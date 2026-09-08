@@ -77,7 +77,7 @@ return Application::configure(basePath: dirname(__DIR__))
     */
     ->withExceptions(function (Exceptions $exceptions) {
 
-        $exceptions->render(function ($e, Request $request) {
+        $exceptions->render(function (\Throwable $e, Request $request) {
 
             /*
             |-----------------------------

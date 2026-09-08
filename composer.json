@@ -6,28 +6,28 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "barryvdh/laravel-dompdf": "^3.1",
-        "blade-ui-kit/blade-icons": "^1.6",
-        "codeat3/blade-simple-icons": "^7.16",
-        "intervention/image": "3",
-        "laravel/framework": "^12.0",
-        "laravel/sanctum": "^4.2",
-        "laravel/scout": "^10.20",
-        "laravel/tinker": "^2.10.1",
+        "blade-ui-kit/blade-icons": "^1.8",
+        "codeat3/blade-simple-icons": "^8.12",
+        "intervention/image": "^4.3",
+        "laravel/framework": "^13.0",
+        "laravel/sanctum": "^4.3",
+        "laravel/scout": "^11.0",
+        "laravel/tinker": "^3.0",
         "livewire/livewire": "^3.6",
         "pusher/pusher-php-server": "^7.2",
-        "spatie/laravel-query-builder": "^6.3"
+        "spatie/laravel-query-builder": "^7.3"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
-        "laravel/breeze": "^2.3",
+        "laravel/breeze": "^2.4",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.13",
         "laravel/sail": "^1.41",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
-        "phpunit/phpunit": "^11.5.3"
+        "phpunit/phpunit": "^12.0"
     },
     "autoload": {
         "psr-4": {
