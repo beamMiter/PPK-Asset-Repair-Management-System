@@ -1,6 +1,5 @@
 import { defineConfig, loadEnv } from 'vite';
 import laravel from 'laravel-vite-plugin';
-import tailwindcss from '@tailwindcss/vite';
 
 // Helper: resolve LAN host for HMR so other devices can access dev server
 function resolveHmrHost(env){
@@ -18,7 +17,6 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      tailwindcss(),
       laravel({
         input: [
           'resources/css/app.css',

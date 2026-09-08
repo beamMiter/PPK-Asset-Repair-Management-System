@@ -1,81 +1,50 @@
-@import "tailwindcss";
 @import "./intro-frame-assembly.css";
 
-/* Tailwind v4: content globs + theme.extend อยู่ใน tailwind.config.js */
-@config "../../tailwind.config.js";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* CSS-first plugins (v4) */
-@plugin "@tailwindcss/forms";
-@plugin "daisyui";
-
-/* ธีม govclean — โทน รพ./ราชการ-clean เข้ากับ Topbar #0E2B51
-   (daisyUI 5 token names: --color-*, --radius-*) */
-@plugin "daisyui/theme" {
-  name: "govclean";
-  default: true;
-  color-scheme: light;
-
-  --color-primary: #0E2B51;          /* Navy */
-  --color-primary-content: #FFFFFF;
-  --color-secondary: #14B8A6;        /* Emerald/Mint */
-  --color-accent: #E5B80B;           /* Royal Gold */
-  --color-neutral: #2C3E50;
-
-  --color-base-100: #FFFFFF;
-  --color-base-200: #F8FAFC;
-  --color-base-300: #E2E8F0;
-
-  --color-info: #1D4ED8;
-  --color-success: #059669;
-  --color-warning: #F59E0B;
-  --color-error: #DC2626;
-
-  --radius-box: 0.9rem;              /* card radius (เดิม --rounded-box) */
-  --radius-field: 0.75rem;           /* button/input radius (เดิม --rounded-btn) */
-  --radius-selector: 9999px;         /* badge/toggle (เดิม --rounded-badge) */
-  --border: 1px;
-}
-
-/* custom utilities (v4: ไม่ต้องห่อ @layer utilities แล้ว) */
-.animate-modal-in {
-    animation: modalIn 0.18s ease-out forwards;
-}
-
-.custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: #e2e8f0 transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
-    border-radius: 4px;
-}
-
-.animate-bounce-slow {
-    animation: bounce-slow 3s infinite;
-}
-
-.animate-bounce-x {
-    animation: bounce-x 1s infinite;
-}
-
-@keyframes bounce-slow {
-    0%, 100% { transform: translateY(-5%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
-    50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
-}
-
-@keyframes bounce-x {
-    0%, 100% {
-        transform: translateX(-25%);
-        animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+@layer utilities {
+    .animate-modal-in {
+        animation: modalIn 0.18s ease-out forwards;
     }
-    50% {
-        transform: none;
-        animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #e2e8f0 transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #e2e8f0;
+        border-radius: 4px;
+    }
+
+    .animate-bounce-slow {
+        animation: bounce-slow 3s infinite;
+    }
+
+    .animate-bounce-x {
+        animation: bounce-x 1s infinite;
+    }
+
+    @keyframes bounce-slow {
+        0%, 100% { transform: translateY(-5%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
+        50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+    }
+
+    @keyframes bounce-x {
+        0%, 100% {
+            transform: translateX(-25%);
+            animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+        }
+        50% {
+            transform: none;
+            animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+        }
     }
 }
 
@@ -94,6 +63,7 @@ body{
 }
 
 [x-cloak] { display: none !important; }
+@plugin "daisyui";
 
 /* ─── Override DaisyUI textarea min-height ───────────────────────────
    DaisyUI sets min-height: 5rem on every <textarea>.
