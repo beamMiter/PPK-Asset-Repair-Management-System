@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "description": "Asset Repair Management System - Laravel with Vite setup",
-  "main": "postcss.config.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -24,16 +23,15 @@
   "homepage": "https://github.com/iMookatayou/Asset-Repair-Management-System#readme",
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.10",
-    "@tailwindcss/line-clamp": "^0.4.4",
+    "@tailwindcss/vite": "^4.3.3",
     "alpinejs": "^3.15.1",
-    "autoprefixer": "^10.4.21",
     "baseline-browser-mapping": "^2.10.20",
     "daisyui": "^5.4.3",
     "laravel-echo": "^2.3.0",
     "laravel-vite-plugin": "^2.0.1",
     "postcss": "^8.5.6",
     "pusher-js": "^8.4.0",
-    "tailwindcss": "^3.4.18",
+    "tailwindcss": "^4.3.3",
     "vite": "^7.1.9"
   },
   "dependencies": {

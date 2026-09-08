@@ -1,22 +1,12 @@
 import { defineConfig, loadEnv } from 'vite';
 import laravel from 'laravel-vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
 
 // Helper: resolve LAN host for HMR so other devices can access dev server
 function resolveHmrHost(env){
-  // Priority: explicit VITE_HMR_HOST -> system detected LAN -> fallback 'localhost'
-  if (env.VITE_HMR_HOST) return env.VITE_HMR_HOST;
-  // Try simple LAN detection (best-effort) – Node may not always provide os.networkInterfaces inside constrained env
-  try {
-    const nets = Object.values(require('os').networkInterfaces());
-    for (const list of nets) {
-      for (const ni of list) {
-        if (ni && ni.family === 'IPv4' && !ni.internal) {
-          return ni.address; // first non-internal IPv4
-        }
-      }
-    }
-  } catch(_) {}
-  return 'localhost';
+  // Priority: explicit VITE_HMR_HOST -> fallback 'localhost'
+  // (Prevents Vite from picking up internal Docker IPs which browsers can't reach)
+  return env.VITE_HMR_HOST || 'localhost';
 }
 
 export default defineConfig(({ mode }) => {
@@ -28,9 +18,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
+      tailwindcss(),
       laravel({
         input: [
           'resources/css/app.css',
+          'resources/css/toast.css',
           'resources/js/app.js',
           // Page-specific bundles
           'resources/js/repair/dashboard.js',
