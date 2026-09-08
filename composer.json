@@ -15,7 +15,7 @@
         "laravel/sanctum": "^4.3",
         "laravel/scout": "^11.0",
         "laravel/tinker": "^3.0",
-        "livewire/livewire": "^3.6",
+        "livewire/livewire": "^4.0",
         "pusher/pusher-php-server": "^7.2",
         "spatie/laravel-query-builder": "^7.3"
     },
