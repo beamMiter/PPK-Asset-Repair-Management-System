@@ -78,7 +78,12 @@ class MaintenanceTransitionController extends Controller
                 'action'  => $status,
                 'error'   => $e->getMessage()
             ]);
-            $code = in_array($e->getCode(), [403, 409, 422]) ? $e->getCode() : 500;
+            // Business-rule rejections in the service use abort(409, ...), which
+            // throws an HttpException whose getCode() is 0 — read getStatusCode()
+            // instead so JSON callers get 409/422 rather than a bogus 500.
+            $code = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface
+                ? $e->getStatusCode()
+                : (in_array($e->getCode(), [403, 409, 422], true) ? (int) $e->getCode() : 500);
             return $this->respondWithToast($request, Toast::warning($e->getMessage(), 2200), redirect()->route('maintenance.requests.show', $req->id), ['message' => $e->getMessage()], $code);
         }
     }

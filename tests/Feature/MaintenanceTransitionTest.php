@@ -43,4 +43,23 @@ class MaintenanceTransitionTest extends TestCase
         $resp2->assertOk();
         $this->assertSame(MaintenanceRequest::STATUS_IN_PROGRESS, $resp2->json('data.status'));
     }
+
+    public function test_invalid_transition_returns_409_not_500(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $req   = MaintenanceRequest::factory()->create([
+            'status' => MaintenanceRequest::STATUS_PENDING,
+        ]);
+
+        // pending -> in_progress is not an allowed transition; the service
+        // aborts(409). handleAction() must surface that as 409, not a bogus 500.
+        $resp = $this->actingAs($admin)->postJson("/maintenance/requests/{$req->id}/start");
+
+        $resp->assertStatus(409);
+        $this->assertSame(
+            MaintenanceRequest::STATUS_PENDING,
+            $req->fresh()->status,
+            'status must be unchanged after a rejected transition'
+        );
+    }
 }
