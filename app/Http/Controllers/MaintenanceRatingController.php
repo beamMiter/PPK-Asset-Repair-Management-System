@@ -16,6 +16,9 @@ class MaintenanceRatingController extends Controller
 {
     protected int $ratingDeadlineDays = 30;
 
+    /** Per-request memo for resolveTechnicianIdForRating() (guard + store both need it). */
+    private array $resolvedTechnicianId = [];
+
     public function evaluateList()
     {
         /** @var User $user */
@@ -309,6 +312,11 @@ class MaintenanceRatingController extends Controller
     // ค้นหา ID ของเจ้าหน้าที่ที่รับผิดชอบงาน
     protected function resolveTechnicianIdForRating(MaintenanceRequest $maintenanceRequest): ?int
     {
+        $key = $maintenanceRequest->getKey() ?? spl_object_id($maintenanceRequest);
+        if (array_key_exists($key, $this->resolvedTechnicianId)) {
+            return $this->resolvedTechnicianId[$key];
+        }
+
         $assignment = $maintenanceRequest->assignments()
             // อนุญาตให้ทั้ง technician และ admin สามารถรับการประเมินได้
             ->whereHas('user', function ($q) {
@@ -319,7 +327,7 @@ class MaintenanceRatingController extends Controller
             ->orderByDesc('assigned_at')
             ->first();
 
-        return $assignment?->user_id;
+        return $this->resolvedTechnicianId[$key] = $assignment?->user_id;
     }
 
     public function summary(User $user)

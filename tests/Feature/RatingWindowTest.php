@@ -61,4 +61,17 @@ class RatingWindowTest extends TestCase
         $this->assertFalse($this->webWindow(new MaintenanceRequest()));
         $this->assertFalse($this->apiWindow(new MaintenanceRequest()));
     }
+
+    /**
+     * R3: a future-dated completion must not read as "still inside the window".
+     * The web controller already guards with isPast(); the API copy did not,
+     * so its abs day-diff (~0) passed the "<= deadline" check.
+     */
+    public function test_window_is_closed_for_a_future_dated_request(): void
+    {
+        $mr = new MaintenanceRequest(['closed_at' => now()->addDays(3)]);
+
+        $this->assertFalse($this->webWindow($mr));
+        $this->assertFalse($this->apiWindow($mr));
+    }
 }

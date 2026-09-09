@@ -141,8 +141,10 @@ class MaintenanceRatingApiController extends Controller
             return false;
         }
 
-        // Carbon 3: diffInDays() is signed — $base is in the past, so pass
-        // `true` for an absolute day count (Carbon 2's default behaviour).
-        return (int) now()->diffInDays($base, true) <= $this->ratingDeadlineDays;
+        // Carbon 3: diffInDays() is signed — $base is in the past here, so pass
+        // `true` for an absolute day count (Carbon 2's default behaviour). The
+        // isPast() guard matches the web controller: a future-dated base must
+        // not read as "still inside the window".
+        return $base->isPast() && (int) now()->diffInDays($base, true) <= $this->ratingDeadlineDays;
     }
 }
