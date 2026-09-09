@@ -36,9 +36,9 @@
 
         $kpi = array_merge(
             [
-                'lastMonth' => 0,
-                'thisMonth' => 0,
-                'thisMonthCompleted' => 0,
+                'lastYear' => 0,
+                'thisYear' => 0,
+                'thisYearCompleted' => 0,
                 'avgResolveHours' => null,
             ],
             $kpi ?? [],
@@ -298,8 +298,8 @@
                         สถิติการแจ้งซ่อมปีนี้</h3>
                     <div class="flex items-center gap-3">
                         <p class="text-4xl sm:text-5xl font-bold text-[#0B1F3B] leading-none"
-                            data-countup="{{ (int) $kpi['thisMonth'] }}">
-                            {{ number_format((int) $kpi['thisMonth']) }}</p>
+                            data-countup="{{ (int) $kpi['thisYear'] }}">
+                            {{ number_format((int) $kpi['thisYear']) }}</p>
                         @php
                             $trend = $kpi['totalTrend'] ?? 0;
                             $trendDisplay = abs($trend) >= 999 ? '>999' : abs($trend);
@@ -341,8 +341,8 @@
                         งานที่ซ่อมเสร็จสิ้นปีนี้</h3>
                     <div class="flex items-center gap-3">
                         <p class="text-4xl sm:text-5xl font-bold text-[#006c46] leading-none"
-                            data-countup="{{ (int) $kpi['thisMonthCompleted'] }}">
-                            {{ number_format((int) $kpi['thisMonthCompleted']) }}</p>
+                            data-countup="{{ (int) $kpi['thisYearCompleted'] }}">
+                            {{ number_format((int) $kpi['thisYearCompleted']) }}</p>
                         @php
                             $trend = $kpi['completedTrend'] ?? 0;
                             $trendDisplay = abs($trend) >= 999 ? '>999' : abs($trend);

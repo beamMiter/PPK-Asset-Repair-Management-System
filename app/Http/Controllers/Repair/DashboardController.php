@@ -113,14 +113,15 @@ class DashboardController extends Controller
 
         // ----- KPI สำหรับการ์ดบนซ้าย (Last month / This month / Completed-this-month) -----
         $kpi = [
-            'lastMonth'          => 0,
-            'thisMonth'          => 0,
-            'thisMonthCompleted' => 0,
-            'avgResolveHours'    => null,
+            'lastYear'          => 0,
+            'thisYear'          => 0,
+            'thisYearCompleted' => 0,
+            'avgResolveHours'   => null,
         ];
 
         if ($dateCol) {
-            // เปลี่ยนจากรายเดือนเป็นรายปี (Year-to-Date vs Last Year) ตามความเหมาะสมของการสรุปภาพรวม
+            // Year-to-Date vs the same span last year — the KPI cards read
+            // "ปีนี้ / ปีที่แล้ว" (the keys used to say "month", which was wrong).
             $startThis = now()->startOfYear();
             $startLast = (clone $startThis)->subYear();
 
@@ -128,16 +129,16 @@ class DashboardController extends Controller
             $endLast = (clone $startThis)->subSecond();
 
             $kpiStats = (clone $base)->selectRaw("
-                SUM(CASE WHEN $dateCol BETWEEN ? AND ? THEN 1 ELSE 0 END) as this_month,
-                SUM(CASE WHEN $dateCol BETWEEN ? AND ? THEN 1 ELSE 0 END) as last_month,
-                SUM(CASE WHEN $dateCol BETWEEN ? AND ? AND mr.status IN ('resolved','closed') THEN 1 ELSE 0 END) as this_month_completed,
-                SUM(CASE WHEN $dateCol BETWEEN ? AND ? AND mr.status IN ('resolved','closed') THEN 1 ELSE 0 END) as last_month_completed
+                SUM(CASE WHEN $dateCol BETWEEN ? AND ? THEN 1 ELSE 0 END) as this_year,
+                SUM(CASE WHEN $dateCol BETWEEN ? AND ? THEN 1 ELSE 0 END) as last_year,
+                SUM(CASE WHEN $dateCol BETWEEN ? AND ? AND mr.status IN ('resolved','closed') THEN 1 ELSE 0 END) as this_year_completed,
+                SUM(CASE WHEN $dateCol BETWEEN ? AND ? AND mr.status IN ('resolved','closed') THEN 1 ELSE 0 END) as last_year_completed
             ", [$startThis, $endThis, $startLast, $endLast, $startThis, $endThis, $startLast, $endLast])->first();
 
-            $kpi['thisMonth'] = (int) $kpiStats->this_month;
-            $kpi['lastMonth'] = (int) $kpiStats->last_month;
-            $kpi['thisMonthCompleted'] = (int) $kpiStats->this_month_completed;
-            $kpi['lastMonthCompleted'] = (int) $kpiStats->last_month_completed;
+            $kpi['thisYear'] = (int) $kpiStats->this_year;
+            $kpi['lastYear'] = (int) $kpiStats->last_year;
+            $kpi['thisYearCompleted'] = (int) $kpiStats->this_year_completed;
+            $kpi['lastYearCompleted'] = (int) $kpiStats->last_year_completed;
 
             // Calculate trends (Percentage like stocks)
             $calcTrend = function($current, $previous) {
@@ -146,8 +147,8 @@ class DashboardController extends Controller
                 return $val > 999 ? 999 : ($val < -999 ? -999 : $val);
             };
 
-            $kpi['totalTrend']     = $calcTrend($kpi['thisMonth'], $kpi['lastMonth']);
-            $kpi['completedTrend'] = $calcTrend($kpi['thisMonthCompleted'], $kpi['lastMonthCompleted']);
+            $kpi['totalTrend']     = $calcTrend($kpi['thisYear'], $kpi['lastYear']);
+            $kpi['completedTrend'] = $calcTrend($kpi['thisYearCompleted'], $kpi['lastYearCompleted']);
         }
 
         // avgResolveHours (ถ้ามี completed date/at)
