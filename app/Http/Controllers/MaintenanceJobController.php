@@ -137,7 +137,7 @@ class MaintenanceJobController extends Controller
         $stats['closed_avg_per_month'] = $avgClosedPerMonth;
 
         // 3. Team list for Filter
-        $team = User::whereIn('role', ['admin', 'supervisor', 'technician'])
+        $team = User::whereIn('role', User::teamRoles())
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -207,7 +207,7 @@ class MaintenanceJobController extends Controller
             abort(403);
         }
 
-        $technicians = User::whereIn('role', ['admin', 'supervisor', 'technician'])
+        $technicians = User::whereIn('role', User::teamRoles())
             ->orderBy('department')
             ->orderBy('name')
             ->get(['id', 'name', 'role', 'department']);
