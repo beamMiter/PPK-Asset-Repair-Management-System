@@ -3,20 +3,20 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\MaintenanceRequest;
 use App\Models\MaintenanceRating;
+use App\Models\MaintenanceRequest;
 use App\Models\User;
+use App\Services\MaintenanceTransitionService;
+use App\Traits\HandlesMaintenanceRating;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class MaintenanceRatingApiController extends Controller
 {
-    /**
-     * กำหนดช่วงเวลาที่อนุญาตให้ให้คะแนน (วัน)
-     */
-    protected int $ratingDeadlineDays = 30;
+    use HandlesMaintenanceRating;
 
     /**
      * ดึง “งานที่รอการให้คะแนน” ของ user ปัจจุบัน
@@ -36,10 +36,8 @@ class MaintenanceRatingApiController extends Controller
             ])
             ->whereDoesntHave('rating')
             ->get()
-            ->filter(function (MaintenanceRequest $req) {
-                return $this->withinRatingWindow($req);
-            })
-            ->values(); // reset index
+            ->filter(fn (MaintenanceRequest $req) => $this->withinRatingWindow($req))
+            ->values();
 
         return response()->json([
             'data' => $requests,
@@ -88,21 +86,17 @@ class MaintenanceRatingApiController extends Controller
             ], 422);
         }
 
-        // 5) validate + rule: ถ้าให้ 1–2 ดาว ต้องกรอก comment
-        $validator = Validator::make($request->all(), [
-            'score'   => ['required', 'integer', 'between:1,5'],
-            'comment' => ['nullable', 'string', 'max:1000'],
-        ]);
+        // 5) ต้องมีเจ้าหน้าที่ให้ผูกคะแนน (เหมือนฝั่ง web)
+        $technicianId = $this->resolveTechnicianIdForRating($maintenanceRequest);
+        if (! $technicianId) {
+            return response()->json([
+                'message' => 'ยังไม่มีการมอบหมายเจ้าหน้าที่ในงานนี้ จึงยังให้คะแนนไม่ได้',
+            ], 422);
+        }
 
-        $validator->after(function ($v) {
-            $data    = $v->getData();
-            $score   = isset($data['score']) ? (int) $data['score'] : null;
-            $comment = trim($data['comment'] ?? '');
-
-            if ($score !== null && $score <= 2 && $comment === '') {
-                $v->errors()->add('comment', 'ถ้าให้ 1–2 ดาว กรุณาระบุความคิดเห็นเพิ่มเติม');
-            }
-        });
+        // 6) validate + rule: ถ้าให้ 1–2 ดาว ต้องกรอก comment
+        $validator = Validator::make($request->all(), $this->ratingRules())
+            ->after(fn ($v) => $this->requireCommentForLowScore($v));
 
         if ($validator->fails()) {
             return response()->json([
@@ -113,38 +107,34 @@ class MaintenanceRatingApiController extends Controller
 
         $data = $validator->validated();
 
-        // 6) สร้าง rating
+        // 7) สร้าง rating
         $rating = MaintenanceRating::create([
             'maintenance_request_id' => $maintenanceRequest->id,
             'rater_id'               => $user->id,
-            'technician_id'          => $maintenanceRequest->technician_id,
+            'technician_id'          => $technicianId,
             'score'                  => $data['score'],
             'comment'                => $data['comment'] ?? null,
         ]);
 
-        return response()->json([
-            'message' => 'บันทึกคะแนนเรียบร้อย',
-            'data'    => $rating,
-        ], 201);
-    }
-
-    /**
-     * ใช้ logic เดียวกับฝั่ง web: closed_at > resolved_at > completed_date
-     */
-    protected function withinRatingWindow(MaintenanceRequest $maintenanceRequest): bool
-    {
-        $base = $maintenanceRequest->closed_at
-            ?? $maintenanceRequest->resolved_at
-            ?? $maintenanceRequest->completed_date;
-
-        if (! $base) {
-            return false;
+        // 8) Auto-close งานที่ยัง 'resolved' หลังผู้แจ้งให้คะแนน (เหมือนฝั่ง web)
+        $maintenanceRequest->refresh();
+        $autoClosed = false;
+        if ($maintenanceRequest->status === MaintenanceRequest::STATUS_RESOLVED) {
+            try {
+                app(MaintenanceTransitionService::class)->applyTransition(
+                    $maintenanceRequest,
+                    ['status' => MaintenanceRequest::STATUS_CLOSED, 'note' => 'ปิดงานอัตโนมัติหลังผู้แจ้งให้คะแนนเรียบร้อย'],
+                    $user->id
+                );
+                $autoClosed = true;
+            } catch (\Throwable $e) {
+                Log::warning("Auto-close failed for Request ID {$maintenanceRequest->id}: " . $e->getMessage());
+            }
         }
 
-        // Carbon 3: diffInDays() is signed — $base is in the past here, so pass
-        // `true` for an absolute day count (Carbon 2's default behaviour). The
-        // isPast() guard matches the web controller: a future-dated base must
-        // not read as "still inside the window".
-        return $base->isPast() && (int) now()->diffInDays($base, true) <= $this->ratingDeadlineDays;
+        return response()->json([
+            'message' => $autoClosed ? 'บันทึกคะแนนและปิดงานเรียบร้อย' : 'บันทึกคะแนนเรียบร้อย',
+            'data'    => $rating,
+        ], 201);
     }
 }

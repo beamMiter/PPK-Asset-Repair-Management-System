@@ -6,6 +6,7 @@ use App\Models\MaintenanceRequest;
 use App\Models\MaintenanceRating;
 use App\Models\User;
 use App\Services\MaintenanceTransitionService;
+use App\Traits\HandlesMaintenanceRating;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -14,10 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 class MaintenanceRatingController extends Controller
 {
-    protected int $ratingDeadlineDays = 30;
-
-    /** Per-request memo for resolveTechnicianIdForRating() (guard + store both need it). */
-    private array $resolvedTechnicianId = [];
+    use HandlesMaintenanceRating;
 
     public function evaluateList()
     {
@@ -280,57 +278,9 @@ class MaintenanceRatingController extends Controller
     // การตรวจสอบความถูกต้องของข้อมูล (Validation)
     protected function validateRating(Request $request): array
     {
-        $validator = Validator::make($request->all(), [
-            'score'   => ['required', 'integer', 'between:1,5'],
-            'comment' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $validator->after(function ($v) {
-            $data    = $v->getData();
-            $score   = isset($data['score']) ? (int) $data['score'] : null;
-            $comment = trim((string) ($data['comment'] ?? ''));
-
-            if ($score !== null && $score <= 2 && $comment === '') {
-                $v->errors()->add('comment', 'ถ้าให้ 1–2 ดาว กรุณาระบุความคิดเห็นเพิ่มเติม');
-            }
-        });
-
-        return $validator->validate();
-    }
-
-    // ตรวจสอบระยะเวลาให้คะแนน
-    protected function withinRatingWindow(MaintenanceRequest $maintenanceRequest): bool
-    {
-        $base = $maintenanceRequest->closed_at
-            ?? $maintenanceRequest->resolved_at
-            ?? $maintenanceRequest->completed_date;
-
-        if (! $base) return false;
-
-        // Carbon 3: diffInDays() is signed — $base is in the past here, so pass
-        // `true` for an absolute day count (Carbon 2's default behaviour).
-        return $base->isPast() && (int) now()->diffInDays($base, true) <= $this->ratingDeadlineDays;
-    }
-
-    // ค้นหา ID ของเจ้าหน้าที่ที่รับผิดชอบงาน
-    protected function resolveTechnicianIdForRating(MaintenanceRequest $maintenanceRequest): ?int
-    {
-        $key = $maintenanceRequest->getKey() ?? spl_object_id($maintenanceRequest);
-        if (array_key_exists($key, $this->resolvedTechnicianId)) {
-            return $this->resolvedTechnicianId[$key];
-        }
-
-        $assignment = $maintenanceRequest->assignments()
-            // อนุญาตให้ทั้ง technician และ admin สามารถรับการประเมินได้
-            ->whereHas('user', function ($q) {
-                $q->whereIn('role', \App\Models\User::teamRoles());
-            })
-            ->orderByDesc('is_lead')
-            ->orderByRaw("CASE WHEN status = 'done' THEN 1 ELSE 0 END DESC")
-            ->orderByDesc('assigned_at')
-            ->first();
-
-        return $this->resolvedTechnicianId[$key] = $assignment?->user_id;
+        return Validator::make($request->all(), $this->ratingRules())
+            ->after(fn ($v) => $this->requireCommentForLowScore($v))
+            ->validate();
     }
 
     public function summary(User $user)
