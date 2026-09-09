@@ -52,7 +52,16 @@ class AssetController extends Controller
         $sortBy = $sortMap[$sortKey] ?? 'id';
 
         $baseQuery = Asset::query()
-            ->with(['categoryRef', 'department'])
+            ->with([
+                'categoryRef',
+                'department',
+                // Feed the `hero_image_url` append without an N+1 per row.
+                // Mirrors Asset::getHeroImageUrlAttribute()'s image filter;
+                // the relation itself already orders by order_column.
+                'attachments' => fn ($rel) => $rel
+                    ->whereHas('file', fn ($f) => $f->where('mime', 'like', 'image/%'))
+                    ->with('file'),
+            ])
             ->search($q)
             ->status($status)
             ->category($categoryId)
@@ -80,6 +89,10 @@ class AssetController extends Controller
             ->orderBy($sortBy, $sortDir)
             ->paginate($perPage)
             ->withQueryString();
+
+        // `attachments` is loaded only to resolve `hero_image_url`; keep it out
+        // of the serialized payload so the response shape is unchanged.
+        $assets->getCollection()->makeHidden('attachments');
 
         Log::info('[Asset::index] API listing', [
             'q'          => $q,
@@ -170,7 +183,11 @@ class AssetController extends Controller
         }
 
         $data  = $validator->validated();
-        $asset = Asset::create($data)->load(['categoryRef', 'department']);
+        $asset = Asset::create($data);
+        // The request already validates hero_image / files.*; persist them like
+        // update() and storePage() do instead of dropping them silently.
+        $this->syncAttachments($request, $asset);
+        $asset->load(['categoryRef', 'department']);
 
         Log::info('[Asset::store] API created', [
             'asset_id'   => $asset->id,
@@ -478,11 +495,6 @@ class AssetController extends Controller
 
         $data = $validator->validated();
 
-        // Sanitize price: remove commas if any
-        if (isset($data['price'])) {
-            $data['price'] = str_replace(',', '', (string)$data['price']);
-        }
-
         $asset = Asset::create($data);
         $this->syncAttachments($request, $asset);
 
@@ -623,11 +635,6 @@ class AssetController extends Controller
 
         $data   = $validator->validated();
 
-        // Sanitize price: remove commas if any
-        if (isset($data['price'])) {
-            $data['price'] = str_replace(',', '', (string)$data['price']);
-        }
-
         // ป้องกันการเปลี่ยนสถานะกลับเป็น active ดัวยมือ หากยังมีใบแจ้งซ่อมค้างอยู่
         if (isset($data['status']) && $data['status'] === Asset::STATUS_ACTIVE && $asset->status !== Asset::STATUS_ACTIVE) {
             $hasActiveRequests = $asset->maintenanceRequests()
@@ -758,6 +765,7 @@ class AssetController extends Controller
                 'internal_phone' => $mockData['internal_phone']  ?? null,
                 'price'          => $mockData['price']           ?? null,
                 'purchase_date'  => $mockData['warranty_start']  ?? null,
+                'warranty_start' => $mockData['warranty_start']  ?? null,
                 'warranty_expire'=> $mockData['warranty_expire'] ?? null,
                 'category_id'    => $mockData['category_id']     ?? null,
                 'department_id'  => $mockData['department_id']   ?? null,
@@ -834,6 +842,7 @@ class AssetController extends Controller
                 $path = $file->store('assets/attachments', 'public');
                 $fileModel = FileModel::create([
                     'path' => $path,
+                    'disk' => 'public',
                     'mime' => $file->getMimeType(),
                     'size' => $file->getSize(),
                 ]);

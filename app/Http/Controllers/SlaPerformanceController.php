@@ -19,10 +19,13 @@ class SlaPerformanceController extends Controller
     {
         $data = $this->getSlaDashboardData($request);
         
-        $signatureData = $request->input('signature');
-        if ($signatureData) {
-            // signature data is usually: data:image/png;base64,iVBOR...
-            $data['signature'] = $signatureData;
+        // signature is a data: URI from a canvas in the dashboard; only accept
+        // an inline image so nothing else can be piped into the PDF's <img src>.
+        $validated = $request->validate([
+            'signature' => ['nullable', 'string', 'starts_with:data:image/', 'max:500000'],
+        ]);
+        if (! empty($validated['signature'])) {
+            $data['signature'] = $validated['signature'];
         }
 
         $hospital = [
@@ -44,13 +47,8 @@ class SlaPerformanceController extends Controller
     private function getSlaDashboardData(Request $request)
     {
         $jobTypes = \App\Models\MaintenanceRequestType::where('is_active', true)->orderBy('sort_order')->get();
-        
-        // Calculate Dashboard Metrics
-        // ... (rest of search logic remains same) ...
-        // ... (skipping long block for brevity in replacement, but I will include it) ...
-        
-        // (Better approach: I'll just replace the whole methods to be sure)
-        $start = $request->query('from') 
+
+        $start = $request->query('from')
             ? Carbon::parse($request->query('from'))->startOfDay() 
             : Carbon::now()->startOfYear();
 
@@ -69,16 +67,16 @@ class SlaPerformanceController extends Controller
 
         foreach ($requests as $req) {
             if ($req->acknowledged_at && $req->request_date) {
-                $responseTimeSum += $req->request_date->diffInMinutes($req->acknowledged_at);
+                $responseTimeSum += (int) $req->request_date->diffInMinutes($req->acknowledged_at);
                 $responseCount++;
             }
             if ($req->accepted_at && $req->acknowledged_at) {
-                $acceptanceTimeSum += $req->acknowledged_at->diffInMinutes($req->accepted_at);
+                $acceptanceTimeSum += (int) $req->acknowledged_at->diffInMinutes($req->accepted_at);
                 $acceptanceCount++;
             }
             if ($req->resolved_at && $req->request_date) {
                 // Resolution time from start of request
-                $gross = $req->request_date->diffInMinutes($req->resolved_at);
+                $gross = (int) $req->request_date->diffInMinutes($req->resolved_at);
                 $net = max(0, $gross - ($req->paused_duration_minutes ?? 0));
                 $resolutionTimeSum += $net;
                 $resolutionCount++;
@@ -121,14 +119,17 @@ class SlaPerformanceController extends Controller
         usort($breachedTickets, fn($a, $b) => $a->sla_due_date <=> $b->sla_due_date);
         usort($atRiskTickets, fn($a, $b) => $a->sla_due_date <=> $b->sla_due_date);
 
-        $statusDist = ['ทำตาม SLA' => $complianceCount, 'เกินเวลา' => 0, 'มีความเสี่ยง' => 0, 'ตามกำหนด' => 0];
+        // Built up entirely by the loop below — the compliant branch increments
+        // 'ทำตาม SLA' per resolved request, so it must start at 0 (seeding it
+        // with $complianceCount double-counted every compliant ticket).
+        $statusDist = ['ทำตาม SLA' => 0, 'เกินเวลา' => 0, 'มีความเสี่ยง' => 0, 'ตามกำหนด' => 0];
         $monthBreached = [];
 
         foreach ($requests as $req) {
             if ($req->resolved_at && $req->request_date) {
                 $isCompliant = $req->sla_due_date 
                     ? ($req->resolved_at <= $req->sla_due_date) 
-                    : (max(0, $req->request_date->diffInMinutes($req->resolved_at) - ($req->paused_duration_minutes ?? 0)) <= (48 * 60));
+                    : (max(0, (int) $req->request_date->diffInMinutes($req->resolved_at) - ($req->paused_duration_minutes ?? 0)) <= (48 * 60));
                 
                 if ($isCompliant) {
                     $statusDist['ทำตาม SLA']++;
@@ -181,7 +182,7 @@ class SlaPerformanceController extends Controller
         $chartStart = $start->copy()->startOfMonth();
         $chartEnd = $end->copy()->endOfMonth();
         
-        if ($chartStart->diffInMonths($chartEnd) > 60) {
+        if ((int) $chartStart->diffInMonths($chartEnd) > 60) {
             $chartStart = $chartEnd->copy()->subMonths(60);
         }
 
@@ -198,7 +199,7 @@ class SlaPerformanceController extends Controller
             $mResSum = 0; $mResCount = 0; $mCompCount = 0; $mTotalRes = 0;
             foreach ($mRequests as $req) {
                 if ($req->resolved_at && $req->request_date) {
-                    $mTotalRes++; $gross = $req->request_date->diffInMinutes($req->resolved_at);
+                    $mTotalRes++; $gross = (int) $req->request_date->diffInMinutes($req->resolved_at);
                     $net = max(0, $gross - ($req->paused_duration_minutes ?? 0));
                     $mResSum += $net; $mResCount++;
                     if ($req->sla_due_date) { if ($req->resolved_at <= $req->sla_due_date) $mCompCount++; }

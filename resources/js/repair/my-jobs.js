@@ -242,6 +242,90 @@
       });
   }
 
+  // --- Inline "change job type" on a repair card (my-jobs page) ---------------
+  // Delegated on document and bound once, so Turbo re-visits don't stack
+  // duplicate listeners (which used to fire the request N times).
+  function csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  }
+
+  async function handleJobTypeChange(select) {
+    const requestId = select.dataset.id;
+    const newTypeId = select.value;
+    const oldTypeId = select.dataset.oldValue;
+
+    // Try to find ticket number for confirmation
+    let ticketNo = requestId;
+    const card = select.closest('.bg-white.rounded-md');
+    if (card) {
+      const ticketElem = card.querySelector('.font-mono');
+      if (ticketElem) {
+        ticketNo = ticketElem.textContent.replace('#', '').trim();
+      }
+    }
+
+    const confirmed = await window.Confirm.show({
+      title: 'ยืนยันการเปลี่ยนประเภทงาน',
+      message: `ต้องการเปลี่ยนประเภทงานสำหรับใบงาน #${ticketNo} หรือไม่?`,
+      variant: 'primary'
+    });
+
+    if (!confirmed) {
+      select.value = oldTypeId;
+      return;
+    }
+
+    try {
+      showLoader();
+
+      const response = await fetch(`/maintenance/requests/${requestId}/type`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrfToken(),
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ type_id: newTypeId })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        select.dataset.oldValue = newTypeId;
+        // Update styles
+        if (newTypeId) {
+          select.classList.remove('border-slate-200', 'bg-slate-50', 'text-slate-500');
+          select.classList.add('border-[#0F2D5C]/20', 'bg-[#0F2D5C]/5', 'text-[#0F2D5C]');
+        } else {
+          select.classList.remove('border-[#0F2D5C]/20', 'bg-[#0F2D5C]/5', 'text-[#0F2D5C]');
+          select.classList.add('border-slate-200', 'bg-slate-50', 'text-slate-500');
+        }
+
+        // Show toast
+        if (typeof window.showToast === 'function' && result.toast) {
+          window.showToast(result.toast);
+        } else if (result.toast) {
+          alert(result.toast.message || 'อัปเดตประเภทงานเรียบร้อยแล้ว');
+        } else {
+          alert('อัปเดตประเภทงานเรียบร้อยแล้ว');
+        }
+      } else {
+        throw new Error(result.message || result.errors?.type_id?.[0] || 'เกิดข้อผิดพลาดในการอัปเดตประเภทงาน');
+      }
+    } catch (error) {
+      console.error('Update type error:', error);
+      alert(error.message);
+      select.value = oldTypeId;
+    } finally {
+      hideLoader();
+    }
+  }
+
+  document.addEventListener('change', (e) => {
+    const select = e.target.closest?.('.job-type-select');
+    if (select) handleJobTypeChange(select);
+  });
+
   // expose to inline onclick
   window.showLoader = showLoader;
   window.hideLoader = hideLoader;

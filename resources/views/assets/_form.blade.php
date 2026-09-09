@@ -241,7 +241,7 @@
                         @endif
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                             <label class="{{ $labelCls }}">วันที่จัดซื้อจัดจ้าง</label>
                             @if ($readonly)
@@ -250,6 +250,17 @@
                             @else
                                 <input id="purchase_date" type="date" name="purchase_date"
                                     value="{{ $v('purchase_date', optional($asset->purchase_date)->format('Y-m-d')) }}"
+                                    class="{{ $input }}">
+                            @endif
+                        </div>
+                        <div>
+                            <label class="{{ $labelCls }}">วันเริ่มประกัน</label>
+                            @if ($readonly)
+                                <div class="{{ $displayBox }}">
+                                    {{ optional($asset->warranty_start)->format('d/m/Y') ?? '—' }}</div>
+                            @else
+                                <input id="warranty_start" type="date" name="warranty_start"
+                                    value="{{ $v('warranty_start', optional($asset->warranty_start)->format('Y-m-d')) }}"
                                     class="{{ $input }}">
                             @endif
                         </div>
@@ -637,6 +648,7 @@
                     internal_phone: 'internal_phone',
                     price: 'price',
                     purchase_date: 'purchase_date',
+                    warranty_start: 'warranty_start',
                     warranty_expire: 'warranty_expire',
                     type: 'type',
                     category_id: 'category_id',

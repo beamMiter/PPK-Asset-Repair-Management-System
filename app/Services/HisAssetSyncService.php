@@ -17,6 +17,11 @@ class HisAssetSyncService
     {
         return [
             'his_asset_id'   => $hisData['asset_no']       ?? null,
+            // assets.asset_code is NOT NULL + unique; on a first-time sync there
+            // is no internal code yet, so seed it from the HIS number (same
+            // convention as the fetch-his autofill). A later manual edit can
+            // replace it with the real inventory code.
+            'asset_code'     => $hisData['asset_no']       ?? null,
             'name'           => $hisData['name']            ?? null,
             'brand'          => $hisData['brand']           ?? null,
             'model'          => $hisData['model']           ?? null,
@@ -107,10 +112,17 @@ class HisAssetSyncService
             throw new \InvalidArgumentException("HIS Asset ID is missing from payload.");
         }
 
-        $asset = Asset::updateOrCreate(
-            ['his_asset_id' => $mapped['his_asset_id']],
-            $mapped
-        );
+        $existing = Asset::where('his_asset_id', $mapped['his_asset_id'])->first();
+
+        if ($existing) {
+            // Never let a re-sync overwrite the internal inventory code that a
+            // human may have set after the first import.
+            unset($mapped['asset_code']);
+            $existing->fill($mapped)->save();
+            $asset = $existing;
+        } else {
+            $asset = Asset::create($mapped);
+        }
 
         Log::info('[HisAssetSyncService] Synced asset from HIS', [
             'his_asset_id' => $asset->his_asset_id,

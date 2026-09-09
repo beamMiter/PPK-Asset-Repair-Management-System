@@ -142,20 +142,22 @@
             </a>
         @endcan
 
-        @php $active = $is('maintenance.requests.rating.technicians'); @endphp
-        <a href="{{ $rl('maintenance.requests.rating.technicians') }}"
-            class="{{ $itemBase }} {{ $linkBase }} {{ $active ? $on : $off }}">
-            <span class="{{ $strip($active) }}"></span>
-            <span class="icon-wrap flex-shrink-0">
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 21h18" />
-                    <rect x="5" y="10" width="3" height="7" rx="1" />
-                    <rect x="10.5" y="7" width="3" height="10" rx="1" />
-                    <rect x="16" y="4" width="3" height="13" rx="1" />
-                </svg>
-            </span>
-            <span class="{{ $textBase }}">Technician Rating</span>
-        </a>
+        @can('maintenance-type-manage')
+            @php $active = $is('maintenance.requests.rating.technicians'); @endphp
+            <a href="{{ $rl('maintenance.requests.rating.technicians') }}"
+                class="{{ $itemBase }} {{ $linkBase }} {{ $active ? $on : $off }}">
+                <span class="{{ $strip($active) }}"></span>
+                <span class="icon-wrap flex-shrink-0">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 21h18" />
+                        <rect x="5" y="10" width="3" height="7" rx="1" />
+                        <rect x="10.5" y="7" width="3" height="10" rx="1" />
+                        <rect x="16" y="4" width="3" height="13" rx="1" />
+                    </svg>
+                </span>
+                <span class="{{ $textBase }}">Technician Rating</span>
+            </a>
+        @endcan
 
 
 

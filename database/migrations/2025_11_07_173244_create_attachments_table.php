@@ -31,7 +31,8 @@ return new class extends Migration {
             $table->string('alt_text', 512)->nullable();
 
             // ลำดับการแสดงผลของไฟล์ (กรณีมีหลายไฟล์แนบในเป้าหมายเดียวกัน)
-            $table->unsignedInteger('order_column')->default(0);
+            // signed: hero image ใช้ค่า sentinel Attachment::HERO_ORDER (-1) เพื่อให้ sort มาก่อน gallery
+            $table->integer('order_column')->default(0);
 
             // กำหนดความละเอียดอ่อนของไฟล์ (true = เฉพาะผู้เกี่ยวข้องเห็น, false = สาธารณะ)
             $table->boolean('is_private')->default(false);

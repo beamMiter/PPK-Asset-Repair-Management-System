@@ -51,16 +51,21 @@ class AttachmentController extends Controller
             return redirect()->away($publicUrl);
         }
 
-        $disk = $attachment->disk ?: 'local';
-        $path = $attachment->path;
+        // path / disk / mime / size live on the linked File, not on Attachment —
+        // reading them off $attachment made every private download 404.
+        $file = $attachment->file;
+        abort_unless($file, 404);
+
+        $disk = $file->disk ?: 'local';
+        $path = $file->path;
 
         abort_unless($path && Storage::disk($disk)->exists($path), 404);
 
         $stream = Storage::disk($disk)->readStream($path);
         abort_unless($stream !== false, 404);
 
-        $mime     = $attachment->mime ?: 'application/octet-stream';
-        $size     = $attachment->size ?: null;
+        $mime     = $file->mime ?: 'application/octet-stream';
+        $size     = $file->size ?: null;
         $filename = $attachment->filename;
         $download = $request->boolean('download', false);
 

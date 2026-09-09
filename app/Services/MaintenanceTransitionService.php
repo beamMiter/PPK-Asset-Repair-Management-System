@@ -50,8 +50,11 @@ class MaintenanceTransitionService
                 // คำนวณเวลาหยุดการซ่อมบำรุงชั่วคราวเมื่อออกจากการหยุดชั่วคราว
                 if ($from === MR::STATUS_ON_HOLD && $locked->on_hold_at) {
                     $onHoldAt = Carbon::parse($locked->on_hold_at);
-                    $pausedSecs = $onHoldAt->diffInSeconds(now());
-                    
+                    // Carbon 3: diffInSeconds() is signed and returns a float —
+                    // force an absolute int so clock skew / bad data can't push
+                    // paused_duration_minutes and the due dates backwards.
+                    $pausedSecs = (int) $onHoldAt->diffInSeconds(now(), true);
+
                     // อัปเกรดเป็นวินาทีเพื่อความเป๊ะ (Pe-Pa)
                     $locked->paused_duration_minutes = (int) $locked->paused_duration_minutes + (int) ceil($pausedSecs / 60);
                     
@@ -61,6 +64,11 @@ class MaintenanceTransitionService
                     if ($locked->response_due_date && !$locked->acknowledged_at) {
                         $locked->response_due_date = Carbon::parse($locked->response_due_date)->addSeconds($pausedSecs);
                     }
+
+                    // Leaving ON_HOLD: clear the marker so on_hold_at set means
+                    // "currently on hold". Every reader already guards by status,
+                    // and the next hold re-stamps it below.
+                    $locked->on_hold_at = null;
                 }
 
                 $locked->status = $targetStatus;
@@ -135,31 +143,29 @@ class MaintenanceTransitionService
                 $this->syncAssignments($locked, array_values($currentTeamIds), $actorId);
             }
 
-            if (class_exists(MaintenanceLog::class)) {
-                if ($techChanged) {
-                    $locked->loadMissing('technician:id,name');
-                }
-
-                $labels = MR::statusLabels();
-                $fromLabel = $labels[$originalStatus] ?? $originalStatus;
-                $toLabel = $labels[$locked->status] ?? $locked->status;
-                
-                $defaultNote = $data['note'] ?? $this->defaultNoteForStatus($locked->status, $actorId, $locked);
-                $finalNote = trim("[{$fromLabel} -> {$toLabel}] " . $defaultNote);
-
-                if ($techChanged && $locked->technician) {
-                    $finalNote = trim($finalNote . ' • เจ้าหน้าที่: ' . $locked->technician->name);
-                }
-
-                MaintenanceLog::create([
-                    'request_id'  => $locked->id,
-                    'action'      => MaintenanceLog::ACTION_TRANSITION,
-                    'note'        => $finalNote ?: null,
-                    'user_id'     => $actorId,
-                    'from_status' => $originalStatus,
-                    'to_status'   => $locked->status,
-                ]);
+            if ($techChanged) {
+                $locked->loadMissing('technician:id,name');
             }
+
+            $labels = MR::statusLabels();
+            $fromLabel = $labels[$originalStatus] ?? $originalStatus;
+            $toLabel = $labels[$locked->status] ?? $locked->status;
+
+            $defaultNote = $data['note'] ?? $this->defaultNoteForStatus($locked->status, $actorId, $locked);
+            $finalNote = trim("[{$fromLabel} -> {$toLabel}] " . $defaultNote);
+
+            if ($techChanged && $locked->technician) {
+                $finalNote = trim($finalNote . ' • เจ้าหน้าที่: ' . $locked->technician->name);
+            }
+
+            MaintenanceLog::create([
+                'request_id'  => $locked->id,
+                'action'      => MaintenanceLog::ACTION_TRANSITION,
+                'note'        => $finalNote ?: null,
+                'user_id'     => $actorId,
+                'from_status' => $originalStatus,
+                'to_status'   => $locked->status,
+            ]);
 
             return $locked;
         });
@@ -194,8 +200,10 @@ class MaintenanceTransitionService
 
         $status = match ($req->status) {
             MR::STATUS_RESOLVED,
-            MR::STATUS_CLOSED => MaintenanceAssignment::STATUS_DONE,
-            default           => MaintenanceAssignment::STATUS_IN_PROGRESS,
+            MR::STATUS_CLOSED     => MaintenanceAssignment::STATUS_DONE,
+            MR::STATUS_CANCELLED,
+            MR::STATUS_REJECTED   => MaintenanceAssignment::STATUS_CANCELLED,
+            default              => MaintenanceAssignment::STATUS_IN_PROGRESS,
         };
 
         foreach ($userIds as $index => $userId) {

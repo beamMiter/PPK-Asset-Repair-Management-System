@@ -14,11 +14,14 @@ class StatsController extends Controller
         $key = 'stats:summary:v1';
         $payload = Cache::remember($key, 60, function () {
             $assetTotal = DB::table('assets')->count();
+            // Open / closed sets must match the model's canonical split
+            // (MaintenanceRequest::syncAssetStatus): 'acknowledged' is open,
+            // 'rejected' is terminal — both were missing here.
             $openRequests = DB::table('maintenance_requests')->whereIn('status', [
-                'pending','accepted','in_progress','on_hold'
+                'pending','acknowledged','accepted','in_progress','on_hold'
             ])->count();
             $closedRequests = DB::table('maintenance_requests')->whereIn('status', [
-                'resolved','closed','cancelled'
+                'resolved','closed','cancelled','rejected'
             ])->count();
 
 
@@ -63,8 +66,8 @@ class StatsController extends Controller
         $rows = Cache::remember('stats:technician_summary:v1', 60, function () {
             return DB::table('maintenance_requests')
             ->selectRaw('technician_id as id,
-                SUM(CASE WHEN status IN (\'pending\',\'accepted\',\'in_progress\',\'on_hold\') THEN 1 ELSE 0 END) as open_count,
-                SUM(CASE WHEN status IN (\'resolved\',\'closed\',\'cancelled\') THEN 1 ELSE 0 END) as closed_count,
+                SUM(CASE WHEN status IN (\'pending\',\'acknowledged\',\'accepted\',\'in_progress\',\'on_hold\') THEN 1 ELSE 0 END) as open_count,
+                SUM(CASE WHEN status IN (\'resolved\',\'closed\',\'cancelled\',\'rejected\') THEN 1 ELSE 0 END) as closed_count,
                 COUNT(*) as total_count,
                 AVG(CASE WHEN resolved_at IS NOT NULL AND started_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, started_at, resolved_at) END) as avg_hours
             ')

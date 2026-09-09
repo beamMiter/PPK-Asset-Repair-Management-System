@@ -7,9 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class NotificationSettingController extends Controller
 {
+    private const SOUND_EXTS   = ['mp3', 'wav', 'ogg'];
+    private const LOCKED_SOUND = 'new-request.mp3';
+
     public function __construct()
     {
         $this->middleware('auth');
@@ -23,20 +27,26 @@ class NotificationSettingController extends Controller
         });
     }
 
-    public function index()
+    /**
+     * Filenames present in public/sounds (basename only).
+     */
+    private function availableSounds(): array
     {
-        $soundPath = public_path('sounds');
-        $sounds = [];
-
-        // // ตรวจสอบไฟล์เสียงที่รองรับใน Folder sounds
-        if (File::exists($soundPath)) {
-            $sounds = collect(File::files($soundPath))
-                ->filter(fn($file) => in_array($file->getExtension(), ['mp3', 'wav', 'ogg']))
-                ->map(fn($file) => $file->getFilename())
-                ->all();
+        $dir = public_path('sounds');
+        if (! File::exists($dir)) {
+            return [];
         }
 
-        // // ตรวจสอบการตั้งค่าเสียงปัจจุบันของผู้ใช้งาน
+        return collect(File::files($dir))
+            ->filter(fn ($f) => in_array(strtolower($f->getExtension()), self::SOUND_EXTS, true))
+            ->map(fn ($f) => $f->getFilename())
+            ->values()
+            ->all();
+    }
+
+    public function index()
+    {
+        $sounds       = $this->availableSounds();
         $currentSound = Auth::user()->notification_sound;
 
         return view('settings.notifications.index', compact('sounds', 'currentSound'));
@@ -48,53 +58,100 @@ class NotificationSettingController extends Controller
             'notification_sound' => ['required', 'string'],
         ]);
 
+        // Must be one of the files actually in the library — no arbitrary paths.
+        $choice = basename((string) $request->notification_sound);
+        if (! in_array($choice, $this->availableSounds(), true)) {
+            return back()->with('toast', Toast::error('ไม่พบไฟล์เสียงที่เลือก', 2200));
+        }
+
         try {
             $user = Auth::user();
-            $user->notification_sound = $request->notification_sound;
+            $user->notification_sound = $choice;
             $user->save();
 
             Log::info('[NotificationSetting::updateSound] sound updated', [
-                'sound'    => $request->notification_sound,
-                'actor_id' => Auth::id()
+                'sound'    => $choice,
+                'actor_id' => Auth::id(),
             ]);
 
             return back()->with('toast', Toast::success('บันทึกการตั้งค่าเสียงเรียบร้อย', 1800));
         } catch (\Throwable $e) {
-            Log::error('[NotificationSetting::updateSound] failed', [
-                'error' => $e->getMessage()
-            ]);
+            Log::error('[NotificationSetting::updateSound] failed', ['error' => $e->getMessage()]);
 
             return back()->with('toast', Toast::error('ไม่สามารถบันทึกการตั้งค่าได้', 2500));
         }
     }
 
+    public function uploadSound(Request $request)
+    {
+        $request->validate([
+            'sound_file' => ['required', 'file', 'max:2048', 'mimes:mp3,wav', 'mimetypes:audio/mpeg,audio/wav,audio/x-wav,audio/wave'],
+        ], [
+            'sound_file.required'  => 'กรุณาเลือกไฟล์เสียง',
+            'sound_file.max'       => 'ไฟล์ต้องมีขนาดไม่เกิน 2MB',
+            'sound_file.mimes'     => 'รองรับเฉพาะไฟล์ .mp3 และ .wav',
+            'sound_file.mimetypes' => 'รองรับเฉพาะไฟล์เสียง .mp3 และ .wav',
+        ]);
+
+        $file = $request->file('sound_file');
+        $ext  = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'mp3');
+        $base = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) ?: 'sound';
+        $name = $base . '-' . now()->format('YmdHis') . '.' . $ext;
+
+        try {
+            $file->move(public_path('sounds'), $name);
+
+            Log::info('[NotificationSetting::uploadSound] uploaded', [
+                'file'     => $name,
+                'actor_id' => Auth::id(),
+            ]);
+
+            return back()->with('toast', Toast::success("เพิ่มไฟล์ {$name} เข้าคลังเสียงแล้ว", 1800));
+        } catch (\Throwable $e) {
+            Log::error('[NotificationSetting::uploadSound] failed', ['error' => $e->getMessage()]);
+
+            return back()->with('toast', Toast::error('อัปโหลดไฟล์ไม่สำเร็จ', 2500));
+        }
+    }
+
     public function destroySound(Request $request)
     {
-        $fileName = $request->file_name;
-        $filePath = public_path('sounds/' . $fileName);
+        $request->validate(['file_name' => ['required', 'string']]);
 
-        // // Safety lock: ป้องกันการลบไฟล์ระบบหรือไฟล์มาตรฐาน
-        if ($fileName === 'new-request.mp3') {
+        // Strip any directory component — 'file_name' is fully user-controlled
+        // and used to build a filesystem path.
+        $fileName = basename((string) $request->file_name);
+        $ext      = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+        if (! in_array($ext, self::SOUND_EXTS, true)) {
+            return back()->with('toast', Toast::error('ชนิดไฟล์ไม่ถูกต้อง', 2000));
+        }
+
+        if ($fileName === self::LOCKED_SOUND) {
             return back()->with('toast', Toast::warning('ไม่สามารถลบไฟล์มาตรฐานได้', 2200));
         }
 
-        try {
-            if (File::exists($filePath)) {
-                File::delete($filePath);
+        $dir      = public_path('sounds');
+        $filePath = $dir . DIRECTORY_SEPARATOR . $fileName;
+        $real     = realpath($filePath);
 
-                Log::warning('[NotificationSetting::destroySound] file deleted', [
-                    'file'     => $fileName,
-                    'actor_id' => Auth::id()
-                ]);
-
-                return back()->with('toast', Toast::success("ลบไฟล์ {$fileName} เรียบร้อย", 1600));
-            }
-
+        if ($real === false || ! str_starts_with($real, realpath($dir) . DIRECTORY_SEPARATOR)) {
             return back()->with('toast', Toast::error('ไม่พบไฟล์ที่ต้องการลบ', 2000));
+        }
+
+        try {
+            File::delete($real);
+
+            Log::warning('[NotificationSetting::destroySound] file deleted', [
+                'file'     => $fileName,
+                'actor_id' => Auth::id(),
+            ]);
+
+            return back()->with('toast', Toast::success("ลบไฟล์ {$fileName} เรียบร้อย", 1600));
         } catch (\Throwable $e) {
             Log::error('[NotificationSetting::destroySound] failed', [
                 'file'  => $fileName,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return back()->with('toast', Toast::error('ไม่สามารถลบไฟล์ได้', 2500));

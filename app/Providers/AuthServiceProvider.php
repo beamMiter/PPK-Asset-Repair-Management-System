@@ -24,9 +24,10 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        // manage users
+        // manage users — admin only (was: admin + supervisor + every worker role,
+        // which let any IT worker open /admin/users and read the full staff list)
         Gate::define('manage-users', function (User $user): bool {
-            return $user->role === User::ROLE_ADMIN || $user->isSupervisor() || $user->isTechnician();
+            return $user->isAdmin();
         });
 
         // repair dashboard

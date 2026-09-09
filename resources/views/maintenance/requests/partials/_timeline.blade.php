@@ -45,7 +45,7 @@
                     $durationText = null;
                     
                     if ($nextLog) {
-                        $diffSeconds = $log->created_at->diffInSeconds($nextLog->created_at);
+                        $diffSeconds = (int) $log->created_at->diffInSeconds($nextLog->created_at);
                         $durationText = formatDurationThai($diffSeconds);
                     } elseif ($log->created_at->diffInHours(now()) < 8760) { // If it's the latest log, show time since then if relevant
                          // Optional: show "กำลังดำเนินการมาแล้ว..."

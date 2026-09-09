@@ -78,7 +78,6 @@ class ProfileController extends Controller
             $supportsWebp = function_exists('imagewebp');
         }
         $targetExt = $supportsWebp ? 'webp' : 'jpg';
-        $encodeFn  = $supportsWebp ? 'toWebp' : 'toJpeg';
 
         // กรณีลบรูปโปรไฟล์
         if ($request->boolean('remove_avatar') === true) {
@@ -119,8 +118,8 @@ class ProfileController extends Controller
                     $mainPath  = "avatars/{$basename}-512.{$targetExt}";
                     $thumbPath = "avatars/{$basename}-128.{$targetExt}";
 
-                    $main  = $this->readImage($manager, $file->getRealPath())->cover(512, 512)->{$encodeFn}(80);
-                    $thumb = $this->readImage($manager, $file->getRealPath())->cover(128, 128)->{$encodeFn}(80);
+                    $main  = $this->readImage($manager, $file->getRealPath())->cover(512, 512)->encodeUsingFileExtension($targetExt, quality: 80);
+                    $thumb = $this->readImage($manager, $file->getRealPath())->cover(128, 128)->encodeUsingFileExtension($targetExt, quality: 80);
 
                     $disk->put($mainPath,  (string) $main);
                     $disk->put($thumbPath, (string) $thumb);
@@ -200,9 +199,11 @@ class ProfileController extends Controller
     /**
      * อ่านไฟล์รูปภาพด้วย ImageManager และ return ImageInterface
      * เพื่อให้ static analysis tools (intelephense) infer type ได้ถูกต้อง
+     *
+     * intervention/image v4: ImageManager::read() ถูกแทนที่ด้วย decodePath()
      */
     private function readImage(ImageManager $manager, string $path): ImageInterface
     {
-        return $manager->read($path);
+        return $manager->decodePath($path);
     }
 }

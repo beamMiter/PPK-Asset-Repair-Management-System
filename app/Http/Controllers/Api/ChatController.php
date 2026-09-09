@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ChatThread;
 use App\Models\ChatMessage;
+use App\Traits\HandlesChatReads;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class ChatController extends Controller
 {
+    use HandlesChatReads;
+
     public function index(Request $r)
     {
         $q = (string) $r->query('q', '');
@@ -28,29 +30,14 @@ class ChatController extends Controller
             ->orderByDesc('created_at')
             ->paginate(15); // เอา named argument ออกให้ compatible
 
-        $readsMap = [];
-        if ($userId) {
-            $readsMap = DB::table('chat_thread_reads')
-                ->where('user_id', $userId)
-                ->whereIn('chat_thread_id', $threads->getCollection()->pluck('id')->all())
-                ->pluck('last_read_message_id', 'chat_thread_id')
-                ->all();
-        }
+        $readsMap = $userId
+            ? $this->readPointers((int) $userId, $threads->getCollection()->pluck('id')->all())
+            : [];
 
         $payload = [
             'data' => $threads->getCollection()->map(function (ChatThread $th) use ($readsMap) {
-                $lastReadMessageId = $readsMap[$th->id] ?? null;
-                $total   = $th->messages_count ?? 0;
-                $unread  = 0;
-
-                if ($lastReadMessageId) {
-                    $unread = ChatMessage::query()
-                        ->where('chat_thread_id', $th->id)
-                        ->where('id', '>', $lastReadMessageId)
-                        ->count();
-                } else {
-                    $unread = $total;
-                }
+                $total  = $th->messages_count ?? 0;
+                $unread = $this->unreadCount((int) $th->id, $readsMap[$th->id] ?? null, (int) $total);
 
                 return [
                     'id'              => $th->id,
@@ -192,16 +179,11 @@ class ChatController extends Controller
         $msg->load('user:id,name');
 
         if ($msg->user_id) {
-            DB::table('chat_thread_reads')->updateOrInsert(
-                ['user_id' => $msg->user_id, 'chat_thread_id' => $thread->id],
-                [
-                    'last_read_message_id' => $msg->id,
-                    'last_read_at'         => now(),
-                    'updated_at'           => now(),
-                    'created_at'           => now(),
-                ]
-            );
+            $this->markThreadRead((int) $msg->user_id, (int) $thread->id, (int) $msg->id);
         }
+
+        // Real-time fan-out, same as the web path.
+        broadcast(new \App\Events\ChatMessageSent($msg));
 
         return response()->json([
             'id'         => $msg->id,
@@ -246,18 +228,7 @@ class ChatController extends Controller
 
     protected function authorizeLocking(ChatThread $thread)
     {
-        $user = Auth::user();
-
-        if (! $user) {
-            abort(403, 'Forbidden');
-        }
-
-        // ให้สิทธิ์ทุกคนที่ role ไม่ใช่ member
-        if ($user->role === 'member') {
-            abort(403, 'Forbidden');
-        }
-
-        // ถ้าไม่ใช่ member ก็ปล่อยผ่าน
+        $this->assertCanManageThread();
     }
 
     public function myUpdates(Request $r)
@@ -287,24 +258,11 @@ class ChatController extends Controller
         }
 
         // map last_read_message_id ของ user นี้ เพื่อคำนวณ unread
-        $readsMap = DB::table('chat_thread_reads')
-            ->where('user_id', $user->id)
-            ->whereIn('chat_thread_id', $threads->pluck('id')->all())
-            ->pluck('last_read_message_id', 'chat_thread_id')
-            ->all();
+        $readsMap = $this->readPointers((int) $user->id, $threads->pluck('id')->all());
 
         $items = $threads->map(function (ChatThread $th) use ($readsMap) {
-            $lastReadMessageId = $readsMap[$th->id] ?? null;
-            $total = $th->messages_count ?? 0;
-
-            if ($lastReadMessageId) {
-                $unread = ChatMessage::query()
-                    ->where('chat_thread_id', $th->id)
-                    ->where('id', '>', $lastReadMessageId)
-                    ->count();
-            } else {
-                $unread = $total;
-            }
+            $total  = $th->messages_count ?? 0;
+            $unread = $this->unreadCount((int) $th->id, $readsMap[$th->id] ?? null, (int) $total);
 
             $latest = $th->latestMessage;
 

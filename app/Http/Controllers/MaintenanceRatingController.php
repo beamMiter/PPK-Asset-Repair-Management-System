@@ -6,6 +6,7 @@ use App\Models\MaintenanceRequest;
 use App\Models\MaintenanceRating;
 use App\Models\User;
 use App\Services\MaintenanceTransitionService;
+use App\Traits\HandlesMaintenanceRating;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 class MaintenanceRatingController extends Controller
 {
-    protected int $ratingDeadlineDays = 30;
+    use HandlesMaintenanceRating;
 
     public function evaluateList()
     {
@@ -28,14 +29,17 @@ class MaintenanceRatingController extends Controller
             ->where('status', MaintenanceRequest::STATUS_CLOSED);
 
         // งานที่ยังไม่ให้คะแนน (Paginated: 10 per page)
+        // Match withinRatingWindow() exactly: the *first* of
+        // closed_at / resolved_at / completed_date, in the past, within the
+        // deadline. An OR across the three columns used to surface rows the
+        // rating guard then rejected with "เลยระยะเวลา".
         $pendingRequests = (clone $baseQuery)
             ->with(['technician:id,name', 'assignments.user:id,name,role'])
             ->whereDoesntHave('rating')
-            ->where(function($q) use ($limitDate) {
-                $q->where('closed_at', '>=', $limitDate)
-                  ->orWhere('resolved_at', '>=', $limitDate)
-                  ->orWhere('completed_date', '>=', $limitDate);
-            })
+            ->whereRaw(
+                'COALESCE(closed_at, resolved_at, completed_date) BETWEEN ? AND ?',
+                [$limitDate, now()]
+            )
             ->latest('id')
             ->paginate(10, ['*'], 'pending_page')
             ->withQueryString();
@@ -274,50 +278,9 @@ class MaintenanceRatingController extends Controller
     // การตรวจสอบความถูกต้องของข้อมูล (Validation)
     protected function validateRating(Request $request): array
     {
-        $validator = Validator::make($request->all(), [
-            'score'   => ['required', 'integer', 'between:1,5'],
-            'comment' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $validator->after(function ($v) {
-            $data    = $v->getData();
-            $score   = isset($data['score']) ? (int) $data['score'] : null;
-            $comment = trim((string) ($data['comment'] ?? ''));
-
-            if ($score !== null && $score <= 2 && $comment === '') {
-                $v->errors()->add('comment', 'ถ้าให้ 1–2 ดาว กรุณาระบุความคิดเห็นเพิ่มเติม');
-            }
-        });
-
-        return $validator->validate();
-    }
-
-    // ตรวจสอบระยะเวลาให้คะแนน
-    protected function withinRatingWindow(MaintenanceRequest $maintenanceRequest): bool
-    {
-        $base = $maintenanceRequest->closed_at
-            ?? $maintenanceRequest->resolved_at
-            ?? $maintenanceRequest->completed_date;
-
-        if (! $base) return false;
-
-        return $base->isPast() && now()->diffInDays($base) <= $this->ratingDeadlineDays;
-    }
-
-    // ค้นหา ID ของเจ้าหน้าที่ที่รับผิดชอบงาน
-    protected function resolveTechnicianIdForRating(MaintenanceRequest $maintenanceRequest): ?int
-    {
-        $assignment = $maintenanceRequest->assignments()
-            // อนุญาตให้ทั้ง technician และ admin สามารถรับการประเมินได้
-            ->whereHas('user', function ($q) {
-                $q->whereIn('role', \App\Models\User::teamRoles());
-            })
-            ->orderByDesc('is_lead')
-            ->orderByRaw("CASE WHEN status = 'done' THEN 1 ELSE 0 END DESC")
-            ->orderByDesc('assigned_at')
-            ->first();
-
-        return $assignment?->user_id;
+        return Validator::make($request->all(), $this->ratingRules())
+            ->after(fn ($v) => $this->requireCommentForLowScore($v))
+            ->validate();
     }
 
     public function summary(User $user)

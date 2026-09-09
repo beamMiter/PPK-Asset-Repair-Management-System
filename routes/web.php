@@ -102,7 +102,11 @@ Route::middleware(['auth'])->group(function () {
                 Route::get('/{maintenanceRequest}/create', [MaintenanceRatingController::class, 'create'])->name('create');
                 Route::post('/{maintenanceRequest}/store', [MaintenanceRatingController::class, 'store'])->name('store');
                 Route::get('/evaluate', [MaintenanceRatingController::class, 'evaluateList'])->name('evaluate');
-                Route::get('/technicians', [MaintenanceRatingController::class, 'technicianDashboard'])->name('technicians');
+
+                // Team-wide performance board — same gate as the SLA dashboard.
+                Route::get('/technicians', [MaintenanceRatingController::class, 'technicianDashboard'])
+                    ->name('technicians')
+                    ->middleware('can:maintenance-type-manage');
             });
 
             // Status transitions
@@ -171,7 +175,6 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/{user}/edit', [AdminUserController::class, 'edit'])->name('edit');
             Route::put('/{user}', [AdminUserController::class, 'update'])->name('update');
             Route::delete('/{user}', [AdminUserController::class, 'destroy'])->name('destroy');
-            Route::post('/bulk', [AdminUserController::class, 'bulk'])->name('bulk');
         });
     });
 
@@ -213,7 +216,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/technicians/{user}/rating-summary', [MaintenanceRatingController::class, 'summary'])
         ->name('technicians.rating.summary')
-        ->middleware('auth');
+        ->middleware(['auth', 'can:maintenance-type-manage']);
 
 // Auth scaffolding routes
 require __DIR__ . '/auth.php';
