@@ -183,7 +183,11 @@ class AssetController extends Controller
         }
 
         $data  = $validator->validated();
-        $asset = Asset::create($data)->load(['categoryRef', 'department']);
+        $asset = Asset::create($data);
+        // The request already validates hero_image / files.*; persist them like
+        // update() and storePage() do instead of dropping them silently.
+        $this->syncAttachments($request, $asset);
+        $asset->load(['categoryRef', 'department']);
 
         Log::info('[Asset::store] API created', [
             'asset_id'   => $asset->id,
@@ -761,6 +765,7 @@ class AssetController extends Controller
                 'internal_phone' => $mockData['internal_phone']  ?? null,
                 'price'          => $mockData['price']           ?? null,
                 'purchase_date'  => $mockData['warranty_start']  ?? null,
+                'warranty_start' => $mockData['warranty_start']  ?? null,
                 'warranty_expire'=> $mockData['warranty_expire'] ?? null,
                 'category_id'    => $mockData['category_id']     ?? null,
                 'department_id'  => $mockData['department_id']   ?? null,
@@ -837,6 +842,7 @@ class AssetController extends Controller
                 $path = $file->store('assets/attachments', 'public');
                 $fileModel = FileModel::create([
                     'path' => $path,
+                    'disk' => 'public',
                     'mime' => $file->getMimeType(),
                     'size' => $file->getSize(),
                 ]);
