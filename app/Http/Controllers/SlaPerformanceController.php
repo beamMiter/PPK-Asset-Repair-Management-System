@@ -69,16 +69,16 @@ class SlaPerformanceController extends Controller
 
         foreach ($requests as $req) {
             if ($req->acknowledged_at && $req->request_date) {
-                $responseTimeSum += $req->request_date->diffInMinutes($req->acknowledged_at);
+                $responseTimeSum += (int) $req->request_date->diffInMinutes($req->acknowledged_at);
                 $responseCount++;
             }
             if ($req->accepted_at && $req->acknowledged_at) {
-                $acceptanceTimeSum += $req->acknowledged_at->diffInMinutes($req->accepted_at);
+                $acceptanceTimeSum += (int) $req->acknowledged_at->diffInMinutes($req->accepted_at);
                 $acceptanceCount++;
             }
             if ($req->resolved_at && $req->request_date) {
                 // Resolution time from start of request
-                $gross = $req->request_date->diffInMinutes($req->resolved_at);
+                $gross = (int) $req->request_date->diffInMinutes($req->resolved_at);
                 $net = max(0, $gross - ($req->paused_duration_minutes ?? 0));
                 $resolutionTimeSum += $net;
                 $resolutionCount++;
@@ -128,7 +128,7 @@ class SlaPerformanceController extends Controller
             if ($req->resolved_at && $req->request_date) {
                 $isCompliant = $req->sla_due_date 
                     ? ($req->resolved_at <= $req->sla_due_date) 
-                    : (max(0, $req->request_date->diffInMinutes($req->resolved_at) - ($req->paused_duration_minutes ?? 0)) <= (48 * 60));
+                    : (max(0, (int) $req->request_date->diffInMinutes($req->resolved_at) - ($req->paused_duration_minutes ?? 0)) <= (48 * 60));
                 
                 if ($isCompliant) {
                     $statusDist['ทำตาม SLA']++;
@@ -181,7 +181,7 @@ class SlaPerformanceController extends Controller
         $chartStart = $start->copy()->startOfMonth();
         $chartEnd = $end->copy()->endOfMonth();
         
-        if ($chartStart->diffInMonths($chartEnd) > 60) {
+        if ((int) $chartStart->diffInMonths($chartEnd) > 60) {
             $chartStart = $chartEnd->copy()->subMonths(60);
         }
 
@@ -198,7 +198,7 @@ class SlaPerformanceController extends Controller
             $mResSum = 0; $mResCount = 0; $mCompCount = 0; $mTotalRes = 0;
             foreach ($mRequests as $req) {
                 if ($req->resolved_at && $req->request_date) {
-                    $mTotalRes++; $gross = $req->request_date->diffInMinutes($req->resolved_at);
+                    $mTotalRes++; $gross = (int) $req->request_date->diffInMinutes($req->resolved_at);
                     $net = max(0, $gross - ($req->paused_duration_minutes ?? 0));
                     $mResSum += $net; $mResCount++;
                     if ($req->sla_due_date) { if ($req->resolved_at <= $req->sla_due_date) $mCompCount++; }

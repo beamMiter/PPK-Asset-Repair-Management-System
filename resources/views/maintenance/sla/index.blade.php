@@ -187,10 +187,10 @@
                         // คำนวณจำนวนวัน
                         $diffDays = 0;
                         if ($fromDate) {
-                            $diffDays = $fromDate->startOfDay()->diffInDays($toDate->copy()->startOfDay()) + 1;
+                            $diffDays = (int) $fromDate->startOfDay()->diffInDays($toDate->copy()->startOfDay()) + 1;
                         } else {
                             $diffDays =
-                                now()
+                                (int) now()
                                     ->startOfYear()
                                     ->diffInDays(now()->startOfDay()) + 1;
                         }
@@ -478,7 +478,7 @@
                                 @forelse (collect($breachedTickets)->take(20) as $t)
                                     @php
                                         $now = \Carbon\Carbon::now();
-                                        $diffInMins = $t->sla_due_date->diffInMinutes($now);
+                                        $diffInMins = (int) $t->sla_due_date->diffInMinutes($now);
                                         $days = floor($diffInMins / (60 * 24));
                                         $hrs = floor(($diffInMins % (60 * 24)) / 60);
                                         $mins = $diffInMins % 60;
@@ -539,7 +539,7 @@
                                 @forelse (collect($atRiskTickets)->take(20) as $t)
                                     @php
                                         $now = \Carbon\Carbon::now();
-                                        $diffInMins = $now->diffInMinutes($t->sla_due_date);
+                                        $diffInMins = (int) $now->diffInMinutes($t->sla_due_date);
                                         // 4 hours warning baseline (total = 240 mins)
                                         $pct = min(100, max(0, 100 - ($diffInMins / (4 * 60)) * 100));
                                         $hrs = floor($diffInMins / 60);

@@ -6,12 +6,12 @@
 
     // 1. Response Time
     $firstResponseTime = $req->acknowledged_at ?? $req->accepted_at;
-    $responseTimeSeconds = $firstResponseTime ? $startTime->diffInSeconds($firstResponseTime) : null;
+    $responseTimeSeconds = $firstResponseTime ? (int) $startTime->diffInSeconds($firstResponseTime) : null;
 
     // 2. Total Hold Time
     $totalHoldSeconds = ($req->paused_duration_minutes ?? 0) * 60;
     if ($req->status === MR::STATUS_ON_HOLD && $req->on_hold_at) {
-        $totalHoldSeconds += $req->on_hold_at->diffInSeconds(now());
+        $totalHoldSeconds += (int) $req->on_hold_at->diffInSeconds(now());
     }
 
     // 3. Repair Time (Net)
@@ -27,7 +27,7 @@
 
     $repairTimeSeconds = 0;
     if ($actualStart && isset($actualEnd)) {
-        $grossRepairSeconds = $actualStart->diffInSeconds($actualEnd);
+        $grossRepairSeconds = (int) $actualStart->diffInSeconds($actualEnd);
         $repairTimeSeconds = max(0, $grossRepairSeconds - $totalHoldSeconds);
     }
 
