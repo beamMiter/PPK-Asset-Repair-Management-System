@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\ChatThread;
+use App\Traits\HandlesChatReads;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ChatController extends Controller
 {
+    use HandlesChatReads;
+
     public function index(Request $r)
     {
         $q = (string) $r->string('q');
@@ -106,6 +109,12 @@ class ChatController extends Controller
 
         $message->load('user:id,name');
 
+        // Advance the sender's own read pointer (the API path already did this;
+        // without it their unread badge never clears for their own posts).
+        if ($message->user_id) {
+            $this->markThreadRead((int) $message->user_id, (int) $thread->id, (int) $message->id);
+        }
+
         broadcast(new \App\Events\ChatMessageSent($message));
 
         return back();
@@ -123,17 +132,20 @@ class ChatController extends Controller
             ->with(['messages' => function ($q) {
                 $q->with('user:id,name')->latest('id')->limit(1);
             }])
+            ->withCount('messages')
             ->latest('updated_at')
             ->limit(15)
             ->get();
 
-        $items = $threads->map(function ($t) {
+        $pointers = $this->readPointers((int) $u->id, $threads->pluck('id')->all());
+
+        $items = $threads->map(function ($t) use ($pointers) {
             $last = $t->messages->first();
             return [
                 'id'              => $t->id,
                 'title'           => $t->title ?? ('กระทู้ #' . $t->id),
                 'show_url'        => route('chat.show', $t),
-                'unread'          => 0, // ถ้าอยากนับ unread จริง ๆ ค่อยต่อ logic เพิ่มทีหลัง
+                'unread'          => $this->unreadCount((int) $t->id, $pointers[$t->id] ?? null, (int) ($t->messages_count ?? 0)),
                 'last_user_name'  => $last?->user?->name,
                 'last_user_avatar'=> $last?->user?->avatar_thumb_url,
                 'last_body'       => $last?->body,
@@ -199,17 +211,7 @@ class ChatController extends Controller
 
     protected function authorizeLocking(ChatThread $thread): void
     {
-        $user = Auth::user();
-
-        if (! $user) {
-            abort(403, 'Forbidden');
-        }
-
-        // ให้สิทธิ์ทุกคนที่ role ไม่ใช่ member
-        if ($user->role === 'member') {
-            abort(403, 'Forbidden');
-        }
-
-        // ถ้าไม่ใช่ member ก็ผ่านได้เลย (admin, supervisor, technician, it_support, network, developer, ฯลฯ)
+        // Locking is open to any signed-in non-member (see HandlesChatReads).
+        $this->assertCanManageThread();
     }
 }
