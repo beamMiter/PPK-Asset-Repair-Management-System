@@ -301,7 +301,9 @@ class MaintenanceRatingController extends Controller
 
         if (! $base) return false;
 
-        return $base->isPast() && now()->diffInDays($base) <= $this->ratingDeadlineDays;
+        // Carbon 3: diffInDays() is signed — $base is in the past here, so pass
+        // `true` for an absolute day count (Carbon 2's default behaviour).
+        return $base->isPast() && (int) now()->diffInDays($base, true) <= $this->ratingDeadlineDays;
     }
 
     // ค้นหา ID ของเจ้าหน้าที่ที่รับผิดชอบงาน

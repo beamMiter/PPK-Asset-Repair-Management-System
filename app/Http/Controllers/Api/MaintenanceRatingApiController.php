@@ -141,6 +141,8 @@ class MaintenanceRatingApiController extends Controller
             return false;
         }
 
-        return now()->diffInDays($base) <= $this->ratingDeadlineDays;
+        // Carbon 3: diffInDays() is signed — $base is in the past, so pass
+        // `true` for an absolute day count (Carbon 2's default behaviour).
+        return (int) now()->diffInDays($base, true) <= $this->ratingDeadlineDays;
     }
 }

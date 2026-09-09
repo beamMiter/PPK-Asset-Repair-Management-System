@@ -128,7 +128,9 @@ class MaintenanceJobController extends Controller
 
         $closedThisMonth = (int) ($monthlyStats->closed_this_month ?? 0);
         $firstClosed = $monthlyStats->first_closed_at ? \Carbon\Carbon::parse($monthlyStats->first_closed_at) : null;
-        $monthsActive = $firstClosed ? max(1, now()->diffInMonths($firstClosed) + 1) : 1;
+        // Carbon 3: diffInMonths() is signed — $firstClosed is in the past, so
+        // pass `true` for an absolute month count (Carbon 2's default).
+        $monthsActive = $firstClosed ? max(1, (int) now()->diffInMonths($firstClosed, true) + 1) : 1;
         $avgClosedPerMonth = round($stats['closed'] / $monthsActive, 1);
 
         $stats['closed_this_month'] = $closedThisMonth;
