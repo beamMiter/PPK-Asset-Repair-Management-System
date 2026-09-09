@@ -261,9 +261,17 @@ class Asset extends Model
 
     public function getHeroImageUrlAttribute(): ?string
     {
-        $hero = $this->attachments()
-            ->whereHas('file', fn($q) => $q->where('mime', 'like', 'image/%'))
-            ->first();
+        // Prefer the eager-loaded collection when a caller has already loaded
+        // `attachments` (e.g. the assets list endpoint) so this append does not
+        // fire an N+1 query per row. Falls back to a scoped query otherwise.
+        // The relation is defined with orderBy('order_column'), so the hero
+        // (order_column = HERO_ORDER) still sorts first either way.
+        $hero = $this->relationLoaded('attachments')
+            ? $this->attachments->first(fn($a) => optional($a->file)->isImage())
+            : $this->attachments()
+                ->whereHas('file', fn($q) => $q->where('mime', 'like', 'image/%'))
+                ->first();
+
         return $hero ? $hero->url : null;
     }
 }
