@@ -31,14 +31,17 @@ class MaintenanceRatingController extends Controller
             ->where('status', MaintenanceRequest::STATUS_CLOSED);
 
         // งานที่ยังไม่ให้คะแนน (Paginated: 10 per page)
+        // Match withinRatingWindow() exactly: the *first* of
+        // closed_at / resolved_at / completed_date, in the past, within the
+        // deadline. An OR across the three columns used to surface rows the
+        // rating guard then rejected with "เลยระยะเวลา".
         $pendingRequests = (clone $baseQuery)
             ->with(['technician:id,name', 'assignments.user:id,name,role'])
             ->whereDoesntHave('rating')
-            ->where(function($q) use ($limitDate) {
-                $q->where('closed_at', '>=', $limitDate)
-                  ->orWhere('resolved_at', '>=', $limitDate)
-                  ->orWhere('completed_date', '>=', $limitDate);
-            })
+            ->whereRaw(
+                'COALESCE(closed_at, resolved_at, completed_date) BETWEEN ? AND ?',
+                [$limitDate, now()]
+            )
             ->latest('id')
             ->paginate(10, ['*'], 'pending_page')
             ->withQueryString();
