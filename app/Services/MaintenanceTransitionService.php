@@ -64,6 +64,11 @@ class MaintenanceTransitionService
                     if ($locked->response_due_date && !$locked->acknowledged_at) {
                         $locked->response_due_date = Carbon::parse($locked->response_due_date)->addSeconds($pausedSecs);
                     }
+
+                    // Leaving ON_HOLD: clear the marker so on_hold_at set means
+                    // "currently on hold". Every reader already guards by status,
+                    // and the next hold re-stamps it below.
+                    $locked->on_hold_at = null;
                 }
 
                 $locked->status = $targetStatus;
@@ -197,8 +202,10 @@ class MaintenanceTransitionService
 
         $status = match ($req->status) {
             MR::STATUS_RESOLVED,
-            MR::STATUS_CLOSED => MaintenanceAssignment::STATUS_DONE,
-            default           => MaintenanceAssignment::STATUS_IN_PROGRESS,
+            MR::STATUS_CLOSED     => MaintenanceAssignment::STATUS_DONE,
+            MR::STATUS_CANCELLED,
+            MR::STATUS_REJECTED   => MaintenanceAssignment::STATUS_CANCELLED,
+            default              => MaintenanceAssignment::STATUS_IN_PROGRESS,
         };
 
         foreach ($userIds as $index => $userId) {
