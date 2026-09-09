@@ -50,8 +50,11 @@ class MaintenanceTransitionService
                 // คำนวณเวลาหยุดการซ่อมบำรุงชั่วคราวเมื่อออกจากการหยุดชั่วคราว
                 if ($from === MR::STATUS_ON_HOLD && $locked->on_hold_at) {
                     $onHoldAt = Carbon::parse($locked->on_hold_at);
-                    $pausedSecs = $onHoldAt->diffInSeconds(now());
-                    
+                    // Carbon 3: diffInSeconds() is signed and returns a float —
+                    // force an absolute int so clock skew / bad data can't push
+                    // paused_duration_minutes and the due dates backwards.
+                    $pausedSecs = (int) $onHoldAt->diffInSeconds(now(), true);
+
                     // อัปเกรดเป็นวินาทีเพื่อความเป๊ะ (Pe-Pa)
                     $locked->paused_duration_minutes = (int) $locked->paused_duration_minutes + (int) ceil($pausedSecs / 60);
                     
