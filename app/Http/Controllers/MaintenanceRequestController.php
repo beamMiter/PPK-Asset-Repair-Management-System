@@ -351,6 +351,13 @@ class MaintenanceRequestController extends Controller
         $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $validator->errors()->first(),
+                    'errors'  => $validator->errors(),
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput()
@@ -378,6 +385,10 @@ class MaintenanceRequestController extends Controller
                 ->with('toast', Toast::success('สร้างคำขอเรียบร้อย', 1800));
 
         } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+
             return redirect()->back()
                 ->withInput()
                 ->with('toast', Toast::warning($e->getMessage(), 3000));
