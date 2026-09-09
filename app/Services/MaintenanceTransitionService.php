@@ -143,31 +143,29 @@ class MaintenanceTransitionService
                 $this->syncAssignments($locked, array_values($currentTeamIds), $actorId);
             }
 
-            if (class_exists(MaintenanceLog::class)) {
-                if ($techChanged) {
-                    $locked->loadMissing('technician:id,name');
-                }
-
-                $labels = MR::statusLabels();
-                $fromLabel = $labels[$originalStatus] ?? $originalStatus;
-                $toLabel = $labels[$locked->status] ?? $locked->status;
-                
-                $defaultNote = $data['note'] ?? $this->defaultNoteForStatus($locked->status, $actorId, $locked);
-                $finalNote = trim("[{$fromLabel} -> {$toLabel}] " . $defaultNote);
-
-                if ($techChanged && $locked->technician) {
-                    $finalNote = trim($finalNote . ' • เจ้าหน้าที่: ' . $locked->technician->name);
-                }
-
-                MaintenanceLog::create([
-                    'request_id'  => $locked->id,
-                    'action'      => MaintenanceLog::ACTION_TRANSITION,
-                    'note'        => $finalNote ?: null,
-                    'user_id'     => $actorId,
-                    'from_status' => $originalStatus,
-                    'to_status'   => $locked->status,
-                ]);
+            if ($techChanged) {
+                $locked->loadMissing('technician:id,name');
             }
+
+            $labels = MR::statusLabels();
+            $fromLabel = $labels[$originalStatus] ?? $originalStatus;
+            $toLabel = $labels[$locked->status] ?? $locked->status;
+
+            $defaultNote = $data['note'] ?? $this->defaultNoteForStatus($locked->status, $actorId, $locked);
+            $finalNote = trim("[{$fromLabel} -> {$toLabel}] " . $defaultNote);
+
+            if ($techChanged && $locked->technician) {
+                $finalNote = trim($finalNote . ' • เจ้าหน้าที่: ' . $locked->technician->name);
+            }
+
+            MaintenanceLog::create([
+                'request_id'  => $locked->id,
+                'action'      => MaintenanceLog::ACTION_TRANSITION,
+                'note'        => $finalNote ?: null,
+                'user_id'     => $actorId,
+                'from_status' => $originalStatus,
+                'to_status'   => $locked->status,
+            ]);
 
             return $locked;
         });

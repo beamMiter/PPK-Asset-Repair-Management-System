@@ -111,31 +111,6 @@ class MaintenanceJobController extends Controller
             'closed'       => (int) ($statsRow->closed_count ?? 0),
         ];
 
-        // 2.1 Calculate Monthly Average & Current Month Stats
-        $thisMonthStart = now()->startOfMonth();
-        $monthlyStats = (clone $base)
-            ->select([
-                DB::raw("SUM(CASE WHEN maintenance_requests.status = 'closed' AND maintenance_requests.closed_at >= '{$thisMonthStart}' THEN 1 ELSE 0 END) as closed_this_month"),
-                DB::raw("MIN(maintenance_requests.closed_at) as first_closed_at"),
-            ])
-            ->when($filter === 'my', function ($qb) use ($userId) {
-                $qb->where(function ($qq) use ($userId) {
-                    $qq->where('maintenance_requests.technician_id', $userId)
-                       ->orWhereNotNull('ma.maintenance_request_id');
-                });
-            })
-            ->first();
-
-        $closedThisMonth = (int) ($monthlyStats->closed_this_month ?? 0);
-        $firstClosed = $monthlyStats->first_closed_at ? \Carbon\Carbon::parse($monthlyStats->first_closed_at) : null;
-        // Carbon 3: diffInMonths() is signed — $firstClosed is in the past, so
-        // pass `true` for an absolute month count (Carbon 2's default).
-        $monthsActive = $firstClosed ? max(1, (int) now()->diffInMonths($firstClosed, true) + 1) : 1;
-        $avgClosedPerMonth = round($stats['closed'] / $monthsActive, 1);
-
-        $stats['closed_this_month'] = $closedThisMonth;
-        $stats['closed_avg_per_month'] = $avgClosedPerMonth;
-
         // 3. Team list for Filter
         $team = User::whereIn('role', User::teamRoles())
             ->orderBy('name')

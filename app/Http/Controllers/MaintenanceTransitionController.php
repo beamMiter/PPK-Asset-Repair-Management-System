@@ -55,8 +55,23 @@ class MaintenanceTransitionController extends Controller
             $this->transitionService->applyTransition($req, $validator->validated(), $actorId);
             return $this->respondWithToast($request, Toast::success('อัปเดตสถานะใบงานเรียบร้อยแล้ว', 1800), redirect()->route('maintenance.requests.show', $req->id), ['data' => $req->fresh(['technician', 'assignments.user'])]);
         } catch (\Exception $e) {
-            return $this->respondWithToast($request, Toast::warning($e->getMessage(), 3000), redirect()->route('maintenance.requests.show', $req->id), ['message' => $e->getMessage()], 409);
+            return $this->respondWithToast($request, Toast::warning($e->getMessage(), 3000), redirect()->route('maintenance.requests.show', $req->id), ['message' => $e->getMessage()], $this->statusForException($e));
         }
+    }
+
+    /**
+     * Map a caught exception to an HTTP status. Rule rejections in the
+     * service use abort(409, ...), which throws an HttpException whose
+     * getCode() is 0 — read getStatusCode(); fall back to getCode() for
+     * plain exceptions that carry a meaningful one.
+     */
+    protected function statusForException(\Throwable $e): int
+    {
+        if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+            return $e->getStatusCode();
+        }
+
+        return in_array($e->getCode(), [403, 409, 422], true) ? (int) $e->getCode() : 500;
     }
 
     protected function handleAction(Request $request, MR $req, string $gate, string $status, string $successMsg, array $additionalData = [])
@@ -78,13 +93,7 @@ class MaintenanceTransitionController extends Controller
                 'action'  => $status,
                 'error'   => $e->getMessage()
             ]);
-            // Business-rule rejections in the service use abort(409, ...), which
-            // throws an HttpException whose getCode() is 0 — read getStatusCode()
-            // instead so JSON callers get 409/422 rather than a bogus 500.
-            $code = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface
-                ? $e->getStatusCode()
-                : (in_array($e->getCode(), [403, 409, 422], true) ? (int) $e->getCode() : 500);
-            return $this->respondWithToast($request, Toast::warning($e->getMessage(), 2200), redirect()->route('maintenance.requests.show', $req->id), ['message' => $e->getMessage()], $code);
+            return $this->respondWithToast($request, Toast::warning($e->getMessage(), 2200), redirect()->route('maintenance.requests.show', $req->id), ['message' => $e->getMessage()], $this->statusForException($e));
         }
     }
 
@@ -158,7 +167,7 @@ class MaintenanceTransitionController extends Controller
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return $this->respondWithToast($request, Toast::warning('คุณไม่มีสิทธิ์ทำรายการนี้', 2200), redirect()->route('maintenance.requests.show', $req->id), ['message' => 'คุณไม่มีสิทธิ์ทำรายการนี้'], 403);
         } catch (\Exception $e) {
-            return $this->respondWithToast($request, Toast::warning($e->getMessage(), 2200), redirect()->route('maintenance.requests.show', $req->id), ['message' => $e->getMessage()], 409);
+            return $this->respondWithToast($request, Toast::warning($e->getMessage(), 2200), redirect()->route('maintenance.requests.show', $req->id), ['message' => $e->getMessage()], $this->statusForException($e));
         }
     }
 
