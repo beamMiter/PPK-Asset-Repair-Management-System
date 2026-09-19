@@ -573,11 +573,7 @@
 
                                     {{-- View Details --}}
                                     <div class="mt-4">
-                                        <a href="{{ route('maintenance.requests.show', $r) }}" onclick="showLoader()"
-                                            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0F2D5C] text-white text-[13px] font-semibold rounded-sm hover:bg-[#0a2045] transition-colors whitespace-nowrap">
-                                            <span class="material-symbols-outlined text-[16px] shrink-0">visibility</span>
-                                            <span>ดูรายละเอียด</span>
-                                        </a>
+                                        <x-ui.button :href="route('maintenance.requests.show', $r)" variant="brand" icon="visibility" class="w-full" onclick="showLoader()">ดูรายละเอียด</x-ui.button>
                                     </div>
                                 </div>
                             </div>
@@ -604,32 +600,17 @@
                                 <div class="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
                                     @can('acknowledge', $r)
                                         @if ($mrStatus === 'pending')
-                                            <button type="button"
-                                                class="inline-flex items-center gap-2 px-4 py-2 bg-[#0F2D5C] text-white text-[13px] font-semibold rounded-sm hover:bg-[#0A2045] transition-colors"
-                                                onclick="submitAcknowledge('{{ $r->id }}', '{{ $ticketNo }}')">
-                                                <span class="material-symbols-outlined text-[16px]">approval_delegation</span>
-                                                รับทราบ
-                                            </button>
+                                            <x-ui.button variant="brand" icon="approval_delegation" onclick="submitAcknowledge('{{ $r->id }}', '{{ $ticketNo }}')">รับทราบ</x-ui.button>
                                         @endif
                                     @endcan
                                     @can('accept', $r)
                                         @if ($mrStatus === 'acknowledged')
-                                            <button type="button"
-                                                class="inline-flex items-center gap-2 px-4 py-2 bg-[#0F2D5C] text-white text-[13px] font-semibold rounded-sm hover:bg-[#0A2045] transition-colors"
-                                                onclick="submitAccept('{{ $r->id }}', '{{ $ticketNo }}')">
-                                                <span class="material-symbols-outlined text-[16px]">check</span>
-                                                รับเรื่อง
-                                            </button>
+                                            <x-ui.button variant="brand" icon="check" onclick="submitAccept('{{ $r->id }}', '{{ $ticketNo }}')">รับเรื่อง</x-ui.button>
                                         @endif
                                     @endcan
                                     @can('reject', $r)
                                         @if (in_array($mrStatus, ['pending', 'acknowledged']))
-                                            <button type="button"
-                                                class="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 text-white text-[13px] font-semibold rounded-sm hover:bg-rose-700 transition-colors"
-                                                onclick="submitReject('{{ $r->id }}', '{{ $ticketNo }}')">
-                                                <span class="material-symbols-outlined text-[16px]">block</span>
-                                                ไม่รับเรื่อง
-                                            </button>
+                                            <x-ui.button variant="danger" icon="block" onclick="submitReject('{{ $r->id }}', '{{ $ticketNo }}')">ไม่รับเรื่อง</x-ui.button>
                                         @endif
                                     @endcan
                                 </div>

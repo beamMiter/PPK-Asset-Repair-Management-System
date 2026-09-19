@@ -95,7 +95,7 @@
 
                         {{-- Filter Toggle (Mobile Only) --}}
                         <button type="button" @click="showFilters = !showFilters"
-                            class="md:hidden flex-1 md:flex-none inline-flex justify-center items-center gap-1.5 h-10 px-4 rounded-md border text-[13px] font-medium transition-colors"
+                            class="md:hidden flex-1 md:flex-none inline-flex justify-center items-center gap-1.5 h-11 px-4 rounded-md border text-[13px] font-medium transition-colors"
                             :class="showFilters ? 'bg-slate-100 border-slate-300 text-slate-800' :
                                 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'">
                             <span class="material-symbols-outlined text-[16px]">filter_list</span>

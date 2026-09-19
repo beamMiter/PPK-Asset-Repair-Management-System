@@ -95,21 +95,13 @@
                     <div class="flex items-center gap-2 w-full md:w-auto">
                         {{-- Filter Toggle (Mobile Only) --}}
                         <button type="button" @click="showFilters = !showFilters"
-                            class="md:hidden flex-1 md:flex-none inline-flex justify-center items-center gap-1.5 h-10 px-4 rounded-md border text-[13px] font-medium transition-colors"
+                            class="md:hidden flex-1 md:flex-none inline-flex justify-center items-center gap-1.5 h-11 px-4 rounded-md border text-[13px] font-medium transition-colors"
                             :class="showFilters ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'">
                             <span class="material-symbols-outlined text-[16px]">filter_list</span>
                             <span x-text="showFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรอง'"></span>
                         </button>
 
-                        <a href="{{ route('assets.create') }}"
-                            class="flex-1 md:flex-none inline-flex justify-center items-center gap-2 h-10 rounded-md bg-[#0F2D5C] px-4 py-2 text-[13px] font-medium text-white hover:bg-[#0F2D5C]/90 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/40 transition-all"
-                            onclick="showLoader()">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
-                            </svg>
-                            ลงทะเบียน<span class="hidden sm:inline">ทรัพย์สิน</span>
-                        </a>
+                        <x-ui.button :href="route('assets.create')" variant="primary" icon="add" class="flex-1 md:flex-none" onclick="showLoader()">ลงทะเบียน<span class="hidden sm:inline">ทรัพย์สิน</span></x-ui.button>
                     </div>
                 </div>
 
