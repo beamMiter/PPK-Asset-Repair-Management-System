@@ -87,8 +87,9 @@ class MaintenanceRequestController extends Controller
 
             // NEW: eager load type relation
             ->with([
-                'type', // <<<< สำคัญ
-                'asset',
+                'type',
+                'department',
+                'asset.department',
                 'reporter:id,name,email',
                 'technician:id,name',
                 'attachments' => fn($qq) => $qq

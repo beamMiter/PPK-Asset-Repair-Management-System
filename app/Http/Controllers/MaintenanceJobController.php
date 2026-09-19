@@ -47,7 +47,7 @@ class MaintenanceJobController extends Controller
 
         // 1. Build List Query
         $query = (clone $base)
-            ->with(['department', 'type', 'asset', 'reporter:id,name', 'technician:id,name'])
+            ->with(['department', 'type', 'asset', 'reporter:id,name', 'technician:id,name', 'assignments.user:id,name,role'])
             // Filter: My Jobs
             ->when($filter === 'my', function ($qb) use ($userId) {
                 $qb->where(function ($qq) use ($userId) {
