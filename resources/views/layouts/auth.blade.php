@@ -210,6 +210,16 @@
     </script>
 
     <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js" defer></script>
+
+    {{-- Carrier for the session toast, same as layouts/app. <x-toast /> only *consumes*
+         session('toast') (it forgets it) — it never renders it — so without this a controller
+         flash such as a failed login was silently dropped and the user saw nothing. It must sit
+         before <x-toast />, which clears the session key. --}}
+    @if (session('toast'))
+        <script id="session-toast-data" type="application/json">
+            @json(session('toast'))
+        </script>
+    @endif
     <x-toast />
 
     {{-- (ถ้าคุณมี <x-toast /> หรือสคริปต์อื่น ๆ อยู่เดิม ให้คงไว้ใต้ตรงนี้ได้เลย) --}}

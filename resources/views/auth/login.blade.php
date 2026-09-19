@@ -23,6 +23,7 @@
                    class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2
                           focus:border-[#0E2B51] focus:ring-[#0E2B51]">
             @error('citizen_id')
+                <p class="mt-1 text-sm text-rose-600" role="alert">{{ $message }}</p>
             @enderror
         </div>
 
@@ -33,6 +34,7 @@
                    class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2
                           focus:border-[#0E2B51] focus:ring-[#0E2B51]">
             @error('password')
+                <p class="mt-1 text-sm text-rose-600" role="alert">{{ $message }}</p>
             @enderror
         </div>
 

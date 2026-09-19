@@ -111,7 +111,13 @@ return Application::configure(basePath: dirname(__DIR__))
             | WEB: Session / CSRF Token expired (419)
             |-----------------------------
             */
-            if (!$request->expectsJson() && !$request->is('api/*') && $e instanceof \Illuminate\Session\TokenMismatchException) {
+            // The framework converts TokenMismatchException into an HttpException(419) before the
+            // render callbacks run, so the instanceof alone never matched — the user got the bare
+            // "419 | Page Expired" page instead of this redirect + message.
+            $isTokenMismatch = $e instanceof \Illuminate\Session\TokenMismatchException
+                || ($e instanceof HttpExceptionInterface && $e->getStatusCode() === 419);
+
+            if (!$request->expectsJson() && !$request->is('api/*') && $isTokenMismatch) {
                 return redirect()->back()->withInput($request->except(['password', 'password_confirmation', '_token']))->with('toast', [
                     'type'     => 'warning',
                     'message'  => 'หน้าเว็บหมดอายุ (Page Expired) หรือเปิดหน้านี้ทิ้งไว้นานเกินไป กรุณาลองใหม่อีกครั้ง',
