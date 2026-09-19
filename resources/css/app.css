@@ -4,6 +4,46 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Form field look — the single definition every form shares ──────────
+   Named ui-* on purpose: Bootstrap (CDN) owns .btn / .form-control on the
+   same pages. Buttons live in <x-ui.button>; fields are plain classes so
+   they also work on markup built in JS or Alpine templates.
+   `mt-2 w-full` is part of the field so a label + field pair is one unit.
+─────────────────────────────────────────────────────────────────────── */
+@layer components {
+    .ui-label {
+        @apply block text-sm font-medium text-slate-700 mb-1;
+    }
+
+    .ui-hint {
+        @apply ml-1 text-[11px] font-normal italic text-slate-500;
+    }
+
+    .ui-input {
+        @apply mt-2 w-full h-11 rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900
+               placeholder:text-slate-400 outline-none transition-all
+               focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100
+               disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed;
+    }
+
+    .ui-textarea {
+        @apply mt-2 w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900
+               placeholder:text-slate-400 outline-none transition-all
+               focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100
+               disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed;
+    }
+
+    /* Server-side validation failure: add to the field, e.g. class="ui-input @error('name') is-invalid @enderror" */
+    .ui-input.is-invalid,
+    .ui-textarea.is-invalid {
+        @apply border-rose-400 focus:border-rose-500 focus:ring-rose-100;
+    }
+
+    .ui-error {
+        @apply mt-1 text-sm text-rose-600;
+    }
+}
+
 @layer utilities {
     .animate-modal-in {
         animation: modalIn 0.18s ease-out forwards;
