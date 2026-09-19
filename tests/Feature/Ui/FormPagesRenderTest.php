@@ -3,6 +3,7 @@
 namespace Tests\Feature\Ui;
 
 use App\Models\Asset;
+use App\Models\MaintenanceLog;
 use App\Models\MaintenanceRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -65,6 +66,38 @@ class FormPagesRenderTest extends TestCase
             $this->assertStringNotContainsString('<x-ui', $html, $url);
             $this->assertStringContainsString(self::BUTTON_MARK, $html, $url);
         }
+    }
+
+    public function test_request_history_button_is_labelled_with_a_count_and_the_action_row_ends_with_back(): void
+    {
+        $admin = $this->admin();
+        $req = MaintenanceRequest::factory()->create(['status' => MaintenanceRequest::STATUS_PENDING]);
+        foreach ([MaintenanceRequest::STATUS_ACKNOWLEDGED, MaintenanceRequest::STATUS_ACCEPTED] as $to) {
+            MaintenanceLog::create([
+                'request_id' => $req->id,
+                'user_id' => $admin->id,
+                'action' => MaintenanceLog::ACTION_TRANSITION,
+                'note' => 'x',
+                'from_status' => MaintenanceRequest::STATUS_PENDING,
+                'to_status' => $to,
+            ]);
+        }
+
+        $html = $this->actingAs($admin)->get(route('maintenance.requests.show', $req))->assertOk()->getContent();
+
+        // it used to be an unlabelled clock icon in the action row — now a labelled button with the number of entries
+        $this->assertMatchesRegularExpression(
+            '/id="openHistoryModalBtn".*?ประวัติการดำเนินงาน\s*<span[^>]*>\s*' . $req->logs()->count() . '\s*<\/span>/s',
+            $html
+        );
+        $this->assertDoesNotMatchRegularExpression('/openHistoryModalBtn"[^>]*aria-label/', $html);
+
+        // action row order: …พิมพ์ PDF, then กลับ last (as on the asset pages) — and the history button sits after it, with the progress bar
+        $print = strpos($html, 'พิมพ์ PDF');
+        $back = strpos($html, 'กลับ', $print);
+        $history = strpos($html, 'id="openHistoryModalBtn"');
+        $this->assertNotFalse($print);
+        $this->assertTrue($print < $back && $back < $history, 'expected: พิมพ์ PDF → กลับ → (progress bar) ประวัติการดำเนินงาน');
     }
 
     public function test_form_fields_share_one_input_height_and_buttons_match_it(): void

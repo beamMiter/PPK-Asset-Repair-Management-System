@@ -203,16 +203,23 @@
 
                     <x-ui.button :href="route('maintenance.requests.work-order', $req->id)" target="_blank" icon="print">พิมพ์ PDF</x-ui.button>
 
-                    <x-ui.button id="openHistoryModalBtn" size="square" icon="history"
-                        title="ดูประวัติการดำเนินงานและ Operation Log ทั้งหมด"
-                        aria-label="ดูประวัติการดำเนินงานและ Operation Log ทั้งหมด" />
-
                     <x-ui.back-button :fallback="route('maintenance.requests.index')" />
                 </div>
             </div>
 
-            {{-- Row 2: Progress bar --}}
-            <div class="w-full px-2 sm:px-4 mt-5 overflow-x-auto pb-4">
+            {{-- Row 2: Progress + history. The history log is the status timeline, so it sits with the
+                 progress bar (labelled, with a count) instead of as an icon in the crowded action row. --}}
+            <div class="mt-4 flex items-center justify-between gap-3 px-2 sm:px-4">
+                <div class="hidden sm:block text-[13px] font-semibold text-slate-600 whitespace-nowrap">ความคืบหน้า</div>
+
+                <x-ui.button id="openHistoryModalBtn" icon="history" class="ml-auto">
+                    ประวัติการดำเนินงาน
+                    <span class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">{{ $req->logs->count() }}</span>
+                </x-ui.button>
+            </div>
+
+            {{-- Progress bar --}}
+            <div class="w-full px-2 sm:px-4 mt-3 overflow-x-auto pb-4">
                 <div class="relative w-full min-w-[500px] sm:min-w-full">
                     <div class="absolute top-[22px] left-0 w-full h-[6px] bg-slate-200 rounded-full z-0"></div>
                     <div class="absolute top-[22px] left-0 h-[6px] bg-[#1e3a8a] rounded-full z-0 transition-all duration-700 ease-out"
