@@ -14,6 +14,7 @@
            neutral   slate solid — cancel-the-job style actions
            brand     navy — technician / staff side and the rating dialog
            ghost     no border — icon buttons such as a dialog close (X)
+           ghost-danger  ghost, rose icon — icon-only destructive tool (delete)
   size     md        h-11 (44px) — the same height as a form field (.ui-input), so a button beside an input lines up
                      and stays a comfortable tap target. Page + dialog actions.                       (default)
            sm        h-8 — dense spots: table rows, cards, inline helpers
@@ -64,6 +65,7 @@
         'neutral'        => 'bg-slate-600 text-white hover:bg-slate-700 focus:ring-slate-200',
         'brand'          => 'bg-[#0F2D5C] text-white hover:bg-[#1a3d75] focus:ring-[#0F2D5C]/30',
         'ghost'          => 'text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus:ring-slate-200',
+        'ghost-danger'   => 'text-rose-500 hover:bg-rose-50 hover:text-rose-600 focus:ring-rose-100',
     ];
 
     $size = isset($sizes[$size]) ? $size : 'md';
