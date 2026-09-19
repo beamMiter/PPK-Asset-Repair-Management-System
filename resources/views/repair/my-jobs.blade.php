@@ -573,7 +573,11 @@
 
                                     {{-- View Details --}}
                                     <div class="mt-4">
-                                        <x-ui.button :href="route('maintenance.requests.show', $r)" variant="brand" icon="visibility" onclick="showLoader()">ดูรายละเอียด</x-ui.button>
+                                        <a href="{{ route('maintenance.requests.show', $r) }}" onclick="showLoader()"
+                                            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0F2D5C] text-white text-[13px] font-semibold rounded-sm hover:bg-[#0a2045] transition-colors whitespace-nowrap">
+                                            <span class="material-symbols-outlined text-[16px] shrink-0">visibility</span>
+                                            <span>ดูรายละเอียด</span>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
