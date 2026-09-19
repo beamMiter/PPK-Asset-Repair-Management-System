@@ -23,11 +23,7 @@
                     </div>
 
                     {{-- Mobile Toggle --}}
-                    <button @click="showConfig = !showConfig"
-                        class="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-600 md:hidden">
-                        <i class="fa-solid fa-gear transition-transform duration-300" :class="{ 'rotate-180': showConfig }"></i>
-                        ตั้งค่า
-                    </button>
+                    <x-ui.button @click="showConfig = !showConfig" icon="settings" class="md:hidden">ตั้งค่า</x-ui.button>
                 </div>
 
                 <div x-show="showConfig" x-collapse x-cloak>
@@ -43,7 +39,7 @@
                                     <i class="fa-solid fa-bell"></i>
                                 </span>
                                 <select name="notification_sound"
-                                    class="w-full rounded-md border border-slate-200 bg-white pl-10 pr-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[{{ $primary }}]/35">
+                                    class="w-full h-11 rounded-md border border-slate-200 bg-white pl-10 pr-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[{{ $primary }}]/35">
                                     @foreach ($sounds as $sound)
                                         <option value="{{ $sound }}" @selected($currentSound == $sound)>
                                             {{ $sound == 'new-request.mp3' ? 'ระบบมาตรฐาน (Default)' : $sound }}
@@ -52,15 +48,9 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="md:col-span-4 lg:col-span-3 flex items-center gap-2">
-                            <button type="button" onclick="previewSound()"
-                                class="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-                                <i class="fa-solid fa-play text-blue-600"></i> ทดสอบ
-                            </button>
-                            <button type="submit"
-                                class="inline-flex h-10 items-center gap-2 rounded-md bg-[{{ $primary }}] px-6 text-[13px] font-medium text-white hover:bg-[{{ $primary }}]/90 transition-colors">
-                                <i class="fa-solid fa-floppy-disk"></i> บันทึกการเลือก
-                            </button>
+                        <div class="md:col-span-4 lg:col-span-3 flex flex-wrap items-center gap-2">
+                            <x-ui.button onclick="previewSound()" icon="play_arrow">ทดสอบ</x-ui.button>
+                            <x-ui.button type="submit" variant="primary" icon="save">บันทึกการเลือก</x-ui.button>
                         </div>
                     </form>
                 </div>
@@ -90,11 +80,8 @@
                             </div>
                         </div>
 
-                        <div class="px-4 pb-4">
-                            <button type="submit"
-                                class="w-full bg-[#3d8b63] hover:bg-[#2d6a4c] text-white py-3.5 rounded-lg text-[15px] font-semibold transition-colors border-none">
-                                เพิ่มเข้าคลังเสียง
-                            </button>
+                        <div class="px-4 pb-4 flex justify-center">
+                            <x-ui.button type="submit" variant="primary" icon="upload">เพิ่มเข้าคลังเสียง</x-ui.button>
                         </div>
                     </div>
                 </form>

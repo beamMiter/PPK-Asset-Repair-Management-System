@@ -81,13 +81,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
-                    <a href="{{ route('maintenance.requests.rating.technicians') }}"
-                        class="inline-flex items-center h-9 gap-2 rounded-md border {{ $line }} bg-white px-4 text-[13px] font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        กลับ
-                    </a>
+                    <x-ui.back-button :fallback="route('maintenance.requests.rating.technicians')" />
                 </div>
             </div>
         </div>

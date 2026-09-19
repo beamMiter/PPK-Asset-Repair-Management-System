@@ -356,10 +356,7 @@
 
             {{-- ── Modal Footer ── --}}
             <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end shrink-0">
-                <button onclick="closeRatingModal()"
-                    class="px-4 py-2 rounded-md border border-slate-300 bg-white text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-                    ปิด
-                </button>
+                <x-ui.button onclick="closeRatingModal()">ปิด</x-ui.button>
             </div>
         </div>
     </div>

@@ -205,28 +205,16 @@
                             <td class="p-3 align-middle text-center whitespace-nowrap">
                                 <div class="inline-flex items-center justify-center gap-2">
                                     <a href="{{ route('admin.users.edit', $u) }}" onclick="showLoader()"
-                                        class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-3 py-2 text-[12px] font-semibold text-emerald-700
-                        hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600/30 min-w-[92px] justify-center transition-colors">
-                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                            stroke-width="2">
-                                            <path d="M12 20h9" />
-                                            <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z" />
-                                        </svg>
+                                        class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-[12px] font-medium text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+                                        <span class="material-symbols-outlined ms text-[15px] leading-none text-emerald-600">edit</span>
                                         แก้ไข
                                     </a>
 
                                     @if ($u->id !== auth()->id())
                                         <button type="button"
-                                            class="inline-flex items-center gap-1.5 rounded-md border border-rose-300 bg-white px-3 py-2 text-[12px] font-semibold text-rose-600
-                               hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30 min-w-[76px] justify-center transition-colors"
+                                            class="inline-flex items-center gap-1.5 rounded-md border border-rose-300 bg-white px-3 py-1.5 text-[12px] font-medium text-rose-600 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
                                             onclick="return window.confirmDeleteUser('{{ route('admin.users.destroy', $u) }}');">
-                                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="2">
-                                                <path d="M3 6h18" />
-                                                <path d="M8 6V4h8v2" />
-                                                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                                                <path d="M10 11v6M14 11v6" />
-                                            </svg>
+                                            <span class="material-symbols-outlined ms text-[15px] leading-none text-rose-500">delete</span>
                                             ลบ
                                         </button>
                                     @endif
@@ -291,24 +279,16 @@
 
                     <div class="flex items-center justify-end gap-2">
                         <a href="{{ route('admin.users.edit', $u) }}" onclick="showLoader()"
-                            class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-3 py-2 text-[12px] font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 20h9" />
-                                <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z" />
-                            </svg>
+                            class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-[12px] font-medium text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+                            <span class="material-symbols-outlined ms text-[15px] leading-none text-emerald-600">edit</span>
                             แก้ไข
                         </a>
 
                         @if ($u->id !== auth()->id())
                             <button type="button"
-                                class="inline-flex items-center gap-1.5 rounded-md border border-rose-300 bg-white px-3 py-2 text-[12px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+                                class="inline-flex items-center gap-1.5 rounded-md border border-rose-300 bg-white px-3 py-1.5 text-[12px] font-medium text-rose-600 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
                                 onclick="return window.confirmDeleteUser('{{ route('admin.users.destroy', $u) }}');">
-                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M3 6h18" />
-                                    <path d="M8 6V4h8v2" />
-                                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                                    <path d="M10 11v6M14 11v6" />
-                                </svg>
+                                <span class="material-symbols-outlined ms text-[15px] leading-none text-rose-500">delete</span>
                                 ลบ
                             </button>
                         @endif
