@@ -9,7 +9,9 @@
         <div class="px-4 md:px-6 lg:px-8 py-4">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-start gap-3">
-                    <img src="{{ asset('icon/feedback.webp') }}" class="w-8 h-8 object-contain mt-0.5" alt="">
+                    {{-- Header glyph — same style as My Jobs / users / settings pages --}}
+                    <span class="material-symbols-outlined text-[32px] text-[#0F2D5C] mt-0.5"
+                        aria-hidden="true">rate_review</span>
                     <div>
                         <h1 class="text-[17px] font-semibold text-slate-900">ประเมินความพึงพอใจ</h1>
                         <p class="text-[13px] text-slate-600">
@@ -106,18 +108,11 @@
                                                 </div>
                                             </div>
 
-                                            <div
-                                                class="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full md:w-auto mt-4 md:mt-0">
-                                                <a href="{{ route('maintenance.requests.show', $req) }}"
-                                                    class="inline-flex items-center justify-center h-10 px-4 text-[13px] font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-sm transition-colors whitespace-nowrap">
-                                                    รายละเอียด
-                                                </a>
-                                                <a href="{{ route('maintenance.requests.show', $req) }}?rate=1"
-                                                    class="inline-flex items-center justify-center gap-2 h-10 px-6 rounded-sm bg-[#0F2D5C] text-white text-[13px] font-bold hover:bg-[#1a3d75] transition-all active:scale-95 cursor-pointer relative z-10 group/btn whitespace-nowrap">
-                                                    <span>ประเมินงาน</span>
-                                                    <span
-                                                        class="material-symbols-outlined text-[16px] animate-bounce-x">arrow_forward</span>
-                                                </a>
+                                            <div class="flex flex-wrap items-center justify-end gap-[12px] w-full md:w-auto mt-4 md:mt-0">
+                                                <x-ui.button :href="route('maintenance.requests.show', $req)">รายละเอียด</x-ui.button>
+                                                {{-- same "rate" action as the post-close dialog: amber + star --}}
+                                                <x-ui.button :href="route('maintenance.requests.show', $req) . '?rate=1'" variant="warning"
+                                                    icon="star">ประเมินงาน</x-ui.button>
                                             </div>
                                         </div>
                                     </div>
@@ -174,11 +169,8 @@
                                         @endif
 
                                         <div class="mt-4 flex justify-end">
-                                            <a href="{{ route('maintenance.requests.show', $req) }}"
-                                                class="text-[11px] font-bold text-[#0F2D5C] hover:underline flex items-center gap-1">
-                                                <span>ดูรายการ</span>
-                                                <span class="material-symbols-outlined text-[14px]">open_in_new</span>
-                                            </a>
+                                            <x-ui.button :href="route('maintenance.requests.show', $req)" size="sm"
+                                                icon="visibility">ดูรายการ</x-ui.button>
                                         </div>
                                     </div>
                                 @endforeach

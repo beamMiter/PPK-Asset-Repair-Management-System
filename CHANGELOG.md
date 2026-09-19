@@ -32,6 +32,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Header icons restored on the request list, assets, chat, users, maintenance-types and
   notification-settings pages (Material Symbols, same style as My Jobs).
+- **ประเมินความพึงพอใจ page:** the header image icon is now a Material Symbol like the other pages, and its
+  buttons use the shared `<x-ui.button>` ("รายละเอียด" secondary, "ประเมินงาน" the amber star button used in the
+  post-close dialog, "ดูรายการ" small secondary). Buttons keep their natural width and wrap instead of stretching.
 - **Buttons and form fields look the same on every create / edit page** (assets, maintenance requests,
   users, maintenance types, profile), on the technician request-detail page and on the list-page
   "create" buttons: one 44px height (the same as a field), one corner radius, one weight. Colours that
