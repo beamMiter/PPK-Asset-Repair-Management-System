@@ -1,11 +1,11 @@
 @php
     use App\Models\MaintenanceRequest as MR;
-    use Carbon\Carbon;
-    
+
     // Sort ascending for chronological calculation, then we'll reverse for display
     $logsChronological = $req->logs->sortBy('created_at')->values();
     $statusLabels = MR::statusLabels();
-    
+    $labelToCode = array_flip($statusLabels);
+
     // Function to format duration nicely
     if (!function_exists('formatDurationThai')) {
         function formatDurationThai($seconds) {
@@ -20,152 +20,146 @@
             return $days . " วัน " . ($remainHours > 0 ? $remainHours . " ชม." : "");
         }
     }
+
+    // One row per status: icon, dot colours and the accent bar of the note. Every status has its own icon — the two
+    // "done" states (resolved / closed) used to share look-alike ticks; approval is now a paper with a tick, filled.
+    $statusStyle = [
+        'pending'      => ['icon' => 'hourglass_empty', 'dot' => 'bg-amber-50 text-amber-600',    'bar' => 'border-amber-300'],
+        'acknowledged' => ['icon' => 'visibility',      'dot' => 'bg-blue-50 text-blue-600',      'bar' => 'border-blue-300'],
+        'accepted'     => ['icon' => 'thumb_up',        'dot' => 'bg-indigo-50 text-indigo-600',  'bar' => 'border-indigo-300'],
+        'in_progress'  => ['icon' => 'directions_run',  'dot' => 'bg-sky-50 text-sky-600',        'bar' => 'border-sky-300'],
+        'on_hold'      => ['icon' => 'pause_circle',    'dot' => 'bg-rose-50 text-rose-600',      'bar' => 'border-rose-300'],
+        'resolved'     => ['icon' => 'task_alt',        'dot' => 'bg-emerald-50 text-emerald-600', 'bar' => 'border-emerald-300'],
+        'closed'       => ['icon' => 'task',            'dot' => 'bg-emerald-600 text-white',     'bar' => 'border-emerald-500'],
+        'completed'    => ['icon' => 'task_alt',        'dot' => 'bg-emerald-50 text-emerald-600', 'bar' => 'border-emerald-300'],
+        'cancelled'    => ['icon' => 'cancel',          'dot' => 'bg-slate-100 text-slate-500',   'bar' => 'border-slate-300'],
+        'rejected'     => ['icon' => 'block',           'dot' => 'bg-rose-50 text-rose-600',      'bar' => 'border-rose-300'],
+    ];
+    $neutralStyle = ['icon' => 'info', 'dot' => 'bg-slate-100 text-slate-500', 'bar' => 'border-slate-300'];
+
+    // Events that are not a status change
+    $eventStyle = [
+        'create_request'    => ['icon' => 'add_circle',  'dot' => 'bg-amber-50 text-amber-600',   'bar' => 'border-amber-300',  'title' => 'สร้างใบแจ้งซ่อมใหม่'],
+        'assign_technician' => ['icon' => 'person_add',  'dot' => 'bg-indigo-50 text-indigo-600', 'bar' => 'border-indigo-300', 'title' => 'มอบหมายเจ้าหน้าที่ผู้รับผิดชอบ'],
+        'update_request'    => ['icon' => 'edit_note',   'dot' => 'bg-slate-100 text-slate-600',  'bar' => 'border-slate-300',  'title' => 'แก้ไขข้อมูลใบแจ้งซ่อม'],
+        'note'              => ['icon' => 'sticky_note_2', 'dot' => 'bg-slate-100 text-slate-600', 'bar' => 'border-slate-300', 'title' => 'บันทึกเพิ่มเติม'],
+    ];
+
+    // A status column holds a code ("in_progress"); an old note prefix may hold a code or a Thai label.
+    $toCode = function ($token) use ($statusLabels, $labelToCode) {
+        $token = trim((string) $token);
+        if ($token === '') return null;
+        return isset($statusLabels[strtolower($token)]) ? strtolower($token) : ($labelToCode[$token] ?? null);
+    };
 @endphp
 
-<div class="space-y-6">
+<div>
     @if($logsChronological->isEmpty())
         <div class="text-center py-10">
             <span class="material-symbols-outlined text-[48px] text-slate-200">history_toggle_off</span>
-            <p class="mt-2 text-sm text-slate-400">ยังไม่มีบันทึกประวัติการดำเนินงาน</p>
+            <p class="mt-2 text-[14px] text-slate-400">ยังไม่มีบันทึกประวัติการดำเนินงาน</p>
         </div>
     @else
-        <div class="relative pl-8 ml-4 border-l-2 border-slate-100 space-y-8">
-            @php
-                // Reverse for display (latest first)
-                $displayLogs = $logsChronological->reverse();
-            @endphp
-            
-            @foreach($displayLogs as $index => $log)
+        {{-- Latest first. Each item draws the rail down to the next dot (rail centre = dot centre = 18px). --}}
+        <ol class="space-y-5">
+            @foreach($logsChronological->reverse() as $log)
                 @php
-                    $toStatus = strtolower((string)$log->to_status);
-                    
-                    // Find duration spent in this state (time until next log in chronological order)
+                    $action = (string) $log->action;
+                    $note = trim((string) $log->note);
+
+                    // "[from -> to] text": the text is the note; the bracket is only used when the columns are empty.
+                    $noteFrom = $noteTo = null;
+                    $actualNote = $note;
+                    if (preg_match('/^\[(.*?)\s*->\s*(.*?)\]\s*(.*)$/su', $note, $m)) {
+                        $noteFrom = $toCode($m[1]);
+                        $noteTo = $toCode($m[2]);
+                        $actualNote = trim($m[3]);
+                    } elseif (str_starts_with($note, '[')) {
+                        $actualNote = '';
+                    }
+
+                    $isCreate = $action === 'create_request';
+                    $isAssign = $action === 'assign_technician';
+                    $fromCode = $toCode($log->from_status) ?? $noteFrom;
+                    $toStatus = ($isCreate || $isAssign) ? null : ($toCode($log->to_status) ?? $noteTo);
+
+                    if ($toStatus) {
+                        $style = $statusStyle[$toStatus] ?? $neutralStyle;
+                        $actionTitle = $statusLabels[$toStatus];
+                        if ($toStatus === 'in_progress' && $fromCode === 'on_hold') {
+                            $actionTitle = 'ดำเนินการต่อ (ยกเลิกการหยุดซ่อมชั่วคราว)';
+                        }
+                    } else {
+                        $event = $eventStyle[$action] ?? null;
+                        $style = $event ?? $neutralStyle;
+                        $actionTitle = $event['title'] ?? 'อัปเดตรายการ';
+                    }
+
+                    // Say where the status came from in words — only when there really was a previous status.
+                    $fromText = ($toStatus && $fromCode && $fromCode !== $toStatus) ? $statusLabels[$fromCode] : null;
+
+                    // "Created" already says it; do not repeat the same sentence as a note.
+                    if ($isCreate && str_starts_with($actualNote, 'สร้างใบแจ้งซ่อมใหม่')) {
+                        $actualNote = '';
+                    }
+
+                    // Time spent in this state = until the next log in chronological order
                     $chronoIndex = $logsChronological->search(fn($l) => $l->id === $log->id);
                     $nextLog = $logsChronological->get($chronoIndex + 1);
-                    $durationText = null;
-                    
-                    if ($nextLog) {
-                        $diffSeconds = (int) $log->created_at->diffInSeconds($nextLog->created_at);
-                        $durationText = formatDurationThai($diffSeconds);
-                    } elseif ($log->created_at->diffInHours(now()) < 8760) { // If it's the latest log, show time since then if relevant
-                         // Optional: show "กำลังดำเนินการมาแล้ว..."
-                    }
-
-                    $dotColor = match($toStatus) {
-                        'pending'      => 'bg-amber-400',
-                        'acknowledged' => 'bg-blue-400',
-                        'accepted'     => 'bg-indigo-400',
-                        'in_progress'  => 'bg-sky-500',
-                        'on_hold'      => 'bg-rose-400',
-                        'resolved'     => 'bg-emerald-500',
-                        'closed'       => 'bg-emerald-700',
-                        'cancelled'    => 'bg-slate-400',
-                        default        => 'bg-slate-300'
-                    };
-
-                    $icon = match($log->action) {
-                        'create_request' => 'add_circle',
-                        'assign_technician' => 'person_add',
-                        'transition' => match($toStatus) {
-                            'on_hold' => 'pause_circle',
-                            'in_progress' => 'directions_run',
-                            'resolved' => 'task_alt',
-                            'closed' => 'verified',
-                            'cancelled' => 'cancel',
-                            default => 'sync'
-                        },
-                        default => 'info'
-                    };
-
-                    // Translation Logic
-                    $fromLabel = $log->from_status ? ($statusLabels[strtolower($log->from_status)] ?? $log->from_status) : 'เริ่มต้น';
-                    $toLabel = $log->to_status ? ($statusLabels[strtolower($log->to_status)] ?? $log->to_status) : '-';
-                    $actorName = $log->user->name ?? 'ระบบ';
-
-                    // Parse and extract the actual note (removing the English prefix if it exists)
-                    $displayNote = $log->note;
-                    $actualNote = '';
-                    
-                    if (preg_match('/^\[(.*?) -> (.*?)\](.*)$/', $displayNote, $matches)) {
-                        $actualNote = trim($matches[3]);
-                    } elseif (!str_starts_with($displayNote, '[')) {
-                        $actualNote = trim($displayNote);
-                    }
-
-                    // Determine clear Action Title based on standard system language
-                    $actionTitle = $statusLabels[$toStatus] ?? 'อัปเดตสถานะ';
-                    if ($toStatus === 'in_progress' && strtolower((string)$log->from_status) === 'on_hold') {
-                        $actionTitle = 'ดำเนินการต่อ (ยกเลิกการหยุดซ่อมชั่วคราว)';
-                    }
-                    if ($log->action === 'create_request') {
-                        $actionTitle = 'สร้างใบแจ้งซ่อมใหม่ (เข้าระบบ)';
-                    }
-                    if ($log->action === 'assign_technician') {
-                        $actionTitle = 'มอบหมายเจ้าหน้าที่ผู้รับผิดชอบ';
-                    }
-
-                    // Label for the duration type
+                    $durationText = $nextLog
+                        ? trim(formatDurationThai((int) $log->created_at->diffInSeconds($nextLog->created_at)))
+                        : null;
                     $isHold = ($toStatus === 'on_hold');
-                    $durationLabel = $isHold ? 'หยุดซ่อมชั่วคราว: ' : 'ใช้เวลา: ';
-                    $durationClass = $isHold 
-                        ? 'text-rose-600 bg-rose-50 border-rose-100' 
-                        : 'text-amber-600 bg-amber-50 border-amber-100';
+
+                    $actorName = $log->user->name ?? 'ระบบ';
                 @endphp
 
-                <div class="relative">
-                    {{-- Timeline Dot --}}
-                    <div class="absolute -left-[45px] top-0 flex h-8 w-8 items-center justify-center rounded-full bg-white border-2 border-slate-50 z-10">
-                        <span class="material-symbols-outlined text-[18px] {{ str_replace('bg-', 'text-', $dotColor) }}">
-                            {{ $icon }}
-                        </span>
-                    </div>
+                <li class="relative pl-[52px]">
+                    @unless($loop->last)
+                        <span class="absolute left-[17px] top-[18px] -bottom-5 w-0.5 bg-slate-200" aria-hidden="true"></span>
+                    @endunless
 
-                    {{-- Content Card --}}
-                    <div class="bg-slate-50/50 rounded-lg p-4 border border-slate-200 hover:border-indigo-200 hover:bg-white transition-all group">
-                        <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
-                            <div class="flex flex-col">
-                                <span class="text-sm font-bold text-slate-800">
-                                    {{ $actionTitle }}
-                                </span>
-                                @if($actualNote !== '')
-                                    <span class="text-[13px] text-slate-600 mt-1.5 pl-2.5 border-l-[3px] border-indigo-200">
-                                        {{ $actualNote }}
-                                    </span>
+                    {{-- Dot --}}
+                    <span class="absolute left-0 top-0 z-10 flex h-9 w-9 items-center justify-center rounded-full ring-4 ring-white {{ $style['dot'] }}">
+                        <span class="material-symbols-outlined text-[20px]">{{ $style['icon'] }}</span>
+                    </span>
+
+                    {{-- Card --}}
+                    <div class="rounded-xl border border-slate-200 bg-white p-[16px]">
+                        <div class="flex flex-wrap items-start justify-between gap-x-[12px] gap-y-1">
+                            <div class="min-w-0">
+                                <div class="text-[14px] font-semibold leading-snug text-slate-900">{{ $actionTitle }}</div>
+                                @if($fromText)
+                                    <div class="mt-0.5 text-[12px] text-slate-500">
+                                        เปลี่ยนจาก <span class="font-medium text-slate-700">{{ $fromText }}</span>
+                                    </div>
                                 @endif
                             </div>
-                            <div class="flex flex-col items-end gap-1.5">
-                                @if($durationText)
-                                    <span class="text-[10px] font-bold {{ $durationClass }} px-2 py-0.5 rounded-full border flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-[12px]">{{ $isHold ? 'pause_circle' : 'schedule' }}</span>
-                                        {{ $durationLabel }}{{ $durationText }}
-                                    </span>
-                                @endif
-                                <span class="text-[11px] font-medium text-slate-400 bg-white px-2 py-0.5 rounded-full border border-slate-100">
-                                    {{ $log->created_at->format('d/m/Y H:i') }}
-                                </span>
-                            </div>
+                            <time class="whitespace-nowrap text-[12px] text-slate-500" datetime="{{ $log->created_at->toIso8601String() }}">
+                                {{ $log->created_at->format('d/m/Y H:i') }}
+                            </time>
                         </div>
-                        
-                        <div class="flex items-center gap-3">
-                            <div class="flex items-center gap-1.5 text-[12px] text-slate-600">
-                                <div class="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                                    {{ mb_substr($actorName, 0, 1) }}
-                                </div>
-                                <span>{{ $actorName }}</span>
+
+                        @if($actualNote !== '')
+                            <p class="mt-2 border-l-[3px] {{ $style['bar'] }} pl-[10px] text-[13px] leading-relaxed text-slate-600">{{ $actualNote }}</p>
+                        @endif
+
+                        <div class="mt-[12px] flex flex-wrap items-center justify-between gap-x-[12px] gap-y-1 border-t border-slate-100 pt-[12px]">
+                            <div class="flex min-w-0 items-center gap-2 text-[12px] text-slate-600">
+                                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[12px] font-semibold text-slate-600">{{ mb_substr($actorName, 0, 1) }}</span>
+                                <span class="truncate">{{ $actorName }}</span>
                             </div>
-                            
-                            @if($log->from_status || $log->to_status)
-                                <span class="text-slate-300 text-[10px]">•</span>
-                                <div class="flex items-center gap-1.5 text-[10px] bg-white px-2 py-0.5 rounded-md border border-slate-100">
-                                    <span class="text-slate-400 font-bold lowercase">{{ $fromLabel }}</span>
-                                    <span class="material-symbols-outlined text-[10px] text-slate-300">trending_flat</span>
-                                    <span class="text-indigo-600 font-bold lowercase">{{ $toLabel }}</span>
-                                </div>
+
+                            @if($durationText)
+                                <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium {{ $isHold ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-600' }}">
+                                    <span class="material-symbols-outlined text-[14px]">{{ $isHold ? 'pause_circle' : 'schedule' }}</span>
+                                    {{ $isHold ? 'หยุดซ่อมชั่วคราว' : 'อยู่ในสถานะนี้' }} {{ $durationText }}
+                                </span>
                             @endif
                         </div>
                     </div>
-                </div>
+                </li>
             @endforeach
-        </div>
+        </ol>
     @endif
 </div>
