@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 use App\Support\Toast;
 
 class UserController extends Controller
@@ -377,5 +378,40 @@ class UserController extends Controller
                 ->withInput()
                 ->with('toast', Toast::error('เกิดข้อผิดพลาดระหว่างอัพเดตข้อมูลผู้ใช้', 4000));
         }
+    }
+
+    /**
+     * ระงับบัญชี — แทนการลบ: ประวัติ (ใบแจ้งซ่อม, แชท, คะแนน, การมอบหมาย) อยู่ครบ
+     * แต่เข้าสู่ระบบไม่ได้และถูกมอบหมายงานใหม่ไม่ได้ เปิดใช้งานกลับได้ภายหลัง
+     */
+    public function suspend(User $user)
+    {
+        if ($user->id === Auth::id()) {
+            return back()->with('toast', Toast::error('ไม่สามารถระงับบัญชีของตัวเองได้', 3200));
+        }
+
+        if ($user->isSuspended()) {
+            return back()->with('toast', Toast::warning('บัญชีนี้ถูกระงับอยู่แล้ว', 2800));
+        }
+
+        $user->forceFill(['suspended_at' => now(), 'remember_token' => null])->save();
+        $user->tokens()->delete(); // API tokens stop working at once; web sessions end on their next request
+
+        Log::info('[Admin\UserController::suspend] account suspended', ['user_id' => $user->id, 'actor_id' => Auth::id()]);
+
+        return back()->with('toast', Toast::success("ระงับบัญชี {$user->name} แล้ว", 2800));
+    }
+
+    public function reactivate(User $user)
+    {
+        if (! $user->isSuspended()) {
+            return back()->with('toast', Toast::warning('บัญชีนี้ไม่ได้ถูกระงับ', 2800));
+        }
+
+        $user->forceFill(['suspended_at' => null])->save();
+
+        Log::info('[Admin\UserController::reactivate] account reactivated', ['user_id' => $user->id, 'actor_id' => Auth::id()]);
+
+        return back()->with('toast', Toast::success("เปิดใช้งานบัญชี {$user->name} แล้ว", 2800));
     }
 }

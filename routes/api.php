@@ -38,7 +38,7 @@ Route::prefix('auth')->name('auth.')->group(function () {
         ->name('password.reset');
 });
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/user', fn (Request $r) => $r->user());
 
     // Assets API

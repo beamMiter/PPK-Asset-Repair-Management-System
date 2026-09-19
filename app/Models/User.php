@@ -56,8 +56,20 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'suspended_at'      => 'datetime',
             'password'          => 'hashed',
         ];
+    }
+
+    /** Suspended = keeps all history, cannot sign in or be assigned new work (see EnsureAccountIsActive). */
+    public function isSuspended(): bool
+    {
+        return $this->suspended_at !== null;
+    }
+
+    public function scopeActive($q)
+    {
+        return $q->whereNull('suspended_at');
     }
 
     // งานที่ User คนนี้ถูกมอบหมาย (ผ่านตาราง Assignment)

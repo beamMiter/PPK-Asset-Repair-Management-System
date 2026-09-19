@@ -174,6 +174,8 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/', [AdminUserController::class, 'store'])->name('store');
             Route::get('/{user}/edit', [AdminUserController::class, 'edit'])->name('edit');
             Route::put('/{user}', [AdminUserController::class, 'update'])->name('update');
+            Route::patch('/{user}/suspend', [AdminUserController::class, 'suspend'])->name('suspend');
+            Route::patch('/{user}/reactivate', [AdminUserController::class, 'reactivate'])->name('reactivate');
         });
     });
 

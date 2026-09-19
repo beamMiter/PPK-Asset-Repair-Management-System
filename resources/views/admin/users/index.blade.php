@@ -180,7 +180,11 @@
 
                                     <div class="min-w-0">
                                         <div class="truncate max-w-[220px] font-semibold text-slate-900">
-                                            {{ $u->name }}</div>
+                                            {{ $u->name }}
+                                            @if ($u->isSuspended())
+                                                <span class="ml-1 rounded-full bg-amber-50 px-2 py-0.5 align-middle text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200">ระงับ</span>
+                                            @endif
+                                        </div>
                                         <div class="text-[11px] text-slate-500">#{{ $u->id }}</div>
                                     </div>
                                 </div>
@@ -209,6 +213,32 @@
                                         <span class="material-symbols-outlined ms text-[15px] leading-none text-emerald-600">edit</span>
                                         แก้ไข
                                     </a>
+
+                                    @if ($u->id !== auth()->id())
+                                        @if ($u->isSuspended())
+                                            <form method="POST" action="{{ route('admin.users.reactivate', $u) }}" class="inline"
+                                                onsubmit="return confirm(@js('เปิดใช้งานบัญชี '.$u->name.' อีกครั้ง?'));">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit"
+                                                    class="inline-flex items-center gap-1.5 rounded-md border border-sky-300 bg-white px-3 py-1.5 text-[12px] font-medium text-sky-700 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500/30">
+                                                    <span class="material-symbols-outlined ms text-[15px] leading-none text-sky-600">lock_open</span>
+                                                    เปิดใช้งาน
+                                                </button>
+                                            </form>
+                                        @else
+                                            <form method="POST" action="{{ route('admin.users.suspend', $u) }}" class="inline"
+                                                onsubmit="return confirm(@js('ระงับบัญชี '.$u->name.' ? ผู้ใช้จะเข้าสู่ระบบไม่ได้ แต่ประวัติทั้งหมดยังอยู่ และเปิดใช้งานกลับได้'));">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit"
+                                                    class="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-white px-3 py-1.5 text-[12px] font-medium text-amber-700 hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500/30">
+                                                    <span class="material-symbols-outlined ms text-[15px] leading-none text-amber-600">block</span>
+                                                    ระงับ
+                                                </button>
+                                            </form>
+                                        @endif
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -255,7 +285,11 @@
                             @endif
                         </div>
                         <div class="min-w-0 flex-1">
-                            <div class="font-semibold text-slate-900 truncate">{{ $u->name }}</div>
+                            <div class="font-semibold text-slate-900 truncate">{{ $u->name }}
+                                @if ($u->isSuspended())
+                                    <span class="ml-1 rounded-full bg-amber-50 px-2 py-0.5 align-middle text-[11px] font-semibold text-amber-700 ring-1 ring-amber-200">ระงับ</span>
+                                @endif
+                            </div>
                             <div class="text-[12px] text-slate-500 truncate">{{ $u->email }}</div>
                             <div class="text-[11px] text-slate-400">#{{ $u->id }}</div>
                         </div>
@@ -274,6 +308,32 @@
                             <span class="material-symbols-outlined ms text-[15px] leading-none text-emerald-600">edit</span>
                             แก้ไข
                         </a>
+
+                        @if ($u->id !== auth()->id())
+                            @if ($u->isSuspended())
+                                <form method="POST" action="{{ route('admin.users.reactivate', $u) }}" class="inline"
+                                    onsubmit="return confirm(@js('เปิดใช้งานบัญชี '.$u->name.' อีกครั้ง?'));">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit"
+                                        class="inline-flex items-center gap-1.5 rounded-md border border-sky-300 bg-white px-3 py-1.5 text-[12px] font-medium text-sky-700 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500/30">
+                                        <span class="material-symbols-outlined ms text-[15px] leading-none text-sky-600">lock_open</span>
+                                        เปิดใช้งาน
+                                    </button>
+                                </form>
+                            @else
+                                <form method="POST" action="{{ route('admin.users.suspend', $u) }}" class="inline"
+                                    onsubmit="return confirm(@js('ระงับบัญชี '.$u->name.' ? ผู้ใช้จะเข้าสู่ระบบไม่ได้ แต่ประวัติทั้งหมดยังอยู่ และเปิดใช้งานกลับได้'));">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit"
+                                        class="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-white px-3 py-1.5 text-[12px] font-medium text-amber-700 hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500/30">
+                                        <span class="material-symbols-outlined ms text-[15px] leading-none text-amber-600">block</span>
+                                        ระงับ
+                                    </button>
+                                </form>
+                            @endif
+                        @endif
                     </div>
                 </div>
             @empty

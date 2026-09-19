@@ -45,6 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
         | Sidebar intro ต้องอยู่ตรงนี้เท่านั้น
         */
         $middleware->web(append: [
+            \App\Http\Middleware\EnsureAccountIsActive::class,
             PlaySidebarIntroOnce::class,
         ]);
 
@@ -67,6 +68,7 @@ return Application::configure(basePath: dirname(__DIR__))
         */
         $middleware->alias([
             'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
+            'active'   => \App\Http\Middleware\EnsureAccountIsActive::class,
         ]);
     })
 

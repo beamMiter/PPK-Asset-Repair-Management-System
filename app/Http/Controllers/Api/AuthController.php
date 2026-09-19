@@ -60,6 +60,14 @@ class AuthController extends Controller
             ], Response::HTTP_UNAUTHORIZED);
         }
 
+        if ($user->isSuspended()) {
+            RateLimiter::hit($key, 60);
+            return response()->json([
+                'message' => \App\Http\Middleware\EnsureAccountIsActive::MESSAGE,
+                'code'    => 'account_suspended',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
         RateLimiter::clear($key);
 
         $device    = $data['device_name'] ?? ('api-'.Str::random(6));
