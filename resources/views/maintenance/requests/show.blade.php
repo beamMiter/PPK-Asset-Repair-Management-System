@@ -724,10 +724,6 @@
                 <div class="px-6 py-6 max-h-[60vh] overflow-y-auto bg-white custom-scrollbar-indigo">
                     @include('maintenance.requests.partials._timeline')
                 </div>
-
-                <div class="flex justify-end border-t {{ $line }} px-6 py-4 bg-slate-50/50">
-                    <x-ui.button id="cancelHistoryModalBtn">ปิดหน้าต่าง</x-ui.button>
-                </div>
             </div>
         </div>
 
@@ -1180,7 +1176,6 @@
             const historyModal = document.getElementById('historyModal');
             const openHistoryBtn = document.getElementById('openHistoryModalBtn');
             const closeHistoryBtn = document.getElementById('closeHistoryModalBtn');
-            const cancelHistoryBtn = document.getElementById('cancelHistoryModalBtn');
 
             if (historyModal && openHistoryBtn) {
                 const showHistory = () => {
@@ -1195,7 +1190,6 @@
                 };
                 openHistoryBtn.addEventListener('click', showHistory);
                 closeHistoryBtn?.addEventListener('click', hideHistory);
-                cancelHistoryBtn?.addEventListener('click', hideHistory);
                 historyModal.addEventListener('click', e => {
                     if (e.target === historyModal) hideHistory();
                 });
