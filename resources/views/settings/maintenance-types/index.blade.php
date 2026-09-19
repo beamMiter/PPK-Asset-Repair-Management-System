@@ -51,7 +51,7 @@
                             <span x-text="showFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรอง'"></span>
                         </button>
 
-                        <x-ui.button :href="route('settings.maintenance-types.create')" variant="primary" icon="add">เพิ่มประเภท</x-ui.button>
+                        <x-ui.button :href="route('settings.maintenance-types.create')" variant="primary" icon="add" onclick="showLoader()">เพิ่มประเภท</x-ui.button>
                     </div>
                 </div>
 
@@ -157,21 +157,29 @@
                             </td>
                             <td class="p-3 text-slate-700">{{ $t->description ?: '—' }}</td>
                             <td class="p-3 text-center">{!! $statusText($isActive) !!}</td>
-                            <td class="p-3 text-center whitespace-nowrap">
-                                <a href="{{ route('settings.maintenance-types.edit', $t->id) }}" class="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-700 hover:bg-slate-50
-                                     focus:outline-none focus:ring-2 focus:ring-[{{ $primary }}]/25">
-                                    แก้ไข
-                                </a>
+                            <td class="p-3 text-center align-middle whitespace-nowrap">
+                                {{-- Same row-action look as the assets / requests / users lists: outlined edit (emerald) + outlined destructive (rose), each with an icon --}}
+                                <div class="inline-flex items-center justify-center gap-2">
+                                    <a href="{{ route('settings.maintenance-types.edit', $t->id) }}"
+                                        class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-[12px] font-medium text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                                        onclick="showLoader()">
+                                        <span
+                                            class="material-symbols-outlined ms text-[15px] leading-none text-emerald-600">edit</span>
+                                        แก้ไข
+                                    </a>
 
-                                <form method="POST" action="{{ route('settings.maintenance-types.destroy', $t->id) }}"
-                                    class="inline" onsubmit="return confirm('ยืนยันปิดใช้งานประเภทนี้?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="inline-flex items-center justify-center rounded-md bg-rose-600 px-3 py-1.5 text-[12px] font-medium text-white hover:bg-rose-700
-                                        focus:outline-none focus:ring-2 focus:ring-rose-400/40">
-                                        ปิดใช้งาน
-                                    </button>
-                                </form>
+                                    <form method="POST" action="{{ route('settings.maintenance-types.destroy', $t->id) }}"
+                                        class="inline" onsubmit="return confirm('ยืนยันปิดใช้งานประเภทนี้?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                            class="inline-flex items-center gap-1.5 rounded-md border border-rose-300 bg-white px-3 py-1.5 text-[12px] font-medium text-rose-600 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30">
+                                            <span
+                                                class="material-symbols-outlined ms text-[15px] leading-none text-rose-500">block</span>
+                                            ปิดใช้งาน
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     @empty

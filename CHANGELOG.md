@@ -41,6 +41,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from a CDN whose `!important` `.px-4` / `.px-5` / `.gap-3`… override Tailwind's same-named classes, so
   the shared button uses `px-[16px]`-style values that Bootstrap has no twin for.
   Row-level "ดูรายละเอียด / แก้ไข" links in tables and the round search buttons are unchanged.
+  The maintenance-types list was the odd one out (grey "แก้ไข", solid red "ปิดใช้งาน", no icons); its row actions now
+  match the other lists (outlined emerald edit + outlined rose disable, each with an icon).
 - **Request history dialog:** the header now matches the assign-team dialog (plain 36px icon, 16px title, 13px
   subtitle) and the footer "ปิดหน้าต่าง" button is gone (× or a click outside closes it). The timeline cards were redesigned: every status has its own icon (resolved and approved no longer
   share look-alike ticks — approval is a filled paper-with-tick), the "เริ่มต้น -> x" chip is replaced by
