@@ -195,26 +195,19 @@
                         <x-ui.button id="openCancelModalBtn" variant="neutral" icon="cancel" split>ยกเลิกการซ่อมบำรุง</x-ui.button>
                     @endif
 
-                    <div class="ml-2 flex items-center gap-2">
+                    {{-- Tools + navigation, same order as the asset page: actions first, กลับ last.
+                         Direct children of the row above so every gap is the same gap-2. --}}
+                    @if ($canUpdate)
+                        <x-ui.button :href="route('maintenance.requests.edit', $req->id)" icon="edit">แก้ไข</x-ui.button>
+                    @endif
 
+                    <x-ui.button :href="route('maintenance.requests.work-order', $req->id)" target="_blank" icon="print">พิมพ์ PDF</x-ui.button>
 
-                        {{-- Nav buttons --}}
-                        <x-ui.back-button :fallback="route('maintenance.requests.index')" />
+                    <x-ui.button id="openHistoryModalBtn" size="square" icon="history"
+                        title="ดูประวัติการดำเนินงานและ Operation Log ทั้งหมด"
+                        aria-label="ดูประวัติการดำเนินงานและ Operation Log ทั้งหมด" />
 
-                        @if ($canUpdate)
-                            <x-ui.button :href="route('maintenance.requests.edit', $req->id)" icon="edit">แก้ไข</x-ui.button>
-                        @endif
-
-                        <x-ui.button :href="route('maintenance.requests.work-order', $req->id)" target="_blank" icon="print">พิมพ์ PDF</x-ui.button>
-                    </div>
-
-                    {{-- History Button (Circular) - Moved to far right --}}
-                    <div class="ml-2">
-
-                        <x-ui.button id="openHistoryModalBtn" size="square" icon="history"
-                            title="ดูประวัติการดำเนินงานและ Operation Log ทั้งหมด"
-                            aria-label="ดูประวัติการดำเนินงานและ Operation Log ทั้งหมด" />
-                    </div>
+                    <x-ui.back-button :fallback="route('maintenance.requests.index')" />
                 </div>
             </div>
 
