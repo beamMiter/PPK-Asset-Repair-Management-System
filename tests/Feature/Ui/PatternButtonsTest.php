@@ -80,7 +80,7 @@ class PatternButtonsTest extends TestCase
         $html = $this->actingAs($this->admin())->get(route('settings.notifications.index'))->assertOk()->getContent();
 
         $this->assertStringNotContainsString('<x-ui', $html);
-        foreach (['ทดสอบ', 'บันทึกการเลือก', 'เพิ่มเข้าคลังเสียง', 'ตั้งค่า'] as $label) {
+        foreach (['ทดสอบ', 'บันทึกการเลือก', 'ตั้งค่า'] as $label) {
             $this->assertMatchesRegularExpression('/<button[^>]*whitespace-nowrap select-none[^>]*>[^<]*(<span[^>]*>[^<]*<\/span>)?\s*'.preg_quote($label, '/').'\s*<\/button>/u', $html, $label);
         }
         // the save button keeps the page's navy (#0F2D5C), it is not the green of the form pages
@@ -88,8 +88,9 @@ class PatternButtonsTest extends TestCase
         $this->assertStringContainsString('onclick="previewSound()"', $html);
         $this->assertStringContainsString('@click="showConfig = !showConfig"', $html);
         $this->assertMatchesRegularExpression('/<select name="notification_sound"\s+class="[^"]*\bh-11\b/', $html);
-        // no leftover hand-made 40px / 52px buttons
+        // no leftover hand-made 40px buttons in the settings row
         $this->assertStringNotContainsString('h-10 items-center gap-2 rounded-md', $html);
-        $this->assertStringNotContainsString('py-3.5 rounded-lg', $html);
+        // "เพิ่มเข้าคลังเสียง" is deliberately NOT the shared button: it stays the full-width green bar of the drop zone
+        $this->assertMatchesRegularExpression('/<button type="submit"\s+class="w-full bg-\[#3d8b63\][^"]*py-3\.5 rounded-lg[^"]*">\s*เพิ่มเข้าคลังเสียง\s*<\/button>/u', $html);
     }
 }

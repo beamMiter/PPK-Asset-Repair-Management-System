@@ -80,8 +80,11 @@
                             </div>
                         </div>
 
-                        <div class="px-4 pb-4 flex justify-center">
-                            <x-ui.button type="submit" variant="primary" icon="upload">เพิ่มเข้าคลังเสียง</x-ui.button>
+                        <div class="px-4 pb-4">
+                            <button type="submit"
+                                class="w-full bg-[#3d8b63] hover:bg-[#2d6a4c] text-white py-3.5 rounded-lg text-[15px] font-semibold transition-colors border-none">
+                                เพิ่มเข้าคลังเสียง
+                            </button>
                         </div>
                     </div>
                 </form>
