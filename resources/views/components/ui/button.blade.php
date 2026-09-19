@@ -20,6 +20,7 @@
            sm        h-8 — dense spots: table rows, cards, inline helpers
            square    same height as md, square — icon-only next to inputs (attach file, camera)
            icon      h-8 w-8 round — icon-only, small (dialog close X). Icon-only buttons need `aria-label`
+           icon-lg   h-10 w-10 round, 24px icon — icon-only tools that should read at a glance (chat thread header)
   icon     Material Symbols name shown before the label
   split    with `icon`: put the icon in a darker block on the left (the form-submit look)
 
@@ -52,8 +53,9 @@
         'sm'     => 'h-8 rounded-md text-[12px]',
         'square' => 'h-11 w-11 shrink-0 rounded-md text-[13px]',
         'icon'   => 'h-8 w-8 shrink-0 rounded-full text-[13px]',
+        'icon-lg' => 'h-10 w-10 shrink-0 rounded-full text-[13px]',
     ];
-    $pads = ['md' => 'px-[16px]', 'sm' => 'px-[12px]', 'square' => '', 'icon' => ''];
+    $pads = ['md' => 'px-[16px]', 'sm' => 'px-[12px]', 'square' => '', 'icon' => '', 'icon-lg' => ''];
 
     $variants = [
         'primary'        => 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-200',
@@ -69,7 +71,7 @@
     ];
 
     $size = isset($sizes[$size]) ? $size : 'md';
-    $iconSize = $size === 'sm' ? 'text-[16px]' : 'text-[18px]';
+    $iconSize = ['sm' => 'text-[16px]', 'icon-lg' => 'text-[24px]'][$size] ?? 'text-[18px]';
 
     $classes = implode(' ', array_filter([
         $base,

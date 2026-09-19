@@ -44,7 +44,7 @@ class ButtonComponentTest extends TestCase
 
     public function test_every_page_button_size_shares_the_field_height(): void
     {
-        foreach (['md' => 'h-11', 'sm' => 'h-8', 'square' => 'h-11 w-11', 'icon' => 'h-8 w-8'] as $size => $expected) {
+        foreach (['md' => 'h-11', 'sm' => 'h-8', 'square' => 'h-11 w-11', 'icon' => 'h-8 w-8', 'icon-lg' => 'h-10 w-10'] as $size => $expected) {
             $this->assertStringContainsString($expected, $this->render("<x-ui.button size=\"$size\">x</x-ui.button>"), $size);
         }
         // an unknown size falls back to the standard one instead of rendering an unstyled button
