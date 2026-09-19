@@ -21,10 +21,29 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   scripts came back as HTML). It picks the first free port itself; HMR follows it. `VITE_PORT`
   still sets the starting port.
 
+### Added
+
+- **Shared UI components** (`resources/views/components/ui/`): `<x-ui.button>` (variant × size, one
+  place to change a colour or height), `<x-ui.back-button>`, `<x-ui.form-actions>` (the cancel + save
+  row), `<x-ui.section-head>` (numbered form section heading), and `.ui-input` / `.ui-textarea` /
+  `.ui-label` / `.ui-hint` / `.ui-error` field classes in `app.css`.
+
 ### Changed
 
 - Header icons restored on the request list, assets, chat, users, maintenance-types and
   notification-settings pages (Material Symbols, same style as My Jobs).
+- **Buttons and form fields look the same on every create / edit page** (assets, maintenance requests,
+  users, maintenance types, profile), on the technician request-detail page and on the list-page
+  "create" buttons: one 44px height (the same as a field), one corner radius, one weight. Colours that
+  carry meaning (reject = red, hold = amber, cancel = grey, accept = blue) are kept as variants. The
+  two indigo "save" buttons in the assign-team dialog are now the standard green.
+  Row-level "ดูรายละเอียด / แก้ไข" links in tables and the round search buttons are unchanged.
+
+### Removed
+
+- Unused files: `components/_form-standard.blade.php` (a template with `{{ page_title }}`
+  placeholders), `maintenance/requests/partials/_form_submit.blade.php` and
+  `_form_operation_log.blade.php` (nothing included them).
 
 ## [2.0.0] - 2026-09-10
 
