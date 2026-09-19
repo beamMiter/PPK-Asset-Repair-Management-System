@@ -82,25 +82,13 @@ style="display: none;"
             </div>
         </div>
         
-        <div class="bg-slate-50/80 px-6 py-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-            <button 
-                @click="cancel()"
-                type="button" 
-                class="inline-flex justify-center rounded-xl px-4 py-2.5 text-[14px] font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all duration-200"
-                x-text="cancelText"
-            ></button>
-            <button 
-                @click="confirm()"
-                type="button" 
-                class="inline-flex justify-center rounded-xl px-6 py-2.5 text-[14px] font-semibold text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2"
-                :class="{
-                    'bg-[#0F2D5C] hover:bg-[#133A73] focus:ring-[#0F2D5C]/50': variant === 'primary',
-                    'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500/50': variant === 'danger',
-                    'bg-amber-500 hover:bg-amber-600 focus:ring-amber-500/50': variant === 'warning',
-                    'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500/50': variant === 'success'
-                }"
-                x-text="confirmText"
-            ></button>
+        <div class="bg-slate-50/80 px-6 py-4 flex flex-wrap items-center justify-end gap-[12px]">
+            {{-- Shared buttons (44px). The confirm colour follows the `variant` the caller passes to Confirm.show() --}}
+            <x-ui.button @click="cancel()" x-text="cancelText" />
+            <template x-if="variant === 'primary'"><x-ui.button variant="brand" @click="confirm()" x-text="confirmText" /></template>
+            <template x-if="variant === 'danger'"><x-ui.button variant="danger" @click="confirm()" x-text="confirmText" /></template>
+            <template x-if="variant === 'warning'"><x-ui.button variant="warning" @click="confirm()" x-text="confirmText" /></template>
+            <template x-if="variant === 'success'"><x-ui.button variant="primary" @click="confirm()" x-text="confirmText" /></template>
         </div>
     </div>
 </div>

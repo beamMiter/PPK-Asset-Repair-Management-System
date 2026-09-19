@@ -23,7 +23,7 @@
                 <div class="flex flex-wrap items-center gap-2 mt-2 md:mt-0" x-data="{ showSignModal: false }">
                     {{-- Filter Toggle (Mobile Only) --}}
                     <button type="button" @click="showFilters = !showFilters"
-                        class="md:hidden inline-flex items-center gap-1.5 h-10 px-4 rounded-md border text-[13px] font-medium transition-colors"
+                        class="md:hidden inline-flex items-center gap-1.5 h-11 px-4 rounded-md border text-[13px] font-medium transition-colors"
                         :class="showFilters ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'">
                         <span class="material-symbols-outlined text-[16px]">filter_list</span>
                         <span x-text="showFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรอง'"></span>
@@ -614,6 +614,7 @@
                                 </p>
                             </div>
                             <div class="flex items-center gap-2">
+                                @can('manage-system')
                                 <a href="{{ route('settings.maintenance-types.index') }}"
                                     class="inline-flex items-center overflow-hidden rounded border border-slate-200 bg-white text-[13px] font-bold text-slate-700 hover:bg-slate-50 transition-all group active:scale-95">
                                     <span
@@ -622,6 +623,7 @@
                                     </span>
                                     <span class="px-3 py-2 leading-none">จัดการประเภทงาน</span>
                                 </a>
+                                @endcan
                                 <button type="submit"
                                     :class="isEdited ? 'bg-amber-500 hover:bg-amber-600' : 'bg-[#0F2D5C] hover:bg-[#0F2D5C]/90'"
                                     class="inline-flex items-center overflow-hidden rounded text-[13px] font-bold text-white transition-all group active:scale-95">

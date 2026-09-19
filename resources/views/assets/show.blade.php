@@ -7,20 +7,6 @@
     $createMrUrl = route('maintenance.requests.create', ['asset_id' => $assetKey]);
     $mrListRoute = route('maintenance.requests.index', ['asset_id' => $assetKey]);
 
-    // LITERALLY exactly the identical CSS as $input in edit.blade.php, but adding disabled:bg-slate-50
-    $input = "mt-2 w-full h-11 rounded-md border $line bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 outline-none transition-all disabled:bg-slate-50 disabled:text-slate-700 disabled:cursor-default";
-    $textarea = "mt-2 w-full rounded-md border $line bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 outline-none disabled:bg-slate-50 disabled:text-slate-700 disabled:cursor-default";
-
-    $headCls = 'flex items-start gap-3 pb-3 min-h-[56px]';
-    $noCls =
-        'w-8 h-8 shrink-0 rounded-full border border-emerald-600 bg-emerald-600 flex items-center justify-center text-sm font-bold text-white leading-none';
-    $titleCls = 'text-base font-semibold text-slate-900 leading-tight';
-    $subCls = 'text-sm text-slate-500 leading-snug';
-    $accentWrap = 'min-w-0 relative pl-3 pt-[1px]';
-    $accentBar = 'absolute left-0 top-[2px] w-[3px] h-9 rounded-full bg-emerald-600/90';
-    $labelCls = 'block text-sm font-medium text-slate-700 mb-1';
-    $hintCls = 'ml-1 text-[11px] text-slate-500 font-normal italic';
-
     // Policy check (will implement AssetPolicy shortly)
     $canUpdate = Gate::allows('update', $asset);
 @endphp
@@ -73,25 +59,11 @@
 
                 {{-- RIGHT --}}
                 <div class="flex flex-wrap items-center justify-start sm:justify-end gap-2">
-                    <a href="{{ $createMrUrl }}"
-                        class="inline-flex items-center h-9 gap-1.5 rounded-md border border-transparent bg-emerald-600 px-4 text-[13px] font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all">
-                        <span class="material-symbols-outlined ms text-[18px] leading-none">add</span>
-                        สร้างคำขอซ่อมใหม่
-                    </a>
+                    <x-ui.button variant="primary" :href="$createMrUrl" icon="add">สร้างคำขอซ่อมใหม่</x-ui.button>
                     @if ($canUpdate)
-                        <a href="{{ route('assets.edit', $asset) }}"
-                            class="inline-flex items-center gap-1.5 rounded-md border {{ $line }} bg-white px-4 h-9 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-all">
-                            <span class="material-symbols-outlined ms text-[16px] leading-none text-slate-500">edit</span>
-                            แก้ไข
-                        </a>
+                        <x-ui.button :href="route('assets.edit', $asset)" icon="edit">แก้ไข</x-ui.button>
                     @endif
-                    <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('assets.index') }}"
-                        class="inline-flex items-center h-9 gap-2 rounded-md border {{ $line }} bg-white px-4 text-[13px] font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        กลับ
-                    </a>
+                    <x-ui.back-button :fallback="route('assets.index')" />
                 </div>
             </div>
             </form>
@@ -111,37 +83,30 @@
 
                         {{-- STEP 1: ข้อมูลหลัก --}}
                         <section>
-                            <div class="{{ $headCls }}">
-                                <div class="{{ $noCls }}">1</div>
-                                <div class="{{ $accentWrap }}">
-                                    <span class="{{ $accentBar }}"></span>
-                                    <div class="{{ $titleCls }}">ข้อมูลหลัก</div>
-                                    <div class="{{ $subCls }}">ชื่อ รหัส และการเชื่อมต่อ HIS</div>
-                                </div>
-                            </div>
+                            <x-ui.section-head no="1" title="ข้อมูลหลัก" subtitle="ชื่อ รหัส และการเชื่อมต่อ HIS" />
 
                             <div class="space-y-5 pt-1">
                                 <div>
-                                    <label class="{{ $labelCls }}">ชื่อครุภัณฑ์ <span
+                                    <label class="ui-label">ชื่อครุภัณฑ์ <span
                                             class="text-rose-600 font-bold">*</span></label>
-                                    <input type="text" class="{{ $input }} !bg-white"
+                                    <input type="text" class="ui-input !bg-white"
                                         value="{{ $asset->name ?? '' }}" readonly>
                                 </div>
                                 <div>
-                                    <label class="{{ $labelCls }}">รหัสครุภัณฑ์ <span
+                                    <label class="ui-label">รหัสครุภัณฑ์ <span
                                             class="text-rose-600 font-bold">*</span></label>
-                                    <input type="text" class="{{ $input }} !bg-white"
+                                    <input type="text" class="ui-input !bg-white"
                                         value="{{ $asset->asset_code ?? '' }}" readonly>
                                 </div>
                                 <div>
-                                    <label class="{{ $labelCls }}">ประเภท <span class="{{ $hintCls }}">(Medical /
+                                    <label class="ui-label">ประเภท <span class="ui-hint">(Medical /
                                             IT / Office)</span></label>
-                                    <input type="text" class="{{ $input }} !bg-white"
+                                    <input type="text" class="ui-input !bg-white"
                                         value="{{ $asset->type ?? '' }}" readonly>
                                 </div>
                                 <div>
                                     <div class="flex items-center justify-between">
-                                        <label class="{{ $labelCls }}">เลข รพจ <span class="{{ $hintCls }}">(HIS
+                                        <label class="ui-label">เลข รพจ <span class="ui-hint">(HIS
                                                 ID)</span></label>
                                         @if ($asset->his_asset_id)
                                             <span
@@ -155,7 +120,7 @@
                                             </span>
                                         @endif
                                     </div>
-                                    <input type="text" class="{{ $input }} !mt-0 !bg-white"
+                                    <input type="text" class="ui-input !mt-0 !bg-white"
                                         value="{{ $asset->his_asset_id ?? '—' }}" readonly>
                                 </div>
                             </div>
@@ -163,42 +128,35 @@
 
                         {{-- STEP 2: รายละเอียดทางเทคนิค --}}
                         <section>
-                            <div class="{{ $headCls }}">
-                                <div class="{{ $noCls }}">2</div>
-                                <div class="{{ $accentWrap }}">
-                                    <span class="{{ $accentBar }}"></span>
-                                    <div class="{{ $titleCls }}">รายละเอียดทางเทคนิค</div>
-                                    <div class="{{ $subCls }}">ยี่ห้อ รุ่น Serial และที่ตั้ง</div>
-                                </div>
-                            </div>
+                            <x-ui.section-head no="2" title="รายละเอียดทางเทคนิค" subtitle="ยี่ห้อ รุ่น Serial และที่ตั้ง" />
 
                             <div class="space-y-5 pt-1">
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label class="{{ $labelCls }}">ยี่ห้อ</label>
-                                        <input type="text" class="{{ $input }} !bg-white"
+                                        <label class="ui-label">ยี่ห้อ</label>
+                                        <input type="text" class="ui-input !bg-white"
                                             value="{{ $asset->brand ?? '' }}" readonly>
                                     </div>
                                     <div>
-                                        <label class="{{ $labelCls }}">รุ่น</label>
-                                        <input type="text" class="{{ $input }} !bg-white"
+                                        <label class="ui-label">รุ่น</label>
+                                        <input type="text" class="ui-input !bg-white"
                                             value="{{ $asset->model ?? '' }}" readonly>
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="{{ $labelCls }}">Serial Number</label>
-                                    <input type="text" class="{{ $input }} !bg-white"
+                                    <label class="ui-label">Serial Number</label>
+                                    <input type="text" class="ui-input !bg-white"
                                         value="{{ $asset->serial_number ?? '' }}" readonly>
                                 </div>
                                 <div>
-                                    <label class="{{ $labelCls }}">เบอร์ติดต่อภายใน <span
-                                            class="{{ $hintCls }}">(ป้ายเหลือง)</span></label>
-                                    <input type="text" class="{{ $input }} !bg-white"
+                                    <label class="ui-label">เบอร์ติดต่อภายใน <span
+                                            class="ui-hint">(ป้ายเหลือง)</span></label>
+                                    <input type="text" class="ui-input !bg-white"
                                         value="{{ $asset->internal_phone ?? '' }}" readonly>
                                 </div>
                                 <div>
-                                    <label class="{{ $labelCls }}">ที่ตั้ง / ห้อง / สถานที่ใช้งาน</label>
-                                    <input type="text" class="{{ $input }} !bg-white"
+                                    <label class="ui-label">ที่ตั้ง / ห้อง / สถานที่ใช้งาน</label>
+                                    <input type="text" class="ui-input !bg-white"
                                         value="{{ $asset->location ?? '' }}" readonly>
                                 </div>
                             </div>
@@ -206,42 +164,35 @@
 
                         {{-- STEP 3: ข้อมูลการจัดซื้อ --}}
                         <section>
-                            <div class="{{ $headCls }}">
-                                <div class="{{ $noCls }}">3</div>
-                                <div class="{{ $accentWrap }}">
-                                    <span class="{{ $accentBar }}"></span>
-                                    <div class="{{ $titleCls }}">ข้อมูลการจัดซื้อ</div>
-                                    <div class="{{ $subCls }}">ผู้ขาย ราคา และวันจัดซื้อ</div>
-                                </div>
-                            </div>
+                            <x-ui.section-head no="3" title="ข้อมูลการจัดซื้อ" subtitle="ผู้ขาย ราคา และวันจัดซื้อ" />
 
                             <div class="space-y-5 pt-1">
                                 <div>
-                                    <label class="{{ $labelCls }}">ชื่อผู้ขาย / ตัวแทนจำหน่าย</label>
-                                    <input type="text" class="{{ $input }} !bg-white"
+                                    <label class="ui-label">ชื่อผู้ขาย / ตัวแทนจำหน่าย</label>
+                                    <input type="text" class="ui-input !bg-white"
                                         value="{{ $asset->vendor_name ?? '' }}" readonly>
                                 </div>
                                 <div>
-                                    <label class="{{ $labelCls }}">เบอร์ติดต่อผู้ขาย</label>
-                                    <input type="text" class="{{ $input }} !bg-white"
+                                    <label class="ui-label">เบอร์ติดต่อผู้ขาย</label>
+                                    <input type="text" class="ui-input !bg-white"
                                         value="{{ $asset->vendor_phone ?? '' }}" readonly>
                                 </div>
                                 <div>
-                                    <label class="{{ $labelCls }}">ราคาจัดซื้อ <span
-                                            class="{{ $hintCls }}">(บาท)</span></label>
-                                    <input type="text" class="{{ $input }} !bg-white"
+                                    <label class="ui-label">ราคาจัดซื้อ <span
+                                            class="ui-hint">(บาท)</span></label>
+                                    <input type="text" class="ui-input !bg-white"
                                         value="{{ $asset->formatted_price ?? '—' }}" readonly>
                                 </div>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label class="{{ $labelCls }}">วันที่จัดซื้อ</label>
-                                        <input type="text" class="{{ $input }} !bg-white"
+                                        <label class="ui-label">วันที่จัดซื้อ</label>
+                                        <input type="text" class="ui-input !bg-white"
                                             value="{{ optional($asset->purchase_date)->format('d/m/Y') ?? '—' }}"
                                             readonly>
                                     </div>
                                     <div>
-                                        <label class="{{ $labelCls }}">ประกันสิ้นสุด</label>
-                                        <input type="text" class="{{ $input }} !bg-white"
+                                        <label class="ui-label">ประกันสิ้นสุด</label>
+                                        <input type="text" class="ui-input !bg-white"
                                             value="{{ optional($asset->warranty_expire)->format('d/m/Y') ?? '—' }}"
                                             readonly>
                                     </div>
@@ -254,49 +205,35 @@
 
                         {{-- STEP 4: การจัดกลุ่ม & สถานะ --}}
                         <section>
-                            <div class="{{ $headCls }}">
-                                <div class="{{ $noCls }}">4</div>
-                                <div class="{{ $accentWrap }}">
-                                    <span class="{{ $accentBar }}"></span>
-                                    <div class="{{ $titleCls }}">หมวดหมู่ และสถานะ</div>
-                                    <div class="{{ $subCls }}">จัดกลุ่ม / ระบุเจ้าของ / สถานะ</div>
-                                </div>
-                            </div>
+                            <x-ui.section-head no="4" title="หมวดหมู่ และสถานะ" subtitle="จัดกลุ่ม / ระบุเจ้าของ / สถานะ" />
 
                             <div class="space-y-5 pt-1">
                                 <div>
-                                    <label class="{{ $labelCls }}">หมวดหมู่ครุภัณฑ์</label>
-                                    <input type="text" class="{{ $input }} !bg-white"
+                                    <label class="ui-label">หมวดหมู่ครุภัณฑ์</label>
+                                    <input type="text" class="ui-input !bg-white"
                                         value="{{ optional($asset->categoryRef)->name ?? '—' }}" readonly>
                                 </div>
                                 <div>
-                                    <label class="{{ $labelCls }}">หน่วยงานเจ้าของ</label>
-                                    <input type="text" class="{{ $input }} !bg-white"
+                                    <label class="ui-label">หน่วยงานเจ้าของ</label>
+                                    <input type="text" class="ui-input !bg-white"
                                         value="{{ optional($asset->department)->name_th ?? (optional($asset->department)->name_en ?? '—') }}"
                                         readonly>
                                 </div>
                                 <div>
-                                    <label class="{{ $labelCls }}">สถานะในระบบ</label>
-                                    <input type="text" class="{{ $input }} !bg-white font-bold"
+                                    <label class="ui-label">สถานะในระบบ</label>
+                                    <input type="text" class="ui-input !bg-white font-bold"
                                         value="{{ $asset->status_label ?? '—' }}" readonly>
                                 </div>
                                 <div>
-                                    <label class="{{ $labelCls }}">หมายเหตุเพิ่มเติม</label>
-                                    <textarea rows="5" class="{{ $textarea }} !bg-white" readonly>{{ $asset->note ?? '' }}</textarea>
+                                    <label class="ui-label">หมายเหตุเพิ่มเติม</label>
+                                    <textarea rows="5" class="ui-textarea !bg-white" readonly>{{ $asset->note ?? '' }}</textarea>
                                 </div>
                             </div>
                         </section>
 
                         {{-- STEP 5: รูปครุภัณฑ์ --}}
                         <section>
-                            <div class="{{ $headCls }}">
-                                <div class="{{ $noCls }}">5</div>
-                                <div class="{{ $accentWrap }}">
-                                    <span class="{{ $accentBar }}"></span>
-                                    <div class="{{ $titleCls }}">ภาพถ่ายครุภัณฑ์</div>
-                                    <div class="{{ $subCls }}">รูปภาพถ่ายของครุภัณฑ์</div>
-                                </div>
-                            </div>
+                            <x-ui.section-head no="5" title="ภาพถ่ายครุภัณฑ์" subtitle="รูปภาพถ่ายของครุภัณฑ์" />
 
                             <div class="space-y-4 pt-1">
                                 @php
@@ -320,14 +257,7 @@
 
                         {{-- STEP 6: ไฟล์แนบ --}}
                         <section>
-                            <div class="{{ $headCls }}">
-                                <div class="{{ $noCls }}">6</div>
-                                <div class="{{ $accentWrap }}">
-                                    <span class="{{ $accentBar }}"></span>
-                                    <div class="{{ $titleCls }}">ไฟล์แนบ</div>
-                                    <div class="{{ $subCls }}">เอกสาร คู่มือ หรืออื่นๆ</div>
-                                </div>
-                            </div>
+                            <x-ui.section-head no="6" title="ไฟล์แนบ" subtitle="เอกสาร คู่มือ หรืออื่นๆ" />
 
                             <div class="space-y-4 pt-1">
                                 @php $attached = $asset->attachments ?? collect(); @endphp
@@ -357,14 +287,7 @@
 
                     {{-- STEP 7: ประวัติการแจ้งซ่อมล่าสุด --}}
                     <section class="mt-12 pt-12 border-t {{ $line }}">
-                        <div class="{{ $headCls }}">
-                            <div class="{{ $noCls }}">7</div>
-                            <div class="{{ $accentWrap }}">
-                                <span class="{{ $accentBar }}"></span>
-                                <div class="{{ $titleCls }}">ประวัติการแจ้งซ่อมล่าสุด</div>
-                                <div class="{{ $subCls }}">รายการซ่อมล่าสุดของครุภัณฑ์ชิ้นนี้</div>
-                            </div>
-                        </div>
+                        <x-ui.section-head no="7" title="ประวัติการแจ้งซ่อมล่าสุด" subtitle="รายการซ่อมล่าสุดของครุภัณฑ์ชิ้นนี้" />
 
                         <div class="mt-6">
                             @if ($asset->maintenanceRequests && $asset->maintenanceRequests->count() > 0)

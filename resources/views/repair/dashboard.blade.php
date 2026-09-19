@@ -374,8 +374,14 @@
                             คน</span>
                     </div>
 
-                    {{-- Horizontal scroll row --}}
-                    <div class="flex gap-x-8 px-6 py-8 overflow-x-auto scrollbar-thin" style="scrollbar-width: thin;">
+                    {{-- Horizontal scroll row: drag it with the mouse, use the arrows, or swipe (see initHScrollers) --}}
+                    <div class="relative" data-hscroll>
+                        <x-ui.button variant="secondary" size="icon-lg" icon="chevron_left" data-hscroll-prev
+                            aria-label="เลื่อนไปทางซ้าย" class="hidden max-md:hidden absolute left-3 top-1/2 z-10 -translate-y-1/2" />
+                        <x-ui.button variant="secondary" size="icon-lg" icon="chevron_right" data-hscroll-next
+                            aria-label="เลื่อนไปทางขวา" class="hidden max-md:hidden absolute right-3 top-1/2 z-10 -translate-y-1/2" />
+
+                    <div data-hscroll-track class="flex gap-x-8 px-6 py-8 overflow-x-auto scrollbar-thin select-none" style="scrollbar-width: thin;">
                         @foreach ($techWorkload as $tech)
                             <a href="{{ route('repairs.my_jobs', ['tech' => $tech['id'], 'filter' => 'all']) }}"
                                 class="flex flex-col items-center gap-2.5 flex-shrink-0 group transition-all duration-300 hover:-translate-y-1"
@@ -413,6 +419,7 @@
                         @endforeach
                         {{-- Spacer to ensure right padding when scrolled to the end --}}
                         <div class="flex-shrink-0 w-4 h-1"></div>
+                    </div>
                     </div>
                 </section>
             @endif

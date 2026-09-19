@@ -14,8 +14,6 @@
 
     // Standard Styles
     $line = 'border-slate-200';
-    $input = "mt-2 w-full h-11 rounded-md border $line bg-white px-3 py-2 text-sm
-            focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 transition-all";
 @endphp
 
 <div class="space-y-10"> {{-- เว้นระยะห่างระหว่างแต่ละ Section --}}
@@ -45,7 +43,7 @@
                     ชื่อผู้ใช้ <span class="text-rose-500">*</span>
                 </label>
                 <input id="name" name="name" type="text" value="{{ old('name', $user->name) }}" required
-                    class="{{ $input }}">
+                    class="ui-input">
             </div>
 
             {{-- เลขบัตรประชาชน --}}
@@ -54,7 +52,7 @@
                     เลขบัตรประชาชน <span class="text-rose-500">*</span>
                 </label>
                 <input id="citizen_id" name="citizen_id" type="text" inputmode="numeric" maxlength="13"
-                    value="{{ old('citizen_id', $user->citizen_id) }}" required class="{{ $input }}">
+                    value="{{ old('citizen_id', $user->citizen_id) }}" required class="ui-input">
             </div>
 
             {{-- อีเมล (ปรับให้เต็มแถว เพื่อความสวยงาม) --}}
@@ -63,7 +61,7 @@
                     อีเมล (ถ้ามี)
                 </label>
                 <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}"
-                    class="{{ $input }}">
+                    class="ui-input">
             </div>
         </div>
     </div>
@@ -154,7 +152,7 @@
                     @endif
                 </label>
                 <input id="password" name="password" type="password" autocomplete="new-password"
-                    @if (!$isEdit) required @endif class="{{ $input }}">
+                    @if (!$isEdit) required @endif class="ui-input">
             </div>
 
             {{-- ยืนยันรหัสผ่าน --}}
@@ -164,7 +162,7 @@
                 </label>
                 <input id="password_confirmation" name="password_confirmation" type="password"
                     autocomplete="new-password" @if (!$isEdit) required @endif
-                    class="{{ $input }}">
+                    class="ui-input">
             </div>
         </div>
     </div>

@@ -13,7 +13,7 @@ class MaintenanceRequestTypePolicy
 
     protected function canManage(User $user): bool
     {
-        return $user->isAdmin() || $user->isSupervisor() || $user->isTechnician();
+        return $user->isAdmin();
     }
 
     public function viewAny(User $user): Response

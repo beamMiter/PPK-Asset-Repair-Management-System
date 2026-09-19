@@ -45,13 +45,7 @@
                 </div>
 
                 {{-- Back Button --}}
-                <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('admin.users.index') }}"
-                    class="inline-flex items-center h-9 gap-2 rounded-md border border-slate-200 bg-white px-4 text-[13px] font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
-                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    กลับ
-                </a>
+                <x-ui.back-button :fallback="route('admin.users.index')" />
 
             </div>
         </div>
@@ -88,17 +82,7 @@
             ])
 
             {{-- Action Buttons --}}
-            <div class="mt-8 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 border-t border-slate-200 pt-6">
-                <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('admin.users.index') }}"
-                    class="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all">
-                    ยกเลิก
-                </a>
-
-                <button type="submit"
-                    class="w-full sm:w-auto inline-flex items-center justify-center rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all">
-                    บันทึกข้อมูล
-                </button>
-            </div>
+            <x-ui.form-actions :cancel-href="url()->previous() !== url()->current() ? url()->previous() : route('admin.users.index')" />
         </form>
 
         {{-- Danger Zone --}}
@@ -125,15 +109,9 @@
                     onsubmit="return confirm('ยืนยันการลบผู้ใช้ {{ $user->name }} ? \nการกระทำนี้ไม่สามารถย้อนกลับได้');">
                     @csrf
                     @method('DELETE')
-                    <button type="submit"
-                        class="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-rose-200 bg-white px-5 py-2.5 text-sm font-medium text-rose-700 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-800 transition-all">
-                        <svg class="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
+                    <x-ui.button type="submit" variant="danger-outline" icon="delete">
                         ลบผู้ใช้
-                    </button>
+                    </x-ui.button>
                 </form>
             </div>
         </div>

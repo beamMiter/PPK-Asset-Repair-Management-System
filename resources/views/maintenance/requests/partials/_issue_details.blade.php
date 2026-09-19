@@ -42,15 +42,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <button type="submit"
-                        class="inline-flex items-center h-11 overflow-hidden rounded-md bg-emerald-600 text-[13px] font-bold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all active:scale-95 group shrink-0"
-                        title="บันทึกประเภท">
-                        <span
-                            class="px-2.5 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/10 h-full">
-                            <span class="material-symbols-outlined text-[17px]">check</span>
-                        </span>
-                        <span class="px-3 leading-none">บันทึก</span>
-                    </button>
+                    <x-ui.button type="submit" title="บันทึกประเภท" variant="primary" icon="check" split>บันทึก</x-ui.button>
                 </form>
             @else
                 <div

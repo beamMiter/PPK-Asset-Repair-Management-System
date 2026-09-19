@@ -15,11 +15,7 @@
     // ===== UI tokens (โทนเดียวกับ show) =====
     $line = 'border-slate-200';
 
-    $input = "mt-2 w-full h-11 rounded-md border $line bg-white px-3 py-2 text-sm
-            focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100";
 
-    $textarea = "mt-2 w-full rounded-md border $line bg-white px-3 py-2 text-sm
-              focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 resize-none overflow-hidden";
     $textareaStyle = 'min-height:unset;height:auto;';
 
     $headCls = 'flex items-start gap-3 pb-3 min-h-[56px]';
@@ -107,13 +103,7 @@
 
                 {{-- RIGHT --}}
                 <div class="flex flex-wrap items-center justify-start sm:justify-end gap-2">
-                    <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('maintenance.requests.index') }}"
-                        class="inline-flex items-center h-9 gap-2 rounded-md border {{ $line }} bg-white px-4 text-[13px] font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        กลับ
-                    </a>
+                    <x-ui.back-button :fallback="route('maintenance.requests.index')" />
                 </div>
 
             </div>
@@ -168,13 +158,9 @@
                         </div>
 
                         @can('assign', $mr)
-                            <button type="button" id="openAssignModalBtn"
-                                class="inline-flex items-center gap-2 rounded-lg border border-slate-800 bg-white px-3.5 py-2 text-[13px] font-semibold
-                                text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all active:scale-95 shrink-0">
-                                <img src="/icon/technical-support.webp" class="w-4 h-4 object-contain brightness-0"
-                                    alt="Assign">
+                            <x-ui.button id="openAssignModalBtn" icon="group_add" class="shrink-0">
                                 มอบหมายทีมเจ้าหน้าที่
-                            </button>
+                            </x-ui.button>
                         @endcan
                     </div>
 
@@ -260,7 +246,7 @@
                             <label class="block text-sm font-medium text-slate-700">รายการซ่อมสำหรับวันที่</label>
                             <input type="date" name="operation_date"
                                 value="{{ old('operation_date', optional($opLog?->operation_date)->format('Y-m-d')) }}"
-                                class="{{ $input }}" onclick="this.showPicker()">
+                                class="ui-input" onclick="this.showPicker()">
                         </div>
 
                         <div>
@@ -292,7 +278,7 @@
                             <label class="block text-sm font-medium text-slate-700">ระบุรพจ. (รหัสครุภัณฑ์)</label>
                             <input type="text" name="property_code"
                                 value="{{ old('property_code', $opLog->property_code ?? ($mr->asset?->asset_code ?? '')) }}"
-                                class="{{ $input }}" placeholder="เช่น 68101068718">
+                                class="ui-input" placeholder="เช่น 68101068718">
                         </div>
 
                         <div>
@@ -324,19 +310,14 @@
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">หมายเหตุ / รายละเอียดประกอบ</label>
-                            <textarea name="remark" rows="4" style="{{ $textareaStyle }}" class="{{ $textarea }}"
+                            <textarea name="remark" rows="4" style="{{ $textareaStyle }}" class="ui-textarea resize-none overflow-hidden"
                                 placeholder="เช่น ตรวจเช็คแล้วพบว่า..., ผู้ใช้ทดสอบแล้วเรียบร้อย">{{ old('remark', $opLog->remark ?? '') }}</textarea>
                         </div>
 
                         <div class="pt-2 flex justify-end">
-                            <button type="submit"
-                                class="inline-flex items-center justify-center h-11 overflow-hidden rounded-md bg-emerald-600 text-[13px] font-bold text-white hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-200 transition-all active:scale-95 group shrink-0">
-                                <span
-                                    class="px-2.5 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/10 h-full">
-                                    <span class="material-symbols-outlined text-[17px]">check</span>
-                                </span>
-                                <span class="px-3 leading-none">บันทึกรายงานการปฏิบัติงาน</span>
-                            </button>
+                            <x-ui.button type="submit" variant="primary" icon="check" split>
+                                บันทึกรายงานการปฏิบัติงาน
+                            </x-ui.button>
                         </div>
 
                         @if ($opLog)
@@ -371,12 +352,7 @@
                             <p class="text-[13px] text-slate-500">ค้นหาและเลือกเจ้าหน้าที่ที่ต้องการ</p>
                         </div>
                     </div>
-                    <button type="button" id="closeAssignModalBtn"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                        </svg>
-                    </button>
+                    <x-ui.button id="closeAssignModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                 </div>
 
                 <form method="POST" action="{{ route('maintenance.requests.assignments.store', $mr) }}">
@@ -428,16 +404,8 @@
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-2">
-                                    <button type="button" id="assignSelectAllBtn"
-                                        class="inline-flex items-center justify-center rounded-lg border {{ $line }} bg-white px-3 py-2
-                                      text-[12px] font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
-                                        เลือกทั้งหมด
-                                    </button>
-                                    <button type="button" id="assignClearAllBtn"
-                                        class="inline-flex items-center justify-center rounded-lg border {{ $line }} bg-white px-3 py-2
-                                      text-[12px] font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
-                                        ล้างการเลือก
-                                    </button>
+                                    <x-ui.button id="assignSelectAllBtn" size="sm">เลือกทั้งหมด</x-ui.button>
+                                    <x-ui.button id="assignClearAllBtn" size="sm">ล้างการเลือก</x-ui.button>
                                 </div>
                             </div>
 
@@ -536,14 +504,8 @@
 
                     {{-- Modal Footer --}}
                     <div class="flex items-center justify-end gap-3 border-t {{ $line }} px-6 py-4 bg-slate-50">
-                        <button type="button" id="cancelAssignModalBtn"
-                            class="rounded-lg border {{ $line }} bg-white px-4 py-2 text-[14px] font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
-                            ยกเลิก
-                        </button>
-                        <button type="submit"
-                            class="rounded-lg bg-indigo-600 px-6 py-2 text-[14px] font-bold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all active:scale-95">
-                            บันทึกการมอบหมาย
-                        </button>
+                        <x-ui.button id="cancelAssignModalBtn">ยกเลิก</x-ui.button>
+                        <x-ui.button type="submit" variant="primary">บันทึกการมอบหมาย</x-ui.button>
                     </div>
                 </form>
             </div>

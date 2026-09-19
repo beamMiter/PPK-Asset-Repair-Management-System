@@ -50,13 +50,7 @@
                 </div>
 
                 <div class="flex flex-wrap items-center justify-start sm:justify-end gap-2">
-                    <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('assets.index') }}"
-                        class="inline-flex items-center h-9 gap-2 rounded-md border {{ $line }} bg-white px-4 text-[13px] font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        กลับ
-                    </a>
+                    <x-ui.back-button :fallback="route('assets.index')" />
                 </div>
 
             </div>
@@ -74,24 +68,8 @@
         ])
 
         <div class="mx-auto max-w-screen-2xl px-3 sm:px-6 lg:px-8 pb-10">
-            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 mt-6 border-t {{ $line }}">
-                <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('assets.index') }}"
-                    class="inline-flex items-center justify-center gap-2 h-11 px-8 min-w-[180px] rounded-md border {{ $line }} bg-white
-                        text-[13px] font-bold text-slate-700 hover:bg-slate-50 transition-all">
-                    <span class="material-symbols-outlined text-[17px]">close</span>
-                    ยกเลิก
-                </a>
-                <button type="submit"
-                    class="inline-flex items-center justify-center overflow-hidden rounded-md bg-emerald-600 text-[13px] font-bold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all active:scale-95 group h-11 min-w-[180px] shrink-0">
-                    <span
-                        class="px-2.5 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/10 h-full">
-                        <span class="material-symbols-outlined text-[17px]">send</span>
-                    </span>
-                    <span class="px-6 leading-none">
-                        บันทึกข้อมูล
-                    </span>
-                </button>
-            </div>
+            <x-ui.form-actions
+                :cancel-href="url()->previous() !== url()->current() ? url()->previous() : route('assets.index')" />
         </div>
     </form>
 @endsection

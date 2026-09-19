@@ -48,9 +48,10 @@ class NotificationSoundTest extends TestCase
         return $path;
     }
 
+    /** the sound library is admin-only (see SystemManagementAccessTest) */
     private function staff(): User
     {
-        return User::factory()->create(['role' => 'it_support']);
+        return User::factory()->create(['role' => 'admin']);
     }
 
     public function test_destroy_sound_cannot_traverse_out_of_the_sounds_folder(): void

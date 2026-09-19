@@ -33,11 +33,7 @@
                     {{-- ฝั่งขวา: ปุ่มแก้ไข (ไม่มี Shadow และไม่มี Motion เวลากด) --}}
                     <div class="flex items-center">
                         @if (Route::has('profile.edit'))
-                            <a href="{{ route('profile.edit') }}"
-                                class="inline-flex items-center gap-2 px-4 py-1.5 bg-white text-slate-700 border border-slate-200 rounded-md text-[14px] font-medium hover:bg-slate-50 transition-colors">
-                                <span class="material-symbols-outlined text-[18px] text-emerald-600">edit</span>
-                                แก้ไขโปรไฟล์
-                            </a>
+                            <x-ui.button :href="route('profile.edit')" icon="edit">แก้ไขโปรไฟล์</x-ui.button>
                         @endif
                     </div>
 

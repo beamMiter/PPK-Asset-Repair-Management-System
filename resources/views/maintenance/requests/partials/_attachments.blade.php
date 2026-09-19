@@ -18,27 +18,9 @@
             <input id="mr_files_camera" type="file" accept="image/*" capture="environment" class="hidden">
 
             <div class="flex items-center gap-2">
-                <button type="button" id="mr_files_any_btn"
-                    class="inline-flex items-center justify-center h-10 px-4 rounded-md border {{ $line }} bg-white
-                                       text-sm font-medium text-slate-700 hover:bg-slate-50
-                                       focus:outline-none focus:ring-2 focus:ring-emerald-100">
-                    <svg class="h-4 w-4 mr-2 text-slate-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path
-                            d="M21 11.5l-8.5 8.5a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.7-8.7"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    เลือกไฟล์เพิ่ม
-                </button>
+                <x-ui.button id="mr_files_any_btn" icon="attach_file">เลือกไฟล์เพิ่ม</x-ui.button>
 
-                <button type="button" id="mr_files_camera_btn"
-                    class="inline-flex items-center justify-center h-10 w-11 rounded-md border {{ $line }} bg-white
-                                       hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-100">
-                    <svg class="h-5 w-5 text-emerald-700" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                        <circle cx="12" cy="13" r="4" />
-                    </svg>
-                </button>
+                <x-ui.button id="mr_files_camera_btn" size="square" icon="photo_camera" aria-label="ถ่ายรูป" title="ถ่ายรูป" />
             </div>
 
             <div class="mt-3 p-3 rounded-md bg-amber-50 border border-amber-200">
@@ -63,10 +45,7 @@
             </div>
 
             <div class="flex justify-end pt-2">
-                <button type="submit"
-                    class="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-emerald-600 text-sm font-medium text-white hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-200">
-                    แนบไฟล์
-                </button>
+                <x-ui.button type="submit" variant="primary" icon="upload_file">แนบไฟล์</x-ui.button>
             </div>
         </form>
 
@@ -252,14 +231,7 @@
                                             onsubmit="return confirm('ยืนยันลบไฟล์แนบนี้?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit"
-                                                class="inline-flex h-7 w-7 items-center justify-center rounded border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 focus:ring-2 focus:ring-rose-200 transition">
-                                                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"
-                                                    stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
+                                            <x-ui.button type="submit" variant="danger-outline" size="icon" icon="delete" aria-label="ลบไฟล์แนบ" />
                                         </form>
                                     @endif
                                 @endcan

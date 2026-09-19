@@ -249,10 +249,18 @@
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
   }
 
+  // The <select> is replaced on screen by a TomSelect widget, which does not follow `select.value = …`.
+  // Put the value back through the widget (silently, so it does not fire another `change`).
+  function restoreJobType(select, typeId) {
+    if (select.tomselect) select.tomselect.setValue(typeId, true);
+    else select.value = typeId;
+  }
+
   async function handleJobTypeChange(select) {
     const requestId = select.dataset.id;
     const newTypeId = select.value;
-    const oldTypeId = select.dataset.oldValue;
+    // saved value: the markup renders data-old-type-id (this used to read a different attribute, so it was undefined)
+    const oldTypeId = select.dataset.oldTypeId ?? '';
 
     // Try to find ticket number for confirmation
     let ticketNo = requestId;
@@ -271,7 +279,7 @@
     });
 
     if (!confirmed) {
-      select.value = oldTypeId;
+      restoreJobType(select, oldTypeId);
       return;
     }
 
@@ -291,7 +299,7 @@
       const result = await response.json();
 
       if (response.ok) {
-        select.dataset.oldValue = newTypeId;
+        select.dataset.oldTypeId = newTypeId;
         // Update styles
         if (newTypeId) {
           select.classList.remove('border-slate-200', 'bg-slate-50', 'text-slate-500');
@@ -315,7 +323,7 @@
     } catch (error) {
       console.error('Update type error:', error);
       alert(error.message);
-      select.value = oldTypeId;
+      restoreJobType(select, oldTypeId);
     } finally {
       hideLoader();
     }

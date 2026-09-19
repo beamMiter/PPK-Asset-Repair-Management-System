@@ -128,8 +128,8 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
-    // Notifications
-    Route::prefix('settings/notifications')->name('settings.notifications.')->group(function () {
+    // Notifications (sound library is shared by everyone, so admin only)
+    Route::prefix('settings/notifications')->name('settings.notifications.')->middleware('can:manage-system')->group(function () {
         Route::get('/', [NotificationSettingController::class, 'index'])->name('index');
         Route::patch('/update-sound', [NotificationSettingController::class, 'updateSound'])->name('update_sound');
         Route::post('/upload-sound', [NotificationSettingController::class, 'uploadSound'])->name('upload_sound');
@@ -181,7 +181,7 @@ Route::middleware(['auth'])->group(function () {
     // Settings - Maintenance Types
     Route::prefix('settings/maintenance-types')
         ->name('settings.maintenance-types.')
-        ->middleware('can:maintenance-type-manage')
+        ->middleware('can:manage-system')
         ->group(function () {
             Route::get('/', [MaintenanceRequestTypeController::class, 'index'])->name('index');
             Route::get('/create', [MaintenanceRequestTypeController::class, 'create'])->name('create');

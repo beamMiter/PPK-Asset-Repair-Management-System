@@ -45,20 +45,13 @@
                     <div class="flex items-center gap-2 w-full md:w-auto">
                         {{-- Filter Toggle (Mobile Only) --}}
                         <button type="button" @click="showFilters = !showFilters"
-                            class="md:hidden flex-1 md:flex-none inline-flex justify-center items-center gap-1.5 h-10 px-4 rounded-md border text-[13px] font-medium transition-colors"
+                            class="md:hidden inline-flex justify-center items-center gap-1.5 h-11 px-4 rounded-md border text-[13px] font-medium transition-colors"
                             :class="showFilters ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'">
                             <span class="material-symbols-outlined text-[16px]">filter_list</span>
                             <span x-text="showFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรอง'"></span>
                         </button>
 
-                        <a href="{{ route('settings.maintenance-types.create') }}" class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 rounded-md bg-[#0F2D5C] px-4 py-2 text-[13px] font-medium text-white hover:bg-[#0F2D5C]/90
-                             focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/40  transition-all">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
-                            </svg>
-                            เพิ่มประเภท
-                        </a>
+                        <x-ui.button :href="route('settings.maintenance-types.create')" variant="primary" icon="add" onclick="showLoader()">เพิ่มประเภท</x-ui.button>
                     </div>
                 </div>
 
@@ -164,21 +157,29 @@
                             </td>
                             <td class="p-3 text-slate-700">{{ $t->description ?: '—' }}</td>
                             <td class="p-3 text-center">{!! $statusText($isActive) !!}</td>
-                            <td class="p-3 text-center whitespace-nowrap">
-                                <a href="{{ route('settings.maintenance-types.edit', $t->id) }}" class="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-700 hover:bg-slate-50
-                                     focus:outline-none focus:ring-2 focus:ring-[{{ $primary }}]/25">
-                                    แก้ไข
-                                </a>
+                            <td class="p-3 text-center align-middle whitespace-nowrap">
+                                {{-- Same row-action look as the assets / requests / users lists: outlined edit (emerald) + outlined destructive (rose), each with an icon --}}
+                                <div class="inline-flex items-center justify-center gap-2">
+                                    <a href="{{ route('settings.maintenance-types.edit', $t->id) }}"
+                                        class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-[12px] font-medium text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                                        onclick="showLoader()">
+                                        <span
+                                            class="material-symbols-outlined ms text-[15px] leading-none text-emerald-600">edit</span>
+                                        แก้ไข
+                                    </a>
 
-                                <form method="POST" action="{{ route('settings.maintenance-types.destroy', $t->id) }}"
-                                    class="inline" onsubmit="return confirm('ยืนยันปิดใช้งานประเภทนี้?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="inline-flex items-center justify-center rounded-md bg-rose-600 px-3 py-1.5 text-[12px] font-medium text-white hover:bg-rose-700
-                                        focus:outline-none focus:ring-2 focus:ring-rose-400/40">
-                                        ปิดใช้งาน
-                                    </button>
-                                </form>
+                                    <form method="POST" action="{{ route('settings.maintenance-types.destroy', $t->id) }}"
+                                        class="inline" onsubmit="return confirm('ยืนยันปิดใช้งานประเภทนี้?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                            class="inline-flex items-center gap-1.5 rounded-md border border-rose-300 bg-white px-3 py-1.5 text-[12px] font-medium text-rose-600 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30">
+                                            <span
+                                                class="material-symbols-outlined ms text-[15px] leading-none text-rose-500">block</span>
+                                            ปิดใช้งาน
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     @empty

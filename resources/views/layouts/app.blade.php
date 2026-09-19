@@ -451,6 +451,27 @@
             line-height: 1.25rem !important;
         }
 
+        /* The control is a fixed 44px tall, so the selected item and the search input must stay on ONE line.
+           TomSelect's own CSS is flex-wrap:wrap with input min-width:7rem — in a narrow spot (the type select in a
+           My Jobs card) the input dropped onto a second line and the field looked like it jumped. A long value now
+           truncates with "…" instead. */
+        .ts-wrapper.single .ts-control {
+            flex-wrap: nowrap !important;
+        }
+
+        .ts-wrapper.single .ts-control > .item {
+            flex: 0 1 auto !important;
+            min-width: 0 !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+        }
+
+        .ts-wrapper.single .ts-control > input {
+            flex: 1 1 2rem !important;
+            min-width: 2rem !important;
+        }
+
         .ts-wrapper.single .ts-control:focus-within {
             border-color: #059669 !important;
             box-shadow: 0 0 0 2px rgba(16, 185, 129, .20) !important;

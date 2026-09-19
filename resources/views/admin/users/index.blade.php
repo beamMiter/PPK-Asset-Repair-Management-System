@@ -47,20 +47,13 @@
                     <div class="flex items-center gap-2 w-full md:w-auto">
                         {{-- Filter Toggle (Mobile Only) --}}
                         <button type="button" @click="showFilters = !showFilters"
-                            class="md:hidden flex-1 md:flex-none inline-flex justify-center items-center gap-1.5 h-10 px-4 rounded-md border text-[13px] font-medium transition-colors"
+                            class="md:hidden inline-flex justify-center items-center gap-1.5 h-11 px-4 rounded-md border text-[13px] font-medium transition-colors"
                             :class="showFilters ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'">
                             <span class="material-symbols-outlined text-[16px]">filter_list</span>
                             <span x-text="showFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรอง'"></span>
                         </button>
 
-                        <a href="{{ route('admin.users.create') }}" onclick="showLoader()"
-                            class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 py-2 text-[13px] font-medium text-white
-                      hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/40 transition-all">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
-                            </svg>
-                            สร้างผู้ใช้ใหม่
-                        </a>
+                        <x-ui.button :href="route('admin.users.create')" variant="primary" icon="add" onclick="showLoader()">สร้างผู้ใช้ใหม่</x-ui.button>
                     </div>
                 </div>
 
@@ -212,28 +205,16 @@
                             <td class="p-3 align-middle text-center whitespace-nowrap">
                                 <div class="inline-flex items-center justify-center gap-2">
                                     <a href="{{ route('admin.users.edit', $u) }}" onclick="showLoader()"
-                                        class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-3 py-2 text-[12px] font-semibold text-emerald-700
-                        hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600/30 min-w-[92px] justify-center transition-colors">
-                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                            stroke-width="2">
-                                            <path d="M12 20h9" />
-                                            <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z" />
-                                        </svg>
+                                        class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-[12px] font-medium text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+                                        <span class="material-symbols-outlined ms text-[15px] leading-none text-emerald-600">edit</span>
                                         แก้ไข
                                     </a>
 
                                     @if ($u->id !== auth()->id())
                                         <button type="button"
-                                            class="inline-flex items-center gap-1.5 rounded-md border border-rose-300 bg-white px-3 py-2 text-[12px] font-semibold text-rose-600
-                               hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30 min-w-[76px] justify-center transition-colors"
+                                            class="inline-flex items-center gap-1.5 rounded-md border border-rose-300 bg-white px-3 py-1.5 text-[12px] font-medium text-rose-600 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
                                             onclick="return window.confirmDeleteUser('{{ route('admin.users.destroy', $u) }}');">
-                                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="2">
-                                                <path d="M3 6h18" />
-                                                <path d="M8 6V4h8v2" />
-                                                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                                                <path d="M10 11v6M14 11v6" />
-                                            </svg>
+                                            <span class="material-symbols-outlined ms text-[15px] leading-none text-rose-500">delete</span>
                                             ลบ
                                         </button>
                                     @endif
@@ -298,24 +279,16 @@
 
                     <div class="flex items-center justify-end gap-2">
                         <a href="{{ route('admin.users.edit', $u) }}" onclick="showLoader()"
-                            class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-3 py-2 text-[12px] font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 20h9" />
-                                <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z" />
-                            </svg>
+                            class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-[12px] font-medium text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+                            <span class="material-symbols-outlined ms text-[15px] leading-none text-emerald-600">edit</span>
                             แก้ไข
                         </a>
 
                         @if ($u->id !== auth()->id())
                             <button type="button"
-                                class="inline-flex items-center gap-1.5 rounded-md border border-rose-300 bg-white px-3 py-2 text-[12px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+                                class="inline-flex items-center gap-1.5 rounded-md border border-rose-300 bg-white px-3 py-1.5 text-[12px] font-medium text-rose-600 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
                                 onclick="return window.confirmDeleteUser('{{ route('admin.users.destroy', $u) }}');">
-                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M3 6h18" />
-                                    <path d="M8 6V4h8v2" />
-                                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                                    <path d="M10 11v6M14 11v6" />
-                                </svg>
+                                <span class="material-symbols-outlined ms text-[15px] leading-none text-rose-500">delete</span>
                                 ลบ
                             </button>
                         @endif

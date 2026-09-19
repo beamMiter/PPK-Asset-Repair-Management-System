@@ -21,13 +21,7 @@
                 </div>
 
                 {{-- ปุ่มย้อนกลับ (ใส่ไอคอนคืนให้แล้วครับ) --}}
-                <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('admin.users.index') }}"
-                    class="inline-flex items-center h-9 gap-2 rounded-md border border-slate-200 bg-white px-4 text-[13px] font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
-                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    กลับ
-                </a>
+                <x-ui.back-button :fallback="route('admin.users.index')" />
 
             </div>
         </div>
@@ -63,17 +57,7 @@
             ])
 
             {{-- Action Buttons --}}
-            <div class="mt-8 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 border-t border-slate-200 pt-6">
-                <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('admin.users.index') }}"
-                    class="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all">
-                    ยกเลิก
-                </a>
-
-                <button type="submit"
-                    class="w-full sm:w-auto inline-flex items-center justify-center rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all">
-                    บันทึกข้อมูล
-                </button>
-            </div>
+            <x-ui.form-actions :cancel-href="url()->previous() !== url()->current() ? url()->previous() : route('admin.users.index')" />
         </form>
     </div>
 @endsection

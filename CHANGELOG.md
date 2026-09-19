@@ -21,10 +21,60 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   scripts came back as HTML). It picks the first free port itself; HMR follows it. `VITE_PORT`
   still sets the starting port.
 
+### Added
+
+- **Shared UI components** (`resources/views/components/ui/`): `<x-ui.button>` (variant × size, one
+  place to change a colour or height), `<x-ui.back-button>`, `<x-ui.form-actions>` (the cancel + save
+  row), `<x-ui.section-head>` (numbered form section heading), and `.ui-input` / `.ui-textarea` /
+  `.ui-label` / `.ui-hint` / `.ui-error` field classes in `app.css`.
+
 ### Changed
 
 - Header icons restored on the request list, assets, chat, users, maintenance-types and
   notification-settings pages (Material Symbols, same style as My Jobs).
+- **Buttons only have to match inside a pattern group** (form pages, list-page row actions, dialogs, back button) —
+  detail pages, staff job cards, dashboards and auth pages may look different. The four spots that had drifted:
+  the user list's row actions (36px → the ~32px of the other lists), the technician rating page's "กลับ" (now
+  `<x-ui.back-button>`), the global confirm dialog and the technician-rating popup's "ปิด" (now `<x-ui.button>`, 44px;
+  the confirm colour still follows the caller's `variant`), and the notification settings page (four buttons at
+  38 / 40 / 40 → shared buttons, the save button keeps its navy, the select beside them is 44px; the full-width
+  green "เพิ่มเข้าคลังเสียง" bar of the drop zone is left as it was).
+- **ประเมินความพึงพอใจ page:** the header image icon is now a Material Symbol like the other pages, and its
+  buttons use the shared `<x-ui.button>` ("รายละเอียด" secondary, "ประเมินงาน" the amber star button used in the
+  post-close dialog, "ดูรายการ" small secondary). Buttons keep their natural width and wrap instead of stretching.
+- **Buttons and form fields look the same on every create / edit page** (assets, maintenance requests,
+  users, maintenance types, profile), on the technician request-detail page and on the list-page
+  "create" buttons: one 44px height (the same as a field), one corner radius, one weight. Colours that
+  carry meaning (reject = red, hold = amber, cancel = grey, accept = blue) are kept as variants. The
+  two indigo "save" buttons in the assign-team dialog are now the standard green.
+  Buttons are only as wide as their label (no fixed or stretched widths). Note: the pages load Bootstrap
+  from a CDN whose `!important` `.px-4` / `.px-5` / `.gap-3`… override Tailwind's same-named classes, so
+  the shared button uses `px-[16px]`-style values that Bootstrap has no twin for.
+  Row-level "ดูรายละเอียด / แก้ไข" links in tables and the round search buttons are unchanged.
+  The maintenance-types list was the odd one out (grey "แก้ไข", solid red "ปิดใช้งาน", no icons); its row actions now
+  match the other lists (outlined emerald edit + outlined rose disable, each with an icon).
+- **Request history dialog:** the header now matches the assign-team dialog (plain 36px icon, 16px title, 13px
+  subtitle) and the footer "ปิดหน้าต่าง" button is gone (× or a click outside closes it). The timeline cards were redesigned: every status has its own icon (resolved and approved no longer
+  share look-alike ticks — approval is a filled paper-with-tick), the "เริ่มต้น -> x" chip is replaced by
+  "เปลี่ยนจาก <status>", the creation card no longer repeats its own sentence, all text is ≥ 12px, and rows that
+  only carry the status in the note prefix (seeded / legacy) now show the right title and icon.
+
+### Removed
+
+- Unused files: `components/_form-standard.blade.php` (a template with `{{ page_title }}`
+  placeholders), `maintenance/requests/partials/_form_submit.blade.php` and
+  `_form_operation_log.blade.php` (nothing included them).
+
+### Security
+
+- **System management is admin-only.** The sidebar "การจัดการระบบ" pages — maintenance types, notification
+  sounds and user admin — now sit behind one `manage-system` gate (admin role). Maintenance types and the
+  notification settings used to be open to supervisors and every worker role, and the notification controller
+  only turned `member` away (a deny-list of one), so any staff account could add or delete sound files in the
+  shared `public/sounds` library. Route middleware, controller middleware, the type policy and the sidebar all use
+  the same gate, and the SLA page's "จัดการประเภทงาน" shortcut is hidden for other roles. The SLA dashboard and
+  technician rating board keep their existing `maintenance-type-manage` gate (supervisors / workers).
+  Note: only admins can now choose their notification sound on the settings page.
 
 ## [2.0.0] - 2026-09-10
 
