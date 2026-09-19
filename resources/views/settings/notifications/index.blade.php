@@ -50,7 +50,7 @@
                         </div>
                         <div class="md:col-span-4 lg:col-span-3 flex flex-wrap items-center gap-2">
                             <x-ui.button onclick="previewSound()" icon="play_arrow">ทดสอบ</x-ui.button>
-                            <x-ui.button type="submit" variant="primary" icon="save">บันทึกการเลือก</x-ui.button>
+                            <x-ui.button type="submit" variant="brand" icon="save">บันทึกการเลือก</x-ui.button>
                         </div>
                     </form>
                 </div>

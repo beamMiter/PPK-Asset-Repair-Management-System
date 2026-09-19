@@ -83,6 +83,8 @@ class PatternButtonsTest extends TestCase
         foreach (['ทดสอบ', 'บันทึกการเลือก', 'เพิ่มเข้าคลังเสียง', 'ตั้งค่า'] as $label) {
             $this->assertMatchesRegularExpression('/<button[^>]*whitespace-nowrap select-none[^>]*>[^<]*(<span[^>]*>[^<]*<\/span>)?\s*'.preg_quote($label, '/').'\s*<\/button>/u', $html, $label);
         }
+        // the save button keeps the page's navy (#0F2D5C), it is not the green of the form pages
+        $this->assertMatchesRegularExpression('/<button[^>]*bg-\[#0F2D5C\][^>]*>[^<]*<span[^>]*>save<\/span>\s*บันทึกการเลือก/u', $html);
         $this->assertStringContainsString('onclick="previewSound()"', $html);
         $this->assertStringContainsString('@click="showConfig = !showConfig"', $html);
         $this->assertMatchesRegularExpression('/<select name="notification_sound"\s+class="[^"]*\bh-11\b/', $html);

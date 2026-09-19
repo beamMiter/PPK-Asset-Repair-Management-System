@@ -37,7 +37,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the user list's row actions (36px → the ~32px of the other lists), the technician rating page's "กลับ" (now
   `<x-ui.back-button>`), the global confirm dialog and the technician-rating popup's "ปิด" (now `<x-ui.button>`, 44px;
   the confirm colour still follows the caller's `variant`), and the notification settings page (four buttons at
-  38 / 40 / 40 / 52px → shared buttons, save + upload use the standard green, select beside them 44px).
+  38 / 40 / 40 / 52px → shared buttons; the upload button uses the standard green, the save button keeps its navy;
+  select beside them 44px).
 - **ประเมินความพึงพอใจ page:** the header image icon is now a Material Symbol like the other pages, and its
   buttons use the shared `<x-ui.button>` ("รายละเอียด" secondary, "ประเมินงาน" the amber star button used in the
   post-close dialog, "ดูรายการ" small secondary). Buttons keep their natural width and wrap instead of stretching.
