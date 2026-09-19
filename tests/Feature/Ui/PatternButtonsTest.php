@@ -22,24 +22,20 @@ class PatternButtonsTest extends TestCase
         return User::factory()->create(['role' => User::ROLE_ADMIN]);
     }
 
-    public function test_user_list_row_actions_are_the_same_small_size_as_the_other_lists(): void
+    public function test_user_list_row_action_is_the_same_small_size_as_the_other_lists(): void
     {
         $admin = $this->admin();
         $other = User::factory()->create(['role' => 'member']);
 
         $html = $this->actingAs($admin)->get(route('admin.users.index'))->assertOk()->getContent();
 
-        // edit + delete for the other user (table row and mobile card), only edit for yourself
+        // the row action is edit only (table row + mobile card); deleting accounts is not a front-end feature
         $this->assertStringContainsString(route('admin.users.edit', $other), $html);
-        $this->assertSame(2, substr_count($html, "confirmDeleteUser('".route('admin.users.destroy', $other)."')"), 'delete: table row + mobile card');
-        $this->assertStringNotContainsString("confirmDeleteUser('".route('admin.users.destroy', $admin)."')", $html, 'you cannot delete yourself');
 
         // same look as assets / requests / types: py-1.5, text-[12px] font-medium, no stretched min-width
         $this->assertStringContainsString('border-emerald-300 bg-white px-3 py-1.5 text-[12px] font-medium text-emerald-700', $html);
-        $this->assertStringContainsString('border-rose-300 bg-white px-3 py-1.5 text-[12px] font-medium text-rose-600', $html);
         $this->assertStringNotContainsString('min-w-[92px]', $html);
-        $this->assertStringNotContainsString('min-w-[76px]', $html);
-        $this->assertDoesNotMatchRegularExpression('/border-(emerald|rose)-300 bg-white px-3 py-2 /', $html, 'row action drifted back to the 36px size');
+        $this->assertDoesNotMatchRegularExpression('/border-emerald-300 bg-white px-3 py-2 /', $html, 'row action drifted back to the 36px size');
     }
 
     public function test_technician_rating_page_uses_the_shared_back_button_and_close_button(): void

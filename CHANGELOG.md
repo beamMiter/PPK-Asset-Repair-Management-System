@@ -61,6 +61,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- **Deleting a user from the app** (route `admin.users.destroy`, `UserController::destroy`, the "ลบ" buttons in the
+  user list and the "danger zone" on the edit page). Users are referenced by requests, logs, assignments, ratings and
+  chat with `ON DELETE CASCADE` / `SET NULL`, so a delete destroyed other people's data (whole chat threads with every
+  message, the ratings a person gave, job assignments) and orphaned requests. Removing an account is now a
+  database-level operation; editing a user is unchanged.
 - Unused files: `components/_form-standard.blade.php` (a template with `{{ page_title }}`
   placeholders), `maintenance/requests/partials/_form_submit.blade.php` and
   `_form_operation_log.blade.php` (nothing included them).

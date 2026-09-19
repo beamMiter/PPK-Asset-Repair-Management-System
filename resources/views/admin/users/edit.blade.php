@@ -85,36 +85,5 @@
             <x-ui.form-actions :cancel-href="url()->previous() !== url()->current() ? url()->previous() : route('admin.users.index')" />
         </form>
 
-        {{-- Danger Zone --}}
-        <div class="mt-16 rounded-xl border border-rose-100 bg-rose-50/50 p-6">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                <div class="flex items-start gap-4">
-                    <div class="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
-                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path
-                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="text-base font-semibold text-rose-700">ลบผู้ใช้</h3>
-                        <p class="mt-1 text-sm text-rose-600">
-                            การลบผู้ใช้จะไม่สามารถกู้คืนข้อมูลได้ โปรดตรวจสอบให้แน่ใจก่อนดำเนินการ
-                        </p>
-                    </div>
-                </div>
-
-                <form action="{{ route('admin.users.destroy', $user) }}" method="POST"
-                    class="w-full sm:w-auto"
-                    onsubmit="return confirm('ยืนยันการลบผู้ใช้ {{ $user->name }} ? \nการกระทำนี้ไม่สามารถย้อนกลับได้');">
-                    @csrf
-                    @method('DELETE')
-                    <x-ui.button type="submit" variant="danger-outline" icon="delete">
-                        ลบผู้ใช้
-                    </x-ui.button>
-                </form>
-            </div>
-        </div>
-
     </div>
 @endsection
