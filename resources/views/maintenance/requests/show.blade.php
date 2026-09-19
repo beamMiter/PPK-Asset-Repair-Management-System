@@ -707,16 +707,15 @@
             class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
             <div
                 class="relative z-[10000] w-full max-w-2xl rounded-2xl border {{ $line }} bg-white overflow-hidden animate-in fade-in zoom-in duration-200">
-                <div class="flex items-center justify-between border-b {{ $line }} px-6 py-4 bg-slate-50/50">
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center -slate-200">
-                            <span class="material-symbols-outlined text-[20px]">history</span>
-                        </div>
-                        <div>
-                            <div class="text-[15px] font-bold text-slate-900">ประวัติการดำเนินงาน</div>
-                            <div class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Operation & Status
-                                History Log</div>
+                {{-- Header: same icon / text sizing as the assign-team dialog --}}
+                <div class="flex items-center justify-between border-b {{ $line }} px-6 py-4">
+                    <div class="flex items-start gap-3 min-w-0">
+                        <span class="mt-0.5 inline-flex h-10 w-10 items-center justify-center text-slate-800">
+                            <span class="material-symbols-outlined text-[36px]">history</span>
+                        </span>
+                        <div class="min-w-0">
+                            <div class="text-[16px] font-semibold text-slate-900 leading-tight">ประวัติการดำเนินงาน</div>
+                            <p class="text-[13px] text-slate-500">Operation & Status History Log</p>
                         </div>
                     </div>
                     <x-ui.button id="closeHistoryModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
