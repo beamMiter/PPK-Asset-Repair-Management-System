@@ -109,7 +109,7 @@
                     onsubmit="return confirm('ยืนยันการลบผู้ใช้ {{ $user->name }} ? \nการกระทำนี้ไม่สามารถย้อนกลับได้');">
                     @csrf
                     @method('DELETE')
-                    <x-ui.button type="submit" variant="danger-outline" icon="delete" class="w-full sm:w-auto">
+                    <x-ui.button type="submit" variant="danger-outline" icon="delete">
                         ลบผู้ใช้
                     </x-ui.button>
                 </form>

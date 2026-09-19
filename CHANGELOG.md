@@ -37,6 +37,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   "create" buttons: one 44px height (the same as a field), one corner radius, one weight. Colours that
   carry meaning (reject = red, hold = amber, cancel = grey, accept = blue) are kept as variants. The
   two indigo "save" buttons in the assign-team dialog are now the standard green.
+  Buttons are only as wide as their label (no fixed or stretched widths). Note: the pages load Bootstrap
+  from a CDN whose `!important` `.px-4` / `.px-5` / `.gap-3`… override Tailwind's same-named classes, so
+  the shared button uses `px-[16px]`-style values that Bootstrap has no twin for.
   Row-level "ดูรายละเอียด / แก้ไข" links in tables and the round search buttons are unchanged.
 
 ### Removed

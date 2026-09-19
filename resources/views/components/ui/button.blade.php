@@ -24,8 +24,12 @@
 
   Anything else (id, x-on:*, data-*, form, disabled, name/value, …) is passed straight through.
   `type` defaults to "button" — say type="submit" explicitly for a submit button.
-  Pass LAYOUT classes only (w-full, flex-1, sm:min-w-[160px], mt-2, hidden) — never height / colour / radius,
-  or the sizes drift apart again.
+  Pass LAYOUT classes only (shrink-0, mt-2, hidden) — never height / colour / radius / width, or the sizes drift
+  apart again. A button is as wide as its label + padding; don't stretch it (no w-full / flex-1 / min-w-*).
+
+  Padding is written as px-[16px], NOT px-4: the pages also load Bootstrap from a CDN, whose !important
+  .px-3 / .px-4 / .px-5 / .gap-3 (1rem / 1.5rem / 3rem / 1rem) beat Tailwind's same-named classes, so px-4 rendered
+  as 24px and px-5 as 48px. Arbitrary values have no Bootstrap twin. Keep it that way for anything added here.
 --}}
 @props([
     'variant' => 'secondary',
@@ -48,7 +52,7 @@
         'square' => 'h-11 w-11 shrink-0 rounded-md text-[13px]',
         'icon'   => 'h-8 w-8 shrink-0 rounded-full text-[13px]',
     ];
-    $pads = ['md' => 'px-4', 'sm' => 'px-3', 'square' => '', 'icon' => ''];
+    $pads = ['md' => 'px-[16px]', 'sm' => 'px-[12px]', 'square' => '', 'icon' => ''];
 
     $variants = [
         'primary'        => 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-200',
@@ -82,7 +86,7 @@
         <span class="hidden sm:flex h-full items-center justify-center bg-black/10 px-2.5 border-r border-white/10">
             <span class="material-symbols-outlined {{ $iconSize }}" aria-hidden="true">{{ $icon }}</span>
         </span>
-        <span class="flex items-center gap-1.5 px-5 sm:px-4">
+        <span class="flex items-center gap-1.5 px-[16px]">
             <span class="sm:hidden material-symbols-outlined {{ $iconSize }}" aria-hidden="true">{{ $icon }}</span>
             {{ $slot }}
         </span>

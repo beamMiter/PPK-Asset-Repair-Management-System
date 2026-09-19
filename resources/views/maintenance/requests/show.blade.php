@@ -480,9 +480,9 @@
                                 </div>
 
                                 {{-- Footer ปุ่มย้ายมาอยู่ใต้ sidebar --}}
-                                <div class="border-t {{ $line }} bg-slate-50 px-5 py-3 flex gap-2">
-                                    <x-ui.button id="cancelAssignModalBtn" class="flex-1">ยกเลิก</x-ui.button>
-                                    <x-ui.button type="submit" variant="primary" class="flex-1">บันทึก</x-ui.button>
+                                <div class="border-t {{ $line }} bg-slate-50 px-5 py-3 flex justify-end gap-2">
+                                    <x-ui.button id="cancelAssignModalBtn">ยกเลิก</x-ui.button>
+                                    <x-ui.button type="submit" variant="primary">บันทึก</x-ui.button>
                                 </div>
 
                             </div>
@@ -751,16 +751,12 @@
                         </div>
 
                         {{-- Action Buttons --}}
-                        <div class="p-6 space-y-3">
+                        <div class="p-6 flex flex-wrap justify-center gap-3">
                             @can('rate', $req)
-                                <a href="{{ route('maintenance.requests.rating.create', $req->id) }}"
-                                    class="flex w-full items-center justify-center gap-3 rounded-2xl bg-amber-500 py-4 text-[15px] font-bold text-white -amber-200 hover:bg-amber-600 hover:scale-[1.02] active:scale-[0.98] transition-all">
-                                    <span class="material-symbols-outlined text-[20px]">star</span>
-                                    ประเมินความพึงพอใจ
-                                </a>
+                                <x-ui.button variant="warning" icon="star" :href="route('maintenance.requests.rating.create', $req->id)">ประเมินความพึงพอใจ</x-ui.button>
                             @endcan
 
-                            <x-ui.button icon="visibility" class="w-full"
+                            <x-ui.button icon="visibility"
                                 onclick="document.getElementById('postCloseModal').remove(); document.body.style.overflow = '';">
                                 ดูรายละเอียดใบงาน
                             </x-ui.button>
@@ -845,9 +841,9 @@
                             @enderror
                         </div>
 
-                        <div class="flex gap-4">
-                            <x-ui.button @click="ratingOpen = false" class="flex-1">ยกเลิก</x-ui.button>
-                            <x-ui.button type="submit" variant="brand" class="flex-1">บันทึกการประเมิน</x-ui.button>
+                        <div class="flex justify-end gap-3">
+                            <x-ui.button @click="ratingOpen = false">ยกเลิก</x-ui.button>
+                            <x-ui.button type="submit" variant="brand">บันทึกการประเมิน</x-ui.button>
                         </div>
                     </form>
                 </div>

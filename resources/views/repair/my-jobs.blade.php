@@ -573,7 +573,7 @@
 
                                     {{-- View Details --}}
                                     <div class="mt-4">
-                                        <x-ui.button :href="route('maintenance.requests.show', $r)" variant="brand" icon="visibility" class="w-full" onclick="showLoader()">ดูรายละเอียด</x-ui.button>
+                                        <x-ui.button :href="route('maintenance.requests.show', $r)" variant="brand" icon="visibility" onclick="showLoader()">ดูรายละเอียด</x-ui.button>
                                     </div>
                                 </div>
                             </div>

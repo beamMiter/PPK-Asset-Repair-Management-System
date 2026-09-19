@@ -77,7 +77,7 @@ class ButtonComponentTest extends TestCase
 
         $noIcon = $this->render('<x-ui.button variant="primary" split>ส่ง</x-ui.button>');
         $this->assertStringNotContainsString('bg-black/10', $noIcon);
-        $this->assertStringContainsString('px-4', $noIcon);
+        $this->assertStringContainsString('px-[16px]', $noIcon);
     }
 
     public function test_type_and_arbitrary_attributes_pass_straight_through(): void
@@ -93,10 +93,38 @@ BLADE);
 
     public function test_layout_classes_are_merged_not_replaced(): void
     {
-        $html = $this->render('<x-ui.button class="w-full sm:min-w-[160px] hidden">x</x-ui.button>');
+        $html = $this->render('<x-ui.button class="shrink-0 mt-2 hidden">x</x-ui.button>');
 
-        $this->assertStringContainsString('w-full sm:min-w-[160px] hidden', $html);
+        $this->assertStringContainsString('shrink-0 mt-2 hidden', $html);
         $this->assertStringContainsString('h-11', $html);
+    }
+
+    /**
+     * The pages also load Bootstrap from a CDN. Its !important utilities .p{t,b,x,y}-{0..5}, .m*-{0..5} and
+     * .gap-{0..5} beat Tailwind's same-named classes with different values (px-4 = 24px, px-5 = 48px…), which made
+     * every button far wider than designed. The button must not use any of those names.
+     */
+    public function test_no_class_that_bootstrap_would_override(): void
+    {
+        $templates = [
+            '<x-ui.button>x</x-ui.button>',
+            '<x-ui.button size="sm" icon="add">x</x-ui.button>',
+            '<x-ui.button size="square" icon="add" />',
+            '<x-ui.button variant="primary" icon="send" split>x</x-ui.button>',
+            '<x-ui.form-actions cancel-href="/a" />',
+        ];
+
+        foreach ($templates as $template) {
+            $html = $this->render($template);
+            preg_match_all('/class="([^"]*)"/', $html, $all);
+            foreach (explode(' ', implode(' ', $all[1])) as $token) {
+                $this->assertDoesNotMatchRegularExpression(
+                    '/^(?:[mp][tbxy]?|gap)-[0-5]$/',
+                    $token,
+                    "`$token` collides with Bootstrap's !important utility in $template"
+                );
+            }
+        }
     }
 
     public function test_form_actions_renders_cancel_and_submit_at_the_same_height(): void
@@ -109,6 +137,8 @@ BLADE);
         $this->assertStringContainsString('form="main-form"', $html);
         $this->assertStringContainsString('บันทึกการแก้ไข', $html);
         $this->assertSame(2, substr_count($html, ' h-11 '), 'cancel and submit must be the same height');
+        // a button is as wide as its label — no fixed / stretched width on the footer row
+        $this->assertDoesNotMatchRegularExpression('/\b(?:sm:|md:)?(?:min-w|w-full|flex-1)\b/', $html);
     }
 
     public function test_form_actions_without_cancel_renders_only_the_submit(): void
