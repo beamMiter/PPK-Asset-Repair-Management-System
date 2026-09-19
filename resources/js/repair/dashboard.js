@@ -65,6 +65,68 @@ import Chart from 'chart.js/auto';
       io.observe(canvas);
   }
 
+  /**
+   * Horizontal rows (Technician Workload): a mouse cannot scroll them (the wheel is vertical and the
+   * scrollbar is thin), so add what a mouse needs — drag the row, or use the arrows. Touch and trackpads
+   * still scroll natively.
+   *   <div data-hscroll> [data-hscroll-prev] [data-hscroll-next] <div data-hscroll-track class="overflow-x-auto">…
+   */
+  function initHScrollers() {
+    document.querySelectorAll('[data-hscroll]').forEach((root) => {
+      const track = root.querySelector('[data-hscroll-track]');
+      if (!track) return;
+      const prev = root.querySelector('[data-hscroll-prev]');
+      const next = root.querySelector('[data-hscroll-next]');
+
+      const update = () => {
+        const max = track.scrollWidth - track.clientWidth;
+        prev?.classList.toggle('hidden', track.scrollLeft <= 1);
+        next?.classList.toggle('hidden', track.scrollLeft >= max - 1);
+        track.classList.toggle('cursor-grab', max > 1);
+      };
+      const page = (dir) => track.scrollBy({ left: dir * Math.round(track.clientWidth * 0.8), behavior: 'smooth' });
+      prev?.addEventListener('click', () => page(-1));
+      next?.addEventListener('click', () => page(1));
+      track.addEventListener('scroll', update, { passive: true });
+      new ResizeObserver(update).observe(track);
+      update();
+
+      // drag with the mouse; only captured once the pointer really moves, so a plain click still opens the link
+      let armed = false, dragging = false, justDragged = false, startX = 0, startLeft = 0;
+      track.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'mouse' || e.button !== 0) return;
+        armed = true; dragging = false; startX = e.clientX; startLeft = track.scrollLeft;
+      });
+      track.addEventListener('pointermove', (e) => {
+        if (!armed) return;
+        const dx = e.clientX - startX;
+        if (!dragging && Math.abs(dx) > 5) {
+          dragging = true;
+          track.setPointerCapture(e.pointerId);
+          track.classList.replace('cursor-grab', 'cursor-grabbing');
+        }
+        if (dragging) track.scrollLeft = startLeft - dx;
+      });
+      const stop = (e) => {
+        if (!armed) return;
+        armed = false;
+        if (dragging) {
+          dragging = false;
+          justDragged = true;
+          setTimeout(() => { justDragged = false; }, 0);
+          if (track.hasPointerCapture(e.pointerId)) track.releasePointerCapture(e.pointerId);
+          track.classList.remove('cursor-grabbing');
+          update();
+        }
+      };
+      track.addEventListener('pointerup', stop);
+      track.addEventListener('pointercancel', stop);
+      // a drag must not open the technician under the cursor; images / links must not start a native drag
+      track.addEventListener('click', (e) => { if (justDragged) { e.preventDefault(); e.stopPropagation(); } }, true);
+      track.addEventListener('dragstart', (e) => e.preventDefault());
+    });
+  }
+
   // turbo:load fires on first load AND every Turbo navigation
   document.addEventListener('turbo:load', () => {
     destroyAllCharts(); // reset before re-initialising
@@ -101,6 +163,7 @@ import Chart from 'chart.js/auto';
     };
 
     initCountUp();
+    initHScrollers();
 
     const tooltipDefaults = {
         backgroundColor : '#0F2D5C',
