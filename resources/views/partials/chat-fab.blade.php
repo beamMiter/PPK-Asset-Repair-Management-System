@@ -72,9 +72,19 @@
             const search = document.getElementById('chatSearch');
 
             let isOpen = false;
-            let unreadTotal = 0;
+            let unreadTotal = 0; // ตัวเลขบนป้าย (เคลียร์เป็น 0 ตอนเปิด drawer)
             let allItems = []; // เก็บ items ทั้งหมดสำหรับ filter
             let firstLoaded = false;
+
+            // Baseline สำหรับ "มีข้อความใหม่จริงไหม" — ค่า unread รวมล่าสุดที่ server รายงาน
+            // เก็บไว้ต่อแท็บ (sessionStorage) เพื่อไม่ให้การโหลดหน้าใหม่ (Turbo) หรือการเปิด drawer
+            // ถูกมองเป็น "ข้อความใหม่" แล้วส่งเสียง/แจ้งเตือนทุกครั้งที่คลิก
+            const BASELINE_KEY = 'chatFab.serverUnread';
+            let serverUnread = null; // null = ยังไม่เคยโพลในแท็บนี้ → ครั้งแรกไม่ส่งเสียง
+            try {
+                const saved = sessionStorage.getItem(BASELINE_KEY);
+                if (saved !== null) serverUnread = Number(saved);
+            } catch (e) {}
 
             function openDrawer() {
                 isOpen = true;
@@ -232,8 +242,9 @@
 
                     const sumUnread = data.reduce((n, x) => n + (x.unread || 0), 0);
 
-                    // Notification Logic
-                    if (sumUnread > unreadTotal) {
+                    // Notification Logic — เฉพาะเมื่อ unread ที่ server รายงาน "เพิ่มขึ้น" จริง
+                    // เทียบกับโพลก่อนหน้า (ไม่ใช่ตอนโหลดหน้า / ตอนเปิด drawer)
+                    if (serverUnread !== null && sumUnread > serverUnread) {
                         // 1. Play Sound (if enabled in global settings)
                         const soundEnabled = localStorage.getItem('myjobs.notify.sound.enabled') === '1';
                         if (soundEnabled) {
@@ -254,6 +265,9 @@
                             });
                         }
                     }
+
+                    serverUnread = sumUnread;
+                    try { sessionStorage.setItem(BASELINE_KEY, String(sumUnread)); } catch (e) {}
 
                     unreadTotal = sumUnread;
                     renderBadge();
