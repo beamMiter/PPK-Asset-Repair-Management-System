@@ -209,7 +209,7 @@
         </a>
 
         {{-- Section: Management (Settings & Admin) --}}
-        @if (auth()->user()->can('maintenance-type-manage') || auth()->user()->can('manage-users'))
+        @can('manage-system')
             @php
                 $isMgmtActive = $is('settings.maintenance-types.*', 'settings.notifications.*', 'admin.users.*');
             @endphp
@@ -238,8 +238,7 @@
                     x-transition:leave-start="opacity-100 max-h-60" x-transition:leave-end="opacity-0 max-h-0"
                     class="overflow-hidden bg-slate-50/50 block">
                     <div class="py-2 space-y-1">
-                        @can('maintenance-type-manage')
-                            @php $typesActive = $is('settings.maintenance-types.*'); @endphp
+                        @php $typesActive = $is('settings.maintenance-types.*'); @endphp
                             <a href="{{ $rl('settings.maintenance-types.index') }}"
                                 class="flex items-center gap-3 h-10 px-6 pl-[4rem] text-[13.5px] font-medium transition-colors hover:bg-slate-100 hover:text-[#0F2D5C] {{ $typesActive ? 'text-[#0F2D5C] font-semibold bg-white ' : 'text-zinc-500' }}">
                                 <span class="material-symbols-outlined text-[18px]">build_circle</span>
@@ -252,20 +251,17 @@
                                 <span class="material-symbols-outlined text-[18px]">notifications_active</span>
                                 <span>การแจ้งเตือน</span>
                             </a>
-                        @endcan
 
-                        @can('manage-users')
                             @php $usersActive = $is('admin.users.*'); @endphp
                             <a href="{{ $rl('admin.users.index') }}"
                                 class="flex items-center gap-3 h-10 px-6 pl-[4rem] text-[13.5px] font-medium transition-colors hover:bg-slate-100 hover:text-[#0F2D5C] {{ $usersActive ? 'text-[#0F2D5C] font-semibold bg-white ' : 'text-zinc-500' }}">
                                 <span class="material-symbols-outlined text-[18px]">manage_accounts</span>
                                 <span>ผู้ใช้งานระบบ</span>
                             </a>
-                        @endcan
                     </div>
                 </div>
             </div>
-        @endif
+        @endcan
 
         <div
             class="sidebar-heading px-6 mt-6 mb-2 text-[11px] font-bold uppercase tracking-[0.15em] text-zinc-400/80 transition-all duration-300">

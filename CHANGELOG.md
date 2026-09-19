@@ -55,6 +55,17 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   placeholders), `maintenance/requests/partials/_form_submit.blade.php` and
   `_form_operation_log.blade.php` (nothing included them).
 
+### Security
+
+- **System management is admin-only.** The sidebar "การจัดการระบบ" pages — maintenance types, notification
+  sounds and user admin — now sit behind one `manage-system` gate (admin role). Maintenance types and the
+  notification settings used to be open to supervisors and every worker role, and the notification controller
+  only turned `member` away (a deny-list of one), so any staff account could add or delete sound files in the
+  shared `public/sounds` library. Route middleware, controller middleware, the type policy and the sidebar all use
+  the same gate, and the SLA page's "จัดการประเภทงาน" shortcut is hidden for other roles. The SLA dashboard and
+  technician rating board keep their existing `maintenance-type-manage` gate (supervisors / workers).
+  Note: only admins can now choose their notification sound on the settings page.
+
 ## [2.0.0] - 2026-09-10
 
 Framework modernisation plus a full feature-by-feature logic and security audit.

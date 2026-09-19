@@ -6,7 +6,6 @@ use App\Models\MaintenanceRequestType;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Support\Toast;
-use Illuminate\Support\Facades\Auth;
 
 class MaintenanceRequestTypeController extends Controller
 {
@@ -14,13 +13,8 @@ class MaintenanceRequestTypeController extends Controller
     {
         $this->middleware('auth');
 
-        // กัน Member ตั้งแต่ระดับ Constructor (ถ้าเป็น member ให้ดีดออกทันที)
-        $this->middleware(function ($request, $next) {
-            if (Auth::user()?->role === 'member') {
-                abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนการตั้งค่าประเภทงาน');
-            }
-            return $next($request);
-        });
+        // Admin only (same gate as the route)
+        $this->middleware('can:manage-system');
 
         $this->middleware('can:viewAny,' . MaintenanceRequestType::class);
     }

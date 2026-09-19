@@ -614,6 +614,7 @@
                                 </p>
                             </div>
                             <div class="flex items-center gap-2">
+                                @can('manage-system')
                                 <a href="{{ route('settings.maintenance-types.index') }}"
                                     class="inline-flex items-center overflow-hidden rounded border border-slate-200 bg-white text-[13px] font-bold text-slate-700 hover:bg-slate-50 transition-all group active:scale-95">
                                     <span
@@ -622,6 +623,7 @@
                                     </span>
                                     <span class="px-3 py-2 leading-none">จัดการประเภทงาน</span>
                                 </a>
+                                @endcan
                                 <button type="submit"
                                     :class="isEdited ? 'bg-amber-500 hover:bg-amber-600' : 'bg-[#0F2D5C] hover:bg-[#0F2D5C]/90'"
                                     class="inline-flex items-center overflow-hidden rounded text-[13px] font-bold text-white transition-all group active:scale-95">

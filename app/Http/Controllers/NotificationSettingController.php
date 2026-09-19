@@ -18,13 +18,8 @@ class NotificationSettingController extends Controller
     {
         $this->middleware('auth');
 
-        // บล็อก Member ไม่ให้เข้าถึงการตั้งค่าการแจ้งเตือน
-        $this->middleware(function ($request, $next) {
-            if (Auth::user()?->role === 'member') {
-                abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนการตั้งค่าการแจ้งเตือน');
-            }
-            return $next($request);
-        });
+        // Admin only (same gate as the route — a deny-list of one role let every other role in)
+        $this->middleware('can:manage-system');
     }
 
     /**

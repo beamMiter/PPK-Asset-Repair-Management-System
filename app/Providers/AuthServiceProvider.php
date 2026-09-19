@@ -45,7 +45,14 @@ class AuthServiceProvider extends ServiceProvider
             return $user->role === User::ROLE_ADMIN || $user->isSupervisor() || $user->isWorker();
         });
 
-        // maintenance type manage
+        // System management (sidebar "การจัดการระบบ"): maintenance types, notification sounds, users.
+        // Admin only. Kept separate from `maintenance-type-manage`, which also opens the SLA dashboard and the
+        // technician rating board for supervisors / workers.
+        Gate::define('manage-system', function (User $user): bool {
+            return $user->isAdmin();
+        });
+
+        // SLA dashboard + technician rating board
         Gate::define('maintenance-type-manage', function (User $user): bool {
             return $user->isAdmin() || $user->isSupervisor() || $user->isTechnician();
         });
