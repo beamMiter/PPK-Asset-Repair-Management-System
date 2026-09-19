@@ -23,6 +23,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Suspend an account instead of deleting it.** `users.suspended_at` (new migration — an ordinary
+  `php artisan migrate`, no data touched). A suspended user keeps every record but cannot sign in (web or API; the
+  message is shown only when the password is right), loses an open session / "remember me" cookie / API tokens on the
+  next request (`EnsureAccountIsActive`), and is no longer offered or accepted as an assignee or in `/api/meta/users`.
+  Admins suspend / reactivate from the user list and the user's edit page (not their own account); the list shows a
+  "ระงับ" badge.
 - **Shared UI components** (`resources/views/components/ui/`): `<x-ui.button>` (variant × size, one
   place to change a colour or height), `<x-ui.back-button>`, `<x-ui.form-actions>` (the cancel + save
   row), `<x-ui.section-head>` (numbered form section heading), and `.ui-input` / `.ui-textarea` /
@@ -61,6 +67,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- **Deleting a user from the app** (route `admin.users.destroy`, `UserController::destroy`, the "ลบ" buttons in the
+  user list and the "danger zone" on the edit page). Users are referenced by requests, logs, assignments, ratings and
+  chat with `ON DELETE CASCADE` / `SET NULL`, so a delete destroyed other people's data (whole chat threads with every
+  message, the ratings a person gave, job assignments) and orphaned requests. Removing an account is now a
+  database-level operation; editing a user is unchanged, and accounts can be suspended instead (see Added).
 - Unused files: `components/_form-standard.blade.php` (a template with `{{ page_title }}`
   placeholders), `maintenance/requests/partials/_form_submit.blade.php` and
   `_form_operation_log.blade.php` (nothing included them).

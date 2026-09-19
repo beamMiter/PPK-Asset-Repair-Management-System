@@ -438,7 +438,7 @@ class MaintenanceRequestController extends Controller
             'issue_software'   => ['nullable', 'boolean'],
             'issue_hardware'   => ['nullable', 'boolean'],
             'user_ids'         => ['nullable', 'array'],
-            'user_ids.*'       => ['integer', 'exists:users,id'],
+            'user_ids.*'       => ['integer', Rule::exists('users', 'id')->whereNull('suspended_at')],
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -818,6 +818,7 @@ class MaintenanceRequestController extends Controller
     
         // เตรียม Query พื้นฐานสำหรับกลุ่มทีมงาน
         $base = User::query()
+            ->active()
             ->inRoles(User::teamRoles())
             ->with(['roleRef'])
             ->select($selectCols)
@@ -864,6 +865,7 @@ class MaintenanceRequestController extends Controller
         // NEW: รวมทุกคนที่เป็นทีมงานเพื่อให้ Frontend สามารถเลือก "ทั้งหมด" ได้
         // ใช้ Query ใหม่เพื่อให้แน่ใจว่าไม่มี Filter อื่นค้างอยู่
         $allTeam = User::query()
+            ->active()
             ->inRoles(User::teamRoles())
             ->with(['roleRef'])
             ->select($selectCols)

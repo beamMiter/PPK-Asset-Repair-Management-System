@@ -4,7 +4,9 @@ namespace App\Http\Requests\Auth;
 
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -48,6 +50,17 @@ class LoginRequest extends FormRequest
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
+
+        // Only after the password is right, so this message cannot be used to probe which accounts exist.
+        // It still counts as an attempt, so it is no cheaper to guess against than any other account.
+        $suspended = User::where('citizen_id', $this->input('citizen_id'))->first();
+        if ($suspended && $suspended->isSuspended() && Hash::check((string) $this->input('password'), (string) $suspended->password)) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'citizen_id' => \App\Http\Middleware\EnsureAccountIsActive::MESSAGE,
+            ]);
+        }
 
         if (! Auth::attempt(
             $this->only('citizen_id', 'password'),

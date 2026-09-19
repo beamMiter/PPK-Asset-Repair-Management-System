@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 use App\Support\Toast;
 
 class UserController extends Controller
@@ -380,42 +381,37 @@ class UserController extends Controller
     }
 
     /**
-     * ลบผู้ใช้
+     * ระงับบัญชี — แทนการลบ: ประวัติ (ใบแจ้งซ่อม, แชท, คะแนน, การมอบหมาย) อยู่ครบ
+     * แต่เข้าสู่ระบบไม่ได้และถูกมอบหมายงานใหม่ไม่ได้ เปิดใช้งานกลับได้ภายหลัง
      */
-    public function destroy(User $user)
+    public function suspend(User $user)
     {
-        $currentUser = Auth::user();
-        if ($currentUser->isTechnician() && !$currentUser->isAdmin() && !$currentUser->isSupervisor()) {
-            abort(403, 'เฉพาะผู้ดูแลระบบและหัวหน้างานเท่านั้นที่มีสิทธิ์ลบบัญชีผู้ใช้');
-        }
-
-        // กันลบตัวเอง
         if ($user->id === Auth::id()) {
-            return back()->with('toast', Toast::error('ไม่สามารถลบบัญชีของตัวเองได้', 3200));
+            return back()->with('toast', Toast::error('ไม่สามารถระงับบัญชีของตัวเองได้', 3200));
         }
 
-        // ป้องกันการลบ Admin/Supervisor ถ้าไม่ใช่ Admin
-        if (in_array($user->role, [User::ROLE_ADMIN, User::ROLE_SUPERVISOR])) {
-            if (!Auth::user()->isAdmin()) {
-                return back()->with('toast', Toast::error('เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถลบบัญชีของแอดมินหรือหัวหน้างานได้', 4000));
-            }
+        if ($user->isSuspended()) {
+            return back()->with('toast', Toast::warning('บัญชีนี้ถูกระงับอยู่แล้ว', 2800));
         }
 
-        try {
-            DB::beginTransaction();
+        $user->forceFill(['suspended_at' => now(), 'remember_token' => null])->save();
+        $user->tokens()->delete(); // API tokens stop working at once; web sessions end on their next request
 
-            $user->delete();
+        Log::info('[Admin\UserController::suspend] account suspended', ['user_id' => $user->id, 'actor_id' => Auth::id()]);
 
-            DB::commit();
+        return back()->with('toast', Toast::success("ระงับบัญชี {$user->name} แล้ว", 2800));
+    }
 
-            return redirect()
-                ->route('admin.users.index')
-                ->with('toast', Toast::success('ลบผู้ใช้เรียบร้อยแล้ว', 2800));
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            report($e);
-
-            return back()->with('toast', Toast::error('เกิดข้อผิดพลาดระหว่างลบผู้ใช้', 4000));
+    public function reactivate(User $user)
+    {
+        if (! $user->isSuspended()) {
+            return back()->with('toast', Toast::warning('บัญชีนี้ไม่ได้ถูกระงับ', 2800));
         }
+
+        $user->forceFill(['suspended_at' => null])->save();
+
+        Log::info('[Admin\UserController::reactivate] account reactivated', ['user_id' => $user->id, 'actor_id' => Auth::id()]);
+
+        return back()->with('toast', Toast::success("เปิดใช้งานบัญชี {$user->name} แล้ว", 2800));
     }
 }

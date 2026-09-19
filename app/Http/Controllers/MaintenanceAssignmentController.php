@@ -22,7 +22,7 @@ class MaintenanceAssignmentController extends Controller
         // ตัด lead_user_id ออกจากการ validate ไปเลย ไม่ใช้แล้ว
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'user_ids'   => ['nullable', 'array'],
-            'user_ids.*' => ['integer', 'exists:users,id'],
+            'user_ids.*' => ['integer', Rule::exists('users', 'id')->whereNull('suspended_at')],
         ]);
 
         if ($validator->fails()) {

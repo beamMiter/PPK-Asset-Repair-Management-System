@@ -61,7 +61,7 @@ class MetaController extends Controller
     public function users(Request $r)
     {
         $role = $r->query('role');
-        $q = User::query()->select('id','name','role','department');
+        $q = User::query()->active()->select('id','name','role','department');
         if ($role) {
             $q->where('role', $role);
         }

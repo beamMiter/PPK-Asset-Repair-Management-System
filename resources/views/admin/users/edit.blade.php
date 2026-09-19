@@ -85,34 +85,44 @@
             <x-ui.form-actions :cancel-href="url()->previous() !== url()->current() ? url()->previous() : route('admin.users.index')" />
         </form>
 
-        {{-- Danger Zone --}}
-        <div class="mt-16 rounded-xl border border-rose-100 bg-rose-50/50 p-6">
+        {{-- Account status — suspend instead of delete --}}
+        <div class="mt-16 rounded-xl border border-amber-100 bg-amber-50/50 p-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                 <div class="flex items-start gap-4">
-                    <div class="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
-                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path
-                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
+                    <div class="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                        <span class="material-symbols-outlined text-[22px]" aria-hidden="true">{{ $user->isSuspended() ? 'lock' : 'manage_accounts' }}</span>
                     </div>
                     <div>
-                        <h3 class="text-base font-semibold text-rose-700">ลบผู้ใช้</h3>
-                        <p class="mt-1 text-sm text-rose-600">
-                            การลบผู้ใช้จะไม่สามารถกู้คืนข้อมูลได้ โปรดตรวจสอบให้แน่ใจก่อนดำเนินการ
+                        <h3 class="text-base font-semibold text-amber-800">
+                            สถานะบัญชี:
+                            {{ $user->isSuspended() ? 'ถูกระงับ (ตั้งแต่ ' . $user->suspended_at->format('d/m/Y H:i') . ')' : 'ใช้งานอยู่' }}
+                        </h3>
+                        <p class="mt-1 text-sm text-amber-700">
+                            บัญชีที่ถูกระงับจะเข้าสู่ระบบไม่ได้และไม่ถูกมอบหมายงานใหม่ แต่ประวัติทั้งหมด (ใบแจ้งซ่อม แชท คะแนน)
+                            ยังอยู่ครบ และเปิดใช้งานกลับได้เสมอ
                         </p>
                     </div>
                 </div>
 
-                <form action="{{ route('admin.users.destroy', $user) }}" method="POST"
-                    class="w-full sm:w-auto"
-                    onsubmit="return confirm('ยืนยันการลบผู้ใช้ {{ $user->name }} ? \nการกระทำนี้ไม่สามารถย้อนกลับได้');">
-                    @csrf
-                    @method('DELETE')
-                    <x-ui.button type="submit" variant="danger-outline" icon="delete">
-                        ลบผู้ใช้
-                    </x-ui.button>
-                </form>
+                @if ($user->id !== auth()->id())
+                    @if ($user->isSuspended())
+                        <form action="{{ route('admin.users.reactivate', $user) }}" method="POST"
+                            onsubmit="return confirm(@js('เปิดใช้งานบัญชี ' . $user->name . ' อีกครั้ง?'));">
+                            @csrf
+                            @method('PATCH')
+                            <x-ui.button type="submit" variant="primary" icon="lock_open">เปิดใช้งานบัญชี</x-ui.button>
+                        </form>
+                    @else
+                        <form action="{{ route('admin.users.suspend', $user) }}" method="POST"
+                            onsubmit="return confirm(@js('ระงับบัญชี ' . $user->name . ' ? ผู้ใช้จะเข้าสู่ระบบไม่ได้ แต่ประวัติทั้งหมดยังอยู่'));">
+                            @csrf
+                            @method('PATCH')
+                            <x-ui.button type="submit" variant="warning" icon="block">ระงับบัญชี</x-ui.button>
+                        </form>
+                    @endif
+                @else
+                    <span class="text-[13px] text-amber-700">ไม่สามารถระงับบัญชีของตัวเองได้</span>
+                @endif
             </div>
         </div>
 
