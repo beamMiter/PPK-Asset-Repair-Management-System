@@ -4,7 +4,7 @@
     $line = 'border-slate-200';
 @endphp
 
-@section('title', 'เพิ่มทรัพย์สิน')
+@section('title', 'New Asset')
 
 @push('styles')
     <style>

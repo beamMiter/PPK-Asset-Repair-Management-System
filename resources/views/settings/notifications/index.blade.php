@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'ตั้งค่า - การแจ้งเตือน')
+@section('title', 'Notifications')
 
 @section('content')
     @php

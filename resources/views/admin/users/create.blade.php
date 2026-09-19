@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'สร้างผู้ใช้ใหม่')
+@section('title', 'New User')
 
 @section('page-header')
     <div class="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">

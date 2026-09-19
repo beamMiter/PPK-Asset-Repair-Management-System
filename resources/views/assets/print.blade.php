@@ -3,7 +3,7 @@
 <html lang="th">
 <head>
     <meta charset="utf-8">
-    <title>ใบข้อมูลครุภัณฑ์ {{ $asset->asset_code }}</title>
+    <title>Asset Sheet {{ $asset->asset_code }} • {{ config('app.title_suffix') }}</title>
 
     <style>
         /* ====== FONT: SARABUN (จาก public/fonts) ====== */

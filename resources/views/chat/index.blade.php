@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'กระดานสนทนา')
+@section('title', 'Livechat')
 
 @section('content')
     @php

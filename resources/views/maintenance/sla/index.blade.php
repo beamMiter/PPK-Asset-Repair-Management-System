@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'SLA Performance Dashboard')
+@section('title', 'SLA Dashboard')
 
 @section('page-header')
     <div class="sticky top-16 z-20 bg-white/90 backdrop-blur border-b border-slate-200" x-data="{ showFilters: window.innerWidth >= 768 }">

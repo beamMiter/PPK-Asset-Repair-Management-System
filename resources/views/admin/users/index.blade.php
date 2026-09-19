@@ -1,6 +1,6 @@
 {{-- resources/views/admin/users/index.blade.php --}}
 @extends('layouts.app')
-@section('title', 'ผู้ใช้งานระบบ')
+@section('title', 'Users')
 
 @php
     /** @var \Illuminate\Pagination\LengthAwarePaginator $list */

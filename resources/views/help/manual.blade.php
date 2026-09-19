@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'คู่มือการใช้งานระบบ - ' . config('app.name'))
+@section('title', 'User Manual')
 
 @section('content')
     <div class="max-w-7xl mx-auto px-6 py-12" x-data="{

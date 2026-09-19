@@ -1,6 +1,6 @@
 {{-- resources/views/admin/users/edit.blade.php --}}
 @extends('layouts.app')
-@section('title', 'แก้ไขผู้ใช้ #' . $user->id)
+@section('title', 'Edit User #' . $user->id)
 
 @php
     // Logic ตัวอักษรย่อ 2 ตัว

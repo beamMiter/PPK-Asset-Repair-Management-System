@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'สรุปใบงานซ่อม #' . ($req->request_no ?? $req->id))
+@section('title', 'Request #' . ($req->request_no ?? $req->id))
 
 @section('page-header')
     @php

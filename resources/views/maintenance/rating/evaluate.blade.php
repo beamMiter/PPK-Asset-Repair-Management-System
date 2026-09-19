@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'ประเมินความพึงพอใจ')
+@section('title', 'Satisfaction Ratings')
 
 @section('header-wrap-class', 'z-[30] bg-white')
 

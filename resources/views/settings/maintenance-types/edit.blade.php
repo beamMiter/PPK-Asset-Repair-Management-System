@@ -7,7 +7,7 @@
     // Fixing a typo in Bird-snug -> leading-snug
 @endphp
 
-@section('title', 'แก้ไขประเภทการแจ้งซ่อม - ' . $type->name)
+@section('title', 'Edit Request Type: ' . $type->name)
 
 @section('page-header')
   <div class="w-full bg-slate-50 border-b {{ $line }}">
