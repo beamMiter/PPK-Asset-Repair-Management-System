@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'ตั้งค่า - ประเภทการแจ้งซ่อม')
+@section('title', 'Request Types')
 
 @section('content')
     @php

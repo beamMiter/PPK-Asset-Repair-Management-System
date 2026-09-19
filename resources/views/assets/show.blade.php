@@ -21,7 +21,7 @@
 
 @section('header-wrap-class', 'no-gap')
 
-@section('title', 'รายละเอียดทรัพย์สิน #' . $asset->id)
+@section('title', 'Asset ' . ($asset->asset_code ?: '#' . $asset->id))
 
 @section('page-header')
     <div class="w-full bg-slate-50 border-b {{ $line }}">

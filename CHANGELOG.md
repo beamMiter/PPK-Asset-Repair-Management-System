@@ -45,6 +45,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the confirm colour still follows the caller's `variant`), and the notification settings page (four buttons at
   38 / 40 / 40 → shared buttons, the save button keeps its navy, the select beside them is 44px; the full-width
   green "เพิ่มเข้าคลังเสียง" bar of the drop zone is left as it was).
+- **Browser-tab titles follow one pattern:** `<English page name> • PPK Asset Repair` on every page (was a mix of Thai
+  and English, with different or missing suffixes: "สรุปใบงานซ่อม #…", "Repair Dashboard", "กระดานสนทนา",
+  "…• PPK Hospital System", "…• <APP_NAME>"). The suffix is `config('app.title_suffix')`; each view only sets
+  `@section('title', 'Assets')`. Names match the sidebar (Dashboard, My Jobs, Maintenance Requests, Assets, Livechat,
+  Users, Request Types, Notifications, …); detail pages add the identifier ("Request #691000001",
+  "Edit Request Type: Software"). `PageTitleTest` covers every page and forbids Thai page names.
 - **ประเมินความพึงพอใจ page:** the header image icon is now a Material Symbol like the other pages, and its
   buttons use the shared `<x-ui.button>` ("รายละเอียด" secondary, "ประเมินงาน" the amber star button used in the
   post-close dialog, "ดูรายการ" small secondary). Buttons keep their natural width and wrap instead of stretching.

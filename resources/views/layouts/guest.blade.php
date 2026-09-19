@@ -1,6 +1,7 @@
 @props([
     'heading' => 'PPK Hospital System',
     'sub' => 'Sign in to continue',
+    'title' => null, // browser-tab page name (English); the suffix is added below
 ])
 
 <!DOCTYPE html>
@@ -11,7 +12,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $heading }} • {{ config('app.name', 'PPK') }}</title>
+    <title>{{ $title ? $title . ' • ' : '' }}{{ config('app.title_suffix') }}</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />

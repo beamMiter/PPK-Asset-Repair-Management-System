@@ -17,6 +17,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Browser-tab title suffix
+    |--------------------------------------------------------------------------
+    | Every page's <title> is "<Page name> • <this>" — the page names are English, set per view with
+    | @section('title', 'Assets'). Change the product name here, not in each layout.
+    */
+    'title_suffix' => 'PPK Asset Repair',
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Version
     |--------------------------------------------------------------------------
     |

@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Sign in') • PPK Hospital System</title>
+    <title>@hasSection('title')@yield('title') • @endif{{ config('app.title_suffix') }}</title>
     <link rel="icon" type="image/png" href="{{ asset('icon/maintenance.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 

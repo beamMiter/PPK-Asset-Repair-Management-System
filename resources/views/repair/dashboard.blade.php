@@ -1,7 +1,7 @@
 {{-- resources/views/dashboard.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Repair Dashboard')
+@section('title', 'Dashboard')
 
 @section('content')
     @php

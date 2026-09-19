@@ -2,7 +2,7 @@
 @php
     $line = 'border-slate-200';
 @endphp
-@section('title', 'แจ้งซ่อมบำรุง')
+@section('title', 'New Request')
 @section('page-header')
     <div class="w-full bg-slate-50 border-b {{ $line }}">
         <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-5">

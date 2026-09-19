@@ -7,7 +7,7 @@
 
 @section('header-wrap-class', 'no-gap')
 
-@section('title', 'ทะเบียนครุภัณฑ์')
+@section('title', 'Edit Asset ' . ($asset->asset_code ?: '#' . $asset->id))
 
 @section('page-header')
     <div class="w-full bg-slate-50 border-b {{ $line }}">

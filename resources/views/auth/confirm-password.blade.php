@@ -1,4 +1,4 @@
-<x-guest-layout>
+<x-guest-layout title="Confirm password">
     <div class="mb-4 text-sm text-gray-600 dark:text-gray-400">
         {{ __('เพื่อความปลอดภัย กรุณายืนยันรหัสผ่านของคุณก่อนดำเนินการต่อ') }}
     </div>

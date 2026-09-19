@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'สรุปผลการปฏิบัติงาน - ' . $tech->name)
+@section('title', 'Technician Rating: ' . $tech->name)
 
 @php
     $avgScore = round((float) $tech->technician_ratings_avg_score, 2);
