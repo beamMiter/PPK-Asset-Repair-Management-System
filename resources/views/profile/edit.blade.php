@@ -27,13 +27,7 @@
                             <p class="mt-1.5 text-[13px] text-slate-600">แก้ไขข้อมูลส่วนตัวของคุณ</p>
                         </div>
                     </div>
-                    <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('profile.show') }}"
-                        class="inline-flex items-center h-9 gap-2 rounded-md border border-slate-200 bg-white px-4 text-[13px] font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        กลับ
-                    </a>
+                    <x-ui.back-button :fallback="route('profile.show')" />
                 </div>
             </div>
         </div>
@@ -153,11 +147,7 @@
                     </div>
 
                     <div class="py-10 flex justify-end gap-3">
-                        <button type="submit"
-                            class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-10 py-3 text-[15px] font-bold text-white hover:bg-emerald-700 -emerald-100 transition-all">
-                            <span class="material-symbols-outlined text-[20px]">check_circle</span>
-                            บันทึกการเปลี่ยนแปลง
-                        </button>
+                        <x-ui.button type="submit" variant="primary" icon="check_circle" split>บันทึกการเปลี่ยนแปลง</x-ui.button>
                     </div>
                 </div>
             </form>
@@ -181,12 +171,8 @@
                     </div>
                 </div>
                 <div class="px-6 py-4 bg-slate-50 flex items-center justify-end gap-3">
-                    <button type="button" id="cropper-cancel"
-                        class="px-4 py-2 text-[14px] font-bold text-slate-500 hover:text-slate-700">ยกเลิก</button>
-                    <button type="button" id="cropper-apply"
-                        class="px-6 py-2 bg-emerald-600 text-white text-[14px] font-bold rounded-lg hover:bg-emerald-700 ">
-                        ตกลง
-                    </button>
+                    <x-ui.button id="cropper-cancel">ยกเลิก</x-ui.button>
+                    <x-ui.button id="cropper-apply" variant="primary">ตกลง</x-ui.button>
                 </div>
             </div>
         </div>

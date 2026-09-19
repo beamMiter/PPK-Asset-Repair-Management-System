@@ -2,18 +2,9 @@
 
 @php
     $line = 'border-slate-200';
-    $input = "mt-2 w-full h-11 rounded-md border $line bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100";
-    $textarea = "mt-2 w-full rounded-md border $line bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100";
     
-    $headCls   = "flex items-start gap-3 pb-3 min-h-[56px]";
-    $noCls     = "w-8 h-8 shrink-0 rounded-full border border-emerald-600 bg-emerald-600 flex items-center justify-center text-sm font-bold text-white leading-none";
-    $titleCls  = "text-base font-semibold text-slate-900 leading-tight";
-    $subCls    = "text-sm text-slate-500 Bird-snug";
-    $accentWrap= "min-w-0 relative pl-3 pt-[1px]";
-    $accentBar = "absolute left-0 top-[2px] w-[3px] h-9 rounded-full bg-emerald-600/90";
 
     // Fixing a typo in Bird-snug -> leading-snug
-    $subCls    = "text-sm text-slate-500 leading-snug";
 @endphp
 
 @section('title', 'แก้ไขประเภทการแจ้งซ่อม - ' . $type->name)
@@ -43,13 +34,7 @@
           </div>
         </div>
         <div class="flex flex-wrap items-center justify-start sm:justify-end gap-2">
-          <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('settings.maintenance-types.index') }}"
-             class="inline-flex items-center h-9 gap-2 rounded-md border {{ $line }} bg-white px-4 text-[13px] font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-            กลับ
-          </a>
+          <x-ui.back-button :fallback="route('settings.maintenance-types.index')" />
         </div>
       </div>
     </div>
@@ -90,51 +75,37 @@
 
             {{-- Section 1: Basic Info --}}
             <section>
-              <div class="{{ $headCls }}">
-                <div class="{{ $noCls }}">1</div>
-                <div class="{{ $accentWrap }}">
-                  <span class="{{ $accentBar }}"></span>
-                  <div class="{{ $titleCls }}">ข้อมูลพื้นฐาน</div>
-                  <div class="{{ $subCls }}">แก้ไขชื่อและรายละเอียดประเภทงาน</div>
-                </div>
-              </div>
+              <x-ui.section-head no="1" title="ข้อมูลพื้นฐาน" subtitle="แก้ไขชื่อและรายละเอียดประเภทงาน" />
 
               <div class="space-y-4">
                 <div>
                     <label for="name" class="block text-sm font-medium text-slate-700">
                         ชื่อประเภทงานซ่อม <span class="text-rose-500 font-bold">*</span>
                     </label>
-                    <input type="text" name="name" id="name" value="{{ old('name', $type->name) }}" autocomplete="off" class="{{ $input }}" required placeholder="เช่น งานซ่อมคอมพิวเตอร์, งานประปา">
+                    <input type="text" name="name" id="name" value="{{ old('name', $type->name) }}" autocomplete="off" class="ui-input" required placeholder="เช่น งานซ่อมคอมพิวเตอร์, งานประปา">
                 </div>
 
                 <div>
                     <label for="description" class="block text-sm font-medium text-slate-700">รายละเอียด / คำอธิบาย</label>
-                    <textarea name="description" id="description" rows="4" class="{{ $textarea }}" placeholder="ระบุรายละเอียดเพิ่มเติม...">{{ old('description', $type->description) }}</textarea>
+                    <textarea name="description" id="description" rows="4" class="ui-textarea" placeholder="ระบุรายละเอียดเพิ่มเติม...">{{ old('description', $type->description) }}</textarea>
                 </div>
               </div>
             </section>
 
             {{-- Section 2: Display Settings --}}
             <section>
-              <div class="{{ $headCls }}">
-                <div class="{{ $noCls }}">2</div>
-                <div class="{{ $accentWrap }}">
-                  <span class="{{ $accentBar }}"></span>
-                  <div class="{{ $titleCls }}">การตั้งค่าแสดงผล</div>
-                  <div class="{{ $subCls }}">กำหนดลำดับและสถานะการใช้งาน</div>
-                </div>
-              </div>
+              <x-ui.section-head no="2" title="การตั้งค่าแสดงผล" subtitle="กำหนดลำดับและสถานะการใช้งาน" />
 
               <div class="space-y-4">
                 <div>
                     <label for="sort_order" class="block text-sm font-medium text-slate-700">ลำดับการแสดงผล</label>
-                    <input type="number" name="sort_order" id="sort_order" value="{{ old('sort_order', $type->sort_order ?? 0) }}" min="0" class="{{ $input }}">
+                    <input type="number" name="sort_order" id="sort_order" value="{{ old('sort_order', $type->sort_order ?? 0) }}" min="0" class="ui-input">
                     <p class="mt-1 text-[11px] text-slate-500 font-normal">ตัวเลขน้อยจะแสดงก่อนในรายการเลือก (ค่าเริ่มต้นคือ 0)</p>
                 </div>
 
                 <div>
                     <label for="is_active" class="block text-sm font-medium text-slate-700">สถานะการใช้งาน</label>
-                    <select name="is_active" id="is_active" class="{{ $input }}">
+                    <select name="is_active" id="is_active" class="ui-input">
                         <option value="1" @selected(old('is_active', (bool)$type->is_active) == true)>เปิดใช้งาน (Active)</option>
                         <option value="0" @selected(old('is_active', (bool)$type->is_active) == false)>ปิดใช้งาน (Inactive)</option>
                     </select>
@@ -144,26 +115,19 @@
 
             {{-- Section 3: SLA Targets --}}
             <section>
-              <div class="{{ $headCls }}">
-                <div class="{{ $noCls }}">3</div>
-                <div class="{{ $accentWrap }}">
-                  <span class="{{ $accentBar }}"></span>
-                  <div class="{{ $titleCls }}">เป้าหมายเวลา (SLA Targets)</div>
-                  <div class="{{ $subCls }}">กำหนดเป้าหมายเวลาพื้นฐานของประเภทงานนี้</div>
-                </div>
-              </div>
+              <x-ui.section-head no="3" title="เป้าหมายเวลา (SLA Targets)" subtitle="กำหนดเป้าหมายเวลาพื้นฐานของประเภทงานนี้" />
 
               <div class="space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                       <label for="default_response_minutes" class="block text-sm font-medium text-slate-700">เวลาตอบกลับพื้นฐาน (นาที)</label>
-                      <input type="number" name="default_response_minutes" id="default_response_minutes" value="{{ old('default_response_minutes', $type->default_response_minutes) }}" min="0" class="{{ $input }}" placeholder="เช่น 60">
+                      <input type="number" name="default_response_minutes" id="default_response_minutes" value="{{ old('default_response_minutes', $type->default_response_minutes) }}" min="0" class="ui-input" placeholder="เช่น 60">
                       <p class="mt-1 text-[11px] text-slate-500 font-normal">ใช้เป็นค่าเริ่มต้นในการรับทราบงาน (Acknowledged)</p>
                   </div>
   
                   <div>
                       <label for="default_resolution_minutes" class="block text-sm font-medium text-slate-700">เวลาซ่อมแซมพื้นฐาน (นาที)</label>
-                      <input type="number" name="default_resolution_minutes" id="default_resolution_minutes" value="{{ old('default_resolution_minutes', $type->default_resolution_minutes) }}" min="0" class="{{ $input }}" placeholder="เช่น 1440">
+                      <input type="number" name="default_resolution_minutes" id="default_resolution_minutes" value="{{ old('default_resolution_minutes', $type->default_resolution_minutes) }}" min="0" class="ui-input" placeholder="เช่น 1440">
                       <p class="mt-1 text-[11px] text-slate-500 font-normal">ใช้เป็นค่าเริ่มต้นในการปิดงาน (Resolved)</p>
                   </div>
                 </div>
@@ -178,18 +142,7 @@
         </div>
       </div>
 
-      <div class="flex justify-end gap-2 pt-4 border-t {{ $line }}">
-        <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('settings.maintenance-types.index') }}"
-           class="inline-flex items-center justify-center h-10 px-4 rounded-lg border {{ $line }} bg-white
-                  text-sm font-medium text-slate-700 hover:bg-slate-50">
-          ยกเลิก
-        </a>
-        <button type="submit"
-                class="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-emerald-600
-                       text-sm font-medium text-white hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-200 transition-all">
-          บันทึกการแก้ไข
-        </button>
-      </div>
+      <x-ui.form-actions :cancel-href="url()->previous() !== url()->current() ? url()->previous() : route('settings.maintenance-types.index')" submit-label="บันทึกการแก้ไข" />
     </form>
   </div>
 @endsection
