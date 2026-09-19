@@ -508,26 +508,29 @@
                 // ถ้ากำลังเล่น intro animation อยู่ ให้รอจนกว่าจะเสร็จก่อน
                 const html = document.documentElement;
                 if (html.classList.contains('intro-pending')) {
-                    // รอ event ที่ยิงออกมาตอน intro จบ (forceRevealAll ใน sidebar-intro.js)
-                    const afterIntro = () => {
+                    // Two paths can fire this toast (intro finished / 5s safety fallback). Whichever
+                    // wins must cancel the other, otherwise the toast is shown twice — which is what
+                    // happened to "Login successful", the only toast that lands mid-intro.
+                    let fired = false;
+                    let fallbackTimer = null;
+                    const fire = (delay) => {
+                        if (fired) return;
+                        fired = true;
+                        observer.disconnect();
+                        clearTimeout(fallbackTimer);
                         // หน่วงเพิ่มอีกนิดเพื่อให้ UI settle ก่อน toast โผล่
-                        setTimeout(() => showToast(data), 300);
+                        setTimeout(() => showToast(data), delay);
                     };
+
                     // sidebar-intro.js ยิง introReveal:done หรือลบ class intro-pending
                     // ใช้ MutationObserver เฝ้าดูการลบ class intro-pending
                     const observer = new MutationObserver(() => {
-                        if (!html.classList.contains('intro-pending')) {
-                            observer.disconnect();
-                            afterIntro();
-                        }
+                        if (!html.classList.contains('intro-pending')) fire(300);
                     });
                     observer.observe(html, { attributes: true, attributeFilter: ['class'] });
 
                     // Safety fallback: ถ้านาน 5 วิแล้วยังไม่เสร็จก็ show ไปเลย
-                    setTimeout(() => {
-                        observer.disconnect();
-                        showToast(data);
-                    }, 5000);
+                    fallbackTimer = setTimeout(() => fire(0), 5000);
                 } else {
                     showToast(data);
                 }

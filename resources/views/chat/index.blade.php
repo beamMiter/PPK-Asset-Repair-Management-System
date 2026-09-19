@@ -64,9 +64,14 @@
             {{-- Header & Search --}}
             <div class="p-4 border-b border-slate-200 bg-white flex-shrink-0 z-10 relative">
                 <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <h1 class="text-[17px] font-semibold text-slate-900">กระดานสนทนา</h1>
-                        <p class="text-[12px] text-slate-500 mt-0.5">พื้นที่แลกเปลี่ยนข้อมูลองค์กร</p>
+                    <div class="flex items-start gap-3 min-w-0">
+                        {{-- Header glyph — same style as My Jobs / users / settings pages --}}
+                        <span class="material-symbols-outlined text-[32px] text-[#0F2D5C] mt-0.5"
+                            aria-hidden="true">forum</span>
+                        <div>
+                            <h1 class="text-[17px] font-semibold text-slate-900">กระดานสนทนา</h1>
+                            <p class="text-[12px] text-slate-500 mt-0.5">พื้นที่แลกเปลี่ยนข้อมูลองค์กร</p>
+                        </div>
                     </div>
 
                     <button type="button" @click="showCreateModal = true"

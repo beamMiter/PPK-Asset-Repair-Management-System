@@ -12,9 +12,14 @@
         <div x-data="{ showConfig: window.innerWidth >= 768 }" class="sticky top-16 z-20 bg-white/90 backdrop-blur border-b border-slate-200">
             <div class="px-4 md:px-6 lg:px-8 py-4">
                 <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <h1 class="text-[17px] font-semibold text-slate-900">ตั้งค่า - การแจ้งเตือน</h1>
-                        <p class="text-[13px] text-slate-600">จัดการเสียงและคลังไฟล์แจ้งเตือนในระบบ</p>
+                    <div class="flex items-start gap-3 min-w-0">
+                        {{-- Same glyph as the sidebar's notifications item --}}
+                        <span class="material-symbols-outlined text-[32px] text-[#0F2D5C] mt-0.5"
+                            aria-hidden="true">notifications_active</span>
+                        <div>
+                            <h1 class="text-[17px] font-semibold text-slate-900">ตั้งค่า - การแจ้งเตือน</h1>
+                            <p class="text-[13px] text-slate-600">จัดการเสียงและคลังไฟล์แจ้งเตือนในระบบ</p>
+                        </div>
                     </div>
 
                     {{-- Mobile Toggle --}}

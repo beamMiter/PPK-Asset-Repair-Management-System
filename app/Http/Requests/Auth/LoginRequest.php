@@ -30,6 +30,16 @@ class LoginRequest extends FormRequest
         ];
     }
 
+    /** Thai messages — the default validation strings are English and were the only thing shown. */
+    public function messages(): array
+    {
+        return [
+            'citizen_id.required' => 'กรุณากรอกเลขบัตรประชาชน',
+            'citizen_id.digits'   => 'เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก (ไม่ต้องมีเว้นวรรคหรือขีด)',
+            'password.required'   => 'กรุณากรอกรหัสผ่าน',
+        ];
+    }
+
     /**
      * Attempt to authenticate the request's credentials.
      *
@@ -47,7 +57,7 @@ class LoginRequest extends FormRequest
 
             throw ValidationException::withMessages([
                 // ✅ ผูก error กับช่อง citizen_id
-                'citizen_id' => __('auth.failed'),
+                'citizen_id' => 'เลขบัตรประชาชนหรือรหัสผ่านไม่ถูกต้อง',
             ]);
         }
 
@@ -69,11 +79,10 @@ class LoginRequest extends FormRequest
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
+        // Say it is a temporary lock-out, not "wrong password" — otherwise a locked user keeps
+        // retrying the right password and thinks login is broken.
         throw ValidationException::withMessages([
-            'citizen_id' => trans('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
+            'citizen_id' => "พยายามเข้าสู่ระบบผิดหลายครั้งเกินไป กรุณารอ {$seconds} วินาทีแล้วลองใหม่",
         ]);
     }
 

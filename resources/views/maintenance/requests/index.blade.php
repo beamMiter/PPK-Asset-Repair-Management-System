@@ -42,9 +42,14 @@
             x-data="{ showFilters: window.innerWidth >= 768 }">
             <div class="px-4 md:px-6 lg:px-8 py-4">
                 <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                    <div class="flex flex-col min-w-0 gap-1">
-                        <h1 class="text-[17px] font-semibold text-slate-900">รายการใบงานซ่อมบำรุง</h1>
-                        <p class="text-[13px] text-slate-600">รายการแจ้งซ่อมบำรุงรักษา • ค้นหา กรอง และตรวจทานรายการ</p>
+                    <div class="flex items-start gap-3 min-w-0">
+                        {{-- Header glyph — same style as My Jobs / users / settings pages --}}
+                        <span class="material-symbols-outlined text-[32px] text-[#0F2D5C] mt-0.5"
+                            aria-hidden="true">handyman</span>
+                        <div class="flex flex-col min-w-0 gap-1">
+                            <h1 class="text-[17px] font-semibold text-slate-900">รายการใบงานซ่อมบำรุง</h1>
+                            <p class="text-[13px] text-slate-600">รายการแจ้งซ่อมบำรุงรักษา • ค้นหา กรอง และตรวจทานรายการ</p>
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-2 w-full md:w-auto">

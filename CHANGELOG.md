@@ -6,6 +6,26 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Login feedback:** a failed sign-in was completely silent. The auth layout now renders the
+  session toast (`<x-toast />` only consumed it), the messages under the CID / password fields
+  are shown, and every login message is in Thai. A lock-out after 5 attempts now says to wait N
+  seconds instead of looking like "wrong password", and an expired page (419) redirects back with
+  a message instead of the bare "419 | Page Expired" screen.
+- **"Login successful" toast appeared twice** — the intro-finished path and the 5 s safety timer
+  both fired it; whichever fires first now cancels the other.
+- **Chat FAB played its sound on every page load / when opening the drawer** (unread baseline
+  reset to 0 each time). It now rings only when the unread total actually goes up.
+- **`npm run dev` no longer collides with another project's Vite on port 5173** (styles and
+  scripts came back as HTML). It picks the first free port itself; HMR follows it. `VITE_PORT`
+  still sets the starting port.
+
+### Changed
+
+- Header icons restored on the request list, assets, chat, users, maintenance-types and
+  notification-settings pages (Material Symbols, same style as My Jobs).
+
 ## [2.0.0] - 2026-09-10
 
 Framework modernisation plus a full feature-by-feature logic and security audit.

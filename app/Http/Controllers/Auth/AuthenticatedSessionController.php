@@ -49,10 +49,10 @@ class AuthenticatedSessionController extends Controller
             return back()
                 ->with('toast', [
                     'type'     => 'error',
-                    // ✅ เปลี่ยนข้อความให้ตรงกับ citizen_id
-                    'message'  => 'เลขบัตรประชาชนหรือรหัสผ่านไม่ถูกต้อง',
+                    // the real reason: wrong credentials vs. temporarily locked out
+                    'message'  => $e->validator->errors()->first() ?: 'เลขบัตรประชาชนหรือรหัสผ่านไม่ถูกต้อง',
                     'position' => 'tr',
-                    'timeout'  => 3200,
+                    'timeout'  => 4000,
                 ])
                 ->withErrors($e->errors())
                 ->withInput();

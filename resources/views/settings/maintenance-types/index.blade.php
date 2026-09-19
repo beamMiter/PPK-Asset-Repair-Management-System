@@ -32,9 +32,14 @@
         <div class="sticky top-16 z-20 bg-white/90 backdrop-blur border-b border-slate-200" x-data="{ showFilters: window.innerWidth >= 768 }">
             <div class="px-4 md:px-6 lg:px-8 py-4">
                 <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <h1 class="text-[17px] font-semibold text-slate-900">ตั้งค่า - ประเภทงานซ่อม</h1>
-                        <p class="text-[13px] text-slate-600">จัดการประเภทงานซ่อม • เพิ่ม/แก้ไข/ปิดใช้งาน</p>
+                    <div class="flex items-start gap-3 min-w-0">
+                        {{-- Same glyph as the sidebar's maintenance-types item --}}
+                        <span class="material-symbols-outlined text-[32px] text-[#0F2D5C] mt-0.5"
+                            aria-hidden="true">build_circle</span>
+                        <div>
+                            <h1 class="text-[17px] font-semibold text-slate-900">ตั้งค่า - ประเภทงานซ่อม</h1>
+                            <p class="text-[13px] text-slate-600">จัดการประเภทงานซ่อม • เพิ่ม/แก้ไข/ปิดใช้งาน</p>
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-2 w-full md:w-auto">
