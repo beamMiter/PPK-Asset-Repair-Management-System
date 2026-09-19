@@ -80,12 +80,6 @@
         } else {
             $techDisplayName = $req->technician?->name ?? 'ยังไม่มีเจ้าหน้าที่รับเรื่อง';
         }
-
-        $btnBase = 'inline-flex items-center justify-center gap-2
-              rounded-md px-4 h-9
-              text-sm font-medium
-              transition-all duration-200
-              focus:outline-none focus:ring-2 focus:ring-offset-2';
     @endphp
 
     <style>
@@ -147,167 +141,79 @@
                     @if ($canAcknowledge)
                         <form method="POST" action="{{ route('maintenance.requests.acknowledge', $req->id) }}">
                             @csrf
-                            <button
-                                class="inline-flex items-center overflow-hidden rounded bg-[#1e3a8a] text-[13px] font-bold text-white hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all active:scale-95 group">
-                                <span
-                                    class="px-2.5 py-2 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/10">
-                                    <span class="material-symbols-outlined text-[17px]">approval_delegation</span>
-                                </span>
-                                <span class="px-3 py-2 leading-none">รับทราบ</span>
-                            </button>
+                            <x-ui.button type="submit" variant="brand" icon="approval_delegation" split>รับทราบ</x-ui.button>
                         </form>
                     @endif
 
                     @if ($canAccept)
                         <form method="POST" action="{{ route('maintenance.requests.accept', $req->id) }}">
                             @csrf
-                            <button
-                                class="inline-flex items-center overflow-hidden rounded bg-blue-600 text-[13px] font-bold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all active:scale-95 group">
-                                <span
-                                    class="px-2.5 py-2 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/10">
-                                    <span class="material-symbols-outlined text-[17px]">check</span>
-                                </span>
-                                <span class="px-3 py-2 leading-none">รับเรื่อง</span>
-                            </button>
+                            <x-ui.button type="submit" variant="info" icon="check" split>รับเรื่อง</x-ui.button>
                         </form>
                     @endif
 
                     @if ($canStart)
                         <form method="POST" action="{{ route('maintenance.requests.start', $req->id) }}">
                             @csrf
-                            <button
-                                class="inline-flex items-center overflow-hidden rounded bg-emerald-600 text-[13px] font-bold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all active:scale-95 group">
-                                <span
-                                    class="px-2.5 py-2 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/10">
-                                    <span class="material-symbols-outlined text-[17px]">keyboard_arrow_right</span>
-                                </span>
-                                <span class="px-3 py-2 leading-none">ดำเนินการ</span>
-                            </button>
+                            <x-ui.button type="submit" variant="primary" icon="keyboard_arrow_right" split>ดำเนินการ</x-ui.button>
                         </form>
                     @endif
 
                     @if ($canHold)
-                        <button type="button" id="openHoldModalBtn"
-                            class="inline-flex items-center overflow-hidden rounded bg-amber-600 text-[13px] font-bold text-white hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-200 transition-all active:scale-95 group">
-                            <span
-                                class="px-2.5 py-2 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/20">
-                                <span class="material-symbols-outlined text-[17px]">pause_circle</span>
-                            </span>
-                            <span class="px-3 py-2 leading-none">หยุดชั่วคราว</span>
-                        </button>
+                        <x-ui.button id="openHoldModalBtn" variant="warning" icon="pause_circle" split>หยุดชั่วคราว</x-ui.button>
                     @endif
 
                     @if ($canResume)
                         <form method="POST" action="{{ route('maintenance.requests.resume', $req->id) }}">
                             @csrf
-                            <button
-                                class="inline-flex items-center overflow-hidden rounded bg-sky-600 text-[13px] font-bold text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-200 transition-all active:scale-95 group">
-                                <span
-                                    class="px-2.5 py-2 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/20">
-                                    <span class="material-symbols-outlined text-[17px]">keyboard_double_arrow_right</span>
-                                </span>
-                                <span class="px-3 py-2 leading-none">กลับเข้าดำเนินการ</span>
-                            </button>
+                            <x-ui.button type="submit" variant="info" icon="keyboard_double_arrow_right" split>กลับเข้าดำเนินการ</x-ui.button>
                         </form>
                     @endif
 
                     @if ($canResolve)
-                        <button type="button" id="openResolveModalBtn"
-                            class="inline-flex items-center overflow-hidden rounded bg-emerald-700 text-[13px] font-bold text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all active:scale-95 group">
-                            <span
-                                class="px-2.5 py-2 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/20">
-                                <span class="material-symbols-outlined text-[17px]">task_alt</span>
-                            </span>
-                            <span class="px-3 py-2 leading-none">เสร็จสิ้น</span>
-                        </button>
+                        <x-ui.button id="openResolveModalBtn" variant="primary" icon="task_alt" split>เสร็จสิ้น</x-ui.button>
                     @endif
 
                     @if ($canClose)
                         <form method="POST" action="{{ route('maintenance.requests.close', $req->id) }}">
                             @csrf
-                            <button
-                                class="inline-flex items-center overflow-hidden rounded bg-emerald-800 text-[13px] font-bold text-white hover:bg-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-300 transition-all active:scale-95 group">
-                                <span
-                                    class="px-2.5 py-2 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/20">
-                                    <span class="material-symbols-outlined text-[17px]">check</span>
-                                </span>
-                                <span class="px-3 py-2 leading-none">อนุมัติปิดงาน</span>
-                            </button>
+                            <x-ui.button type="submit" variant="primary" icon="check" split>อนุมัติปิดงาน</x-ui.button>
                         </form>
                     @endif
 
                     @if ($req->status === \App\Models\MaintenanceRequest::STATUS_CLOSED)
                         @can('rate', $req)
-                            <button type="button" x-data @click="$dispatch('open-rating-modal')"
-                                class="inline-flex items-center overflow-hidden rounded bg-amber-500 text-[13px] font-bold text-white hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-200 transition-all active:scale-95 group">
-                                <span
-                                    class="px-2.5 py-2 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/20">
-                                    <span class="material-symbols-outlined text-[17px]">star</span>
-                                </span>
-                                <span class="px-3 py-2 leading-none">ประเมินความพึงพอใจ</span>
-                            </button>
+                            <x-ui.button x-data @click="$dispatch('open-rating-modal')" variant="warning" icon="star" split>ประเมินความพึงพอใจ</x-ui.button>
                         @endcan
                     @endif
 
                     @if ($canReject)
-                        <button type="button" id="openRejectModalBtn"
-                            class="inline-flex items-center overflow-hidden rounded bg-rose-600 text-[13px] font-bold text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-300 transition-all active:scale-95 group">
-                            <span
-                                class="px-2.5 py-2 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/20">
-                                <span class="material-symbols-outlined text-[17px]">block</span>
-                            </span>
-                            <span class="px-3 py-2 leading-none">ไม่รับเรื่อง</span>
-                        </button>
+                        <x-ui.button id="openRejectModalBtn" variant="danger" icon="block" split>ไม่รับเรื่อง</x-ui.button>
                     @endif
 
                     @if ($canCancel)
-                        <button type="button" id="openCancelModalBtn"
-                            class="inline-flex items-center overflow-hidden rounded bg-slate-500 text-[13px] font-bold text-white hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all active:scale-95 group">
-                            <span
-                                class="px-2.5 py-2 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/20">
-                                <span class="material-symbols-outlined text-[17px]">cancel</span>
-                            </span>
-                            <span class="px-3 py-2 leading-none">ยกเลิกการซ่อมบำรุง</span>
-                        </button>
+                        <x-ui.button id="openCancelModalBtn" variant="neutral" icon="cancel" split>ยกเลิกการซ่อมบำรุง</x-ui.button>
                     @endif
 
                     <div class="ml-2 flex items-center gap-2">
 
 
                         {{-- Nav buttons --}}
-                        <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('maintenance.requests.index') }}"
-                            class="inline-flex items-center h-9 gap-2 rounded-md border {{ $line }} bg-white px-4 text-[13px] font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                            กลับ
-                        </a>
+                        <x-ui.back-button :fallback="route('maintenance.requests.index')" />
 
                         @if ($canUpdate)
-                            <a href="{{ route('maintenance.requests.edit', $req->id) }}"
-                                class="inline-flex items-center gap-1.5 rounded-md border {{ $line }} bg-white px-4 h-9 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-all">
-                                <span
-                                    class="material-symbols-outlined ms text-[16px] leading-none text-slate-500">edit</span>
-                                แก้ไข
-                            </a>
+                            <x-ui.button :href="route('maintenance.requests.edit', $req->id)" icon="edit">แก้ไข</x-ui.button>
                         @endif
 
-                        <a href="{{ route('maintenance.requests.work-order', $req->id) }}" target="_blank"
-                            class="inline-flex items-center gap-1.5 rounded-md border {{ $line }} bg-white px-4 h-9 text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition-all">
-                            <span class="material-symbols-outlined ms text-[16px] leading-none">print</span>
-                            พิมพ์ PDF
-                        </a>
+                        <x-ui.button :href="route('maintenance.requests.work-order', $req->id)" target="_blank" icon="print">พิมพ์ PDF</x-ui.button>
                     </div>
 
                     {{-- History Button (Circular) - Moved to far right --}}
                     <div class="ml-2">
 
-                        <button type="button" id="openHistoryModalBtn"
-                            class="inline-flex w-10 h-10 items-center justify-center rounded-full border {{ $line }} bg-white text-slate-600 transition-all hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 focus:outline-none focus:ring-2 focus:ring-slate-200 group"
-                            title="ดูประวัติการดำเนินงานและ Operation Log ทั้งหมด">
-                            <span
-                                class="material-symbols-outlined text-[22px] transition-transform group-hover:rotate-[-15deg]">history</span>
-                        </button>
+                        <x-ui.button id="openHistoryModalBtn" size="square" icon="history"
+                            title="ดูประวัติการดำเนินงานและ Operation Log ทั้งหมด"
+                            aria-label="ดูประวัติการดำเนินงานและ Operation Log ทั้งหมด" />
                     </div>
                 </div>
             </div>
@@ -387,10 +293,6 @@
 
         $line = 'border-slate-200';
 
-        $input = "mt-2 w-full h-10 rounded-md border $line bg-white px-3 py-2 text-sm
-            focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100";
-        $textarea = "mt-2 w-full rounded-md border $line bg-white px-3 py-2 text-sm
-              focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 resize-none overflow-hidden";
         $textareaStyle = 'min-height:unset;height:auto;';
 
         $headCls = 'flex items-start gap-3 pb-3 min-h-[56px]';
@@ -504,13 +406,7 @@
                                 <p class="text-[13px] text-slate-500">ค้นหาและเลือกเจ้าหน้าที่ที่ต้องการ</p>
                             </div>
                         </div>
-                        <button type="button" id="closeAssignModalBtn"
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2"
-                                    stroke-linecap="round" />
-                            </svg>
-                        </button>
+                        <x-ui.button id="closeAssignModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                     </div>
 
                     <form method="POST" action="{{ $assignStoreUrl }}" data-dirty-check="true">
@@ -564,16 +460,8 @@
                                     </div>
 
                                     <div class="grid grid-cols-2 gap-2">
-                                        <button type="button" id="assignSelectAllBtn"
-                                            class="inline-flex items-center justify-center rounded-md border {{ $line }} bg-white px-3 py-2
-                                    text-[12px] font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
-                                            เลือกทั้งหมด
-                                        </button>
-                                        <button type="button" id="assignClearAllBtn"
-                                            class="inline-flex items-center justify-center rounded-md border {{ $line }} bg-white px-3 py-2
-                                    text-[12px] font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
-                                            ล้างการเลือก
-                                        </button>
+                                        <x-ui.button id="assignSelectAllBtn" size="sm">เลือกทั้งหมด</x-ui.button>
+                                        <x-ui.button id="assignClearAllBtn" size="sm">ล้างการเลือก</x-ui.button>
                                     </div>
                                 </div>
 
@@ -593,14 +481,8 @@
 
                                 {{-- Footer ปุ่มย้ายมาอยู่ใต้ sidebar --}}
                                 <div class="border-t {{ $line }} bg-slate-50 px-5 py-3 flex gap-2">
-                                    <button type="button" id="cancelAssignModalBtn"
-                                        class="flex-1 py-2.5 text-[13px] font-semibold border {{ $line }} rounded-md bg-white text-slate-700 hover:bg-slate-100 transition-colors">
-                                        ยกเลิก
-                                    </button>
-                                    <button type="submit"
-                                        class="flex-1 py-2.5 text-[13px] font-semibold bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-200 transition-colors">
-                                        บันทึก
-                                    </button>
+                                    <x-ui.button id="cancelAssignModalBtn" class="flex-1">ยกเลิก</x-ui.button>
+                                    <x-ui.button type="submit" variant="primary" class="flex-1">บันทึก</x-ui.button>
                                 </div>
 
                             </div>
@@ -711,13 +593,7 @@
                 <div class="relative z-[10000] w-full max-w-xl rounded-2xl border {{ $line }} bg-white ">
                     <div class="flex items-center justify-between border-b {{ $line }} px-4 py-3">
                         <div class="text-sm font-semibold text-rose-600">ไม่รับเรื่อง</div>
-                        <button type="button" id="closeRejectModalBtn"
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2"
-                                    stroke-linecap="round" />
-                            </svg>
-                        </button>
+                        <x-ui.button id="closeRejectModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                     </div>
                     <form method="POST" action="{{ route('maintenance.requests.reject', $req->id) }}"
                         class="px-4 py-4 space-y-4" data-dirty-check="true">
@@ -731,14 +607,8 @@
                                 placeholder="เช่น ข้อมูลไม่ครบถ้วน, แจ้งซ้ำ, หรือไม่ใช่หน้าที่ของทีมเจ้าหน้าที่..."></textarea>
                         </div>
                         <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" id="cancelRejectModalBtn"
-                                class="px-3 py-2 text-xs border {{ $line }} rounded-md bg-white hover:bg-slate-50">
-                                ยกเลิก
-                            </button>
-                            <button type="submit"
-                                class="px-3 py-2 text-xs bg-rose-600 text-white rounded-md hover:bg-rose-700 focus:ring-2 focus:ring-rose-200">
-                                ยืนยันการไม่รับเรื่อง
-                            </button>
+                            <x-ui.button id="cancelRejectModalBtn">ยกเลิก</x-ui.button>
+                            <x-ui.button type="submit" variant="danger">ยืนยันการไม่รับเรื่อง</x-ui.button>
                         </div>
                     </form>
                 </div>
@@ -752,13 +622,7 @@
                 <div class="relative z-[10000] w-full max-w-xl rounded-2xl border {{ $line }} bg-white ">
                     <div class="flex items-center justify-between border-b {{ $line }} px-4 py-3">
                         <div class="text-sm font-semibold text-slate-600">ยกเลิกการซ่อมบำรุง</div>
-                        <button type="button" id="closeCancelModalBtn"
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2"
-                                    stroke-linecap="round" />
-                            </svg>
-                        </button>
+                        <x-ui.button id="closeCancelModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                     </div>
                     <form method="POST" action="{{ route('maintenance.requests.cancel', $req->id) }}"
                         class="px-4 py-4 space-y-4" data-dirty-check="true">
@@ -772,14 +636,8 @@
                                 placeholder="เช่น แจ้งผิดหน่วยงาน, ซ่อมเองได้แล้ว, หรือขอยกเลิกรายการนี้..."></textarea>
                         </div>
                         <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" id="cancelCancelModalBtn"
-                                class="px-3 py-2 text-xs border {{ $line }} rounded-md bg-white hover:bg-slate-50">
-                                ปิด
-                            </button>
-                            <button type="submit"
-                                class="px-3 py-2 text-xs bg-slate-600 text-white rounded-md hover:bg-slate-700 focus:ring-2 focus:ring-slate-200">
-                                ยืนยันการยกเลิกการซ่อมบำรุง
-                            </button>
+                            <x-ui.button id="cancelCancelModalBtn">ปิด</x-ui.button>
+                            <x-ui.button type="submit" variant="neutral">ยืนยันการยกเลิกการซ่อมบำรุง</x-ui.button>
                         </div>
                     </form>
                 </div>
@@ -793,13 +651,7 @@
                 <div class="relative z-[10000] w-full max-w-xl rounded-2xl border {{ $line }} bg-white ">
                     <div class="flex items-center justify-between border-b {{ $line }} px-4 py-3">
                         <div class="text-sm font-semibold text-slate-900">พักชั่วคราว</div>
-                        <button type="button" id="closeHoldModalBtn"
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2"
-                                    stroke-linecap="round" />
-                            </svg>
-                        </button>
+                        <x-ui.button id="closeHoldModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                     </div>
                     <form method="POST" action="{{ route('maintenance.requests.hold', $req->id) }}"
                         class="px-4 py-4 space-y-4" data-dirty-check="true">
@@ -813,14 +665,8 @@
                                 placeholder="เช่น รออะไหล่, รอเบิกเครื่องมือ, หรือเหตุผลอื่น ๆ..."></textarea>
                         </div>
                         <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" id="cancelHoldModalBtn"
-                                class="px-3 py-2 text-xs border {{ $line }} rounded-md bg-white hover:bg-slate-50">
-                                ยกเลิก
-                            </button>
-                            <button type="submit"
-                                class="px-3 py-2 text-xs bg-amber-600 text-white rounded-md hover:bg-amber-700 focus:ring-2 focus:ring-amber-200">
-                                ยืนยันการพักชั่วคราว
-                            </button>
+                            <x-ui.button id="cancelHoldModalBtn">ยกเลิก</x-ui.button>
+                            <x-ui.button type="submit" variant="warning">ยืนยันการพักชั่วคราว</x-ui.button>
                         </div>
                     </form>
                 </div>
@@ -834,13 +680,7 @@
                 <div class="relative z-[10000] w-full max-w-xl rounded-2xl border {{ $line }} bg-white ">
                     <div class="flex items-center justify-between border-b {{ $line }} px-4 py-3">
                         <div class="text-sm font-semibold text-slate-900">ซ่อมบำรุงเสร็จสิ้น</div>
-                        <button type="button" id="closeResolveModalBtn"
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2"
-                                    stroke-linecap="round" />
-                            </svg>
-                        </button>
+                        <x-ui.button id="closeResolveModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                     </div>
                     <form method="POST" action="{{ route('maintenance.requests.resolve', $req->id) }}"
                         class="px-4 py-4 space-y-4" data-dirty-check="true">
@@ -854,14 +694,8 @@
                                 placeholder="เช่น เปลี่ยนอะไหล่, ซ่อมแผงวงจรสำเร็จ, ผ่านการสอบเทียบแล้ว..."></textarea>
                         </div>
                         <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" id="cancelResolveModalBtn"
-                                class="px-3 py-2 text-xs border {{ $line }} rounded-md bg-white hover:bg-slate-50">
-                                ยกเลิก
-                            </button>
-                            <button type="submit"
-                                class="px-3 py-2 text-xs bg-emerald-700 text-white rounded-md hover:bg-emerald-800 focus:ring-2 focus:ring-emerald-200">
-                                ยืนยันซ่อมบำรุงเสร็จสิ้น
-                            </button>
+                            <x-ui.button id="cancelResolveModalBtn">ยกเลิก</x-ui.button>
+                            <x-ui.button type="submit" variant="primary">ยืนยันซ่อมบำรุงเสร็จสิ้น</x-ui.button>
                         </div>
                     </form>
                 </div>
@@ -885,10 +719,7 @@
                                 History Log</div>
                         </div>
                     </div>
-                    <button type="button" id="closeHistoryModalBtn"
-                        class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
-                        <span class="material-symbols-outlined text-[20px]">close</span>
-                    </button>
+                    <x-ui.button id="closeHistoryModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                 </div>
 
                 <div class="px-6 py-6 max-h-[60vh] overflow-y-auto bg-white custom-scrollbar-indigo">
@@ -896,10 +727,7 @@
                 </div>
 
                 <div class="flex justify-end border-t {{ $line }} px-6 py-4 bg-slate-50/50">
-                    <button type="button" id="cancelHistoryModalBtn"
-                        class="h-10 px-6 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95">
-                        ปิดหน้าต่าง
-                    </button>
+                    <x-ui.button id="cancelHistoryModalBtn">ปิดหน้าต่าง</x-ui.button>
                 </div>
             </div>
         </div>
@@ -932,12 +760,10 @@
                                 </a>
                             @endcan
 
-                            <button type="button"
-                                onclick="document.getElementById('postCloseModal').remove(); document.body.style.overflow = '';"
-                                class="flex w-full items-center justify-center gap-3 rounded-2xl bg-white border-2 border-slate-100 py-4 text-[15px] font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-200 active:scale-[0.98] transition-all">
-                                <span class="material-symbols-outlined text-[20px]">visibility</span>
+                            <x-ui.button icon="visibility" class="w-full"
+                                onclick="document.getElementById('postCloseModal').remove(); document.body.style.overflow = '';">
                                 ดูรายละเอียดใบงาน
-                            </button>
+                            </x-ui.button>
                         </div>
                     </div>
                 </div>
@@ -973,10 +799,7 @@
                                     #{{ $req->request_no ?? $req->id }}</p>
                             </div>
                         </div>
-                        <button @click="ratingOpen = false"
-                            class="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all">
-                            <span class="material-symbols-outlined text-[20px]">close</span>
-                        </button>
+                        <x-ui.button @click="ratingOpen = false" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                     </div>
 
                     {{-- Form --}}
@@ -1023,14 +846,8 @@
                         </div>
 
                         <div class="flex gap-4">
-                            <button type="button" @click="ratingOpen = false"
-                                class="flex-1 px-6 py-3 bg-slate-100 text-slate-500 rounded-sm font-bold text-[14px] hover:bg-slate-200 transition-all active:scale-95">
-                                ยกเลิก
-                            </button>
-                            <button type="submit"
-                                class="flex-1 px-6 py-3 bg-[#0F2D5C] text-white rounded-sm font-bold text-[14px] hover:bg-[#1a3d75] transition-all active:scale-95">
-                                บันทึกการประเมิน
-                            </button>
+                            <x-ui.button @click="ratingOpen = false" class="flex-1">ยกเลิก</x-ui.button>
+                            <x-ui.button type="submit" variant="brand" class="flex-1">บันทึกการประเมิน</x-ui.button>
                         </div>
                     </form>
                 </div>

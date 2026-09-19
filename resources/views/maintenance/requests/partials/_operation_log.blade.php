@@ -25,7 +25,7 @@
                         class="block text-sm font-medium text-slate-700">รายการซ่อมสำหรับวันที่</label>
                     <input id="operation_date" type="date" name="operation_date"
                         value="{{ old('operation_date', optional($opLog?->operation_date)->format('Y-m-d')) }}"
-                        class="{{ $input }}" onclick="this.showPicker()">
+                        class="ui-input" onclick="this.showPicker()">
                 </div>
                 <div>
                     <div class="block text-sm font-medium text-slate-700">วิธีการปฏิบัติ / การคิดค่าใช้จ่าย</div>
@@ -53,7 +53,7 @@
                         (รหัสครุภัณฑ์)</label>
                     <input id="property_code" type="text" name="property_code"
                         value="{{ old('property_code', $opLog->property_code ?? ($assetCode ?? '')) }}"
-                        class="{{ $input }}" placeholder="เช่น 68101068718">
+                        class="ui-input" placeholder="เช่น 68101068718">
                 </div>
                 <label class="inline-flex items-center gap-2 text-sm text-slate-700">
                     <input type="checkbox" name="require_precheck" value="1" @checked(old('require_precheck', $opLog->require_precheck ?? false))
@@ -78,18 +78,11 @@
                 <div>
                     <label for="remark" class="block text-sm font-medium text-slate-700">หมายเหตุ /
                         รายละเอียดประกอบ</label>
-                    <textarea id="remark" name="remark" rows="4" style="{{ $textareaStyle }}" class="{{ $textarea }}"
+                    <textarea id="remark" name="remark" rows="4" style="{{ $textareaStyle }}" class="ui-textarea resize-none overflow-hidden"
                         placeholder="เช่น ตรวจเช็คแล้วพบว่า..., ผู้ใช้ทดสอบแล้วเรียบร้อย">{{ old('remark', $opLog->remark ?? '') }}</textarea>
                 </div>
                 <div class="flex justify-end">
-                    <button type="submit"
-                        class="inline-flex items-center justify-center h-11 overflow-hidden rounded-md bg-emerald-600 text-[13px] font-bold text-white hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-200 transition-all active:scale-95 group shrink-0">
-                        <span
-                            class="px-2.5 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/10 h-full">
-                            <span class="material-symbols-outlined text-[17px]">check</span>
-                        </span>
-                        <span class="px-3 leading-none">บันทึกรายงานการปฏิบัติงาน</span>
-                    </button>
+                    <x-ui.button type="submit" variant="primary" icon="check" split>บันทึกรายงานการปฏิบัติงาน</x-ui.button>
                 </div>
             </form>
         @else

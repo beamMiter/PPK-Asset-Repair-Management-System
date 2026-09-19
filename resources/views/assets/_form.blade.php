@@ -5,25 +5,12 @@
 
     $line = 'border-slate-200';
 
-    $input = "mt-2 w-full h-11 rounded-md border $line bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 outline-none transition-all";
 
-    $textarea = "mt-2 w-full min-h-[120px] rounded-md border $line bg-white px-3 py-2.5 text-sm text-slate-900
-               placeholder:text-slate-400
-               focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 outline-none transition-all";
 
     $displayBox = "mt-2 w-full min-h-[44px] rounded-md border $line bg-white px-3 py-2.5 flex items-center text-sm text-slate-900 font-medium";
     $displayBoxTextarea = "mt-2 w-full min-h-[44px] rounded-md border $line bg-white px-3 py-2.5 text-sm text-slate-900 font-medium whitespace-pre-line";
 
-    $headCls = 'flex items-start gap-3 pb-3 min-h-[56px]';
-    $noCls =
-        'w-8 h-8 shrink-0 rounded-full border border-emerald-600 bg-emerald-600 flex items-center justify-center text-sm font-bold text-white leading-none';
-    $titleCls = 'text-base font-semibold text-slate-900 leading-tight';
-    $subCls = 'text-sm text-slate-500 leading-snug';
-    $accentWrap = 'min-w-0 relative pl-3 pt-[1px]';
-    $accentBar = 'absolute left-0 top-[2px] w-[3px] h-9 rounded-full bg-emerald-600/90';
 
-    $labelCls = 'block text-sm font-medium text-slate-700 mb-1';
-    $hintCls = 'ml-1 text-[11px] text-slate-500 font-normal italic';
 
     $v = fn($key, $default = '') => old($key, data_get($asset, $key, $default));
 @endphp
@@ -44,18 +31,11 @@
 
             {{-- STEP 1: ข้อมูลหลัก --}}
             <section>
-                <div class="{{ $headCls }}">
-                    <div class="{{ $noCls }}">1</div>
-                    <div class="{{ $accentWrap }}">
-                        <span class="{{ $accentBar }}"></span>
-                        <div class="{{ $titleCls }}">ข้อมูลหลัก</div>
-                        <div class="{{ $subCls }}">ชื่อ รหัส และการเชื่อมต่อ HIS</div>
-                    </div>
-                </div>
+                <x-ui.section-head no="1" title="ข้อมูลหลัก" subtitle="ชื่อ รหัส และการเชื่อมต่อ HIS" />
 
                 <div class="space-y-5 pt-1">
                     <div>
-                        <label class="{{ $labelCls }}">ชื่อครุภัณฑ์ @if (!$readonly)
+                        <label class="ui-label">ชื่อครุภัณฑ์ @if (!$readonly)
                                 <span class="text-rose-600 font-bold">*</span>
                             @endif
                         </label>
@@ -63,7 +43,7 @@
                             <div class="{{ $displayBox }} font-semibold">{{ $asset->name ?? '—' }}</div>
                         @else
                             <input type="text" id="name" name="name" value="{{ $v('name') }}"
-                                class="{{ $input }}" placeholder="ระบุชื่อเรียกครุภัณฑ์" required>
+                                class="ui-input" placeholder="ระบุชื่อเรียกครุภัณฑ์" required>
                             @error('name')
                                 <p class="mt-1 text-[11px] text-rose-600 font-medium">{{ $message }}</p>
                             @enderror
@@ -71,7 +51,7 @@
                     </div>
 
                     <div>
-                        <label class="{{ $labelCls }}">รหัสครุภัณฑ์ @if (!$readonly)
+                        <label class="ui-label">รหัสครุภัณฑ์ @if (!$readonly)
                                 <span class="text-rose-600 font-bold">*</span>
                             @endif
                         </label>
@@ -79,7 +59,7 @@
                             <div class="{{ $displayBox }} font-semibold">{{ $asset->asset_code ?? '—' }}</div>
                         @else
                             <input type="text" id="asset_code" name="asset_code" value="{{ $v('asset_code') }}"
-                                class="{{ $input }}" placeholder="รหัสภายในโรงพยาบาล" required>
+                                class="ui-input" placeholder="รหัสภายในโรงพยาบาล" required>
                             @error('asset_code')
                                 <p class="mt-1 text-[11px] text-rose-600 font-medium">{{ $message }}</p>
                             @enderror
@@ -87,17 +67,17 @@
                     </div>
 
                     <div>
-                        <label class="{{ $labelCls }}">ประเภทครุภัณฑ์</label>
+                        <label class="ui-label">ประเภทครุภัณฑ์</label>
                         @if ($readonly)
                             <div class="{{ $displayBox }}">{{ $asset->type ?? '—' }}</div>
                         @else
                             <input id="type" type="text" name="type" value="{{ $v('type') }}"
-                                class="{{ $input }}" placeholder="เช่น การแพทย์, เทคโนโลยีสารสนเทศ">
+                                class="ui-input" placeholder="เช่น การแพทย์, เทคโนโลยีสารสนเทศ">
                         @endif
                     </div>
 
                     <div>
-                        <label class="{{ $labelCls }}">รหัสทะเบียน รพจ <span class="{{ $hintCls }}">(HIS
+                        <label class="ui-label">รหัสทะเบียน รพจ <span class="ui-hint">(HIS
                                 ID)</span></label>
                         @if ($readonly)
                             <div class="{{ $displayBox }} text-blue-700 font-semibold">
@@ -105,16 +85,9 @@
                         @else
                             <div class="flex gap-2">
                                 <input type="text" id="his_asset_id" name="his_asset_id"
-                                    value="{{ $v('his_asset_id') }}" class="{{ $input }} flex-1"
+                                    value="{{ $v('his_asset_id') }}" class="ui-input flex-1"
                                     placeholder="RPJ-XXXXXX">
-                                <button type="button" id="btn-fetch-his"
-                                    class="mt-2 inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-md border border-sky-600 bg-sky-600 text-white text-sm font-medium hover:bg-sky-700 focus:ring-2 focus:ring-sky-200 transition-all whitespace-nowrap">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                        stroke-width="2">
-                                        <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                                    </svg>
-                                    ดึงข้อมูล HIS
-                                </button>
+                                <x-ui.button id="btn-fetch-his" variant="info" icon="cloud_download" class="mt-2">ดึงข้อมูล HIS</x-ui.button>
                             </div>
                         @endif
                     </div>
@@ -123,67 +96,60 @@
 
             {{-- STEP 2: รายละเอียดทางเทคนิค --}}
             <section>
-                <div class="{{ $headCls }}">
-                    <div class="{{ $noCls }}">2</div>
-                    <div class="{{ $accentWrap }}">
-                        <span class="{{ $accentBar }}"></span>
-                        <div class="{{ $titleCls }}">รายละเอียดทางเทคนิค</div>
-                        <div class="{{ $subCls }}">ยี่ห้อ รุ่น Serial และที่ตั้ง</div>
-                    </div>
-                </div>
+                <x-ui.section-head no="2" title="รายละเอียดทางเทคนิค" subtitle="ยี่ห้อ รุ่น Serial และที่ตั้ง" />
 
                 <div class="space-y-5 pt-1">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="{{ $labelCls }}">ยี่ห้อ</label>
+                            <label class="ui-label">ยี่ห้อ</label>
                             @if ($readonly)
                                 <div class="{{ $displayBox }}">{{ $asset->brand ?? '—' }}</div>
                             @else
                                 <input id="brand" type="text" name="brand" value="{{ $v('brand') }}"
-                                    class="{{ $input }}">
+                                    class="ui-input">
                             @endif
                         </div>
                         <div>
-                            <label class="{{ $labelCls }}">รุ่น</label>
+                            <label class="ui-label">รุ่น</label>
                             @if ($readonly)
                                 <div class="{{ $displayBox }}">{{ $asset->model ?? '—' }}</div>
                             @else
                                 <input id="model" type="text" name="model" value="{{ $v('model') }}"
-                                    class="{{ $input }}">
+                                    class="ui-input">
                             @endif
                         </div>
                     </div>
 
                     <div>
-                        <label class="{{ $labelCls }}">หมายเลขเครื่อง <span class="{{ $hintCls }}">(Serial
+                        <label class="ui-label">หมายเลขเครื่อง <span class="ui-hint">(Serial
                                 No.)</span></label>
                         @if ($readonly)
                             <div class="{{ $displayBox }} font-mono">{{ $asset->serial_number ?? '—' }}</div>
                         @else
                             <input id="serial_number" type="text" name="serial_number"
-                                value="{{ $v('serial_number') }}" class="{{ $input }}">
+                                value="{{ $v('serial_number') }}" class="ui-input">
                         @endif
                     </div>
 
                     <div>
-                        <label class="{{ $labelCls }}">หมายเลขโทรศัพท์ภายใน <span
-                                class="{{ $hintCls }}">(ป้ายเหลือง)</span></label>
+                        <label class="ui-label">หมายเลขโทรศัพท์ภายใน <span
+                                class="ui-hint">(ป้ายเหลือง)</span></label>
                         @if ($readonly)
                             <div class="{{ $displayBox }}">{{ $asset->internal_phone ?? '—' }}</div>
                         @else
                             <input id="internal_phone" type="text" name="internal_phone"
-                                value="{{ $v('internal_phone') }}" class="{{ $input }}"
+                                value="{{ $v('internal_phone') }}" class="ui-input"
                                 placeholder="เช่น 02-xxx-xxxx">
                         @endif
                     </div>
 
                     <div>
-                        <label class="{{ $labelCls }}">สถานที่ตั้ง / ห้อง / บริเวณ</label>
+                        <label class="ui-label">สถานที่ตั้ง / ห้อง / บริเวณ</label>
                         @if ($readonly)
                             <div class="{{ $displayBox }} text-emerald-700">{{ $asset->location ?? '—' }}</div>
                         @else
                             <input id="location" type="text" name="location" value="{{ $v('location') }}"
-                                class="{{ $input }}" placeholder="ระบุตำแหน่งที่ตั้ง">
+                                class="ui-input" placeholder="ระบุตำแหน่งที่ตั้ง">
                         @endif
                     </div>
                 </div>
@@ -191,40 +157,33 @@
 
             {{-- STEP 3: ข้อมูลการจัดซื้อ --}}
             <section>
-                <div class="{{ $headCls }}">
-                    <div class="{{ $noCls }}">3</div>
-                    <div class="{{ $accentWrap }}">
-                        <span class="{{ $accentBar }}"></span>
-                        <div class="{{ $titleCls }}">ข้อมูลการจัดซื้อ</div>
-                        <div class="{{ $subCls }}">ผู้ขาย ราคา และวันจัดซื้อ</div>
-                    </div>
-                </div>
+                <x-ui.section-head no="3" title="ข้อมูลการจัดซื้อ" subtitle="ผู้ขาย ราคา และวันจัดซื้อ" />
 
                 <div class="space-y-5 pt-1">
                     <div>
-                        <label class="{{ $labelCls }}">บริษัทผู้ขาย / ตัวแทนจำหน่าย</label>
+                        <label class="ui-label">บริษัทผู้ขาย / ตัวแทนจำหน่าย</label>
                         @if ($readonly)
                             <div class="{{ $displayBox }}">{{ $asset->vendor_name ?? '—' }}</div>
                         @else
                             <input id="vendor_name" type="text" name="vendor_name"
-                                value="{{ $v('vendor_name') }}" class="{{ $input }}">
+                                value="{{ $v('vendor_name') }}" class="ui-input">
                         @endif
                     </div>
 
                     <div>
-                        <label class="{{ $labelCls }}">หมายเลขโทรศัพท์ผู้ขาย</label>
+                        <label class="ui-label">หมายเลขโทรศัพท์ผู้ขาย</label>
                         @if ($readonly)
                             <div class="{{ $displayBox }}">{{ $asset->vendor_phone ?? '—' }}</div>
                         @else
                             <input id="vendor_phone" type="text" name="vendor_phone"
-                                value="{{ $v('vendor_phone') }}" class="{{ $input }}"
+                                value="{{ $v('vendor_phone') }}" class="ui-input"
                                 placeholder="081-xxx-xxxx">
                         @endif
                     </div>
 
                     <div>
-                        <label class="{{ $labelCls }}">ราคาจัดซื้อจัดจ้าง <span
-                                class="{{ $hintCls }}">(บาท)</span></label>
+                        <label class="ui-label">ราคาจัดซื้อจัดจ้าง <span
+                                class="ui-hint">(บาท)</span></label>
                         @if ($readonly)
                             <div class="{{ $displayBox }}">
                                 {{ $asset->formatted_price ?? '—' }}
@@ -235,7 +194,7 @@
                                     <span class="text-slate-900 font-medium sm:text-sm">฿</span>
                                 </div>
                                 <input id="price" type="number" step="0.01" name="price"
-                                    value="{{ $v('price') }}" class="{{ str_replace('mt-2 ', '', $input) }} !pl-6"
+                                    value="{{ $v('price') }}" class="ui-input !mt-0 !pl-6"
                                     placeholder="0.00">
                             </div>
                         @endif
@@ -243,36 +202,36 @@
 
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                            <label class="{{ $labelCls }}">วันที่จัดซื้อจัดจ้าง</label>
+                            <label class="ui-label">วันที่จัดซื้อจัดจ้าง</label>
                             @if ($readonly)
                                 <div class="{{ $displayBox }}">
                                     {{ optional($asset->purchase_date)->format('d/m/Y') ?? '—' }}</div>
                             @else
                                 <input id="purchase_date" type="date" name="purchase_date"
                                     value="{{ $v('purchase_date', optional($asset->purchase_date)->format('Y-m-d')) }}"
-                                    class="{{ $input }}">
+                                    class="ui-input">
                             @endif
                         </div>
                         <div>
-                            <label class="{{ $labelCls }}">วันเริ่มประกัน</label>
+                            <label class="ui-label">วันเริ่มประกัน</label>
                             @if ($readonly)
                                 <div class="{{ $displayBox }}">
                                     {{ optional($asset->warranty_start)->format('d/m/Y') ?? '—' }}</div>
                             @else
                                 <input id="warranty_start" type="date" name="warranty_start"
                                     value="{{ $v('warranty_start', optional($asset->warranty_start)->format('Y-m-d')) }}"
-                                    class="{{ $input }}">
+                                    class="ui-input">
                             @endif
                         </div>
                         <div>
-                            <label class="{{ $labelCls }}">วันหมดประกัน</label>
+                            <label class="ui-label">วันหมดประกัน</label>
                             @if ($readonly)
                                 <div class="{{ $displayBox }} text-orange-700">
                                     {{ optional($asset->warranty_expire)->format('d/m/Y') ?? '—' }}</div>
                             @else
                                 <input id="warranty_expire" type="date" name="warranty_expire"
                                     value="{{ $v('warranty_expire', optional($asset->warranty_expire)->format('Y-m-d')) }}"
-                                    class="{{ $input }}">
+                                    class="ui-input">
                             @endif
                         </div>
                     </div>
@@ -284,18 +243,11 @@
 
             {{-- STEP 4: การจัดกลุ่ม & สถานะ --}}
             <section>
-                <div class="{{ $headCls }}">
-                    <div class="{{ $noCls }}">4</div>
-                    <div class="{{ $accentWrap }}">
-                        <span class="{{ $accentBar }}"></span>
-                        <div class="{{ $titleCls }}">หมวดหมู่ และสถานะ</div>
-                        <div class="{{ $subCls }}">จัดกลุ่ม / ระบุเจ้าของ / สถานะ</div>
-                    </div>
-                </div>
+                <x-ui.section-head no="4" title="หมวดหมู่ และสถานะ" subtitle="จัดกลุ่ม / ระบุเจ้าของ / สถานะ" />
 
                 <div class="space-y-5 pt-1">
                     <div>
-                        <label class="{{ $labelCls }}">หมวดหมู่ครุภัณฑ์</label>
+                        <label class="ui-label">หมวดหมู่ครุภัณฑ์</label>
                         @if ($readonly)
                             <div class="{{ $displayBox }}">{{ optional($asset->categoryRef)->name ?? '—' }}</div>
                         @else
@@ -310,7 +262,7 @@
                     </div>
 
                     <div>
-                        <label class="{{ $labelCls }}">หน่วยงานที่ครอบครอง</label>
+                        <label class="ui-label">หน่วยงานที่ครอบครอง</label>
                         @if ($readonly)
                             <div class="{{ $displayBox }}">
                                 {{ optional($asset->department)->name_th ?? (optional($asset->department)->name_en ?? '—') }}
@@ -328,7 +280,7 @@
                     </div>
 
                     <div>
-                        <label class="{{ $labelCls }}">สถานะครุภัณฑ์</label>
+                        <label class="ui-label">สถานะครุภัณฑ์</label>
                         @if ($readonly)
                             <div class="{{ $displayBox }}">{{ $asset->status_label ?? '—' }}</div>
                         @else
@@ -342,11 +294,11 @@
                     </div>
 
                     <div>
-                        <label class="{{ $labelCls }}">หมายเหตุเพิ่มเติม</label>
+                        <label class="ui-label">หมายเหตุเพิ่มเติม</label>
                         @if ($readonly)
                             <div class="{{ $displayBoxTextarea }} min-h-[100px]">{{ $asset->note ?? '—' }}</div>
                         @else
-                            <textarea name="note" rows="5" class="{{ $textarea }} bg-slate-50/50"
+                            <textarea name="note" rows="5" class="ui-textarea bg-slate-50/50"
                                 placeholder="ระบุรายละเอียดเพิ่มเติม (ถ้ามี)">{{ $v('note') }}</textarea>
                         @endif
                     </div>
@@ -355,48 +307,22 @@
 
             {{-- STEP 5: รูปครุภัณฑ์ --}}
             <section>
-                <div class="{{ $headCls }}">
-                    <div class="{{ $noCls }}">5</div>
-                    <div class="{{ $accentWrap }}">
-                        <span class="{{ $accentBar }}"></span>
-                        <div class="{{ $titleCls }}">ภาพประกอบครุภัณฑ์</div>
-                        <div class="{{ $subCls }}">ภาพถ่ายหรือภาพประกอบหลัก</div>
-                    </div>
-                </div>
+                <x-ui.section-head no="5" title="ภาพประกอบครุภัณฑ์" subtitle="ภาพถ่ายหรือภาพประกอบหลัก" />
 
                 <div class="space-y-5 pt-1">
                     @if (!$readonly)
-                        <label class="{{ $labelCls }}">เลือกรูปภาพครุภัณฑ์</label>
+                        <label class="ui-label">เลือกรูปภาพครุภัณฑ์</label>
                         <div class="flex items-center gap-2">
                             <input id="hero_image_any" type="file" name="hero_image" accept="image/*"
                                 class="hidden">
                             <input id="hero_image_camera" type="file" name="hero_image" accept="image/*"
                                 capture="environment" class="hidden">
 
-                            <button type="button" id="hero_image_any_btn"
-                                class="inline-flex items-center justify-center h-11 px-4 rounded-md border {{ $line }} bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition focus:ring-2 focus:ring-emerald-100">
-                                <svg class="h-4 w-4 mr-2 text-slate-600" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" stroke-width="2">
-                                    <path
-                                        d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                                </svg>
-                                เลือกรูปภาพ
-                            </button>
+                            <x-ui.button id="hero_image_any_btn" icon="attach_file">เลือกรูปภาพ</x-ui.button>
 
-                            <button type="button" id="hero_image_camera_btn"
-                                class="inline-flex items-center justify-center h-11 w-11 rounded-md border {{ $line }} bg-white hover:bg-slate-50 transition focus:ring-2 focus:ring-emerald-100">
-                                <svg class="h-5 w-5 text-emerald-700" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" stroke-width="2">
-                                    <path
-                                        d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                                    <circle cx="12" cy="13" r="4" />
-                                </svg>
-                            </button>
+                            <x-ui.button id="hero_image_camera_btn" size="square" icon="photo_camera" aria-label="ถ่ายรูป" title="ถ่ายรูป" />
 
-                            <button type="button" id="hero_image_remove_btn"
-                                class="inline-flex items-center justify-center h-11 px-3 rounded-md border {{ $line }} bg-white text-xs font-semibold text-rose-600 hover:bg-rose-50 transition hidden">
-                                ล้างรูปภาพ
-                            </button>
+                            <x-ui.button id="hero_image_remove_btn" variant="danger-outline" class="hidden">ล้างรูปภาพ</x-ui.button>
                         </div>
 
                         <div class="mt-3 p-3 rounded-md bg-amber-50 border border-amber-200">
@@ -459,18 +385,11 @@
 
             {{-- STEP 6: ไฟล์แนบ --}}
             <section>
-                <div class="{{ $headCls }}">
-                    <div class="{{ $noCls }}">6</div>
-                    <div class="{{ $accentWrap }}">
-                        <span class="{{ $accentBar }}"></span>
-                        <div class="{{ $titleCls }}">ไฟล์แนบ</div>
-                        <div class="{{ $subCls }}">เอกสาร คู่มือ หรือรูปภาพเพิ่มเติม</div>
-                    </div>
-                </div>
+                <x-ui.section-head no="6" title="ไฟล์แนบ" subtitle="เอกสาร คู่มือ หรือรูปภาพเพิ่มเติม" />
 
                 <div class="space-y-5 pt-1">
                     @if (!$readonly)
-                        <label class="{{ $labelCls }}">เลือกไฟล์เอกสารเพิ่มเติม</label>
+                        <label class="ui-label">เลือกไฟล์เอกสารเพิ่มเติม</label>
                         <div class="flex items-center gap-2">
                             <input id="att_files_submit" type="file" name="files[]" multiple class="hidden">
                             <input id="att_files_any" type="file" multiple accept="image/*,application/pdf"
@@ -478,25 +397,9 @@
                             <input id="att_files_camera" type="file" accept="image/*" capture="environment"
                                 class="hidden">
 
-                            <button type="button" id="att_files_any_btn"
-                                class="inline-flex items-center justify-center h-11 px-4 rounded-md border {{ $line }} bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition focus:ring-2 focus:ring-emerald-100">
-                                <svg class="h-4 w-4 mr-2 text-slate-600" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" stroke-width="2">
-                                    <path
-                                        d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                                </svg>
-                                เลือกไฟล์แนบ
-                            </button>
+                            <x-ui.button id="att_files_any_btn" icon="attach_file">เลือกไฟล์แนบ</x-ui.button>
 
-                            <button type="button" id="att_files_camera_btn"
-                                class="inline-flex items-center justify-center h-11 w-11 rounded-md border {{ $line }} bg-white hover:bg-slate-50 transition focus:ring-2 focus:ring-emerald-100">
-                                <svg class="h-5 w-5 text-emerald-700" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" stroke-width="2">
-                                    <path
-                                        d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                                    <circle cx="12" cy="13" r="4" />
-                                </svg>
-                            </button>
+                            <x-ui.button id="att_files_camera_btn" size="square" icon="photo_camera" aria-label="ถ่ายรูป" title="ถ่ายรูป" />
                         </div>
 
                         <div class="mt-3 p-3 rounded-md bg-amber-50 border border-amber-200">

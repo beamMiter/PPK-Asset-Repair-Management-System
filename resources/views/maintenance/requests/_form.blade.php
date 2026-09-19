@@ -11,19 +11,8 @@
 
     $line = 'border-slate-200';
 
-    $input = "mt-2 w-full h-11 rounded-md border $line bg-white px-3 py-2 text-sm
-            focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100";
 
-    $textarea = "mt-2 w-full rounded-md border $line bg-white px-3 py-2 text-sm
-              focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100";
 
-    $headCls = 'flex items-start gap-3 pb-3 min-h-[56px]';
-    $noCls = "w-8 h-8 shrink-0 rounded-full border border-emerald-600 bg-emerald-600
-                flex items-center justify-center text-sm font-bold text-white leading-none";
-    $titleCls = 'text-base font-semibold text-slate-900 leading-tight';
-    $subCls = 'text-sm text-slate-500 leading-snug';
-    $accentWrap = 'min-w-0 relative pl-3 pt-[1px]';
-    $accentBar = 'absolute left-0 top-[2px] w-[3px] h-9 rounded-full bg-emerald-600/90';
 
     $v = function ($key, $default = '') use ($req) {
         $old = old($key);
@@ -52,14 +41,7 @@
             <div class="hidden lg:block absolute inset-y-0 left-1/2 w-px bg-slate-200"></div>
 
             <section>
-                <div class="{{ $headCls }}">
-                    <div class="{{ $noCls }}">1</div>
-                    <div class="{{ $accentWrap }}">
-                        <span class="{{ $accentBar }}"></span>
-                        <div class="{{ $titleCls }}">ข้อมูลหลัก</div>
-                        <div class="{{ $subCls }}">ทรัพย์สิน / หน่วยงาน / สถานที่</div>
-                    </div>
-                </div>
+                <x-ui.section-head no="1" title="ข้อมูลหลัก" subtitle="ทรัพย์สิน / หน่วยงาน / สถานที่" />
 
                 <label class="block text-sm font-medium text-slate-700">
                     ทรัพย์สิน <span class="text-rose-500 font-bold">*</span>
@@ -92,18 +74,11 @@
 
                 <label class="block text-sm font-medium text-slate-700 mt-4">สถานที่ / ตำแหน่งงาน</label>
                 <input type="text" name="location_text" value="{{ $v('location_text') }}" autocomplete="off"
-                    class="{{ $input }}">
+                    class="ui-input">
             </section>
 
             <section>
-                <div class="{{ $headCls }}">
-                    <div class="{{ $noCls }}">2</div>
-                    <div class="{{ $accentWrap }}">
-                        <span class="{{ $accentBar }}"></span>
-                        <div class="{{ $titleCls }}">รายละเอียดปัญหา</div>
-                        <div class="{{ $subCls }}">หัวข้อและอาการเสีย</div>
-                    </div>
-                </div>
+                <x-ui.section-head no="2" title="รายละเอียดปัญหา" subtitle="หัวข้อและอาการเสีย" />
 
                 <label class="block text-sm font-medium text-slate-700">
                     ประเภทงาน (Report Type)
@@ -121,10 +96,10 @@
                     หัวข้อ <span class="text-rose-600">*</span>
                 </label>
                 <input type="text" name="title" value="{{ $v('title') }}" autocomplete="off"
-                    class="{{ $input }}" required>
+                    class="ui-input" required>
 
                 <label class="block text-sm font-medium text-slate-700 mt-4">รายละเอียด / อาการเสีย</label>
-                <textarea name="description" rows="6" class="{{ $textarea }}">{{ $v('description') }}</textarea>
+                <textarea name="description" rows="6" class="ui-textarea">{{ $v('description') }}</textarea>
             </section>
         </div>
 
@@ -134,14 +109,7 @@
             <div class="hidden lg:block absolute inset-y-0 left-1/2 w-px bg-slate-200"></div>
 
             <section>
-                <div class="{{ $headCls }}">
-                    <div class="{{ $noCls }}">3</div>
-                    <div class="{{ $accentWrap }}">
-                        <span class="{{ $accentBar }}"></span>
-                        <div class="{{ $titleCls }}">ข้อมูลผู้แจ้ง</div>
-                        <div class="{{ $subCls }}">ระบุข้อมูลและรายละเอียดการติดต่อของผู้แจ้ง</div>
-                    </div>
-                </div>
+                <x-ui.section-head no="3" title="ข้อมูลผู้แจ้ง" subtitle="ระบุข้อมูลและรายละเอียดการติดต่อของผู้แจ้ง" />
 
                 <div class="grid grid-cols-1 gap-4">
                     @if (!$isEdit && $user)
@@ -157,31 +125,31 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-700">เบอร์โทร (ถ้ามี)</label>
                             <input type="text" name="reporter_phone" value="{{ $v('reporter_phone') }}"
-                                class="{{ $input }}">
+                                class="ui-input">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">อีเมล (ถ้ามี)</label>
                             <input type="email" name="reporter_email"
-                                value="{{ $v('reporter_email', $user->email) }}" class="{{ $input }}">
+                                value="{{ $v('reporter_email', $user->email) }}" class="ui-input">
                         </div>
                     @else
                         <div>
                             <label class="block text-sm font-medium text-slate-700">ชื่อผู้แจ้ง</label>
                             <input type="text" name="reporter_name" value="{{ $v('reporter_name') }}"
-                                class="{{ $input }}">
+                                class="ui-input">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">เบอร์โทร</label>
                             <input type="text" name="reporter_phone" value="{{ $v('reporter_phone') }}"
-                                class="{{ $input }}">
+                                class="ui-input">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">อีเมล</label>
                             <input type="email" name="reporter_email" value="{{ $v('reporter_email') }}"
-                                class="{{ $input }}">
+                                class="ui-input">
                         </div>
                     @endif
                 </div>
@@ -192,14 +160,7 @@
             </section>
 
             <section>
-                <div class="{{ $headCls }}">
-                    <div class="{{ $noCls }}">4</div>
-                    <div class="{{ $accentWrap }}">
-                        <span class="{{ $accentBar }}"></span>
-                        <div class="{{ $titleCls }}">ไฟล์แนบ</div>
-                        <div class="{{ $subCls }}">แนบไฟล์ / ถ่ายรูปจากมือถือ</div>
-                    </div>
-                </div>
+                <x-ui.section-head no="4" title="ไฟล์แนบ" subtitle="แนบไฟล์ / ถ่ายรูปจากมือถือ" />
 
                 @php $attachments = is_iterable($attachments ?? null) ? $attachments : []; @endphp
 
@@ -297,30 +258,12 @@
                 <div class="space-y-3">
                     <div class="flex items-center gap-3">
                         {{-- ปุ่มแนบไฟล์ (Icon Only) --}}
-                        <button type="button" id="mr_files_any_btn"
-                            class="inline-flex items-center justify-center h-12 w-12 rounded-xl border {{ $line }} bg-white
-                             text-slate-600 hover:bg-slate-50 hover:text-[#0F2D5C] hover:border-slate-300
-                             focus:outline-none focus:ring-4 focus:ring-emerald-50 transition-all active:scale-95 "
-                            title="แนบไฟล์เอกสาร">
-                            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <path d="M21 11.5l-8.5 8.5a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.7-8.7"
-                                    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                        </button>
+                        <x-ui.button id="mr_files_any_btn" size="square" icon="attach_file"
+                            aria-label="แนบไฟล์เอกสาร" title="แนบไฟล์เอกสาร" />
 
                         {{-- ปุ่มกล้อง (Icon Only) --}}
-                        <button type="button" id="mr_files_camera_btn"
-                            class="inline-flex items-center justify-center h-12 w-12 rounded-xl border {{ $line }} bg-white
-                             text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200 focus:outline-none focus:ring-4 focus:ring-emerald-50 
-                             transition-all active:scale-95 "
-                            aria-label="ถ่ายรูป" title="ถ่ายรูปจากกล้อง">
-                            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                aria-hidden="true">
-                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                                <circle cx="12" cy="13" r="4" />
-                            </svg>
-                        </button>
+                        <x-ui.button id="mr_files_camera_btn" size="square" icon="photo_camera"
+                            aria-label="ถ่ายรูป" title="ถ่ายรูปจากกล้อง" />
 
                         <div class="text-[11px] sm:text-[12px] text-slate-500 font-medium leading-tight">
                             รองรับรูปภาพ / PDF <br class="sm:hidden"> (แนบไฟล์ หรือ ถ่ายรูป)
@@ -458,22 +401,6 @@
     </div>
 </div>
 
-<div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 mt-10 border-t {{ $line }}">
-    <a href="{{ route('maintenance.requests.index') }}"
-        class="inline-flex items-center justify-center gap-1.5 h-11 sm:h-9 px-6 sm:px-3 rounded border {{ $line }} bg-white
-            text-[14px] sm:text-[13px] font-bold text-slate-700 hover:bg-slate-50 transition-all ">
-        <span class="material-symbols-outlined text-[18px] sm:text-[17px]">close</span>
-        ยกเลิก
-    </a>
-    <button type="submit"
-        class="inline-flex items-center justify-center overflow-hidden rounded bg-emerald-600 text-[14px] sm:text-[13px] font-bold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all active:scale-95 group h-11 sm:h-auto">
-        <span
-            class="hidden sm:flex px-2.5 py-2 bg-black/10 items-center justify-center text-white/90 group-hover:text-white border-r border-white/10 h-full">
-            <span class="material-symbols-outlined text-[17px]">{{ $isEdit ? 'save' : 'send' }}</span>
-        </span>
-        <span class="px-6 py-2 leading-none flex items-center gap-2">
-            <span class="sm:hidden material-symbols-outlined text-[18px]">{{ $isEdit ? 'save' : 'send' }}</span>
-            {{ $isEdit ? 'บันทึกการแก้ไข' : 'ส่งใบแจ้งซ่อมบำรุง' }}
-        </span>
-    </button>
-</div>
+<x-ui.form-actions :cancel-href="route('maintenance.requests.index')"
+    :submit-label="$isEdit ? 'บันทึกการแก้ไข' : 'ส่งใบแจ้งซ่อมบำรุง'"
+    :submit-icon="$isEdit ? 'save' : 'send'" />

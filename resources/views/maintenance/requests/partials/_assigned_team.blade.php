@@ -10,12 +10,9 @@
         </div>
 
         @can('assign', $req)
-            <button type="button" id="openAssignModalBtn"
-                class="inline-flex items-center gap-2 rounded-lg border border-slate-800 bg-white px-3.5 py-2 text-[13px] font-semibold
-                text-slate-800 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all active:scale-95 shrink-0">
-                <img src="/icon/technical-support.webp" class="w-4 h-4 object-contain brightness-0" alt="Assign">
+            <x-ui.button id="openAssignModalBtn" icon="group_add" class="shrink-0">
                 มอบหมายทีมเจ้าหน้าที่
-            </button>
+            </x-ui.button>
         @endcan
     </div>
 
