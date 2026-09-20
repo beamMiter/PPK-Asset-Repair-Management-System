@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\MaintenanceLog;
 use App\Models\MaintenanceRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;

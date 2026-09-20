@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\Attachment;
 use App\Models\File as FileModel;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;

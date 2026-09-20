@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use Illuminate\Support\Str;
 
 class Breadcrumb
 {

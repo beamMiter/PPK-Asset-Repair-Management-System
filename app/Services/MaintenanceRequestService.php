@@ -4,13 +4,11 @@ namespace App\Services;
 
 use App\Models\MaintenanceRequest as MR;
 use App\Models\Asset;
-use App\Models\File;
 use App\Models\User;
 use App\Events\MaintenanceRequestCreated;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
-use Illuminate\Http\UploadedFile;
 
 class MaintenanceRequestService
 {

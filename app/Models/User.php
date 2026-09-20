@@ -2,12 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Department;
-use App\Models\MaintenanceLog;
-use App\Models\MaintenanceRequest;
-use App\Models\MaintenanceRating;
-use App\Models\MaintenanceAssignment;
-use App\Models\Role;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;

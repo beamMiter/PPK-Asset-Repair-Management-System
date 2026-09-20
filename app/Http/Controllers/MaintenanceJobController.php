@@ -9,8 +9,6 @@ use App\Models\User;
 use App\Traits\ApiResponseWithToast;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Support\Toast;
-use Symfony\Component\HttpFoundation\Response;
 
 class MaintenanceJobController extends Controller
 {

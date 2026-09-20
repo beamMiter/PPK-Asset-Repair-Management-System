@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Support\Toast;
-use Symfony\Component\HttpFoundation\Response;
 
 class MaintenanceAttachmentController extends Controller
 {
