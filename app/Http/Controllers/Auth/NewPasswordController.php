@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Support\PasswordResetMessage;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\View\View;
+use App\Support\Toast;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -23,11 +26,11 @@ class NewPasswordController extends Controller
     }
 
     /**
-     * Handle an incoming new password request.
+     * Handle an incoming new password request: to the login page for the browser, JSON for API-style clients.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $request->validate([
             'token' => ['required'],
@@ -49,10 +52,12 @@ class NewPasswordController extends Controller
 
         if ($status != Password::PASSWORD_RESET) {
             throw ValidationException::withMessages([
-                'email' => [__($status)],
+                'email' => [PasswordResetMessage::for($status)],
             ]);
         }
 
-        return response()->json(['status' => __($status)]);
+        return $request->expectsJson()
+            ? response()->json(['status' => PasswordResetMessage::for($status)])
+            : redirect()->route('login')->with('toast', Toast::success(PasswordResetMessage::for($status), 3200));
     }
 }

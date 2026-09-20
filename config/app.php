@@ -75,6 +75,9 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Optional separate front end (SPA). Empty = the Blade app serves the password-reset page itself.
+    'frontend_url' => env('APP_FRONTEND_URL'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

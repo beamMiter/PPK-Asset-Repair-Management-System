@@ -19,9 +19,14 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('tech-only', fn($user) => in_array($user->role, ['technician','admin'], true));
         Gate::define('admin-only', fn($user) => $user->role === 'admin');
+        // The e-mailed link opens this app's own reset page; a separate SPA can still take over by setting
+        // APP_FRONTEND_URL (config `app.frontend_url`).
         ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
+            $email = $notifiable->getEmailForPasswordReset();
+
             return config('app.frontend_url')
-                . "/password-reset/$token?email={$notifiable->getEmailForPasswordReset()}";
+                ? rtrim(config('app.frontend_url'), '/')."/password-reset/$token?email=".urlencode($email)
+                : route('password.reset', ['token' => $token, 'email' => $email]);
         });
 
         if (app()->isLocal()) {
