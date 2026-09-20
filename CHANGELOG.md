@@ -144,6 +144,20 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and `DELETE /profile` — a hidden self-delete that still hard-deleted the caller and cascaded like the user-admin one.
 - `DELETE /maintenance/requests/{req}/assignments/{assignment}`: it threw a TypeError on every call and nothing used it
   (the team is edited through `assignments.store`).
+- **Seeders: 13 files / 2,700 lines → 5 files.** `DatabaseSeeder` now runs `ReferenceDataSeeder` (roles, 12 departments, 8 asset
+  categories, 5 request types), `UserSeeder` (15 people), `DemoDataSeeder` (35 assets, 71 requests) and `ChatSeeder`
+  (6 threads). Seven seeders that nothing called (`AssetSeeder`, `DepartmentSeeder`, `DevAdminSeeder`, …) and the
+  overlapping ones (`MockUsers`, `DemoRating`, `AdminEvaluation`, …) are gone; the data is deterministic (no faker), relative
+  to "now", and seeds in under a second instead of ~9 s. It fixes what was wrong in it: the Hardware type's default role was
+  `support` (no such role), the chat was pinned to a hard-coded user id 409, and demo accounts with known passwords were
+  seeded on any environment — production now gets the reference data only. The requests are built the way the app builds
+  them (timeline by status, lead = `technician_id`, one log row per allowed transition, SLA dates from the type, ratings only
+  on closed requests by their reporter, assets `in_repair` exactly while they have an open request) and cover the situations
+  the screens handle: every status, SLA breached / about to breach / met, on hold and resumed, a three-person team, a
+  hand-over, four unrated requests for the admin plus one whose rating window has passed, last year's requests, disposed
+  assets, a suspended technician's history, a request with no asset / no type / a switched-off type, a member with no e-mail.
+  `SeederIntegrityTest` checks all of that (and that production gets only reference data). Logins: `1234567890123` /
+  `Dev12345!` (admin, the developer account) and `10000000000NN` / `12345678` for the other roles.
 - **Dead front-end code:** the 350-line "SearchSelect" script in `app.js` and the two components it served
   (`search-select`, `searchable-select` — no view used them), `intro-frame-reveal.js` (imported by nothing) and
   `assets/_tomselect.blade.php` (included by nothing).
