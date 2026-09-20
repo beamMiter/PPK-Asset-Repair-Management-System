@@ -620,9 +620,8 @@
 
     @auth
         @if (Auth::user()->role !== 'member')
-            <audio id="notifySound" preload="auto">
-                <source src="{{ asset('sounds/new-request.mp3') }}" type="audio/mpeg">
-            </audio>
+            {{-- the sound this user picked on the notification-sound page (falls back to the default) --}}
+            <audio id="notifySound" preload="auto" src="{{ Auth::user()->notificationSoundUrl() }}"></audio>
         @endif
     @endauth
 

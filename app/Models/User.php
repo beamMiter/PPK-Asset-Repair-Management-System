@@ -86,6 +86,23 @@ class User extends Authenticatable
         return $this->assignedMaintenanceRequests();
     }
 
+    /**
+     * URL of the alert sound this user plays for a new request: their pick from the sound library
+     * (`public/sounds`), or the default when they never chose, the file has been removed from the library since, or the
+     * column holds something that is not a bare file name.
+     */
+    public function notificationSoundUrl(): string
+    {
+        $default = 'new-request.mp3';
+        $file = basename(trim((string) $this->notification_sound));
+
+        if ($file === '' || $file !== trim((string) $this->notification_sound) || ! is_file(public_path('sounds/'.$file))) {
+            $file = $default;
+        }
+
+        return asset('sounds/'.rawurlencode($file));
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;

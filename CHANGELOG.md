@@ -34,6 +34,18 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **A mistyped URL was a 500:** `?from=garbage` on the SLA dashboard, `GET /api/stats/assets/by-department`
   (selected a column that does not exist — failed on every call) and `?limit=-1` / `0` on the technician rating board.
 - **N+1 queries** on My Jobs (team members), the request list (department) and the SLA ticket table (type).
+- **The sound bell stopped working after the first page change.** It was wired once, to the buttons of the page that
+  loaded first; Turbo replaces the body on every visit, so from the second page on the bell did nothing and showed the
+  default icon whatever was saved. Also fixed in the same flow: a first page without a bell disabled the feature for the
+  session; after a reload with the sound saved as "on" the browser blocks audio until the user touches the page, so beeps
+  were swallowed while the bell claimed "on" (and clicking it switched the sound *off*) — the first click / key press now
+  unlocks it, and a bell click while locked unlocks instead of switching off; the setting changed in another tab is now
+  followed. `npm run test:js` (`tests/js/notify-sound.test.mjs`, 12 cases) drives the real module through a model of the
+  page and Turbo.
+- **The notification sound you chose was saved but never played.** The settings page says "เสียงแจ้งเตือนที่ใช้งานอยู่"
+  and stores the pick, but the layout's `<audio>` was hard-wired to `new-request.mp3` (only the preview used the choice).
+  It now plays the user's pick (`User::notificationSoundUrl()`), falling back to the default when the file has since been
+  removed from the library; file names with spaces / Thai are URL-encoded.
 - **A Pusher outage broke saves that had already succeeded.** The push runs inside the user's request and after the row
   is written, but was unguarded: creating a request showed a warning toast with the raw cURL error (so people created
   it twice), `POST /api/repair-requests` and posting a chat message (web and API) answered 500 for records that
