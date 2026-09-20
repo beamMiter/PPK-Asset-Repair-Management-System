@@ -174,19 +174,4 @@ class MaintenanceJobController extends Controller
 
         return response()->json(['data' => $jobs]);
     }
-
-    public function queuePage(Request $request)
-    {
-        $user = $request->user();
-        if (!$user || !($user->isAdmin() || $user->isSupervisor() || $user->isTechnician())) {
-            abort(403);
-        }
-
-        $technicians = User::whereIn('role', User::teamRoles())
-            ->orderBy('department')
-            ->orderBy('name')
-            ->get(['id', 'name', 'role', 'department']);
-
-        return view('repair.queue', compact('technicians'));
-    }
 }

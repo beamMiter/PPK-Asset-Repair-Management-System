@@ -13,39 +13,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AttachmentController extends Controller
 {
-    public function index(Request $request)
-    {
-        return response()->json([
-            'error'   => 'deprecated',
-            'message' => 'This endpoint is no longer supported. Use /maintenance/requests/{req} and its attachments relation.',
-        ], 410);
-    }
-
-    public function indexByRequest(MR $req)
-    {
-        $list = $req->attachments()
-            ->orderByDesc('created_at')
-            ->paginate(20);
-
-        $list->getCollection()->transform(function (Attachment $a) {
-            return [
-                'id'            => $a->id,
-                'url'           => $a->url,
-                'filename'      => $a->filename,
-                'mime'          => $a->mime,
-                'size'          => $a->size,
-                'is_private'    => $a->is_private,
-                'caption'       => $a->caption,
-                'alt_text'      => $a->alt_text,
-                'order_column'  => $a->order_column,
-                'uploaded_by'   => $a->uploaded_by,
-                'created_at'    => $a->created_at,
-            ];
-        });
-
-        return response()->json($list);
-    }
-
     /**
      * A private file is exactly as visible as the thing it is attached to: a request's files follow the request
      * policy (reporter, assigned team, admin team), an asset's files follow the asset policy. Before this, any
@@ -130,14 +97,6 @@ class AttachmentController extends Controller
         return response()->json([
             'error'   => 'deprecated',
             'message' => 'This endpoint is no longer supported. Use maintenance.requests.attachments.destroy.',
-        ], 410);
-    }
-
-    public function storeForRequest(Request $request, MR $req)
-    {
-        return response()->json([
-            'error'   => 'deprecated',
-            'message' => 'This endpoint is no longer supported. Use maintenance.requests.attachments.upload.',
         ], 410);
     }
 }

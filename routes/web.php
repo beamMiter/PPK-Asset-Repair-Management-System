@@ -117,7 +117,6 @@ Route::middleware(['auth'])->group(function () {
 
     // Repair views
     Route::get('/repair/my-jobs', [MaintenanceJobController::class, 'myJobsPage'])->name('repairs.my_jobs');
-    Route::get('/repair/queue', [MaintenanceJobController::class, 'queuePage'])->name('repairs.queue');
 
     // Attachments (serve private files after auth)
     Route::get('/attachments/{attachment}', [AttachmentController::class, 'show'])->name('attachments.show');
