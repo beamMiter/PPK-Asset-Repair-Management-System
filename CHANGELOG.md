@@ -112,6 +112,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`GET /debug/login` signed anyone in as user 410** — no middleware, no password (`Auth::loginUsingId(410)`), in the
   routes since the UI-polish merge. Removed together with `/debug/whoami`; `NoDebugRoutesTest` forbids any "debug"
   route from coming back.
+- **A reporter could assign staff to, or wipe the team of, their own request — and back-date it.** In
+  `MaintenanceRequestService::updateRequest` the "not a team member" branch read `user_ids` before stripping it and never
+  stripped `request_date`, so `PUT /maintenance/requests/{id}` (or the API twin) with `user_ids` / `user_ids: []` /
+  `request_date` changed the team and the date every SLA figure starts from. Both are now ignored for non-team users;
+  staff behave as before and no screen sent these fields.
+- **`GET /api/search/maintenance-requests` leaked every request's number, title and status to any signed-in user** (it
+  read the table directly: no visibility rule, and soft-deleted rows included). It now follows the request list: a member
+  only finds their own, deleted requests never appear.
 - **Private attachments were readable by every signed-in user** (`GET /attachments/{id}` with a guessed id) and ignored
   `expires_at`. A file is now as visible as what it is attached to (request policy / asset policy; orphans: uploader or
   admin) and an expired one answers 410.
