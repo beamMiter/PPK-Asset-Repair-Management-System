@@ -117,8 +117,8 @@ class MaintenanceRatingController extends Controller
         $top15 = $allActiveTechs->take(15);
 
         // Paginate the results to allow navigating through the full list of active technicians
-        $limit = $request->get('limit', 15);
-        $technicians = $query->paginate((int)$limit)->withQueryString();
+        $limit = max(1, min($request->integer('limit', 15), 100)); // ?limit=-1 used to be `LIMIT -1`: a SQL error
+        $technicians = $query->paginate($limit)->withQueryString();
 
         Log::info("Technician Dashboard viewed. Sorting by: {$sort}"); // บันทึก Log การเข้าดู Dashboard พร้อมค่าการเรียง
 

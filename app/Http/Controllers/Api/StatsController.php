@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Department;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -103,7 +104,8 @@ class StatsController extends Controller
             ->get();
         });
         $ids = $rows->pluck('id')->all();
-        $deptNames = $ids ? DB::table('departments')->whereIn('id',$ids)->pluck('name','id')->all() : [];
+        // departments have name_th / name_en, not `name` — this endpoint answered 500 every time
+        $deptNames = $ids ? Department::whereIn('id', $ids)->get()->pluck('display_name', 'id')->all() : [];
         $mapped = $rows->map(fn($r) => [
             'id'    => $r->id,
             'name'  => $deptNames[$r->id] ?? null,
