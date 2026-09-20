@@ -167,6 +167,25 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   label of the removed `/repair/queue` page is gone. `HealthEndpointTest` also fails if a queued job / listener / mail is
   ever added, as a reminder to bring a worker and a real check back. The `jobs` tables from Laravel's default migration
   are left alone (empty, harmless).
+- **Unused files (clean-up):** 18 Blade views and the `AppLayout` / `Icon` component classes that nothing rendered (Breeze's
+  `modal`, `dropdown`, `nav-link` … , `app-icon`, `stat-card`, `layouts/layout`, `layouts/navigation`, `dynamic-search-dropdown`,
+  `partials/repair-action`), the unregistered `app/Exceptions/Handler.php`, `config/reverb.php` (the reverb server package is
+  not installed), the placeholder `tests/Unit/ExampleTest.php`, five Lottie animations (the toast has used inline SVG since
+  2026-04-26), 19 Sarabun font files that no page or PDF loads (1.4 MB — both PDFs render identically without them), an
+  unused icon, the README logo copy `imagesREADME/PPK.png` (byte-identical to `public/images/logoppk.png`) and `.styleci.yml`.
+  Everything is in git history.
+- **The e-mail verification scaffolding from Breeze:** three controllers, the `verified` middleware alias, the `verify-email`
+  view and the three `verification.*` routes. Nothing ever sent a link (`User` is not `MustVerifyEmail`) or redirected to
+  it, people sign in with the citizen id and some have no e-mail. Forgot / reset password are unchanged.
+- **Unused packages:** `laravel/scout`, `spatie/laravel-query-builder`, `livewire/livewire`, `blade-ui-kit/blade-icons` and
+  `codeat3/blade-simple-icons` (registered 3,413 icon components at every boot, none used), `laravel/breeze` (dev) and the
+  npm `@tailwindcss/line-clamp` (Tailwind 3.4 has `line-clamp-*` built in and the plugin was never in the config). No other
+  package changed version. **After pulling this: `composer install`, `npm install` and `php artisan view:clear`** — views
+  compiled while Livewire was installed call its classes and answer 500 until the compiled-view cache is cleared.
+- **21 model methods nobody called that were a trap or a copy** — `MaintenanceAssignment::mark*` (state changes that skip the
+  transition rules, the log and the asset sync), `User::rating_average` / `rating_count` (an N+1 per read), `Toast::isSuccess`,
+  a second copy of the asset sort whitelist and of the operation-log upsert, and pure wrappers. 21 other unused relations,
+  predicates and one-line scopes were kept on purpose.
 
 ### Security
 
