@@ -79,6 +79,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   timer for the whole session now (30 s, the interval that was in the working copy), started by
   `resources/js/layout/chat-fab.js`; each page load only wires the freshly rendered button and drawer. The endpoint and the
   notification icon reach the module as `data-*` attributes of `#chatWidgetRoot`. `tests/js/chat-fab.test.mjs` (19 tests).
+- **The live chat page did not update the open thread when you opened it from the menu, and kept running after you left it.**
+  Its inline script started on `DOMContentLoaded` and on Livewire's `livewire:navigated`; neither fires on a Turbo visit, so
+  new messages only appeared after a full reload. Nothing ever stopped its 5 s poll timer, its Echo channel or its Pusher
+  `state_change` handler either, so they went on (the handler stacking up) on every other page. The page now lives in
+  `resources/js/chat/` (`boot.js` installs it once; each page load mounts the thread on screen and the page it replaces is
+  torn down on `turbo:before-render`). `wire:navigate`, `data-navigate-once` and the `livewire:*` listeners are gone — Livewire
+  was removed earlier — and the Alpine methods and the search form use the layout's `window.Loader`.
+  `tests/js/chat-page.test.mjs` (20 tests).
 - **Toast: script and styles moved out of the component** into `resources/js/toast.js` (evaluated once per session, like the
   layout) and `resources/css/toast.css` — the file the layout and `vite.config.js` were already loading but that was an empty
   placeholder, untracked, so a clean checkout could not build. The auth layout, which also renders toasts, now loads it too.
@@ -252,6 +260,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   they opened, as that user. The rows are now built from DOM nodes with `textContent` (`buildItem` in `chat-fab.js`), and the
   test posts `<img onerror>` / `<script>` payloads through the title, sender, message and avatar URL. The chat page itself
   (`chat/index.blade.php`) was not part of this change.
+- **Stored XSS through a display name on the live chat page.** A message that arrives while the page is open (Echo or the
+  poll) was built with `innerHTML`, with the sender's name interpolated as-is. Users can change their own name on the profile
+  page, so anyone could run script in the browser of everyone who had that thread open. Rows are DOM nodes with
+  `textContent` now (`buildMessageRow`); message bodies were already set as text, and the messages the server renders were
+  always escaped.
 
 ## [2.0.0] - 2026-09-10
 
