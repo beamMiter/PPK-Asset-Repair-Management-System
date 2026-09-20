@@ -34,6 +34,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **A mistyped URL was a 500:** `?from=garbage` on the SLA dashboard, `GET /api/stats/assets/by-department`
   (selected a column that does not exist — failed on every call) and `?limit=-1` / `0` on the technician rating board.
 - **N+1 queries** on My Jobs (team members), the request list (department) and the SLA ticket table (type).
+- **A Pusher outage broke saves that had already succeeded.** The push runs inside the user's request and after the row
+  is written, but was unguarded: creating a request showed a warning toast with the raw cURL error (so people created
+  it twice), `POST /api/repair-requests` and posting a chat message (web and API) answered 500 for records that
+  existed. `SafeBroadcast` now logs the failure and carries on, and the Pusher connection ships with 2 s / 4 s timeouts
+  instead of Laravel's 10 s / 30 s (`PUSHER_CONNECT_TIMEOUT`, `PUSHER_TIMEOUT`). Nothing changes while Pusher works.
+- **`GET /api/repair-requests/my-jobs` answered 404 to everyone** — it was declared below `/{req}`, which took "my-jobs"
+  for a request id. It now sits above it and returns the caller's own jobs; `RouteReachabilityTest` fails when any
+  static route is shadowed by an earlier one.
 
 ### Added
 
@@ -106,6 +114,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   unrouted controller methods and 200 lines of commented-out controllers, the duplicated `GET|POST /register`, the
   unreachable confirm-password controller + view, the `tech-only` (defined twice, differently) and `admin-only` gates,
   and `DELETE /profile` — a hidden self-delete that still hard-deleted the caller and cascaded like the user-admin one.
+- `DELETE /maintenance/requests/{req}/assignments/{assignment}`: it threw a TypeError on every call and nothing used it
+  (the team is edited through `assignments.store`).
 
 ### Security
 
