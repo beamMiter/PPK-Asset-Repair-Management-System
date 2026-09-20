@@ -74,6 +74,17 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   were wired on `DOMContentLoaded`, which does not fire on a Turbo visit; a full reload worked). They are now bound from the
   page bundle on every `turbo:load` (`technician-board.js`, `tests/js/technician-board.test.mjs`). The page's inline script also
   left an Escape-key listener behind that threw `Cannot read properties of null` on every other page.
+- **The chat button's poll timer was started again by every page you opened.** Its inline script ran on each Turbo visit and
+  each run added another `setInterval`, so after N pages `/chat/my-updates` was fetched N times per interval. There is one
+  timer for the whole session now (30 s, the interval that was in the working copy), started by
+  `resources/js/layout/chat-fab.js`; each page load only wires the freshly rendered button and drawer. The endpoint and the
+  notification icon reach the module as `data-*` attributes of `#chatWidgetRoot`. `tests/js/chat-fab.test.mjs` (19 tests).
+- **Toast: script and styles moved out of the component** into `resources/js/toast.js` (evaluated once per session, like the
+  layout) and `resources/css/toast.css` — the file the layout and `vite.config.js` were already loading but that was an empty
+  placeholder, untracked, so a clean checkout could not build. The auth layout, which also renders toasts, now loads it too.
+  `Escape` now closes the toasts on screen at any time (it used to work only if it was the very first key pressed, because each
+  toast registered a `{ once: true }` listener), and two declarations that were a truncated `text-shadow` and never applied are
+  gone. `tests/js/toast.test.mjs` (17 tests).
 
 ### Added
 
@@ -235,6 +246,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the same gate, and the SLA page's "จัดการประเภทงาน" shortcut is hidden for other roles. The SLA dashboard and
   technician rating board keep their existing `maintenance-type-manage` gate (supervisors / workers).
   Note: only admins can now choose their notification sound on the settings page.
+- **Stored XSS in the chat button's "My Topics" drawer.** The drawer (on every page of the app) built its rows with
+  `innerHTML` from `/chat/my-updates`, which returns thread titles, sender names and message text exactly as typed. Anyone who
+  could post in a thread — every role — could run script in the browser of everyone who had taken part in it, on every page
+  they opened, as that user. The rows are now built from DOM nodes with `textContent` (`buildItem` in `chat-fab.js`), and the
+  test posts `<img onerror>` / `<script>` payloads through the title, sender, message and avatar URL. The chat page itself
+  (`chat/index.blade.php`) was not part of this change.
 
 ## [2.0.0] - 2026-09-10
 
