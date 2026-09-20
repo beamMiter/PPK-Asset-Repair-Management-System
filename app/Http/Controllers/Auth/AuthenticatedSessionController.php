@@ -23,8 +23,8 @@ class AuthenticatedSessionController extends Controller
                 'timeout'  => 2800,
             ]);
 
-            // ถ้าเป็น API / testing → ตอบ 204 เหมือนเดิม
-            if ($request->expectsJson() || app()->environment('testing')) {
+            // API clients get 204; a browser is redirected below
+            if ($request->expectsJson()) {
                 return response()->noContent();
             }
 
@@ -59,7 +59,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        if ($request->expectsJson() || app()->environment('testing')) {
+        if ($request->expectsJson()) {
             return response()->noContent();
         }
 

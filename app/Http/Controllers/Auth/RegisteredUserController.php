@@ -51,7 +51,7 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
         Auth::login($user);
 
-        if ($request->expectsJson() || app()->environment('testing')) {
+        if ($request->expectsJson()) {
             return response()->noContent();
         }
 

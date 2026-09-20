@@ -20,13 +20,24 @@ class RegistrationTest extends TestCase
             'password_confirmation' => 'password',
         ]);
 
-        // In the testing environment the controller returns 204 No Content.
-        $response->assertNoContent();
+        $response->assertRedirect(route('dashboard'));
         $this->assertAuthenticated();
         $this->assertDatabaseHas('users', [
             'citizen_id' => '1234567890123',
             'email' => 'test@example.com',
         ]);
+    }
+
+    public function test_api_clients_get_204_from_registration(): void
+    {
+        $this->postJson('/register', [
+            'name' => 'Api User',
+            'citizen_id' => '3210987654321',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])->assertNoContent();
+
+        $this->assertAuthenticated();
     }
 
     public function test_registration_requires_a_thirteen_digit_citizen_id(): void
