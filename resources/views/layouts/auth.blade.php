@@ -209,8 +209,6 @@
         })();
     </script>
 
-    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js" defer></script>
-
     {{-- Carrier for the session toast, same as layouts/app. <x-toast /> only *consumes*
          session('toast') (it forgets it) — it never renders it — so without this a controller
          flash such as a failed login was silently dropped and the user saw nothing. It must sit
