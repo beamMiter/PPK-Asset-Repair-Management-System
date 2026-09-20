@@ -57,6 +57,8 @@ export default defineConfig(async ({ command, mode }) => {
           'resources/css/app.css',
           'resources/css/toast.css',
           'resources/js/app.js',
+          // The app layout's behaviour (sidebar, spinner, TomSelect, unsaved-changes guard) — only for pages of that layout
+          'resources/js/layout/boot.js',
           // Page-specific bundles
           'resources/js/repair/dashboard.js',
           'resources/js/maintenance/sla/dashboard.js',
