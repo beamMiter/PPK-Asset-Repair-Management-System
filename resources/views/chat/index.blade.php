@@ -21,15 +21,15 @@
                 return;
             }
             document.getElementById('final-thread-title').value = this.newThreadTitle.trim();
-            showLoader();
+            window.Loader?.show();
             document.getElementById('hidden-create-thread').submit();
         },
         submitLock() {
-            showLoader();
+            window.Loader?.show();
             document.getElementById('hidden-lock-thread').submit();
         },
         submitDelete() {
-            showLoader();
+            window.Loader?.show();
             document.getElementById('hidden-delete-thread').submit();
         },
         chatStatus: 'connecting', // 'connecting', 'online', 'offline'
@@ -85,8 +85,7 @@
                 </div>
 
                 <div class="mt-4">
-                    <form method="GET" action="{{ route('chat.index') }}" class="flex items-center gap-2"
-                        onsubmit="showLoader()">
+                    <form method="GET" action="{{ route('chat.index') }}" class="flex items-center gap-2">
                         <div class="flex-1">
                             <div class="relative">
                                 <input name="q" value="{{ $q }}"
@@ -134,7 +133,7 @@
                         @if ($isActive)
                             <div class="absolute inset-y-0 left-0 w-1 bg-[#0F2D5C] z-20"></div>
                         @endif
-                        <a href="{{ route('chat.index', ['thread_id' => $th->id, 'page' => $threads->currentPage()]) }}" wire:navigate
+                        <a href="{{ route('chat.index', ['thread_id' => $th->id, 'page' => $threads->currentPage()]) }}"
                             class="block px-4 py-3.5 chat-thread-link">
 
                             <div class="flex flex-col gap-1.5">
@@ -179,7 +178,7 @@
                 @if ($threads->hasPages())
                     <div
                         class="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0 -[0_-2px_6px_-2px_rgba(0,0,0,0.03)] z-10">
-                        <a href="{{ $threads->previousPageUrl() ?? '#' }}" wire:navigate
+                        <a href="{{ $threads->previousPageUrl() ?? '#' }}"
                             class="inline-flex items-center justify-center h-8 px-3 rounded-md text-[11.5px] font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors {{ $threads->onFirstPage() ? 'opacity-40 pointer-events-none' : '' }}">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor"
                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -189,7 +188,7 @@
                         </a>
                         <span class="text-[11px] text-slate-400 font-semibold tracking-wide">หน้าที่
                             {{ $threads->currentPage() }} / {{ $threads->lastPage() }}</span>
-                        <a href="{{ $threads->nextPageUrl() ?? '#' }}" wire:navigate
+                        <a href="{{ $threads->nextPageUrl() ?? '#' }}"
                             class="inline-flex items-center justify-center h-8 px-3 rounded-md text-[11.5px] font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors {{ !$threads->hasMorePages() ? 'opacity-40 pointer-events-none' : '' }}">
                             ถัดไป
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 ml-1" fill="none" stroke="currentColor"
@@ -213,7 +212,8 @@
                 @php $thread = $activeThread; @endphp
                 {{-- UNTITLED UI HEADER LAYOUT --}}
                 <header class="shrink-0 w-full bg-white border-b border-gray-200 z-20">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-4 sm:px-6 sm:py-5 gap-2 sm:gap-3">
+                    <div
+                        class="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-4 sm:px-6 sm:py-5 gap-2 sm:gap-3">
                         <div class="flex items-start sm:items-center gap-3 w-full sm:flex-1 min-w-0">
                             <div
                                 class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 border border-gray-200 overflow-hidden mt-0.5 sm:mt-0">
@@ -222,8 +222,7 @@
                             </div>
                             <div class="flex flex-col min-w-0 flex-1">
                                 <div class="flex items-center gap-2">
-                                    <h1
-                                        class="text-[15px] sm:text-lg font-bold text-gray-900 leading-tight">
+                                    <h1 class="text-[15px] sm:text-lg font-bold text-gray-900 leading-tight">
                                         {{ $thread->title }}
                                     </h1>
                                     @if ($thread->is_locked)
@@ -231,7 +230,8 @@
                                             class="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-800 uppercase shrink-0">Locked</span>
                                     @endif
                                 </div>
-                                <div class="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-[12px] text-gray-500 mt-0.5">
+                                <div
+                                    class="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-[12px] text-gray-500 mt-0.5">
                                     <span class="truncate"><span class="hidden sm:inline">ผู้ตั้งกระทู้: </span><span
                                             class="font-medium text-gray-700">{{ $thread->author?->name ?? 'ไม่ทราบผู้ใช้งาน' }}</span></span>
                                     <span class="w-1 h-1 rounded-full bg-gray-300 shrink-0"></span>
@@ -239,55 +239,30 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="flex items-center justify-end gap-1.5 sm:gap-3 w-full sm:w-auto shrink-0 pl-[60px] sm:pl-0 mt-1 sm:mt-0">
+                        <div
+                            class="flex items-center justify-end gap-1.5 sm:gap-3 w-full sm:w-auto shrink-0 pl-[60px] sm:pl-0 mt-1 sm:mt-0">
 
+                            {{-- Header tools: icon only, no button background (the words live in title / aria-label) --}}
                             @if ($canManageLock)
-                                <button type="button" @click="showLockModal = true"
-                                    class="hidden sm:inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors {{ $thread->is_locked ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50' }}"
-                                    title="{{ $thread->is_locked ? 'ปลดล็อกกระทู้' : 'ล็อกกระทู้' }}">
-                                    @if ($thread->is_locked)
-                                        <svg viewBox="0 0 24 24" class="h-4 w-4">
-                                            <path d="M5 11h14v10H5z" fill="none" stroke="currentColor"
-                                                stroke-width="2" />
-                                            <path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor"
-                                                stroke-width="2" stroke-linecap="round" />
-                                        </svg>
-                                        Unlock
-                                    @else
-                                        <svg viewBox="0 0 24 24" class="h-4 w-4">
-                                            <path d="M5 11h14v10H5z" fill="none" stroke="currentColor"
-                                                stroke-width="2" />
-                                            <path d="M12 16v2" stroke="currentColor" stroke-width="2"
-                                                stroke-linecap="round" />
-                                            <path d="M8 11V8a4 4 0 0 1 8 0v0" fill="none" stroke="currentColor"
-                                                stroke-width="2" stroke-linecap="round" />
-                                        </svg>
-                                        Lock thread
-                                    @endif
-                                </button>
+                                @php $lockLabel = $thread->is_locked ? 'ปลดล็อกกระทู้' : 'ล็อกกระทู้'; @endphp
+                                <x-ui.button variant="ghost-warning" size="icon-lg" :icon="$thread->is_locked ? 'lock_open' : 'lock'"
+                                    @click="showLockModal = true" class="hidden sm:inline-flex" :title="$lockLabel"
+                                    :aria-label="$lockLabel" />
                             @endif
 
-                            @if(Auth::user()->role === 'admin')
-                                <button type="button" @click="showDeleteModal = true"
-                                    class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white p-2 sm:px-3 sm:py-2 text-sm font-semibold text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 transition-colors">
-                                    <span class="material-symbols-outlined text-[18px]">delete</span>
-                                </button>
+                            @if (Auth::user()->role === 'admin')
+                                <x-ui.button variant="ghost-danger" size="icon-lg" icon="delete"
+                                    @click="showDeleteModal = true" title="ลบกระทู้" aria-label="ลบกระทู้" />
                             @endif
 
-                            <button id="btnHeaderRefresh" type="button"
+                            <x-ui.button id="btnHeaderRefresh" variant="ghost" size="icon-lg" icon="refresh"
                                 @click="if(typeof window.forceChatPoll === 'function') window.forceChatPoll()"
-                                class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 p-2 sm:px-3 sm:py-2 text-sm font-semibold text-white hover:bg-blue-500 transition-colors">
-                                <svg viewBox="0 0 24 24" class="h-4 w-4">
-                                    <path d="M21 3v5h-5M3 21v-5h5M21 8A9 9 0 0 0 3.5 9.5M3 16a9 9 0 0 0 17.5-1.5"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round" />
-                                </svg>
-                                <span class="btn-text hidden sm:inline">รีเฟรช</span>
-                            </button>
+                                class="hidden sm:inline-flex" title="รีเฟรช" aria-label="รีเฟรช" />
 
-                            <a href="{{ route('chat.index') }}" wire:navigate
+                            <a href="{{ route('chat.index') }}"
                                 class="lg:hidden inline-flex items-center justify-center h-9 gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 sm:px-4 text-[13px] font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
-                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
                                 <span class="hidden sm:inline">กลับ</span>
@@ -499,10 +474,9 @@
                 @csrf
             </form>
 
-            @if(Auth::user()->role === 'admin')
+            @if (Auth::user()->role === 'admin')
                 {{-- Form for deleting the thread --}}
-                <form id="hidden-delete-thread" method="POST"
-                    action="{{ route('chat.destroy', $activeThread) }}" 
+                <form id="hidden-delete-thread" method="POST" action="{{ route('chat.destroy', $activeThread) }}"
                     class="hidden">
                     @csrf
                     @method('DELETE')
@@ -566,7 +540,7 @@
                         @click.away="showLockModal = false">
 
                         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                            <h3 class="text-[15px] font-semibold text-slate-900 font-manrope">ยืนยันการดำเนินการ</h3>
+                            <h3 class="text-[15px] font-semibold text-amber-700 font-manrope">ยืนยันการดำเนินการ</h3>
                             <button @click="showLockModal = false"
                                 class="text-slate-400 hover:text-slate-600 transition-colors">
                                 <span class="material-symbols-outlined text-[20px]">close</span>
@@ -575,7 +549,7 @@
 
                         <div class="p-5 text-center">
                             <div
-                                class="w-14 h-14 rounded-full {{ $activeThread->is_locked ? 'bg-blue-50 text-blue-500' : 'bg-red-50 text-red-500' }} flex items-center justify-center mx-auto mb-3">
+                                class="w-14 h-14 rounded-full bg-amber-50 text-amber-600 ring-1 ring-amber-200 flex items-center justify-center mx-auto mb-3">
                                 <span
                                     class="material-symbols-outlined text-3xl">{{ $activeThread->is_locked ? 'lock_open' : 'lock' }}</span>
                             </div>
@@ -593,321 +567,62 @@
                             <button @click="showLockModal = false"
                                 class="flex-1 px-4 py-2 text-[13px] font-semibold text-slate-600 hover:bg-slate-200 bg-slate-100 border border-slate-200 rounded-md transition-colors">ยกเลิก</button>
                             <button @click="submitLock()"
-                                class="flex-1 px-4 py-2 {{ $activeThread->is_locked ? 'bg-blue-600 hover:bg-blue-700' : 'bg-[#0F2D5C] hover:bg-[#0F2D5C]/90' }} text-white rounded-md text-[13px] font-semibold transition-all focus:outline-none active:scale-95">ยืนยัน</button>
+                                class="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-[13px] font-semibold transition-all focus:outline-none active:scale-95">ยืนยัน</button>
                         </div>
                     </div>
                 </div>
             </template>
 
-            @if(Auth::user()->role === 'admin')
-            {{-- Delete Thread Modal --}}
-            <template x-teleport="body">
-                <div x-show="showDeleteModal"
-                    class="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
-                    x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
-                    x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
-                    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak
-                    style="display: none;">
+            @if (Auth::user()->role === 'admin')
+                {{-- Delete Thread Modal --}}
+                <template x-teleport="body">
+                    <div x-show="showDeleteModal"
+                        class="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+                        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+                        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak
+                        style="display: none;">
 
-                    <div class="bg-white rounded-xl w-full max-w-sm overflow-hidden border border-slate-200"
-                        @click.away="showDeleteModal = false">
+                        <div class="bg-white rounded-xl w-full max-w-sm overflow-hidden border border-slate-200"
+                            @click.away="showDeleteModal = false">
 
-                        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                            <h3 class="text-[15px] font-semibold text-red-600 font-manrope">ยืนยันการลบกระทู้</h3>
-                            <button @click="showDeleteModal = false"
-                                class="text-slate-400 hover:text-slate-600 transition-colors">
-                                <span class="material-symbols-outlined text-[20px]">close</span>
-                            </button>
-                        </div>
-
-                        <div class="p-5 text-center">
-                            <div class="w-14 h-14 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-3">
-                                <span class="material-symbols-outlined text-3xl">delete_forever</span>
+                            <div
+                                class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                <h3 class="text-[15px] font-semibold text-red-600 font-manrope">ยืนยันการลบกระทู้</h3>
+                                <button @click="showDeleteModal = false"
+                                    class="text-slate-400 hover:text-slate-600 transition-colors">
+                                    <span class="material-symbols-outlined text-[20px]">close</span>
+                                </button>
                             </div>
-                            <p class="text-[14px] text-slate-700">
-                                คุณต้องการ <strong>ลบ</strong> กระทู้นี้ออกจากระบบใช่หรือไม่?
-                            </p>
-                            <p class="text-[13px] text-red-500 mt-2 font-medium">กระทู้และข้อความทั้งหมดจะถูกซ่อนทันที</p>
-                        </div>
 
-                        <div class="px-5 py-3 bg-slate-50 flex justify-center gap-2 border-t border-slate-100">
-                            <button @click="showDeleteModal = false"
-                                class="flex-1 px-4 py-2 text-[13px] font-semibold text-slate-600 hover:bg-slate-200 bg-slate-100 border border-slate-200 rounded-md transition-colors">ยกเลิก</button>
-                            <button @click="submitDelete()"
-                                class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-[13px] font-semibold transition-all focus:outline-none active:scale-95">ลบทิ้ง</button>
+                            <div class="p-5 text-center">
+                                <div
+                                    class="w-14 h-14 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-3">
+                                    <span class="material-symbols-outlined text-3xl">delete_forever</span>
+                                </div>
+                                <p class="text-[14px] text-slate-700">
+                                    คุณต้องการ <strong>ลบ</strong> กระทู้นี้ออกจากระบบใช่หรือไม่?
+                                </p>
+                                <p class="text-[13px] text-red-500 mt-2 font-medium">กระทู้และข้อความทั้งหมดจะถูกซ่อนทันที
+                                </p>
+                            </div>
+
+                            <div class="px-5 py-3 bg-slate-50 flex justify-center gap-2 border-t border-slate-100">
+                                <button @click="showDeleteModal = false"
+                                    class="flex-1 px-4 py-2 text-[13px] font-semibold text-slate-600 hover:bg-slate-200 bg-slate-100 border border-slate-200 rounded-md transition-colors">ยกเลิก</button>
+                                <button @click="submitDelete()"
+                                    class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-[13px] font-semibold transition-all focus:outline-none active:scale-95">ลบทิ้ง</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </template>
+                </template>
             @endif
         @endif
     </div>
+@endsection
 
-    <script data-navigate-once>
-        window.chatPollInterval = null;
-
-        function initChatUI() {
-            // Cleanup existing interval
-            if (window.chatPollInterval) {
-                clearInterval(window.chatPollInterval);
-                window.chatPollInterval = null;
-            }
-
-            const box = document.getElementById('chatBox');
-            const btnScrollBottom = document.getElementById('btnScrollBottom');
-            const msgInput = document.getElementById('msgInput');
-
-            @if ($activeThread)
-                if (!box) return;
-
-                const threadId = parseInt(box.dataset.threadId) || 0;
-                const myId = parseInt(box.dataset.myId) || 0;
-                let lastId = parseInt(box.dataset.lastId) || 0;
-                let lastAppendedUserId = parseInt(box.dataset.lastUserId) || 0;
-                const chatUrl = box.dataset.chatUrl;
-                let autoScroll = true;
-
-                // Scroll to bottom immediately
-                box.scrollTop = box.scrollHeight;
-                box.addEventListener('scroll', () => {
-                    const nearBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
-                    autoScroll = nearBottom;
-                    if (nearBottom && btnScrollBottom) btnScrollBottom.classList.add('hidden');
-                });
-
-                function appendMessage(m) {
-                    if (!box) return;
-                    const isMe = (parseInt(m.user_id) === myId);
-                    const isConsecutive = (parseInt(m.user_id) === lastAppendedUserId);
-                    lastAppendedUserId = parseInt(m.user_id);
-                    box.dataset.lastUserId = lastAppendedUserId;
-
-                    const emptyState = document.getElementById('emptyStateMsg');
-                    if (emptyState) emptyState.style.display = 'none';
-
-                    let wrapper = box.querySelector('.space-y-6');
-                    if (!wrapper) {
-                        wrapper = document.createElement('div');
-                        wrapper.className = 'space-y-6 pb-2';
-                        box.appendChild(wrapper);
-                    }
-
-                    const row = document.createElement('div');
-                    row.dataset.userId = m.user_id;
-
-                    const dateOpts = {
-                        weekday: 'long',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    };
-                    const timeStr = new Date().toLocaleString('en-US', dateOpts);
-
-                    if (isMe) {
-                        row.className =
-                            `chat-msg-row flex flex-col items-end w-full animate-bubble-in opacity-0 translate-y-2 ${isConsecutive ? 'mt-1' : 'mt-4'}`;
-                        row.innerHTML = `
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-xs text-gray-500">${timeStr}</span>
-                                <span class="text-[13px] font-semibold text-gray-900">You</span>
-                            </div>
-                            <div class="bg-blue-600 text-white rounded-2xl rounded-tr-none py-2.5 px-4 max-w-[85%] sm:max-w-[70%] text-[15px] leading-relaxed ">
-                                <div class="whitespace-pre-line break-words msg-body"></div>
-                            </div>
-                        `;
-                    } else {
-                        row.className =
-                            `chat-msg-row flex items-start gap-3 w-full animate-bubble-in opacity-0 translate-y-2 ${isConsecutive ? 'mt-1' : 'mt-4'}`;
-                        let avatarHtml = isConsecutive ?
-                            `<div class="relative shrink-0 opacity-0 h-0 pointer-events-none w-10"></div>` :
-                            `<div class="relative shrink-0"><img src="${m.user?.avatar_thumb_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.user?.name||'?')}&background=f1f5f9`}" class="h-10 w-10 rounded-full object-cover border border-gray-200 " alt="Avt"></div>`;
-
-                        let headerHtml = isConsecutive ? '' :
-                            `<div class="flex items-center gap-2 mb-1">
-                                <span class="text-[13px] font-semibold text-gray-900">${m.user?.name || 'Unknown'}</span>
-                                <span class="text-xs text-gray-500">${timeStr}</span>
-                            </div>`;
-
-                        row.innerHTML = `
-                            ${avatarHtml}
-                            <div class="flex flex-col items-start min-w-0 max-w-[85%] sm:max-w-[70%]">
-                                ${headerHtml}
-                                <div class="bg-gray-50 border border-gray-100/80 text-gray-900 rounded-2xl ${!isConsecutive ? 'rounded-tl-none' : ''} py-2.5 px-4 text-[15px] leading-relaxed">
-                                    <div class="whitespace-pre-line break-words msg-body"></div>
-                                </div>
-                            </div>
-                        `;
-                    }
-
-                    row.querySelector('.msg-body').textContent = m.body;
-                    wrapper.appendChild(row);
-                    setTimeout(() => row.classList.remove('translate-y-2', 'opacity-0'), 10);
-                }
-
-                // Echo Real-time
-                if (window.Echo) {
-                    const conn = window.Echo.connector.pusher.connection;
-                    const chatEl = document.getElementById('chat-pane');
-
-                    const updateStatus = (state) => {
-                        console.log('[Chat] Pusher State:', state);
-                        if (!chatEl) return;
-                        try {
-                            const alpine = Alpine.$data(chatEl);
-                            if (!alpine) return;
-
-                            if (state === 'connected') alpine.chatStatus = 'online';
-                            else if (state === 'unavailable' || state === 'failed' || state === 'disconnected') alpine
-                                .chatStatus = 'offline';
-                            else alpine.chatStatus = 'connecting';
-                        } catch (e) {
-                            console.warn('[Chat] Alpine component not fully initialized:', e.message);
-                        }
-                    };
-
-                    updateStatus(conn.state);
-                    conn.bind('state_change', (states) => updateStatus(states.current));
-
-                    // Safety Timeout: If stuck in connecting for 10s, fallback to offline (Polling) UI
-                    setTimeout(() => {
-                        if (chatEl) {
-                            const alpine = Alpine.$data(chatEl);
-                            if (alpine && alpine.chatStatus === 'connecting') {
-                                console.warn('[Chat] Connection timeout, falling back to Polling UI');
-                                alpine.chatStatus = 'offline';
-                            }
-                        }
-                    }, 10000);
-
-                    const ch = 'chat.' + threadId;
-                    window.Echo.leave(ch);
-                    window.Echo.channel(ch).listen('.message.sent', (e) => {
-                        if (e.message && e.message.id > lastId) {
-                            appendMessage(e.message);
-                            lastId = Math.max(lastId, e.message.id);
-                            box.dataset.lastId = lastId;
-
-                            const badge = document.getElementById('thread-count-' + threadId);
-                            if (badge) {
-                                badge.textContent = (parseInt(badge.textContent) || 0) + 1;
-                            }
-
-                            if (autoScroll && box) box.scrollTop = box.scrollHeight;
-                        }
-                    });
-                }
-
-                // Polling Fallback
-                async function poll() {
-                    try {
-                        const r = await fetch(`${chatUrl}?after_id=${lastId}`);
-                        if (!r.ok) return;
-                        const data = await r.json();
-                        const msgs = data.data ?? data;
-                        if (Array.isArray(msgs) && msgs.length) {
-                            msgs.forEach(m => {
-                                appendMessage(m);
-                                lastId = Math.max(lastId, m.id);
-                            });
-                            box.dataset.lastId = lastId;
-
-                            const badge = document.getElementById('thread-count-' + threadId);
-                            if (badge) {
-                                badge.textContent = (parseInt(badge.textContent) || 0) + msgs.length;
-                            }
-
-                            if (autoScroll && box) box.scrollTop = box.scrollHeight;
-                        }
-                    } catch (e) {}
-                }
-
-                // Expose poll to Alpine
-                window.forceChatPoll = async function() {
-                    const btn = document.querySelector('#btnHeaderRefresh');
-                    const icon = btn?.querySelector('svg');
-                    const text = btn?.querySelector('.btn-text');
-                    const pLoader = document.getElementById('panelLoader');
-
-                    if (btn) {
-                        btn.disabled = true;
-                        btn.classList.add('opacity-70');
-                    }
-                    if (text) text.textContent = 'กำลังรีเฟรช...';
-                    if (icon) icon.classList.add('animate-spin');
-                    if (pLoader) {
-                        pLoader.classList.remove('hidden');
-                        pLoader.classList.add('flex');
-                    }
-
-                    // Perform fetch
-                    await poll();
-
-                    // Small delay to make it feel responsive & stable
-                    await new Promise(r => setTimeout(r, 600));
-
-                    if (pLoader) pLoader.classList.add('hidden');
-                    if (icon) icon.classList.remove('animate-spin');
-                    if (text) text.textContent = 'รีเฟรช';
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.classList.remove('opacity-70');
-                    }
-                };
-
-                window.chatPollInterval = setInterval(poll, 5000);
-
-                // Input Logic
-                if (msgInput) {
-                    msgInput.addEventListener('input', function() {
-                        this.style.height = '48px';
-                        const h = Math.min(this.scrollHeight, 140);
-                        this.style.height = h + 'px';
-                        if (autoScroll && h > 48 && box) box.scrollTop = box.scrollHeight;
-                    });
-                    msgInput.addEventListener('keydown', (e) => {
-                        if (window.innerWidth >= 768 && !e.shiftKey && e.key === 'Enter') {
-                            e.preventDefault();
-                            const f = msgInput.closest('form');
-                            if (f && msgInput.value.trim()) f.submit();
-                        }
-                    });
-                }
-
-                if (btnScrollBottom) {
-                    btnScrollBottom.addEventListener('click', () => {
-                        box.scrollTop = box.scrollHeight;
-                        autoScroll = true;
-                        btnScrollBottom.classList.add('hidden');
-                    });
-                }
-            @endif
-        }
-
-        function showLoader() {
-            document.getElementById('loaderOverlay')?.classList.add('show');
-        }
-
-        function hideLoader() {
-            document.getElementById('loaderOverlay')?.classList.remove('show');
-        }
-
-        document.addEventListener('livewire:navigate', () => {
-            document.getElementById('panelLoader')?.classList.remove('hidden');
-            document.getElementById('panelLoader')?.classList.add('flex');
-        });
-
-        document.addEventListener('livewire:navigated', () => {
-            hideLoader();
-            document.getElementById('panelLoader')?.classList.add('hidden');
-            document.getElementById('panelLoader')?.classList.remove('flex');
-            initChatUI();
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
-            hideLoader();
-            initChatUI();
-        });
-    </script>
+@section('scripts')
+    @vite(['resources/js/chat/boot.js'])
 @endsection
 
 @section('after-content')

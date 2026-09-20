@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\ChatMessage;
+use App\Models\ChatThread;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -130,5 +132,35 @@ class LayoutScriptsTest extends TestCase
         foreach ($this->inlineScripts($html) as $script) {
             $this->assertDoesNotMatchRegularExpression('/addEventListener|setInterval|MutationObserver/', $script, 'the layout, toast and chat widget are modules now');
         }
+    }
+
+    public function test_the_chat_page_has_no_script_of_its_own_and_no_livewire_leftovers(): void
+    {
+        $view = file_get_contents(resource_path('views/chat/index.blade.php'));
+
+        $this->assertSame([], $this->inlineScripts($view), 'the page logic lives in resources/js/chat/page.js');
+        foreach (['wire:', 'livewire', 'data-navigate-once', 'showLoader', 'hideLoader'] as $leftover) {
+            $this->assertStringNotContainsString($leftover, $view, "$leftover: Livewire is gone, and the layout provides window.Loader");
+        }
+        $this->assertStringContainsString("@vite(['resources/js/chat/boot.js'])", $view);
+        $this->assertStringContainsString("'resources/js/chat/boot.js'", file_get_contents(base_path('vite.config.js')));
+        $this->assertMatchesRegularExpression('/^installChatPage\(\);/m', file_get_contents(resource_path('js/chat/boot.js')), 'an entry that only defines functions is tree-shaken to nothing');
+    }
+
+    public function test_an_open_thread_hands_the_page_module_what_it_needs_and_escapes_what_it_renders(): void
+    {
+        $me = User::factory()->create(['role' => 'admin']);
+        $other = User::factory()->create(['name' => '<img src=x onerror=alert(1)>']);
+        $thread = ChatThread::create(['title' => 'ทดสอบ', 'author_id' => $other->id]);
+        ChatMessage::create(['chat_thread_id' => $thread->id, 'user_id' => $other->id, 'body' => '<script>alert(2)</script>']);
+
+        $html = $this->actingAs($me)->get(route('chat.index', ['thread_id' => $thread->id]))->assertOk()->getContent();
+
+        $this->assertStringContainsString('resources/js/chat/boot.js', $html);
+        $this->assertStringContainsString('id="chatBox"', $html);
+        $this->assertStringContainsString('data-chat-url="'.route('chat.messages', $thread).'"', $html);
+        $this->assertStringContainsString('data-thread-id="'.$thread->id.'"', $html);
+        $this->assertStringNotContainsString('<script>alert(2)</script>', $html, 'a message body reaches the page escaped');
+        $this->assertStringNotContainsString('<img src=x onerror=alert(1)>', $html, 'and so does a sender name');
     }
 }

@@ -61,6 +61,7 @@ export default defineConfig(async ({ command, mode }) => {
           'resources/js/layout/boot.js',
           // Page-specific bundles
           'resources/js/repair/dashboard.js',
+          'resources/js/chat/boot.js',
           'resources/js/maintenance/sla/dashboard.js',
           'resources/js/maintenance/rating/technicians-dashboard.js',
         ],

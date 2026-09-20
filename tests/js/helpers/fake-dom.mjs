@@ -117,7 +117,8 @@ export class FakeElement extends Target {
   constructor(tag, attrs = {}) {
     super();
     this.tagName = tag.toUpperCase(); this.attrs = { ...attrs }; this.children = []; this.parentElement = null;
-    this.dataset = {}; this.style = {}; this.cells = []; this._text = ''; this._html = '';
+    this.dataset = new Proxy({}, { set(target, key, value) { target[key] = String(value); return true; } }); // data-* values are strings
+    this.style = {}; this.cells = []; this._text = ''; this._html = '';
     this._classes = new Set((attrs.class || '').split(/\s+/).filter(Boolean));
   }
   get id() { return this.attrs.id || ''; }
