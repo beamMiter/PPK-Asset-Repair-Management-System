@@ -128,6 +128,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   third-party asset. Still loaded from a CDN: Bootstrap (css + js) and Bootstrap Icons, TomSelect, Material Symbols and
   Inter from Google Fonts, Cropper on the profile page.
 
+- **Controllers grouped by area:** 12 controllers moved from the root of `app/Http/Controllers` into `Maintenance/` (request,
+  transition, assignment, attachment, operation log, log, print, rating, SLA), `Settings/` (request types, notification sounds)
+  and `Repair/` (my jobs, next to the dashboard) to match the `/maintenance`, `/settings` and `/repair` URLs. Namespace only:
+  no class, method, route, URL or route name changed (the route table is identical before and after). The SLA dashboard script
+  moved from `resources/js/settings/sla/` to `resources/js/maintenance/sla/`, next to its view.
 ### Removed
 
 - **Deleting a user from the app** (route `admin.users.destroy`, `UserController::destroy`, the "ลบ" buttons in the
@@ -180,7 +185,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Unused packages:** `laravel/scout`, `spatie/laravel-query-builder`, `livewire/livewire`, `blade-ui-kit/blade-icons` and
   `codeat3/blade-simple-icons` (registered 3,413 icon components at every boot, none used), `laravel/breeze` (dev) and the
   npm `@tailwindcss/line-clamp` (Tailwind 3.4 has `line-clamp-*` built in and the plugin was never in the config). No other
-  package changed version. **After pulling this: `composer install`, `npm install` and `php artisan view:clear`** — views
+  package changed version. Livewire also registered 9 routes on its own (`/livewire-…/update`, `/upload-file`,
+  `/preview-file/{filename}`, its JS and source maps) — they are gone with it. **After pulling this: `composer install`, `npm install` and `php artisan view:clear`** — views
   compiled while Livewire was installed call its classes and answer 500 until the compiled-view cache is cleared.
   The layout's leftover `livewire:navigated` listeners went too (that event never fired: Livewire's JS was never on a page);
   the chat page still has its own.
