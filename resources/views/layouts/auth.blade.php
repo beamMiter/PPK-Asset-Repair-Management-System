@@ -8,7 +8,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@hasSection('title')@yield('title') • @endif{{ config('app.title_suffix') }}</title>
     <link rel="icon" type="image/png" href="{{ asset('icon/maintenance.png') }}">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/css/toast.css', 'resources/js/app.js'])
 
     <!-- ===== Auth Loader (drop-in, no-conflict) ===== -->
     <script>

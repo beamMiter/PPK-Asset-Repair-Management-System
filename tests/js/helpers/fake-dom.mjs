@@ -1,6 +1,7 @@
 // A small DOM + event model for the JS tests — just enough of Element / Document / Window to run the real modules:
 // the selectors they use (tag, *, #id, .class, [attr], [attr="v"], :not(...), comma lists), capture / bubble order,
-// preventDefault / stopImmediatePropagation, classList, dataset, and timers you release by hand.
+// preventDefault / stopImmediatePropagation, classList, className, dataset, createElement / append / remove, textContent /
+// innerHTML, a virtual clock (setTimeout / setInterval / requestAnimationFrame) and a MutationObserver you trigger by hand.
 // Not a browser: it only models what the code under test touches.
 
 function splitTop(sel) {
@@ -108,11 +109,15 @@ function dispatch(target, ev) {
   return ev;
 }
 
+export class FakeText {
+  constructor(text) { this.nodeType = 3; this.textContent = String(text); this.parentElement = null; }
+}
+
 export class FakeElement extends Target {
   constructor(tag, attrs = {}) {
     super();
     this.tagName = tag.toUpperCase(); this.attrs = { ...attrs }; this.children = []; this.parentElement = null;
-    this.dataset = {}; this.style = {}; this.textContent = ''; this.cells = [];
+    this.dataset = {}; this.style = {}; this.cells = []; this._text = ''; this._html = '';
     this._classes = new Set((attrs.class || '').split(/\s+/).filter(Boolean));
   }
   get id() { return this.attrs.id || ''; }
@@ -120,16 +125,32 @@ export class FakeElement extends Target {
     const s = this._classes;
     return { add: (...c) => c.forEach((x) => s.add(x)), remove: (...c) => c.forEach((x) => s.delete(x)), contains: (c) => s.has(c) };
   }
+  get className() { return [...this._classes].join(' '); }
+  set className(v) { this._classes = new Set(String(v).split(/\s+/).filter(Boolean)); }
+  get textContent() { return this._text + this.children.map((k) => k.textContent).join(''); }
+  set textContent(v) { this.children = []; this._text = String(v); }
+  get innerHTML() { return this._html; }
+  set innerHTML(v) { this.children = []; this._text = ''; this._html = String(v); }
   hasAttribute(n) { return n in this.attrs; }
   getAttribute(n) { return n in this.attrs ? this.attrs[n] : null; }
   setAttribute(n, v) { this.attrs[n] = String(v); }
-  append(...kids) { kids.forEach((k) => { k.parentElement = this; this.children.push(k); }); return this; }
+  removeAttribute(n) { delete this.attrs[n]; }
+  append(...kids) {
+    kids.forEach((k) => { const node = typeof k === 'string' ? new FakeText(k) : k; node.parentElement = this; this.children.push(node); });
+    return this;
+  }
+  appendChild(k) { this.append(k); return k; }
+  remove() {
+    if (!this.parentElement) return;
+    this.parentElement.children = this.parentElement.children.filter((k) => k !== this);
+    this.parentElement = null;
+  }
   matches(sel) { return compile(sel).some((c) => matchCompound(this, c)); }
   closest(sel) { for (let e = this; e && e.tagName; e = e.parentElement) if (e.matches(sel)) return e; return null; }
   contains(el) { for (let e = el; e; e = e.parentElement) if (e === this) return true; return false; }
   querySelectorAll(sel) {
     const cs = compile(sel), out = [];
-    const walk = (e) => e.children.forEach((k) => { if (cs.some((c) => matchCompound(k, c))) out.push(k); walk(k); });
+    const walk = (e) => e.children.forEach((k) => { if (!k.tagName) return; if (cs.some((c) => matchCompound(k, c))) out.push(k); walk(k); });
     walk(this);
     return out;
   }
@@ -138,28 +159,43 @@ export class FakeElement extends Target {
 }
 
 export function createWorld({ storage = {}, mobile = false, extraWindow = {} } = {}) {
-  const timers = [];
-  const world = { timers, mobile, storage, mqls: [] };
+  const world = { mobile, storage, mqls: [], observers: [], now: 0 };
+  const timers = []; const frames = []; let nextId = 1;
+  world.timers = timers;
 
   const html = new FakeElement('html');
   const body = new FakeElement('body');
   html.append(body);
 
   class FakeDocument extends Target {
-    constructor() { super(); this.documentElement = html; this.body = body; this.readyState = 'interactive'; }
+    constructor() { super(); this.documentElement = html; this.body = body; this.readyState = 'interactive'; this.hidden = false; }
     getElementById(id) { return html.querySelectorAll('*').find((e) => e.id === id) || null; }
     querySelectorAll(sel) { return html.querySelectorAll(sel); }
     querySelector(sel) { return html.querySelector(sel); }
+    createElement(tag) { return new FakeElement(tag); }
   }
   const doc = new FakeDocument();
 
   class FakeForm extends FakeElement {}
+  class FakeObserver {
+    constructor(cb) { this.cb = cb; this.connected = false; world.observers.push(this); }
+    observe() { this.connected = true; }
+    disconnect() { this.connected = false; }
+  }
+  const schedule = (fn, ms, every) => { const id = nextId++; timers.push({ id, fn, at: world.now + (ms || 0), every }); return id; };
+  const cancel = (id) => { const i = timers.findIndex((x) => x.id === id); if (i >= 0) timers.splice(i, 1); };
+
   const win = Object.assign(new Target(), {
     document: doc,
     HTMLFormElement: FakeForm,
+    MutationObserver: FakeObserver,
     location: { href: 'https://app.test/current?page=3' },
     localStorage: { getItem: (k) => (k in storage ? storage[k] : null), setItem: (k, v) => { storage[k] = String(v); } },
-    setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
+    setTimeout: (fn, ms) => schedule(fn, ms),
+    setInterval: (fn, ms) => schedule(fn, ms, ms),
+    clearTimeout: cancel,
+    clearInterval: cancel,
+    requestAnimationFrame: (fn) => { frames.push(fn); return frames.length; },
     matchMedia: (query) => {
       const mql = { query, get matches() { return world.mobile; }, listeners: [], addEventListener(t, f) { this.listeners.push(f); } };
       world.mqls.push(mql);
@@ -181,7 +217,23 @@ export function createWorld({ storage = {}, mobile = false, extraWindow = {} } =
     fireWindow: (type, props = {}) => dispatch(win, new FakeEvent(type, { bubbles: false, props })),
     // a Turbo visit: the whole <body> is replaced (new elements, none of the old listeners), then turbo:load fires
     visit: (build) => { body.children = []; build(body, world); world.fireDocument('turbo:load'); },
-    releaseTimers: () => { const t = timers.splice(0); t.forEach((x) => x.fn()); return t.length; },
+    // run the one-shot timers that are pending, whatever their delay (intervals are left alone)
+    releaseTimers: () => { const due = timers.filter((x) => !x.every); due.forEach((x) => cancel(x.id)); due.forEach((x) => x.fn()); return due.length; },
+    // move the virtual clock forward, running timers and intervals that fall due, in order
+    advance: (ms) => {
+      const target = world.now + ms;
+      for (;;) {
+        const due = timers.filter((x) => x.at <= target).sort((a, b) => a.at - b.at || a.id - b.id)[0];
+        if (!due) break;
+        world.now = due.at;
+        if (due.every) due.at += due.every; else cancel(due.id);
+        due.fn();
+      }
+      world.now = target;
+    },
+    flushFrames: (max = 10) => { for (let i = 0; i < max && frames.length; i++) frames.splice(0).forEach((f) => f()); },
+    mutate: () => world.observers.filter((o) => o.connected).forEach((o) => o.cb([])),
+    pendingTimers: () => timers.length,
   });
   return world;
 }

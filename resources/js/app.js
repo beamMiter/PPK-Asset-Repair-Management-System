@@ -4,9 +4,12 @@ import Alpine from 'alpinejs'
 import SignaturePad from 'signature_pad'
 window.SignaturePad = SignaturePad
 import './sidebar-intro';
+import { installToast } from './toast';
 import './bootstrap';
 import './repair/my-jobs';
 import './repair/dashboard';
+
+installToast(); // window.showToast, the `app:toast` event and the flashed session toast — once per session
 
 // Initialize Alpine.js globally for Blade components using x-data/x-show
 window.Alpine = Alpine
