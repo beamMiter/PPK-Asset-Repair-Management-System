@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ChatThread;
+use App\Support\SafeBroadcast;
 use App\Traits\HandlesChatReads;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -115,7 +116,7 @@ class ChatController extends Controller
             $this->markThreadRead((int) $message->user_id, (int) $thread->id, (int) $message->id);
         }
 
-        broadcast(new \App\Events\ChatMessageSent($message));
+        SafeBroadcast::send(new \App\Events\ChatMessageSent($message));
 
         return back();
     }

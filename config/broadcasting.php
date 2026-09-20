@@ -58,9 +58,15 @@ return [
                 'scheme' => env('PUSHER_SCHEME', 'https'),
                 'encrypted' => true,
                 'useTLS' => env('PUSHER_SCHEME', 'https') === 'https',
+                // The push is sent inside the user's own request (the events are ShouldBroadcastNow), so an
+                // unreachable or hung push service holds every save for this long. Laravel's defaults are 10 s to
+                // connect and Pusher's own 30 s in total.
+                'timeout' => (int) env('PUSHER_TIMEOUT', 4),
             ],
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
+                'connect_timeout' => (float) env('PUSHER_CONNECT_TIMEOUT', 2),
+                'timeout' => (float) env('PUSHER_TIMEOUT', 4),
             ],
         ],
 

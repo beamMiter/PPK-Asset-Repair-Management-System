@@ -6,6 +6,7 @@ use App\Models\MaintenanceRequest as MR;
 use App\Models\Asset;
 use App\Models\User;
 use App\Events\MaintenanceRequestCreated;
+use App\Support\SafeBroadcast;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -78,7 +79,7 @@ class MaintenanceRequestService
 
         if ($req) {
             DB::afterCommit(function () use ($req) {
-                broadcast(new MaintenanceRequestCreated([
+                SafeBroadcast::send(new MaintenanceRequestCreated([
                     'id'         => $req->id,
                     'request_no' => $req->request_no ?? null,
                     'title'      => $req->title,

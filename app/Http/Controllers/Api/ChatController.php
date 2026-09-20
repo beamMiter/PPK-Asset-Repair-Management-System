@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ChatThread;
+use App\Support\SafeBroadcast;
 use App\Models\ChatMessage;
 use App\Traits\HandlesChatReads;
 use Illuminate\Http\Request;
@@ -183,7 +184,7 @@ class ChatController extends Controller
         }
 
         // Real-time fan-out, same as the web path.
-        broadcast(new \App\Events\ChatMessageSent($msg));
+        SafeBroadcast::send(new \App\Events\ChatMessageSent($msg));
 
         return response()->json([
             'id'         => $msg->id,
