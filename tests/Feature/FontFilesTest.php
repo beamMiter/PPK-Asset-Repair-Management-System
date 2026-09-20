@@ -107,6 +107,16 @@ class FontFilesTest extends TestCase
         }
     }
 
+    public function test_pages_no_longer_import_sarabun_from_google_fonts(): void
+    {
+        // The top bar used to `@import` Sarabun (weights 300–700) from fonts.googleapis.com on every page. The local files
+        // are declared by the layout now, so the page no longer needs the internet for its main font.
+        $html = $this->actingAs(User::factory()->create(['role' => 'admin']))->get(route('repair.dashboard'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('family=Sarabun', $html);
+        $this->assertStringContainsString("font-family: 'Sarabun'", $html, 'the local faces are still declared');
+    }
+
     /** the variables maintenance/sla/report.blade.php reads, taken from what the dashboard builds */
     private function slaData(): array
     {

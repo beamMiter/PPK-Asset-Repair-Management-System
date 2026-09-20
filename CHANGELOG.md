@@ -107,6 +107,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and the 1,199-line request detail view (`show.blade.php` → 171 lines + eight partials; the rendered HTML of 27 pages is
   identical). 16 files lost unused imports. Login / logout / register no longer answer 204 to browsers "when testing" —
   the real redirects are now what the tests exercise.
+- **Less is loaded on every page** (measured with `vite build`): the JS every page fetches went from 511 kB to 300 kB
+  (gzip 165 → 94 kB) because Chart.js — 200 kB — is now fetched with `import()` only on a page that has a chart, instead of
+  being part of `app.js` for the login page and everything else (`JsBundleTest` guards it). Also gone from every page: the
+  Lottie player (unpinned `@latest`, no view used it), a second Alpine on the manual page, Font Awesome (six icons on the
+  sound-settings page, where it is now loaded), and the top bar's `@import` of Sarabun from Google Fonts (the local files
+  are used since the font fix above; weights 400–700, same family). `CdnAssetsTest` fails on an unpinned or duplicated
+  third-party asset. Still loaded from a CDN: Bootstrap (css + js) and Bootstrap Icons, TomSelect, Material Symbols and
+  Inter from Google Fonts, Cropper on the profile page.
 
 ### Removed
 
@@ -124,6 +132,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and `DELETE /profile` — a hidden self-delete that still hard-deleted the caller and cascaded like the user-admin one.
 - `DELETE /maintenance/requests/{req}/assignments/{assignment}`: it threw a TypeError on every call and nothing used it
   (the team is edited through `assignments.store`).
+- **Dead front-end code:** the 350-line "SearchSelect" script in `app.js` and the two components it served
+  (`search-select`, `searchable-select` — no view used them), `intro-frame-reveal.js` (imported by nothing) and
+  `assets/_tomselect.blade.php` (included by nothing).
 - **The unused queue leftovers:** `composer dev` no longer starts `php artisan queue:listen` (nothing in the app is queued —
   the push events are `ShouldBroadcastNow`, mail and notifications are sent inline), `/api/health` no longer reports a
   "queue" check (it only built the connection object, so it said ok whatever the queue's state), and the breadcrumb

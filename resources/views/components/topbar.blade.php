@@ -174,8 +174,6 @@
 </div>
 
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
-
     :root {
         --topbar-h: 80px;
         --ppk-blue: #0F2D5C;
