@@ -75,7 +75,7 @@ class JsBundleTest extends TestCase
     {
         $vite = file_get_contents(base_path('vite.config.js'));
 
-        foreach (['resources/js/settings/sla/dashboard.js', 'resources/js/maintenance/rating/technicians-dashboard.js'] as $entry) {
+        foreach (['resources/js/maintenance/sla/dashboard.js', 'resources/js/maintenance/rating/technicians-dashboard.js'] as $entry) {
             $this->assertStringContainsString($entry, $vite);
         }
     }

@@ -692,5 +692,5 @@
 @endsection
 
 @section('scripts')
-    @vite(['resources/js/settings/sla/dashboard.js'])
+    @vite(['resources/js/maintenance/sla/dashboard.js'])
 @endsection
