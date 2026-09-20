@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Maintenance;
 
+use App\Http\Controllers\Controller;
 use App\Models\MaintenanceRequest as MR;
 use App\Models\MaintenanceAssignment;
 use App\Models\MaintenanceLog;

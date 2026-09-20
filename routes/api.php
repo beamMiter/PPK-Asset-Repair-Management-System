@@ -3,11 +3,11 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AssetController;
-use App\Http\Controllers\MaintenanceRequestController;
-use App\Http\Controllers\MaintenanceTransitionController;
-use App\Http\Controllers\MaintenanceJobController;
+use App\Http\Controllers\Maintenance\MaintenanceRequestController;
+use App\Http\Controllers\Maintenance\MaintenanceTransitionController;
+use App\Http\Controllers\Repair\MaintenanceJobController;
 use App\Http\Controllers\AttachmentController;
-use App\Http\Controllers\MaintenanceLogController;
+use App\Http\Controllers\Maintenance\MaintenanceLogController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\StatsController;

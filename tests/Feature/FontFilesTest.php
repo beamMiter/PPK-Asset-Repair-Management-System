@@ -120,9 +120,9 @@ class FontFilesTest extends TestCase
     /** the variables maintenance/sla/report.blade.php reads, taken from what the dashboard builds */
     private function slaData(): array
     {
-        $controller = new \ReflectionMethod(\App\Http\Controllers\SlaPerformanceController::class, 'getSlaDashboardData');
+        $controller = new \ReflectionMethod(\App\Http\Controllers\Maintenance\SlaPerformanceController::class, 'getSlaDashboardData');
         $controller->setAccessible(true);
 
-        return $controller->invoke(new \App\Http\Controllers\SlaPerformanceController(), request());
+        return $controller->invoke(new \App\Http\Controllers\Maintenance\SlaPerformanceController(), request());
     }
 }

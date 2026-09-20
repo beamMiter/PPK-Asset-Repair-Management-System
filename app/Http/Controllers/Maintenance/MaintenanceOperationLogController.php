@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Maintenance;
 
+use App\Http\Controllers\Controller;
 use App\Models\MaintenanceRequest;
 use App\Support\Toast;
 use Carbon\Carbon;

@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Maintenance;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\MaintenanceRequest as MR;
 use App\Services\MaintenanceTransitionService;

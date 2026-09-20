@@ -7,20 +7,20 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\PasswordController;
 
 // App Modules (Web)
-use App\Http\Controllers\MaintenanceRequestController;
-use App\Http\Controllers\MaintenanceTransitionController;
-use App\Http\Controllers\MaintenanceJobController;
-use App\Http\Controllers\MaintenanceAttachmentController;
-use App\Http\Controllers\MaintenancePrintController;
+use App\Http\Controllers\Maintenance\MaintenanceRequestController;
+use App\Http\Controllers\Maintenance\MaintenanceTransitionController;
+use App\Http\Controllers\Repair\MaintenanceJobController;
+use App\Http\Controllers\Maintenance\MaintenanceAttachmentController;
+use App\Http\Controllers\Maintenance\MaintenancePrintController;
 use App\Http\Controllers\Repair\DashboardController as RepairDashboardController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AttachmentController;
-use App\Http\Controllers\MaintenanceOperationLogController;
-use App\Http\Controllers\MaintenanceAssignmentController;
-use App\Http\Controllers\MaintenanceRatingController;
-use App\Http\Controllers\MaintenanceRequestTypeController;
-use App\Http\Controllers\NotificationSettingController;
+use App\Http\Controllers\Maintenance\MaintenanceOperationLogController;
+use App\Http\Controllers\Maintenance\MaintenanceAssignmentController;
+use App\Http\Controllers\Maintenance\MaintenanceRatingController;
+use App\Http\Controllers\Settings\MaintenanceRequestTypeController;
+use App\Http\Controllers\Settings\NotificationSettingController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ManualController;
 
@@ -165,10 +165,10 @@ Route::middleware(['auth'])->group(function () {
         ->name('maintenance.sla.')
         ->middleware('can:maintenance-type-manage')
         ->group(function () {
-            Route::get('/', [\App\Http\Controllers\SlaPerformanceController::class, 'index'])->name('index');
-            Route::post('/report', [\App\Http\Controllers\SlaPerformanceController::class, 'report'])->name('report');
-            Route::patch('/type-default/bulk', [\App\Http\Controllers\SlaPerformanceController::class, 'bulkUpdateTypeDefault'])->name('bulk-update-type-default');
-            Route::patch('/type-default/{id}', [\App\Http\Controllers\SlaPerformanceController::class, 'updateTypeDefault'])->name('update-type-default');
+            Route::get('/', [\App\Http\Controllers\Maintenance\SlaPerformanceController::class, 'index'])->name('index');
+            Route::post('/report', [\App\Http\Controllers\Maintenance\SlaPerformanceController::class, 'report'])->name('report');
+            Route::patch('/type-default/bulk', [\App\Http\Controllers\Maintenance\SlaPerformanceController::class, 'bulkUpdateTypeDefault'])->name('bulk-update-type-default');
+            Route::patch('/type-default/{id}', [\App\Http\Controllers\Maintenance\SlaPerformanceController::class, 'updateTypeDefault'])->name('update-type-default');
         });
 
     // Help
