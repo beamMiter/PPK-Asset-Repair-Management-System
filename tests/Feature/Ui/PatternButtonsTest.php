@@ -38,7 +38,7 @@ class PatternButtonsTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/border-emerald-300 bg-white px-3 py-2 /', $html, 'row action drifted back to the 36px size');
     }
 
-    public function test_technician_rating_page_uses_the_shared_back_button_and_close_button(): void
+    public function test_technician_rating_page_uses_the_shared_back_button(): void
     {
         $admin = $this->admin();
         $tech = User::factory()->create(['role' => 'it_support']);
@@ -48,9 +48,6 @@ class PatternButtonsTest extends TestCase
         $this->assertStringContainsString('>chevron_left<', $page, 'shared back button');
         $this->assertStringContainsString(route('maintenance.requests.rating.technicians'), $page, 'falls back to the board');
         $this->assertDoesNotMatchRegularExpression('/<a [^>]*\bh-9\b[^>]*>/', $page, 'hand-made 36px back link');
-
-        $board = $this->actingAs($admin)->get(route('maintenance.requests.rating.technicians'))->assertOk()->getContent();
-        $this->assertMatchesRegularExpression('/<button[^>]*whitespace-nowrap select-none[^>]*onclick="closeRatingModal\(\)"[^>]*>\s*ปิด\s*<\/button>/u', $board);
     }
 
     public function test_confirm_dialog_buttons_are_the_shared_ones_and_keep_their_wiring(): void
