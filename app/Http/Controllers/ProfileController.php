@@ -5,9 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -62,7 +60,6 @@ class ProfileController extends Controller
 
         $disk        = Storage::disk('public');
         $disk->makeDirectory('avatars');
-        $hasThumbCol = Schema::hasColumn('users', 'profile_photo_thumb');
 
         $driver = null;
         if (extension_loaded('imagick')) {
@@ -84,12 +81,12 @@ class ProfileController extends Controller
             Log::info('Removing avatar', ['user_id' => $user->id]);
             $toDelete = array_values(array_filter([
                 $user->profile_photo_path ?: null,
-                $hasThumbCol ? ($user->profile_photo_thumb ?: null) : null,
+                $user->profile_photo_thumb ?: null,
             ]));
             if ($toDelete) $disk->delete($toDelete);
 
             $user->profile_photo_path = null;
-            if ($hasThumbCol) $user->profile_photo_thumb = null;
+            $user->profile_photo_thumb = null;
             $avatarRemoved = true;
         }
 
@@ -98,7 +95,7 @@ class ProfileController extends Controller
             Log::info('Uploading new avatar', ['user_id' => $user->id]);
             $toDelete = array_values(array_filter([
                 $user->profile_photo_path ?: null,
-                $hasThumbCol ? ($user->profile_photo_thumb ?: null) : null,
+                $user->profile_photo_thumb ?: null,
             ]));
             if ($toDelete) $disk->delete($toDelete);
 
@@ -111,7 +108,7 @@ class ProfileController extends Controller
                     $mainPath = "avatars/{$basename}.{$ext}";
                     $disk->putFileAs('avatars', $file, "{$basename}.{$ext}");
                     $user->profile_photo_path = $mainPath;
-                    if ($hasThumbCol) $user->profile_photo_thumb = $mainPath;
+                    $user->profile_photo_thumb = $mainPath;
                     $avatarChanged = true;
                 } else {
                     $basename  = $user->id . '-' . time();
@@ -125,7 +122,7 @@ class ProfileController extends Controller
                     $disk->put($thumbPath, (string) $thumb);
 
                     $user->profile_photo_path = $mainPath;
-                    if ($hasThumbCol) $user->profile_photo_thumb = $thumbPath;
+                    $user->profile_photo_thumb = $thumbPath;
                     $avatarChanged = true;
                 }
             } catch (\Throwable $e) {
@@ -152,46 +149,6 @@ class ProfileController extends Controller
             'message'  => $message,
             'position' => 'tc',
             'timeout'  => 2800,
-            'size'     => 'lg',
-        ]);
-    }
-
-    public function destroy(Request $request): RedirectResponse
-    {
-        if ($request->user()->role === 'member') {
-            return back()->with('toast', [
-                'type'     => 'error',
-                'message'  => 'สมาชิกทั่วไปไม่ได้รับอนุญาตให้ลบบัญชีด้วยตนเอง',
-                'position' => 'tc',
-                'timeout'  => 4000,
-            ]);
-        }
-
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
-        ]);
-
-        $user = $request->user();
-        Log::warning('User deleting account', ['user_id' => $user->id]);
-
-        $disk = Storage::disk('public');
-        $toDelete = array_values(array_filter([
-            $user->profile_photo_path ?: null,
-            Schema::hasColumn('users', 'profile_photo_thumb') ? ($user->profile_photo_thumb ?: null) : null,
-        ]));
-        if ($toDelete) $disk->delete($toDelete);
-
-        Auth::logout();
-        $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return Redirect::to('/')->with('toast', [
-            'type'     => 'success',
-            'message'  => 'ลบบัญชีเรียบร้อย',
-            'position' => 'tc',
-            'timeout'  => 3200,
             'size'     => 'lg',
         ]);
     }

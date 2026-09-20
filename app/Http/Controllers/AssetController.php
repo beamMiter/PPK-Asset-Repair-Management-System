@@ -8,7 +8,6 @@ use App\Models\File as FileModel;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -529,12 +528,7 @@ class AssetController extends Controller
             ->get();
 
         $attQuery = $asset->requestAttachments()->select('attachments.*');
-        $attQuery->orderBy(
-            Schema::hasColumn('attachments', 'created_at')
-                ? 'attachments.created_at'
-                : 'attachments.id',
-            'desc'
-        );
+        $attQuery->orderBy('attachments.created_at', 'desc');
         $attachments = $attQuery->get();
 
         Log::info('[Asset::showPage] viewed', [

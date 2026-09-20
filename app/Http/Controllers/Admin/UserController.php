@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
 use App\Support\Toast;
 
@@ -214,10 +213,6 @@ class UserController extends Controller
             $user->password    = Hash::make($data['password']);
             $user->role        = $data['role'];
             $user->department  = $data['department'] ?? null;
-
-            if (Schema::hasColumn('users', 'created_by')) {
-                $user->created_by = Auth::id();
-            }
 
             $user->save();
 
