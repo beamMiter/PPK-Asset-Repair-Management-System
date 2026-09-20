@@ -57,6 +57,7 @@ export default defineConfig(async ({ command, mode }) => {
           'resources/css/app.css',
           'resources/css/toast.css',
           'resources/css/layout.css', // the app layout's styles, loaded from its <head> after the page stacks
+          'resources/css/topbar.css', // the top bar's, linked right after it
           'resources/js/app.js',
           // The app layout's behaviour (sidebar, spinner, TomSelect, unsaved-changes guard) — only for pages of that layout
           'resources/js/layout/boot.js',

@@ -170,6 +170,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   stylesheets — so the cascade is unchanged (`LayoutScriptsTest` pins the position). The four `@font-face` rules stay inline
   because their URLs come from `asset()`. The file is byte-for-byte the old CSS (whitespace aside); the layout goes from 648
   to 150 lines, and each page's HTML is 14 KB lighter (the stylesheet is 7.6 KB minified and cached).
+- **The top bar's CSS is a file too** (`resources/css/topbar.css`, 207 lines with its header): the bar's styles, and the
+  layout variables it defines (`--topbar-h`, `--side-w`, the `--ppk-*` palette). It was an inline `<style>` at the top of `<body>`
+  in every page, so it is linked right after `layout.css` — after every head style, before every style a page body brings, the
+  place it always had (`LayoutScriptsTest` pins the order). No page overrides the bar, so it always applied on the app layout.
+  The component (387 → 174 lines) also lost a `<script>` that held two comment lines.
 
 ### Removed
 

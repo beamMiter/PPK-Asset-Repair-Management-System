@@ -199,5 +199,32 @@ class LayoutScriptsTest extends TestCase
         $this->assertLessThan($layoutCss, strpos($html, '.page-create-asset'), 'after the styles this page pushes into <head>');
         $this->assertLessThan(strpos($html, '<body'), $layoutCss, 'still in <head>');
         $this->assertSame(1, substr_count($html, 'resources/css/layout.css'), 'linked once');
+
+        // the top bar's <style> sat at the top of <body>: after every head style, so its file goes right after layout.css
+        $topbarCss = strpos($html, 'resources/css/topbar.css');
+        $this->assertNotFalse($topbarCss, 'the top bar stylesheet is linked');
+        $this->assertLessThan($topbarCss, $layoutCss, 'after layout.css');
+        $this->assertLessThan(strpos($html, '<body'), $topbarCss, 'still in <head>');
+        $this->assertSame(1, substr_count($html, 'resources/css/topbar.css'), 'linked once');
+    }
+
+    public function test_the_topbar_component_is_only_markup_and_its_styles_are_a_file(): void
+    {
+        $component = file_get_contents(resource_path('views/components/topbar.blade.php'));
+        $this->assertStringNotContainsString('<style', $component);
+        $this->assertStringNotContainsString('<script', $component);
+        $this->assertStringContainsString('navbar-pinwheel', $component);
+
+        $css = file_get_contents(resource_path('css/topbar.css'));
+        foreach (['--topbar-h', '--ppk-blue', '.navbar-pinwheel', '.nav-brand-block', '@keyframes navPing', '@media (max-width: 991.98px)'] as $needle) {
+            $this->assertStringContainsString($needle, $css);
+        }
+        $this->assertStringNotContainsString('{{', $css);
+        $this->assertStringContainsString("'resources/css/topbar.css'", file_get_contents(base_path('vite.config.js')));
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $html = $this->actingAs($admin)->get(route('repair.dashboard'))->assertOk()->getContent();
+        $this->assertStringContainsString('navbar-pinwheel', $html, 'the bar is still rendered');
+        $this->assertStringNotContainsString('.navbar-pinwheel {', $html, 'and its rules are not repeated inline on every page');
     }
 }

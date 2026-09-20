@@ -72,8 +72,8 @@
         }
     </style>
 
-    {{-- the rest of the layout's CSS; loaded here, after the page stacks, so the cascade order is what it was --}}
-    @vite(['resources/css/layout.css'])
+    {{-- the rest of the layout's CSS and the top bar's; loaded here, after the page stacks, so the cascade order is what it was --}}
+    @vite(['resources/css/layout.css', 'resources/css/topbar.css'])
 </head>
 
 <body class="bg-white text-base-content">
