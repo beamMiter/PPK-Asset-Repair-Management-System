@@ -44,17 +44,34 @@ class SlaPerformanceController extends Controller
         return $pdf->stream('sla-report-' . Carbon::now()->format('Y-m-d') . '.pdf');
     }
 
+    /** A `?from=` / `?to=` date, or null when it is missing or not a date (a typo in the URL must not be a 500). */
+    private function dateFromQuery(Request $request, string $key): ?Carbon
+    {
+        $value = $request->input($key);
+
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     private function getSlaDashboardData(Request $request)
     {
         $jobTypes = \App\Models\MaintenanceRequestType::where('is_active', true)->orderBy('sort_order')->get();
 
-        $start = $request->query('from')
-            ? Carbon::parse($request->query('from'))->startOfDay() 
-            : Carbon::now()->startOfYear();
+        $from = $this->dateFromQuery($request, 'from');
+        $to   = $this->dateFromQuery($request, 'to');
 
-        $end = $request->query('to') 
-            ? Carbon::parse($request->query('to'))->endOfDay() 
-            : Carbon::now()->endOfMonth();
+        // the view echoes and parses request('from') / request('to'): hand it clean Y-m-d values or nothing
+        $request->merge(['from' => $from?->toDateString(), 'to' => $to?->toDateString()]);
+
+        $start = $from?->startOfDay() ?? Carbon::now()->startOfYear();
+        $end   = $to?->endOfDay() ?? Carbon::now()->endOfMonth();
 
         $requests = MaintenanceRequest::with(['department:id,name_th,name_en'])
             ->whereBetween('request_date', [$start, $end])
