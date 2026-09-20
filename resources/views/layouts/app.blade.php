@@ -46,37 +46,36 @@
     @stack('head')
 
     <style>
-        /* --- FONT FACE: SARABUN --- */
+        /* --- FONT FACE: SARABUN (files live in public/images/fonts) --- */
         @font-face {
             font-family: 'Sarabun';
             font-style: normal;
             font-weight: 400;
-            src: url('{{ asset('fonts/Sarabun-Regular.woff2') }}') format('woff2'),
-                url('{{ asset('fonts/Sarabun-Regular.woff') }}') format('woff');
+            src: url('{{ asset('images/fonts/Sarabun-Regular.woff2') }}') format('woff2'),
+                url('{{ asset('images/fonts/Sarabun-Regular.woff') }}') format('woff');
         }
 
         @font-face {
             font-family: 'Sarabun';
             font-style: normal;
             font-weight: 500;
-            src: url('{{ asset('fonts/Sarabun-Medium.woff2') }}') format('woff2'),
-                url('{{ asset('fonts/Sarabun-Medium.woff') }}') format('woff');
+            src: url('{{ asset('images/fonts/Sarabun-Medium.woff2') }}') format('woff2'),
+                url('{{ asset('images/fonts/Sarabun-Medium.woff') }}') format('woff');
         }
 
         @font-face {
             font-family: 'Sarabun';
             font-style: normal;
             font-weight: 600;
-            src: url('{{ asset('fonts/Sarabun-SemiBold.woff2') }}') format('woff2'),
-                url('{{ asset('fonts/Sarabun-SemiBold.woff') }}') format('woff');
+            src: url('{{ asset('images/fonts/Sarabun-SemiBold.woff2') }}') format('woff2');
         }
 
         @font-face {
             font-family: 'Sarabun';
             font-style: normal;
             font-weight: 700;
-            src: url('{{ asset('fonts/Sarabun-Bold.woff2') }}') format('woff2'),
-                url('{{ asset('fonts/Sarabun-Bold.woff') }}') format('woff');
+            src: url('{{ asset('images/fonts/Sarabun-Bold.woff2') }}') format('woff2'),
+                url('{{ asset('images/fonts/Sarabun-Bold.woff') }}') format('woff');
         }
 
         /* --- GLOBAL BASE --- */

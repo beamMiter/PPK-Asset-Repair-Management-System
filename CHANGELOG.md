@@ -39,6 +39,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   it twice), `POST /api/repair-requests` and posting a chat message (web and API) answered 500 for records that
   existed. `SafeBroadcast` now logs the failure and carries on, and the Pusher connection ships with 2 s / 4 s timeouts
   instead of Laravel's 10 s / 30 s (`PUSHER_CONNECT_TIMEOUT`, `PUSHER_TIMEOUT`). Nothing changes while Pusher works.
+- **The local Sarabun web font never loaded.** `public/fonts` was deleted in `a33f009`, but the layout kept asking for
+  `/fonts/Sarabun-*.woff2` (8 files, all 404). It went unnoticed because the top bar also imports Sarabun from Google
+  Fonts — on a network with no internet (a hospital intranet) every page fell back to the system font. The layout now
+  points at `public/images/fonts` (where the files are; SemiBold has no `.woff`, so woff2 is its only source). The
+  PDFs were not affected — they embed Sarabun through the family registered in `installed-fonts.json` — so the dead
+  `@font-face` blocks in the work-order and asset-sheet templates are simply removed. `FontFilesTest` fails when any
+  declared font file is missing, empty or not the kind of file its extension says, and when a PDF stops embedding
+  Sarabun. Not changed: the top bar's Google Fonts `@import` (part of the CDN clean-up still to come).
 - **`GET /api/repair-requests/my-jobs` answered 404 to everyone** — it was declared below `/{req}`, which took "my-jobs"
   for a request id. It now sits above it and returns the caller's own jobs; `RouteReachabilityTest` fails when any
   static route is shadowed by an earlier one.
