@@ -72,8 +72,9 @@
         }
     </style>
 
-    {{-- the rest of the layout's CSS and the top bar's; loaded here, after the page stacks, so the cascade order is what it was --}}
-    @vite(['resources/css/layout.css', 'resources/css/topbar.css'])
+    {{-- the rest of the layout's CSS, then the top bar's and the sidebar's (the order their inline styles had in <body>); loaded
+         here, after the page stacks, so the cascade order is what it was --}}
+    @vite(['resources/css/layout.css', 'resources/css/topbar.css', 'resources/css/sidebar.css'])
 </head>
 
 <body class="bg-white text-base-content">

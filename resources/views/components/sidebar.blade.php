@@ -21,53 +21,6 @@
         ($active ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-50');
 @endphp
 
-<style>
-    /* ซ่อน Scrollbar แต่ยังเลื่อนได้ */
-    .no-scrollbar::-webkit-scrollbar {
-        display: none;
-    }
-
-    .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
-
-    /* เอฟเฟกต์ตอนกดปุ่มในมือถือ */
-    .btn-close-trigger:active {
-        transform: scale(0.9);
-        transition: 0.1s;
-    }
-
-    /* Mobile: จัดการให้เต็มจอ ทับ Navbar และไม่กระทบส่วนอื่น */
-    @media (max-width: 1024px) {
-        .mobile-sidebar-container {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            bottom: 0 !important;
-            height: 100dvh !important;
-            width: 280px !important;
-            /* กำหนดความกว้างตายตัวให้ออกมาสวยงาม */
-            max-width: 85vw !important;
-            z-index: 9999 !important;
-            /* ทับทุกสิ่งบนจอ */
-            background-color: white !important;
-            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08) !important;
-            /* ใส่เงาเบาๆ แทนการทำพื้นหลังจาง */
-        }
-
-        .sidebar .menu-item,
-        .mobile-sidebar-container .menu-item {
-            min-height: 48px;
-        }
-
-        .mobile-sidebar-container .sidebar-nav {
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: contain;
-        }
-    }
-</style>
-
 {{-- ใช้คลาสเฉพาะเจาะจง mobile-sidebar-container เพื่อไม่ให้กระทบส่วนอื่น --}}
 <div class="mobile-sidebar-container flex flex-col h-full bg-white border-r border-zinc-100 relative">
 

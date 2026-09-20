@@ -206,6 +206,44 @@ class LayoutScriptsTest extends TestCase
         $this->assertLessThan($topbarCss, $layoutCss, 'after layout.css');
         $this->assertLessThan(strpos($html, '<body'), $topbarCss, 'still in <head>');
         $this->assertSame(1, substr_count($html, 'resources/css/topbar.css'), 'linked once');
+
+        // and the sidebar's <style> sat inside <aside>, after the top bar's
+        $sidebarCss = strpos($html, 'resources/css/sidebar.css');
+        $this->assertNotFalse($sidebarCss, 'the sidebar stylesheet is linked');
+        $this->assertLessThan($sidebarCss, $topbarCss, 'after topbar.css');
+        $this->assertLessThan(strpos($html, '<body'), $sidebarCss, 'still in <head>');
+        $this->assertSame(1, substr_count($html, 'resources/css/sidebar.css'), 'linked once');
+    }
+
+    public function test_the_sidebar_component_is_only_markup_and_its_styles_are_a_file(): void
+    {
+        $component = file_get_contents(resource_path('views/components/sidebar.blade.php'));
+        $this->assertStringNotContainsString('<style', $component);
+        $this->assertStringNotContainsString('<script', $component);
+        $this->assertStringContainsString('mobile-sidebar-container', $component);
+
+        $css = file_get_contents(resource_path('css/sidebar.css'));
+        foreach (['.no-scrollbar', '.btn-close-trigger:active', '.mobile-sidebar-container', '@media (max-width: 1024px)', '100dvh'] as $needle) {
+            $this->assertStringContainsString($needle, $css);
+        }
+        $this->assertStringContainsString("'resources/css/sidebar.css'", file_get_contents(base_path('vite.config.js')));
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $html = $this->actingAs($admin)->get(route('repair.dashboard'))->assertOk()->getContent();
+        $this->assertStringContainsString('class="mobile-sidebar-container', $html, 'the sidebar is still rendered');
+        $this->assertStringNotContainsString('.mobile-sidebar-container {', $html, 'and its rules are not repeated inline on every page');
+    }
+
+    public function test_the_only_inline_style_left_in_the_page_chrome_is_the_font_faces(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $html = $this->actingAs($admin)->get(route('repair.dashboard'))->assertOk()->getContent();
+
+        preg_match_all('#<style[^>]*>(.*?)</style>#s', $html, $blocks);
+        foreach ($blocks[1] as $block) {
+            $left = preg_replace('#/\*.*?\*/#s', '', preg_replace('/@font-face\s*\{.*?\}/s', '', $block));
+            $this->assertSame('', trim($left), 'the layout, top bar, sidebar and toast styles are files; only the asset()-based font faces stay inline');
+        }
     }
 
     public function test_the_topbar_component_is_only_markup_and_its_styles_are_a_file(): void

@@ -175,6 +175,10 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in every page, so it is linked right after `layout.css` — after every head style, before every style a page body brings, the
   place it always had (`LayoutScriptsTest` pins the order). No page overrides the bar, so it always applied on the app layout.
   The component (387 → 174 lines) also lost a `<script>` that held two comment lines.
+- **The sidebar's CSS is a file too** (`resources/css/sidebar.css`, 0.6 KB built): the hidden scrollbar, the press effect on the
+  phone close button and the full-height phone drawer. Its `<style>` sat inside `<aside>`, after the top bar's, so the file is
+  linked after `topbar.css` (`LayoutScriptsTest` pins the order). No page overrides the sidebar. With this the only inline
+  `<style>` left on a page of the app layout is the four `@font-face` rules (they need `asset()`); a test says so.
 
 ### Removed
 
