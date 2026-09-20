@@ -25,16 +25,8 @@ use App\Http\Controllers\NotificationSettingController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ManualController;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Auth;
-
 // login
 Route::redirect('/', '/login');
-Route::get('/debug/login', function() {
-    Auth::loginUsingId(410);
-    return redirect()->route('repair.my-jobs');
-});
 
 // Guest-only
 Route::middleware('guest')->group(function () {
@@ -44,19 +36,6 @@ Route::middleware('guest')->group(function () {
 
 // Auth-only
 Route::middleware(['auth'])->group(function () {
-
-    // Debug
-    Route::get('/debug/whoami', function (Request $request) {
-        $u = $request->user();
-
-        return response()->json([
-            'id'    => $u?->id,
-            'email' => $u?->email,
-            'role'  => $u?->role,
-            'can_manage_users' => $u ? Gate::forUser($u)->allows('manage-users') : false,
-            'guard' => Auth::getDefaultDriver(),
-        ]);
-    });
 
     // Dashboard
     Route::get('/repair/dashboard', [RepairDashboardController::class, 'index'])->name('repair.dashboard');
