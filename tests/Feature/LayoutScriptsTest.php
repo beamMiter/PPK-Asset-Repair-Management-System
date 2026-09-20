@@ -163,4 +163,41 @@ class LayoutScriptsTest extends TestCase
         $this->assertStringNotContainsString('<script>alert(2)</script>', $html, 'a message body reaches the page escaped');
         $this->assertStringNotContainsString('<img src=x onerror=alert(1)>', $html, 'and so does a sender name');
     }
+
+    public function test_the_layout_keeps_only_its_font_faces_inline_and_the_rest_of_its_css_is_a_file(): void
+    {
+        $source = file_get_contents(resource_path('views/layouts/app.blade.php'));
+
+        preg_match_all('#<style[^>]*>(.*?)</style>#s', $source, $blocks);
+        $this->assertNotEmpty($blocks[1]);
+        foreach ($blocks[1] as $block) {
+            // an @font-face URL comes from asset(), which is why these four stay in the Blade
+            $left = preg_replace('#/\*.*?\*/#s', '', preg_replace('/@font-face\s*\{.*?\n\s*\}/s', '', $block));
+            $this->assertSame('', trim($left), 'the layout\'s styles belong in resources/css/layout.css');
+        }
+
+        $css = file_get_contents(resource_path('css/layout.css'));
+        foreach (['--side-w', '--topbar-h', '.sidebar', '.is-dirty-field', '.page-create-asset .content'] as $needle) {
+            $this->assertStringContainsString($needle, $css);
+        }
+        $this->assertDoesNotMatchRegularExpression('/@font-face\\s*\\{/', $css, 'the font faces need asset() URLs, so they stay in the Blade');
+        $this->assertStringNotContainsString('{{', $css);
+        $this->assertStringContainsString("'resources/css/layout.css'", file_get_contents(base_path('vite.config.js')));
+    }
+
+    public function test_layout_css_is_loaded_where_the_inline_style_used_to_be_after_the_page_styles(): void
+    {
+        // The layout's inline <style> came after `@stack('styles')`, so on equal specificity it beat a page's own styles and
+        // the CDN sheets; a stylesheet linked from the top of <head> would flip that. Pin the position.
+        $admin = User::factory()->create(['role' => 'admin']);
+        $html = $this->actingAs($admin)->get(route('assets.create'))->assertOk()->getContent();
+
+        $layoutCss = strpos($html, 'resources/css/layout.css');
+        $this->assertNotFalse($layoutCss, 'the layout stylesheet is linked');
+        $this->assertLessThan($layoutCss, strpos($html, 'bootstrap.min.css'), 'after the CDN styles');
+        $this->assertLessThan($layoutCss, strpos($html, 'resources/css/app.css'), 'after app.css');
+        $this->assertLessThan($layoutCss, strpos($html, '.page-create-asset'), 'after the styles this page pushes into <head>');
+        $this->assertLessThan(strpos($html, '<body'), $layoutCss, 'still in <head>');
+        $this->assertSame(1, substr_count($html, 'resources/css/layout.css'), 'linked once');
+    }
 }

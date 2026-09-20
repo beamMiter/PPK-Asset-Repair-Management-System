@@ -164,6 +164,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and `Repair/` (my jobs, next to the dashboard) to match the `/maintenance`, `/settings` and `/repair` URLs. Namespace only:
   no class, method, route, URL or route name changed (the route table is identical before and after). The SLA dashboard script
   moved from `resources/js/settings/sla/` to `resources/js/maintenance/sla/`, next to its view.
+- **The app layout's CSS is a file now.** ~500 lines of plain CSS (page frame, sidebar / content widths, the form and
+  dirty-field looks, TomSelect overrides) were an inline `<style>` in `layouts/app.blade.php`, sent again with every page. It is
+  `resources/css/layout.css`, linked from the same place in `<head>` — after the page-level `@stack('styles')` and the CDN
+  stylesheets — so the cascade is unchanged (`LayoutScriptsTest` pins the position). The four `@font-face` rules stay inline
+  because their URLs come from `asset()`. The file is byte-for-byte the old CSS (whitespace aside); the layout goes from 648
+  to 150 lines, and each page's HTML is 14 KB lighter (the stylesheet is 7.6 KB minified and cached).
+
 ### Removed
 
 - **Deleting a user from the app** (route `admin.users.destroy`, `UserController::destroy`, the "ลบ" buttons in the
