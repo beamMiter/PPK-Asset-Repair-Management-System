@@ -182,6 +182,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   npm `@tailwindcss/line-clamp` (Tailwind 3.4 has `line-clamp-*` built in and the plugin was never in the config). No other
   package changed version. **After pulling this: `composer install`, `npm install` and `php artisan view:clear`** — views
   compiled while Livewire was installed call its classes and answer 500 until the compiled-view cache is cleared.
+  The layout's leftover `livewire:navigated` listeners went too (that event never fired: Livewire's JS was never on a page);
+  the chat page still has its own.
 - **21 model methods nobody called that were a trap or a copy** — `MaintenanceAssignment::mark*` (state changes that skip the
   transition rules, the log and the asset sync), `User::rating_average` / `rating_count` (an N+1 per read), `Toast::isSuccess`,
   a second copy of the asset sort whitelist and of the operation-log upsert, and pure wrappers. 21 other unused relations,

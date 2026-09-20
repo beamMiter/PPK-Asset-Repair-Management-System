@@ -828,9 +828,6 @@
             document.addEventListener('turbo:load', function() {
                 initTomSelect(document);
             });
-            document.addEventListener('livewire:navigated', function() {
-                initTomSelect(document);
-            });
 
             window.initTomSelect = initTomSelect;
         })();
@@ -862,7 +859,6 @@
         document.addEventListener('DOMContentLoaded', forceHideLoader);
         window.addEventListener('pageshow', forceHideLoader);
         document.addEventListener('turbo:load', forceHideLoader);
-        document.addEventListener('livewire:navigated', forceHideLoader);
 
         setTimeout(forceHideLoader, 600);
     })();
@@ -939,7 +935,6 @@
         // เริ่มต้นทำงาน
         document.addEventListener('DOMContentLoaded', initDirtyCheck);
         document.addEventListener('turbo:load', initDirtyCheck);
-        document.addEventListener('livewire:navigated', initDirtyCheck);
 
         // ดักการคลิกลิงก์ (Internal Navigation)
         document.addEventListener('click', (e) => {
@@ -965,13 +960,7 @@
                 }).then((confirmed) => {
                     if (confirmed) {
                         isDirty = false;
-                        // ลองใช้ Livewire navigate ถ้ารองรับ
-                        if (typeof window.Livewire !== 'undefined' && typeof window.Livewire
-                            .navigate === 'function') {
-                            window.Livewire.navigate(href);
-                        } else {
-                            window.location.href = href;
-                        }
+                        window.location.href = href;
                     }
                 });
             } else {
