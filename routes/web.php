@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 
 // Auth / Profile
-use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\PasswordController;
 
@@ -27,12 +26,6 @@ use App\Http\Controllers\ManualController;
 
 // login
 Route::redirect('/', '/login');
-
-// Guest-only
-Route::middleware('guest')->group(function () {
-    Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
-    Route::post('/register', [RegisteredUserController::class, 'store']);
-});
 
 // Auth-only
 Route::middleware(['auth'])->group(function () {
