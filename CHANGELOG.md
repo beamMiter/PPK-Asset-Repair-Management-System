@@ -62,6 +62,18 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`GET /api/repair-requests/my-jobs` answered 404 to everyone** — it was declared below `/{req}`, which took "my-jobs"
   for a request id. It now sits above it and returns the caller's own jobs; `RouteReachabilityTest` fails when any
   static route is shadowed by an earlier one.
+- **The app layout stacked its listeners on every page you opened.** Its scripts were inline, and Turbo Drive re-runs inline
+  scripts in the `<body>` on every visit, so each visit added another copy of 16 `document` / `window` listeners (the link
+  spinner, the form spinner, the sidebar, the unsaved-changes guard, a media-query listener …) — none guarded. They now live
+  in `resources/js/layout/` and are registered once when that module loads; each visit only re-applies the per-page work
+  (saved sidebar state, TomSelect / dropdowns / auto-growing textareas on the new page, watching its forms). Behaviour is
+  unchanged, apart from three side effects that went away: the "unsaved changes" flag no longer carries over to the next page,
+  each form is watched once instead of once per visit, and blocked `localStorage` no longer aborts the whole layout script.
+  Covered by `tests/js/layout.test.mjs` (23 tests; run `npm run test:js`) and `LayoutScriptsTest`.
+- **Technician rating board: the sort dropdown and the name search did nothing after opening the page from the menu** (they
+  were wired on `DOMContentLoaded`, which does not fire on a Turbo visit; a full reload worked). They are now bound from the
+  page bundle on every `turbo:load` (`technician-board.js`, `tests/js/technician-board.test.mjs`). The page's inline script also
+  left an Escape-key listener behind that threw `Cannot read properties of null` on every other page.
 
 ### Added
 
@@ -179,6 +191,10 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   2026-04-26), 19 Sarabun font files that no page or PDF loads (1.4 MB — both PDFs render identically without them), an
   unused icon, the README logo copy `imagesREADME/PPK.png` (byte-identical to `public/images/logoppk.png`) and `.styleci.yml`.
   Everything is in git history.
+- **The technician board's "rating detail" modal** (markup, `openRatingModal` / `renderRatingModal` and their Escape listener):
+  nothing ever called it — the rows link to the full rating page — and it wrote the rating comments and names it fetched
+  into `innerHTML` unescaped, so it would have been a stored XSS the day something opened it. The JSON branch of
+  `MaintenanceRatingController::summary()` that fed it is still there.
 - **The e-mail verification scaffolding from Breeze:** three controllers, the `verified` middleware alias, the `verify-email`
   view and the three `verification.*` routes. Nothing ever sent a link (`User` is not `MustVerifyEmail`) or redirected to
   it, people sign in with the citizen id and some have no e-mail. Forgot / reset password are unchanged.
