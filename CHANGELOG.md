@@ -20,6 +20,20 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`npm run dev` no longer collides with another project's Vite on port 5173** (styles and
   scripts came back as HTML). It picks the first free port itself; HMR follows it. `VITE_PORT`
   still sets the starting port.
+- **Print PDF on a request was a 500.** The controller rendered a view that had been left under another name, dompdf
+  ignored `config/dompdf.php` (`setOptions()` replaces the whole option object) and the committed
+  `installed-fonts.json` held one machine's absolute path. Fixed all three; the template now uses the model's status
+  labels (it printed the raw code for "acknowledged").
+- **Dashboard "เวลาเฉลี่ยปิดงาน"** averaged an unordered `limit(3000)` sample; it is now one SQL `AVG` over every
+  finished request. The dashboard controller also lost 17 cached `Schema::hasColumn` probes and a dead `monthCost`.
+- **Password reset in the browser never worked:** both POST handlers returned raw JSON and the e-mailed link pointed
+  at an undefined `app.frontend_url`. It now redirects with a message, the link opens `/reset-password/<token>`, and
+  accounts without an e-mail are told to ask an admin (JSON clients unchanged).
+- **Request-type dropdown was stale for up to an hour** after an admin added / renamed / disabled a type (cached with
+  no invalidation, in four copies); a **suspended account could still be suggested as a type's default assignee**.
+- **A mistyped URL was a 500:** `?from=garbage` on the SLA dashboard, `GET /api/stats/assets/by-department`
+  (selected a column that does not exist — failed on every call) and `?limit=-1` / `0` on the technician rating board.
+- **N+1 queries** on My Jobs (team members), the request list (department) and the SLA ticket table (type).
 
 ### Added
 
@@ -70,6 +84,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   share look-alike ticks — approval is a filled paper-with-tick), the "เริ่มต้น -> x" chip is replaced by
   "เปลี่ยนจาก <status>", the creation card no longer repeats its own sentence, all text is ≥ 12px, and rows that
   only carry the status in the note prefix (seeded / legacy) now show the right title and icon.
+- **Refactors with unchanged behaviour** (each pinned by tests written against the old code first):
+  `MaintenanceRequestController` (list visibility / ordering became `visibleTo()` / `orderedForList()` scopes),
+  `AssetController` 865 → 677 lines (one `AssetInput` for the rules, messages and the "not back to active while a repair
+  is open" guard), `Repair\DashboardController` (small private methods, output identical on ten filter combinations)
+  and the 1,199-line request detail view (`show.blade.php` → 171 lines + eight partials; the rendered HTML of 27 pages is
+  identical). 16 files lost unused imports. Login / logout / register no longer answer 204 to browsers "when testing" —
+  the real redirects are now what the tests exercise.
 
 ### Removed
 
@@ -81,9 +102,19 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Unused files: `components/_form-standard.blade.php` (a template with `{{ page_title }}`
   placeholders), `maintenance/requests/partials/_form_submit.blade.php` and
   `_form_operation_log.blade.php` (nothing included them).
+- **Dead code:** `/repair/queue` (its view was deleted in #8 — a guaranteed 500), `MaintenanceAssignmentService`,
+  unrouted controller methods and 200 lines of commented-out controllers, the duplicated `GET|POST /register`, the
+  unreachable confirm-password controller + view, the `tech-only` (defined twice, differently) and `admin-only` gates,
+  and `DELETE /profile` — a hidden self-delete that still hard-deleted the caller and cascaded like the user-admin one.
 
 ### Security
 
+- **`GET /debug/login` signed anyone in as user 410** — no middleware, no password (`Auth::loginUsingId(410)`), in the
+  routes since the UI-polish merge. Removed together with `/debug/whoami`; `NoDebugRoutesTest` forbids any "debug"
+  route from coming back.
+- **Private attachments were readable by every signed-in user** (`GET /attachments/{id}` with a guessed id) and ignored
+  `expires_at`. A file is now as visible as what it is attached to (request policy / asset policy; orphans: uploader or
+  admin) and an expired one answers 410.
 - **System management is admin-only.** The sidebar "การจัดการระบบ" pages — maintenance types, notification
   sounds and user admin — now sit behind one `manage-system` gate (admin role). Maintenance types and the
   notification settings used to be open to supervisors and every worker role, and the notification controller
