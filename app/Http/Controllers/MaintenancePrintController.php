@@ -13,14 +13,15 @@ class MaintenancePrintController extends Controller
     {
         Gate::authorize('view', $req);
 
+        // exactly what resources/views/maintenance/pdf/work_order.blade.php reads
         $req->loadMissing([
+            'department',
             'asset',
             'reporter:id,name,email',
             'technician:id,name',
-            'attachments' => fn($qq) => $qq->with('file'),
-            'logs.user:id,name',
-            'rating',
-            'rating.rater:id,name',
+            'operationLog',
+            'assignments',
+            'workers:id,name,role',
         ]);
 
         $hospital = [
@@ -46,12 +47,13 @@ class MaintenancePrintController extends Controller
         $pdf = Pdf::loadView('maintenance.pdf.work_order', $paperData)
             ->setPaper('A4', 'portrait')
             ->setWarnings(false)
+            // merge with config/dompdf.php — without `true` the config (font_dir, font_cache, ...) is thrown away
             ->setOptions([
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled'      => true,
-                'defaultFont'          => 'THSarabunNew',
+                'defaultFont'          => 'Sarabun',
                 'chroot'               => public_path(),
-            ]);
+            ], true);
 
         return $pdf->stream($fileName);
     }

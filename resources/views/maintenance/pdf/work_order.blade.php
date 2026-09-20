@@ -1,4 +1,4 @@
-{{-- resources/views/maintenance/requests/print.blade.php --}}
+{{-- resources/views/maintenance/pdf/work_order.blade.php — rendered by MaintenancePrintController --}}
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -193,21 +193,11 @@
 @php
     $hospitalNameTh = $hospital['name_th'] ?? 'โรงพยาบาลพระปกเกล้า';
     $hospitalNameEn = $hospital['name_en'] ?? 'PHRAPOKKLAO HOSPITAL';
-    $logoPath       = public_path('images/logoppk.png');
+    $logoPath       = $hospital['logo'] ?? public_path('images/logoppk1.png');
 
     $opLog = $req->operationLog;
 
-    $status = strtolower((string) $req->status);
-    $statusLabel = [
-        'pending'     => 'รอคิว',
-        'accepted'    => 'รับงานแล้ว',
-        'in_progress' => 'ระหว่างดำเนินการ',
-        'on_hold'     => 'พักไว้',
-        'resolved'    => 'ซ่อมบำรุงเสร็จสิ้น',
-        'closed'      => 'อนุมัติผลการซ่อมบำรุง',
-        'cancelled'   => 'ยกเลิกการซ่อมบำรุง',
-        'rejected'    => 'ไม่รับเรื่อง',
-    ][$status] ?? $status;
+    $statusLabel = $req->statusLabel();
     $workers = $req->workers ?? collect();
 @endphp
 
