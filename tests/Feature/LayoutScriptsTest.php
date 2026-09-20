@@ -11,6 +11,10 @@ use Tests\TestCase;
  * in it, so a layout that registers `document` / `window` listeners inline stacks another copy of each on every page the
  * user opens (16 of them, none guarded). The behaviour now lives in resources/js/layout/, loaded once as a module — the
  * registration-once and behaviour tests are in tests/js/layout.test.mjs (`npm run test:js`); this pins the wiring.
+ *
+ * The same went for the two other things every page carries: the toast component (188 lines of script + 327 of CSS) and the
+ * chat widget (238 lines, whose `setInterval` was started again by every visit, and which put other users' chat text into
+ * innerHTML). Their behaviour is in tests/js/toast.test.mjs and tests/js/chat-fab.test.mjs.
  */
 class LayoutScriptsTest extends TestCase
 {
@@ -74,5 +78,57 @@ class LayoutScriptsTest extends TestCase
 
         $view = file_get_contents(resource_path('views/maintenance/rating/technicians-dashboard.blade.php'));
         $this->assertSame([], $this->inlineScripts($view), 'the board controls live in resources/js/maintenance/rating/technician-board.js');
+    }
+
+    public function test_the_toast_component_is_only_markup_and_its_code_and_styles_are_files(): void
+    {
+        $component = file_get_contents(resource_path('views/components/toast.blade.php'));
+        $this->assertStringNotContainsString('<script', $component);
+        $this->assertStringNotContainsString('<style', $component);
+        $this->assertStringContainsString('class="toast-overlay"', $component);
+
+        $css = file_get_contents(resource_path('css/toast.css'));
+        foreach (['--toast-z', '.toast-card', '.toast--success', '.toast--warning', '.toast-fill'] as $rule) {
+            $this->assertStringContainsString($rule, $css);
+        }
+        $this->assertDoesNotMatchRegularExpression('/^\s*text-\s*:/m', $css, 'a truncated `text-shadow` that never applied');
+
+        $app = file_get_contents(resource_path('js/app.js'));
+        $this->assertMatchesRegularExpression('/^installToast\(\);/m', $app, 'installed at module level, so once per browser session');
+    }
+
+    public function test_every_layout_that_shows_toasts_loads_their_styles(): void
+    {
+        foreach (['app', 'auth'] as $layout) {
+            $source = file_get_contents(resource_path("views/layouts/$layout.blade.php"));
+            $this->assertStringContainsString('<x-toast', $source, $layout);
+            $this->assertStringContainsString('resources/css/toast.css', $source, "$layout renders <x-toast /> so it needs the styles");
+        }
+
+        $this->assertStringContainsString('resources/css/toast.css', $this->get(route('login'))->assertOk()->getContent());
+    }
+
+    public function test_the_chat_widget_hands_its_urls_to_the_module_and_carries_no_script(): void
+    {
+        $partial = file_get_contents(resource_path('views/partials/chat-fab.blade.php'));
+        $this->assertStringNotContainsString('<script', $partial);
+        $this->assertStringContainsString('data-updates-url=', $partial);
+        $this->assertStringContainsString('data-notify-icon=', $partial);
+        $this->assertMatchesRegularExpression('/^installChatFab\(\);/m', file_get_contents(resource_path('js/layout/boot.js')));
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $html = $this->actingAs($admin)->get(route('repair.dashboard'))->assertOk()->getContent();
+        $this->assertStringContainsString('data-updates-url="'.route('chat.my_updates').'"', $html);
+        $this->assertStringContainsString('id="chatWidgetRoot"', $html);
+    }
+
+    public function test_the_common_page_chrome_registers_and_starts_nothing_inline(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $html = $this->actingAs($admin)->get(route('repair.dashboard'))->assertOk()->getContent();
+
+        foreach ($this->inlineScripts($html) as $script) {
+            $this->assertDoesNotMatchRegularExpression('/addEventListener|setInterval|MutationObserver/', $script, 'the layout, toast and chat widget are modules now');
+        }
     }
 }

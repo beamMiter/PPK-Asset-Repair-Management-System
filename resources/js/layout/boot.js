@@ -2,5 +2,7 @@
 // guest layouts, which must not get the app layout's link spinner or unsaved-changes guard. Vite loads this file once per
 // browser session, so the layout's listeners are registered once however many Turbo visits follow.
 import { installLayout } from './index.js';
+import { installChatFab } from './chat-fab.js';
 
 installLayout();
+installChatFab();
