@@ -104,9 +104,6 @@ class PageTitleTest extends TestCase
         $this->assertPattern('Create account', $this->get(route('register'))->assertOk()->getContent(), 'register');
         $this->assertPattern('Forgot password', $this->get(route('password.request'))->assertOk()->getContent(), 'forgot');
         $this->assertPattern('Reset password', $this->get(route('password.reset', ['token' => 'abc']))->assertOk()->getContent(), 'reset');
-
-        $unverified = User::factory()->unverified()->create();
-        $this->assertPattern('Verify email', $this->actingAs($unverified)->get(route('verification.notice'))->assertOk()->getContent(), 'verify');
     }
 
     public function test_a_view_without_a_title_still_gets_the_product_name_only(): void

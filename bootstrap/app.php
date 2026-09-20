@@ -67,8 +67,7 @@ return Application::configure(basePath: dirname(__DIR__))
         |-----------------------------
         */
         $middleware->alias([
-            'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
-            'active'   => \App\Http\Middleware\EnsureAccountIsActive::class,
+            'active' => \App\Http\Middleware\EnsureAccountIsActive::class,
         ]);
     })
 
