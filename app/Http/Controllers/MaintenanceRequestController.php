@@ -5,34 +5,19 @@ namespace App\Http\Controllers;
 use App\Models\MaintenanceRequest as MR;
 use App\Models\MaintenanceAssignment;
 use App\Models\MaintenanceLog;
-use App\Events\MaintenanceRequestCreated;
-use App\Models\MaintenanceRating;
-use App\Models\MaintenanceOperationLog;
-use App\Models\MaintenanceAttachment;
-use App\Models\MaintenanceDepartment;
 use App\Models\MaintenanceRequestType;
-use App\Models\OperationLog;
-use App\Models\Attachment;
 use App\Models\Department;
 use App\Models\Asset;
 use App\Models\User;
-use App\Models\File;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\HttpException;
-use Illuminate\Auth\Access\AuthorizationException;
-use Carbon\Carbon;
 use App\Support\Toast;
 
 class MaintenanceRequestController extends Controller
@@ -41,234 +26,114 @@ class MaintenanceRequestController extends Controller
 
     public function indexPage(Request $request)
     {
-        $user     = Auth::user();
-        $userId   = (int) Auth::id();
+        $user   = $request->user();
+        $status = strtolower(trim($request->string('status')->toString()));
+        $q      = trim($request->string('q')->toString());
+        $typeId = $request->input('type_id'); // null, '__null__' (no type) or an id
 
-        $status   = strtolower(trim($request->string('status')->toString()));
-        $status   = strtolower(trim($request->string('status')->toString()));
-        $q        = trim($request->string('q')->toString());
-        $assetId  = $request->integer('asset_id');
-
-        // NEW: type filter
-        $typeId = $request->input('type_id'); // อาจเป็น null, '__null__', หรือ id
-
-        // ---- ใช้ helper ดึงค่าการเรียง + จัดการ session ต่อ user ----
         [$sortBy, $sortDir] = $this->resolveSort($request);
 
-        // NEW: dropdown options (Maintenance Types)
-        $types = Cache::remember('maintenance_request_types', 3600, function () {
-            return \App\Models\MaintenanceRequestType::query()
-                ->where('is_active', true)
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(['id', 'name']);
-        });
+        $types = MaintenanceRequestType::activeForSelect();
 
-        $query = MR::query()
-
-            // เพิ่ม join เพื่อเอา my_response_status มาใช้บนหน้า index (เหมือน myJobsPage)
-            ->leftJoin('maintenance_assignments as ma', function ($join) use ($userId) {
+        $list = MR::query()
+            // the viewer's own assignment answer, shown on the row (as on My Jobs)
+            ->leftJoin('maintenance_assignments as ma', function ($join) use ($user) {
                 $join->on('ma.maintenance_request_id', '=', 'maintenance_requests.id')
-                    ->where('ma.user_id', '=', $userId);
+                    ->where('ma.user_id', '=', $user->id);
             })
-
-            // ต้อง select เองเพราะมี join
             ->select([
                 'maintenance_requests.*',
                 DB::raw('ma.response_status as my_response_status'),
                 DB::raw('ma.responded_at as my_responded_at'),
             ])
-
-            // NEW: eager load type relation
             ->with([
                 'type',
                 'department',
                 'asset.department',
                 'reporter:id,name,email',
                 'technician:id,name',
-                'attachments' => fn($qq) => $qq
+                'attachments' => fn ($qq) => $qq
                     ->select('id', 'attachable_id', 'attachable_type', 'file_id', 'original_name', 'is_private', 'order_column')
                     ->with(['file:id,path,disk,mime,size']),
             ])
-
-            // จำกัดเฉพาะผู้ใช้ระดับ Member ให้เห็นงานที่ตนแจ้งเท่านั้น
-            ->when(
-                ($user && !$user->isAdmin() && !$user->isSupervisor() && !$user->isTechnician()),
-                fn($qb) => $qb->where('maintenance_requests.reporter_id', $user->id)
-            )
-
-            // filter อื่น ๆ
-            ->when($assetId, fn($qb) => $qb->where('maintenance_requests.asset_id', $assetId))
-            ->when(filled($status), fn($qb) => $qb->where('maintenance_requests.status', $status))
-            ->when(filled($q), fn($qb) => $qb->search($q))
-
-            // NEW: filter type_id
-            ->when(filled($typeId), function ($qb) use ($typeId) {
-                if ($typeId === '__null__') {
-                    $qb->whereNull('maintenance_requests.type_id');
-                } else {
-                    $qb->where('maintenance_requests.type_id', (int) $typeId);
-                }
-            });
-
-        // ---- Sorting Logic ----
-        $dir = strtolower($sortDir) === 'asc' ? 'asc' : 'desc';
-
-        if ($sortBy === 'request_no') {
-            // 1) เอา request_no ว่าง/NULL ไปท้ายเสมอ
-            $query->orderByRaw("CASE WHEN maintenance_requests.request_no IS NULL OR maintenance_requests.request_no = '' THEN 1 ELSE 0 END ASC");
-            // 2) เรียงตาม request_no
-            $query->orderBy('maintenance_requests.request_no', $dir);
-            // 3) tie-breaker
-            $query->orderBy('maintenance_requests.id', $dir);
-        } else {
-            $allowed = ['id', 'request_date', 'status', 'updated_at', 'created_at', 'title'];
-            if (!in_array($sortBy, $allowed, true)) {
-                $sortBy = 'id';
-            }
-            $query->orderBy('maintenance_requests.' . $sortBy, $dir);
-            
-            // Add ID tie-breaker if not already sorting by ID
-            if ($sortBy !== 'id') {
-                $query->orderBy('maintenance_requests.id', $dir);
-            }
-        }
-
-        // Add logging to debug why filters return 0 rows in production
-        \Illuminate\Support\Facades\Log::info('MaintenanceRequests Search Query', [
-            'sql' => $query->toSql(),
-            'bindings' => $query->getBindings(),
-            // 'count' removed to optimize loading speed
-            'q' => $q,
-            'status' => $status,
-            'user' => $user?->email,
-        ]);
-
-        $list = $query
+            ->visibleTo($user)
+            ->when($request->integer('asset_id'), fn ($qb, $assetId) => $qb->where('maintenance_requests.asset_id', $assetId))
+            ->when(filled($status), fn ($qb) => $qb->where('maintenance_requests.status', $status))
+            ->when(filled($q), fn ($qb) => $qb->search($q))
+            ->when(filled($typeId), fn ($qb) => $typeId === '__null__'
+                ? $qb->whereNull('maintenance_requests.type_id')
+                : $qb->where('maintenance_requests.type_id', (int) $typeId))
+            ->orderedForList($sortBy, $sortDir)
             ->paginate(20)
-
             ->withQueryString();
 
-        return view('maintenance.requests.index', compact(
-            'list',
-            'types',
-            'typeId',
-            'status',
-            'q',
-            'sortBy',
-            'sortDir'
-        ));
+        return view('maintenance.requests.index', compact('list', 'types', 'typeId', 'status', 'q', 'sortBy', 'sortDir'));
     }
 
     public function showPage(MR $req)
     {
         Gate::authorize('view', $req);
 
-        $viewer = Auth::user();
         Log::info('Viewed maintenance request', [
             'request_id' => $req->id,
-            'user_id'    => $viewer?->id,
+            'user_id'    => Auth::id(),
             'ip_address' => request()->ip(),
         ]);
 
-        $req->loadMissing([
+        $this->loadDetail($req);
+
+        return view('maintenance.requests.show', [
+            'req'         => $req,
+            'techUsers'   => $this->suggestTechUsersForRequest($req),
+            'types'       => MaintenanceRequestType::activeForSelect(),
+            'suggestRole' => strtolower(trim((string) $req->type?->default_role_code)),
+        ]);
+    }
+
+    /** Everything the detail page and the JSON detail endpoint show about a request. */
+    private function loadDetail(MR $req): MR
+    {
+        return $req->loadMissing([
             'type',
             'asset',
             'department',
             'reporter:id,name,email',
             'technician:id,name',
-            'assignments' => function ($query) {
-                $query->where('status', '!=', \App\Models\MaintenanceAssignment::STATUS_CANCELLED)
-                    ->with('user:id,name,role,profile_photo_path,profile_photo_thumb');
-            },
-            'attachments' => fn($q) => $q->with('file'),
+            'assignments' => fn ($query) => $query
+                ->where('status', '!=', MaintenanceAssignment::STATUS_CANCELLED)
+                ->with('user:id,name,role,profile_photo_path,profile_photo_thumb'),
+            'attachments.file',
             'logs.user:id,name',
             'rating',
             'rating.rater:id,name',
             'operationLog.user:id,name',
         ]);
-
-        $techUsers = $this->suggestTechUsersForRequest($req);
-
-        $types = Cache::remember('maintenance_request_types', 3600, function () {
-            return MaintenanceRequestType::query()
-                ->where('is_active', true)
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(['id', 'name']);
-        });
-
-        $suggestRole = strtolower(trim((string) $req->type?->default_role_code));
-
-        return view('maintenance.requests.show', [
-            'req'         => $req,
-            'techUsers'   => $techUsers,
-            'types'       => $types,
-            'suggestRole' => $suggestRole,
-        ]);
     }
 
     public function createPage()
     {
-        $assets = \App\Models\Asset::orderBy('asset_code')->get(['id', 'asset_code', 'name']);
-        $users  = \App\Models\User::orderBy('name')->get(['id', 'name']);
-        $depts  = \App\Models\Department::orderBy('name_th')->get(['id', 'code', 'name_th', 'name_en']);
-
-        $types = Cache::remember('maintenance_request_types', 3600, function () {
-            return \App\Models\MaintenanceRequestType::query()
-                ->where('is_active', true)
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(['id', 'name']);
-        });
+        $assets = Asset::orderBy('asset_code')->get(['id', 'asset_code', 'name']);
+        $users  = User::orderBy('name')->get(['id', 'name']);
+        $depts  = Department::orderBy('name_th')->get(['id', 'code', 'name_th', 'name_en']);
+        $types  = MaintenanceRequestType::activeForSelect();
 
         return view('maintenance.requests.create', compact('assets', 'users', 'depts', 'types'));
     }
 
     public function index(Request $request)
     {
-        $status   = $request->string('status')->toString();
-        $q        = trim($request->string('q')->toString());
-        $assetId  = $request->integer('asset_id');
-
-        $user = $request->user();
+        $status = $request->string('status')->toString();
+        $q      = trim($request->string('q')->toString());
 
         [$sortBy, $sortDir] = $this->resolveSort($request);
 
-        $query = MR::query()
+        $list = MR::query()
             ->with(['asset', 'reporter:id,name,email', 'technician:id,name'])
-
-            // API/Web: บังคับ filter เหมือนกัน สำหรับ Member เท่านั้น
-            ->when(
-                ($user && !$user->isAdmin() && !$user->isSupervisor() && !$user->isTechnician()),
-                fn($qb) => $qb->where('reporter_id', $user->id)
-            )
-
-            ->when($assetId, fn($qb) => $qb->where('asset_id', $assetId))
-            ->when($status, fn($qb) => $qb->where('status', $status))
-
-            ->when($q !== '', fn($qb) => $qb->search($q));
-
-        // ---- Sorting Logic ----
-        $dir = strtolower($sortDir) === 'asc' ? 'asc' : 'desc';
-
-        if ($sortBy === 'request_no') {
-            $query->orderByRaw("CASE WHEN request_no IS NULL OR request_no = '' THEN 1 ELSE 0 END ASC");
-            $query->orderBy('request_no', $dir);
-            $query->orderBy('id', $dir);
-        } else {
-            $allowed = ['id', 'request_date', 'status', 'updated_at', 'created_at'];
-            if (!in_array($sortBy, $allowed, true)) {
-                $sortBy = 'id';
-            }
-            $query->orderBy($sortBy, $dir);
-
-            if ($sortBy !== 'id') {
-                $query->orderBy('id', $dir);
-            }
-        }
-
-        $list = $query
+            ->visibleTo($request->user())
+            ->when($request->integer('asset_id'), fn ($qb, $assetId) => $qb->where('asset_id', $assetId))
+            ->when($status, fn ($qb) => $qb->where('status', $status))
+            ->when($q !== '', fn ($qb) => $qb->search($q))
+            ->orderedForList($sortBy, $sortDir)
             ->paginate(20)
             ->withQueryString();
 
@@ -281,13 +146,7 @@ class MaintenanceRequestController extends Controller
                     'total'        => $list->total(),
                     'last_page'    => $list->lastPage(),
                 ],
-                'toast' => [
-                    'type' => 'info',
-                    'message' => 'โหลดรายการคำขอบำรุงรักษาแล้ว',
-                    'position' => 'tc',
-                    'timeout' => 1200,
-                    'size' => 'sm',
-                ],
+                'toast' => Toast::make('โหลดรายการคำขอบำรุงรักษาแล้ว', 'info', 'tc', 1200, 'sm'),
             ]);
         }
 
@@ -301,25 +160,8 @@ class MaintenanceRequestController extends Controller
     {
         Gate::authorize('view', $req);
 
-        $req->loadMissing([
-            'type',
-            'asset',
-            'department',
-            'reporter:id,name,email',
-            'technician:id,name',
-            'assignments' => function ($query) {
-                $query->where('status', '!=', \App\Models\MaintenanceAssignment::STATUS_CANCELLED)
-                    ->with('user:id,name,role,profile_photo_path,profile_photo_thumb');
-            },
-            'attachments.file',
-            'logs.user:id,name',
-            'rating',
-            'rating.rater:id,name',
-            'operationLog.user:id,name',
-        ]);
-
         return response()->json([
-            'data' => $req,
+            'data' => $this->loadDetail($req),
         ]);
     }
 
@@ -544,14 +386,7 @@ class MaintenanceRequestController extends Controller
     
         $techUsers   = $this->suggestTechUsersForRequest($mr);
         $suggestRole = strtolower(trim((string) $mr->type?->default_role_code));
-        
-        $types = Cache::remember('maintenance_request_types', 3600, function () {
-            return \App\Models\MaintenanceRequestType::query()
-                ->where('is_active', true)
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(['id', 'name']);
-        });
+        $types       = MaintenanceRequestType::activeForSelect();
     
         return view('maintenance.requests.edit', compact(
             'mr',
@@ -596,85 +431,46 @@ class MaintenanceRequestController extends Controller
     
         return [$sortBy, $sortDir];
     }
-    protected function suggestTechUsersForRequest(MR $req): \Illuminate\Support\Collection
+    /**
+     * Who to offer in the assign-team picker: the type's default person first, then the people matching the type's
+     * department / role (the whole team when nobody matches), then the rest of the team. Suspended accounts are
+     * never offered — the default person included.
+     */
+    protected function suggestTechUsersForRequest(MR $req): Collection
     {
-        $req->loadMissing(['type']);
-        $type = $req->type;
-    
-        // กำหนดคอลัมน์ที่จำเป็นเพื่อลดภาระการดึงข้อมูลจาก Database
-        $selectCols = [
-            'id',
-            'name',
-            'role',
-            'department',
-            'profile_photo_thumb',
-            'profile_photo_path',
-        ];
-    
-        // เตรียม Query พื้นฐานสำหรับกลุ่มทีมงาน
-        $base = User::query()
+        $type = $req->loadMissing('type')->type;
+
+        $columns = ['id', 'name', 'role', 'department', 'profile_photo_thumb', 'profile_photo_path'];
+
+        $team = fn () => User::query()
             ->active()
             ->inRoles(User::teamRoles())
-            ->with(['roleRef'])
-            ->select($selectCols)
+            ->with('roleRef')
+            ->select($columns)
             ->orderBy('name');
-    
-        // หากไม่มีประเภทงานระบุมา ให้คืนค่าเจ้าหน้าที่ทั้งหมดในระบบ
-        if (!$type) {
-            return $base->get();
+
+        $everyone = $team()->get();
+
+        if (! $type) {
+            return $everyone;
         }
-    
-        $suggested = collect();
-    
-        // 1) ดึงรายชื่อเจ้าหน้าที่ที่เป็น Default สำหรับงานประเภทนี้
-        if (!empty($type->default_user_id)) {
-            $u = User::query()
-                ->with(['roleRef'])
-                ->whereKey((int) $type->default_user_id)
-                ->first($selectCols);
-    
-            if ($u) {
-                $suggested->push($u);
-            }
-        }
-    
-        // 2) กรองรายชื่อเจ้าหน้าที่ตามหน่วยงานหรือบทบาทที่กำหนดไว้ในประเภทงาน
-        $filterQuery = clone $base;
-    
-        if (!empty($type->default_department_code)) {
-            $filterQuery->where('department', trim((string) $type->default_department_code));
-        }
-    
-        if (!empty($type->default_role_code)) {
-            $roleCode = strtolower(trim((string) $type->default_role_code));
-            $filterQuery->whereRaw('LOWER(role) = ?', [$roleCode]);
-        }
-    
-        $filteredUsers = $filterQuery->get();
-    
-        // 3) Fallback: หากกรองแล้วไม่เจอใครเลย ให้แสดงรายชื่อทีมทั้งหมดแทน
-        if ($filteredUsers->isEmpty()) {
-            $filteredUsers = $base->get();
-        }
-    
-        // NEW: รวมทุกคนที่เป็นทีมงานเพื่อให้ Frontend สามารถเลือก "ทั้งหมด" ได้
-        // ใช้ Query ใหม่เพื่อให้แน่ใจว่าไม่มี Filter อื่นค้างอยู่
-        $allTeam = User::query()
-            ->active()
-            ->inRoles(User::teamRoles())
-            ->with(['roleRef'])
-            ->select($selectCols)
-            ->orderBy('name')
+
+        $default = $type->default_user_id
+            ? User::query()->active()->with('roleRef')->whereKey((int) $type->default_user_id)->first($columns)
+            : null;
+
+        $matching = $team()
+            ->when(! empty($type->default_department_code), fn ($q) => $q->where('department', trim((string) $type->default_department_code)))
+            ->when(! empty($type->default_role_code), fn ($q) => $q->whereRaw('LOWER(role) = ?', [strtolower(trim((string) $type->default_role_code))]))
             ->get();
 
-        // รวมผลลัพธ์ ตัดรายชื่อที่ซ้ำออก และจัดลำดับ Index ใหม่
-        return $suggested
-            ->merge($filteredUsers)
-            ->merge($allTeam)
+        return collect([$default])->filter()
+            ->merge($matching->isEmpty() ? $everyone : $matching)
+            ->merge($everyone)
             ->unique('id')
             ->values();
     }
-    
+
     public function updateType(Request $request, MR $req)
     {
         try {

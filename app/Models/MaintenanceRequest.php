@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Auth;
 
 class MaintenanceRequest extends Model
 {
@@ -321,6 +320,47 @@ class MaintenanceRequest extends Model
         if ($from) $q->where('request_date', '>=', $from);
         if ($to)   $q->where('request_date', '<=', $to);
         return $q;
+    }
+
+    /**
+     * Requests this user may list: staff (admin / supervisor / technician roles) see everything, anybody else only
+     * what they reported. No user, no rows.
+     */
+    public function scopeVisibleTo($query, ?User $user)
+    {
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($user->isAdmin() || $user->isSupervisor() || $user->isTechnician()) {
+            return $query;
+        }
+
+        return $query->where('maintenance_requests.reporter_id', $user->id);
+    }
+
+    /**
+     * List ordering. A blank `request_no` always sorts last, whatever the direction; every other column falls back to
+     * `id` as tie-breaker; an unknown column becomes `id`.
+     */
+    public function scopeOrderedForList($query, string $sortBy, string $dir)
+    {
+        $dir = strtolower($dir) === 'asc' ? 'asc' : 'desc';
+
+        if ($sortBy === 'request_no') {
+            return $query
+                ->orderByRaw("CASE WHEN maintenance_requests.request_no IS NULL OR maintenance_requests.request_no = '' THEN 1 ELSE 0 END ASC")
+                ->orderBy('maintenance_requests.request_no', $dir)
+                ->orderBy('maintenance_requests.id', $dir);
+        }
+
+        if (! in_array($sortBy, ['id', 'request_date', 'status', 'updated_at', 'created_at', 'title'], true)) {
+            $sortBy = 'id';
+        }
+
+        $query->orderBy('maintenance_requests.'.$sortBy, $dir);
+
+        return $sortBy === 'id' ? $query : $query->orderBy('maintenance_requests.id', $dir);
     }
 
     public function scopeSearch($query, ?string $term)
