@@ -116,6 +116,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and `DELETE /profile` — a hidden self-delete that still hard-deleted the caller and cascaded like the user-admin one.
 - `DELETE /maintenance/requests/{req}/assignments/{assignment}`: it threw a TypeError on every call and nothing used it
   (the team is edited through `assignments.store`).
+- **The unused queue leftovers:** `composer dev` no longer starts `php artisan queue:listen` (nothing in the app is queued —
+  the push events are `ShouldBroadcastNow`, mail and notifications are sent inline), `/api/health` no longer reports a
+  "queue" check (it only built the connection object, so it said ok whatever the queue's state), and the breadcrumb
+  label of the removed `/repair/queue` page is gone. `HealthEndpointTest` also fails if a queued job / listener / mail is
+  ever added, as a reminder to bring a worker and a real check back. The `jobs` tables from Laravel's default migration
+  are left alone (empty, harmless).
 
 ### Security
 

@@ -100,7 +100,6 @@ class Breadcrumb
             'evaluate' => 'Evaluate Ratings',
 
             // อื่นๆ
-            'queue'       => 'Repair Queue',
             'users'       => 'User Management',
             'create'      => 'Create',
             'edit'        => 'Edit',
