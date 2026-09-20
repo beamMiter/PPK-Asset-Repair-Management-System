@@ -127,6 +127,7 @@ class MaintenanceRequestService
                 unset(
                     $data['technician_id'],
                     $data['user_ids'],
+                    $data['request_date'], // the SLA clock starts here: only the team may correct it
                     $data['cost'],
                     $data['resolution_note'],
                     $data['operation_date'],
@@ -139,6 +140,11 @@ class MaintenanceRequestService
                 );
 
                 $incomingTechId = $originalTechId;
+
+                // `user_ids` was read above, before it was stripped from $data: without this a reporter could still
+                // add staff to — or, with an empty list, wipe the team of — their own request.
+                $incomingUserIds = null;
+                $forceUpdateTeam = false;
             }
 
             $req->fill($data);
