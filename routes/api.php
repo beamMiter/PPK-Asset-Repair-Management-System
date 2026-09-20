@@ -50,6 +50,10 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::prefix('repair-requests')->name('repair-requests.')->group(function () {
         Route::get('/',                   [MaintenanceRequestController::class, 'index'])->name('index');
         Route::post('/',                  [MaintenanceRequestController::class, 'store'])->name('store');
+
+        // GET /api/repair-requests/my-jobs — must stay above `/{req}`, which would take "my-jobs" for a request id
+        Route::get('/my-jobs',            [MaintenanceJobController::class, 'myJobs'])->name('my-jobs');
+
         Route::get('/{req}',              [MaintenanceRequestController::class, 'show'])->name('show');
         Route::put('/{req}',              [MaintenanceRequestController::class, 'update'])->name('update');
         Route::delete('/{req}',           [MaintenanceRequestController::class, 'destroy'])->name('destroy');
@@ -115,6 +119,4 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('/maintenance/technicians',     [StatsController::class, 'technicianSummary'])->name('maintenance.technicians');
         Route::get('/assets/by-department',        [StatsController::class, 'assetsByDepartment'])->name('assets.by-department');
     });
-
-    Route::get('/repair-requests/my-jobs', [MaintenanceJobController::class, 'myJobs'])->name('repair-requests.my-jobs');
 });

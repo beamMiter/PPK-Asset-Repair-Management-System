@@ -66,9 +66,6 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{req}/assignments', [MaintenanceAssignmentController::class, 'store'])
                 ->name('assignments.store');
 
-            Route::delete('/{req}/assignments/{assignment}', [MaintenanceAssignmentController::class, 'destroy'])
-                ->name('assignments.destroy');
-
             // Rating
             Route::prefix('rating')->name('rating.')->group(function () {
                 Route::get('/{maintenanceRequest}/create', [MaintenanceRatingController::class, 'create'])->name('create');

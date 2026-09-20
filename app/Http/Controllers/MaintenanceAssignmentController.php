@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Auth;
 
 class MaintenanceAssignmentController extends Controller
 {
@@ -133,46 +132,6 @@ class MaintenanceAssignmentController extends Controller
         } catch (\Throwable $e) {
             Log::error('[MaintenanceAssignment::store] failed', [
                 'request_id' => $req->id,
-                'error'      => $e->getMessage()
-            ]);
-            return back()->with('toast', Toast::error('เกิดข้อผิดพลาด: ' . $e->getMessage(), 3000));
-        }
-    }
-
-    public function destroy(MaintenanceAssignment $assignment)
-    {
-        Gate::authorize('assign', $assignment->maintenanceRequest);
-
-        $actorId = Auth::id();
-
-        // // ป้องกันการยกเลิกงานที่ทำเสร็จไปแล้ว
-        if ($assignment->status === MaintenanceAssignment::STATUS_DONE) {
-            Log::warning('[MaintenanceAssignment::destroy] attempt to cancel completed work', [
-                'assignment_id' => $assignment->id,
-                'actor_id'      => $actorId,
-            ]);
-
-            return back()->with('toast', Toast::warning('งานนี้ถูกทำเสร็จแล้ว ไม่สามารถยกเลิกได้', 2200));
-        }
-
-        try {
-            $assignment->update([
-                'status'          => MaintenanceAssignment::STATUS_CANCELLED,
-                'is_lead'         => false,
-                'response_status' => MaintenanceAssignment::RESP_PENDING,
-                'responded_at'    => null,
-            ]);
-
-            Log::info('[MaintenanceAssignment::destroy] assignment cancelled', [
-                'assignment_id' => $assignment->id,
-                'user_id'       => $assignment->user_id,
-                'actor_id'      => $actorId,
-            ]);
-
-            return back()->with('toast', Toast::success('ยกเลิกการมอบหมายเจ้าหน้าที่เรียบร้อยแล้ว', 1800));
-        } catch (\Throwable $e) {
-            Log::error('[MaintenanceAssignment::destroy] failed', [
-                'assignment_id' => $assignment->id,
                 'error'      => $e->getMessage()
             ]);
             return back()->with('toast', Toast::error('เกิดข้อผิดพลาด: ' . $e->getMessage(), 3000));
