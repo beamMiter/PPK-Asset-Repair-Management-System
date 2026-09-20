@@ -102,6 +102,15 @@ class MaintenanceRequest extends Model
     // legacy
     public const STATUS_COMPLETED    = 'completed';
 
+    /** Still being worked on — the asset is not free while one of these exists. */
+    public const OPEN_STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_ACKNOWLEDGED,
+        self::STATUS_ACCEPTED,
+        self::STATUS_IN_PROGRESS,
+        self::STATUS_ON_HOLD,
+    ];
+
     /**
      * Transition map: สถานะปัจจุบัน => สถานะที่อนุญาตให้เปลี่ยนไปได้
      */

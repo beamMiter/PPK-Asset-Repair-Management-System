@@ -149,6 +149,12 @@ class Asset extends Model
         return $this->hasMany(MaintenanceRequest::class, 'asset_id');
     }
 
+    /** True while any repair request for this asset is still open. */
+    public function hasOpenMaintenance(): bool
+    {
+        return $this->maintenanceRequests()->whereIn('status', MaintenanceRequest::OPEN_STATUSES)->exists();
+    }
+
     public function requestAttachments()
     {
         return $this->hasManyThrough(
