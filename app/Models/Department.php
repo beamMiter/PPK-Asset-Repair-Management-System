@@ -58,16 +58,6 @@ class Department extends Model
         return $code ? $q->where('code', $code) : $q;
     }
 
-    public function scopeNameLike($q, ?string $name)
-    {
-        if (!$name) return $q;
-
-        return $q->where(function ($qq) use ($name) {
-            $qq->where('name_th', 'like', "%{$name}%")
-               ->orWhere('name_en', 'like', "%{$name}%");
-        });
-    }
-
     public function scopeSearch($q, ?string $term)
     {
         if (!$term) return $q;

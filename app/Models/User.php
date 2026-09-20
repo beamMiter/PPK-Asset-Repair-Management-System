@@ -80,12 +80,6 @@ class User extends Authenticatable
                     ->withTimestamps();
     }
 
-    // Alias สำหรับเรียกใช้โค้ดเดิม
-    public function assignedRequests()
-    {
-        return $this->assignedMaintenanceRequests();
-    }
-
     /**
      * URL of the alert sound this user plays for a new request: their pick from the sound library
      * (`public/sounds`), or the default when they never chose, the file has been removed from the library since, or the
@@ -283,21 +277,6 @@ class User extends Authenticatable
     public function givenRatings()
     {
         return $this->hasMany(MaintenanceRating::class, 'rater_id');
-    }
-
-    // คะแนนเฉลี่ยที่เจ้าหน้าที่ได้รับ
-    public function getRatingAverageAttribute(): ?float
-    {
-        if (!$this->technicianRatings()->exists()) {
-            return null;
-        }
-        return round((float) $this->technicianRatings()->avg('score'), 2);
-    }
-
-    // จำนวนครั้งที่ถูกให้คะแนน
-    public function getRatingCountAttribute(): int
-    {
-        return (int) $this->technicianRatings()->count();
     }
 
     public function getAvatarUrlAttribute(): string

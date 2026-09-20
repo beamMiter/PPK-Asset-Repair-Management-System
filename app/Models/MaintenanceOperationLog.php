@@ -44,23 +44,4 @@ class MaintenanceOperationLog extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
-
-    public static function upsertForRequest(
-        int $requestId,
-        array $data,
-        ?int $userId = null
-    ): self {
-        $payload = array_merge($data, [
-            'maintenance_request_id' => $requestId,
-        ]);
-
-        if ($userId !== null) {
-            $payload['user_id'] = $userId;
-        }
-
-        return static::updateOrCreate(
-            ['maintenance_request_id' => $requestId],
-            $payload
-        );
-    }
 }

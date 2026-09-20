@@ -76,11 +76,6 @@ class File extends Model
         return is_string($this->mime) && str_starts_with($this->mime, 'image/');
     }
 
-    public function isVideo(): bool
-    {
-        return is_string($this->mime) && str_starts_with($this->mime, 'video/');
-    }
-
     public function deleteWithPhysical(): bool
     {
         try {
@@ -101,11 +96,6 @@ class File extends Model
     public function scopeImages($q)
     {
         return $q->where('mime', 'like', 'image/%');
-    }
-
-    public function scopeVideos($q)
-    {
-        return $q->where('mime', 'like', 'video/%');
     }
 
     protected static function booted(): void

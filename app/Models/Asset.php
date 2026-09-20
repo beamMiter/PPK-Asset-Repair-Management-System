@@ -226,22 +226,6 @@ class Asset extends Model
         return $type !== '' ? $q->where('type', 'like', "%{$type}%") : $q;
     }
 
-    public function scopeSortBySafe($q, ?string $by, string $dir = 'desc')
-    {
-        $map = [
-            'id'              => 'id',
-            'asset_code'      => 'asset_code',
-            'name'            => 'name',
-            'status'          => 'status',
-            'purchase_date'   => 'purchase_date',
-            'warranty_expire' => 'warranty_expire',
-            'created_at'      => 'created_at',
-        ];
-        $col = $map[$by ?? 'id'] ?? 'id';
-        $dir = strtolower($dir) === 'asc' ? 'asc' : 'desc';
-        return $q->orderBy($col, $dir);
-    }
-
     public function getDisplayNameAttribute(): string
     {
         $code = trim((string) $this->asset_code);

@@ -135,11 +135,6 @@ class MaintenanceRequest extends Model
         ];
     }
 
-    public static function operationMethodLabels(): array
-    {
-        return self::operationLabels();
-    }
-
     public static function statusLabels(): array
     {
         return [
@@ -236,16 +231,6 @@ class MaintenanceRequest extends Model
     {
         return $this->hasOne(MaintenanceRating::class, 'maintenance_request_id')
             ->where('rater_id', $userId);
-    }
-
-    /* ================= ACCESSOR ================= */
-
-    public function getNormalizedStatusAttribute(): string
-    {
-        if ($this->status === self::STATUS_COMPLETED && $this->resolved_at) {
-            return self::STATUS_RESOLVED;
-        }
-        return (string) $this->status;
     }
 
     /* ================= REQUEST NO ================= */
