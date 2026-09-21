@@ -65,7 +65,7 @@
 
         <div
             class="sidebar-heading px-6 mb-2 text-[11px] font-bold uppercase tracking-[0.15em] text-zinc-400/80 transition-all duration-300">
-            <span class="heading-char">M</span><span class="heading-text">enu (เมนู)</span>
+            <span class="heading-char">M</span><span class="heading-text">enu list</span>
         </div>
 
         @php $active = $is('repair.dashboard'); @endphp
@@ -218,7 +218,7 @@
 
         <div
             class="sidebar-heading px-6 mt-6 mb-2 text-[11px] font-bold uppercase tracking-[0.15em] text-zinc-400/80 transition-all duration-300">
-            <span class="heading-char">H</span><span class="heading-text">elp & Support (ช่วยเหลือ)</span>
+            <span class="heading-char">H</span><span class="heading-text">elp & Support</span>
         </div>
 
         @php $active = $is('maintenance.requests.rating.evaluate'); @endphp
