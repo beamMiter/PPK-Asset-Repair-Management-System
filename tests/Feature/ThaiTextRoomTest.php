@@ -7,13 +7,17 @@ use Tests\TestCase;
 
 /**
  * Thai lower vowels (ุ ู) hang further below the baseline than the font's own descent — in Sarabun ู reaches 0.332 em down while
- * the font's descent is 0.232 em — so a line box needs half-leading for them. A box that clips its content (a text input's editor,
- * an `overflow: hidden` element such as a TomSelect item) cuts them off when the line is tight: at 14px on a 20px line
- * (Tailwind `text-sm`) the foot of ู is 0.65px outside the box, and at 16px on the 24px line that @tailwindcss/forms gives every
- * plain text input there is 0.19px left — no room for anti-aliasing — so the foot is eaten ("สระ ู โดน input กิน").
+ * the font's descent is 0.232 em (4.65px against 3px at 14px) — so a box that clips its text cuts their feet off unless it is taller
+ * than the font's own ascent + descent.
  *
- * The room is worked out from the font file itself, the way Chrome lays a line out (whole-pixel ascent / descent, the leading split
- * in two), and each place that clips its text has to give at least that, plus half a pixel for anti-aliasing.
+ * What clips a text `<input>`: its inner editor is `overflow: scroll`, and Chromium (text_control_inner_elements.cc) removes the
+ * line-height of that editor — sets it to `normal` — when the input has a FIXED height taller than the line-height, or when the
+ * line-height is not taller than the font size. `normal` is the font's ascent + descent (18px at 14px), so the ink is cut exactly 3px
+ * under the baseline whatever line-height the CSS says: `.ui-input` was `h-11` (44px fixed), and no line-height could ever help it
+ * ("สระ ู โดน input กิน"; measured on a screenshot: ู had 3 rows of ink in the field and 5 outside it, cut at baseline + 3.0).
+ * An input with an automatic height keeps its line-height, and then the line has to be tall enough: the room is worked out from the
+ * font file, the way Chrome lays a line out (whole-pixel ascent / descent, the leading split in two), plus half a pixel for
+ * anti-aliasing.
  */
 class ThaiTextRoomTest extends TestCase
 {
@@ -103,6 +107,19 @@ class ThaiTextRoomTest extends TestCase
         $this->assertLessThan(0, $this->room(14, 20)['below'], '14px on 20px is cut');
         $this->assertLessThan(self::SLACK_PX, $this->room(16, 24)['below'], '16px on 24px has no room for anti-aliasing');
         $this->assertGreaterThanOrEqual(self::SLACK_PX, $this->room(13, 24)['below'], '13px on 24px is fine');
+
+        // a fixed-height input is laid out with `line-height: normal` (= ascent + descent = 18px at 14px) whatever the CSS says: cut
+        // 1.65px short of the foot of ู, i.e. at baseline + 3px — what the screenshot shows
+        $this->assertSame(18.0, $this->normalLine(14));
+        $this->assertEqualsWithDelta(-1.65, $this->room(14, $this->normalLine(14))['below'], 0.05);
+    }
+
+    /** the line a fixed-height input actually gets: `normal` = the font's whole-pixel ascent + descent */
+    private function normalLine(float $fontPx): float
+    {
+        $m = $this->metrics();
+
+        return round($m['ascent'] * $fontPx / $m['upm']) + round($m['descent'] * $fontPx / $m['upm']);
     }
 
     public function test_the_shared_text_input_gives_thai_the_room_it_needs(): void
@@ -110,13 +127,42 @@ class ThaiTextRoomTest extends TestCase
         $css = file_get_contents(resource_path('css/app.css'));
         $this->assertSame(1, preg_match('/\.ui-input\s*\{\s*@apply([^;]+);/s', $css, $m), '.ui-input');
 
+        // a fixed height would make Chromium drop the line-height of the inner editor (see the class comment): cut at baseline + 3px
+        $this->assertDoesNotMatchRegularExpression('/(?<![-\w])h-(\d|\[|px\b|full\b|screen\b|fit\b)/', $m[1], 'no fixed height on .ui-input');
+
         [$fontPx, $linePx] = $this->metricsOfApply($m[1]);
         $this->assertRoom($fontPx, $linePx, '.ui-input');
 
-        // and the box the line sits in is at least a line tall: fixed height − borders − vertical padding
-        $this->assertSame(1, preg_match('/\bh-(\d+)\b/', $m[1], $h), 'a fixed height');
-        $padding = preg_match('/\bpy-(\d+(?:\.\d)?)\b/', $m[1], $p) ? (float) $p[1] * 4 * 2 : 0.0;
-        $this->assertGreaterThanOrEqual($linePx, (int) $h[1] * 4 - 2 - $padding, 'the content box of .ui-input is at least one line tall');
+        // the field is still 44px: line + vertical padding + the two 1px borders (min-h keeps it from ever being shorter)
+        $this->assertSame(1, preg_match('/\bpy-\[(\d+)px\]/', $m[1], $p), 'vertical padding in px');
+        $this->assertSame(1, preg_match('/\bmin-h-(\d+)\b/', $m[1], $minH), 'a min-height');
+        $this->assertSame(44.0, $linePx + 2 * (float) $p[1] + 2, 'line + padding + borders = 44px, as the old h-11');
+        $this->assertSame(44, (int) $minH[1] * 4);
+    }
+
+    /** No text input is written with a fixed height either: it would get `line-height: normal` and be cut the same way. */
+    public function test_no_text_input_has_a_fixed_height(): void
+    {
+        $offenders = [];
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(resource_path('views'), \FilesystemIterator::SKIP_DOTS)) as $file) {
+            if (! str_ends_with($file->getFilename(), '.blade.php')) {
+                continue;
+            }
+            preg_match_all('/<input\b((?:[^<>"\']|"[^"]*"|\'[^\']*\')*)>/s', file_get_contents($file->getPathname()), $tags);
+            foreach ($tags[1] as $attrs) {
+                if (preg_match('/\btype=["\'](hidden|checkbox|radio|submit|button|file|range|color|image|reset)["\']/', $attrs)) {
+                    continue;
+                }
+                if (preg_match('/\bclass="([^"]*)"/s', $attrs, $class) && preg_match('/(?<![-\w])h-(\d|\[|px\b|full\b|screen\b|fit\b)/', $class[1])) {
+                    $offenders[] = str_replace(resource_path('views').'/', '', $file->getPathname());
+                }
+                if (preg_match('/\bstyle="[^"]*(?<![-\w])height\s*:\s*[\d.]+(px|rem)/', $attrs)) {
+                    $offenders[] = str_replace(resource_path('views').'/', '', $file->getPathname()).' (style)';
+                }
+            }
+        }
+
+        $this->assertSame([], array_values(array_unique($offenders)), 'text inputs with a fixed height');
     }
 
     public function test_the_select_fields_give_thai_the_room_it_needs(): void

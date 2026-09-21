@@ -161,21 +161,23 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   waits 300 ms), back when the text is deleted, the list closes or a value is picked. No button inside the field. Checked against
   the real TomSelect (row order, the submitted value, one `change` per pick). `tests/js/layout.test.mjs`, `LayoutScriptsTest`.
   Needs `npm run build` in production.
-- **The foot of the Thai lower vowel ู (and ุ) was cut off in the input fields.** Thai lower vowels hang further below the
-  baseline than the font's own descent — in Sarabun ู reaches 0.332 em down against a descent of 0.232 em — so a line has to give
-  them room, and a text input clips its text at its line box (so does an `overflow: hidden` element). Three groups of fields were
-  too tight: the shared `.ui-input` (58 fields) and the select fields (TomSelect's item, which is `overflow: hidden` for the "…" on
-  a long value, and its text box) used Tailwind `text-sm`'s 1.25rem line on a 14px font — the foot of ู stuck out 0.65px; and every
-  *plain* text input and select (the sign-in / register forms, the profile page, the filter bars) takes `line-height: 1.5rem` from
-  `@tailwindcss/forms`, which is 24px on the default 16px font — 0.19px of room, none for anti-aliasing. Now: `.ui-input` and the
-  TomSelect fields use a 1.5rem line on their 14px font (`.ui-input` lost its vertical padding so its content box, the height is fixed
-  by h-11, still holds the line — same 44px field); and one base rule, `line-height: max(1.5rem, 1.625em)` on text inputs and selects,
-  raises the plain fields to 1.625 em when the font is big enough for 24px to be too tight (16px → 26px, so the sign-in inputs are
-  now 44px tall like the rest) and never lowers it (13px fields stay 24px, the filter bars keep their height). `ThaiTextRoomTest`
-  reads Sarabun's metrics from the font file, lays a line out the way Chrome does (whole-pixel ascent / descent, half a pixel kept
-  for anti-aliasing) and checks each of those rules at every font size in use; it also fails if an `<input>` / `<select>` is written
-  with `text-xs` / `text-sm` and no `leading-*`. Not changed: textareas (they do not clip) and the rows of the dropdown list. Needs
-  `npm run build` in production.
+- **The foot of the Thai lower vowel ู (and ุ) was cut off in the input fields.** Thai lower vowels hang further below the baseline
+  than the font's own descent (Sarabun: ู reaches 0.332 em down against a descent of 0.232 em — 4.65px against 3px at 14px), so a box
+  that clips its text needs to be taller than the font's ascent + descent. *Text inputs:* the inner editor is `overflow: scroll`, and
+  Chromium (`text_control_inner_elements.cc`) removes its line-height — sets it to `normal`, the font's ascent + descent — when the input
+  has a **fixed height** taller than the line-height. `.ui-input` (58 fields, every `<input>` of the forms) was `h-11`, so it was cut
+  exactly 3px under the baseline whatever line-height it declared (measured on a screenshot of the request form: ู had 3 rows of ink
+  inside the field and 5 outside it). It now has no fixed height — `min-h-11` + `py-[9px]` + a 1.5rem line + the two 1px borders is the
+  same 44px — so its line-height applies. *Other text inputs and selects* (the sign-in / register forms, the profile page, the filter
+  bars) have an automatic height and take `line-height: 1.5rem` from `@tailwindcss/forms`, which is 24px on the default 16px font —
+  0.19px of room, none for anti-aliasing; one base rule, `line-height: max(1.5rem, 1.625em)`, raises those to 1.625 em when the font is
+  big enough for 24px to be too tight (16px → 26px, so the sign-in inputs are 44px tall like the rest) and never lowers it (13px
+  fields stay 24px). *Select fields (TomSelect):* the item is `overflow: hidden` for the "…" on a long value and used a 1.25rem line; it
+  and its text box use 1.5rem now. `ThaiTextRoomTest` reads Sarabun's metrics from the font file, lays a line out the way Chrome does
+  (whole-pixel ascent / descent, half a pixel kept for anti-aliasing), pins the fixed-height mechanism (a 14px field on `normal` is cut
+  1.65px short), checks each rule at every font size in use, and fails if an `<input>` gets a fixed height (class or inline style) or an
+  `<input>` / `<select>` is written with `text-xs` / `text-sm` and no `leading-*`. Not changed: textareas (they do not clip) and the rows
+  of the dropdown list. Needs `npm run build` in production.
 - **The asset picker of the request form could not be searched by HIS number.** It searches the option text, which was only
   "code - name"; the HIS registry number (รหัสทะเบียน รพจ) is now part of it — `AST-001 - name (รพจ. 6500123)`, not repeated when it
   is the asset code itself (an asset registered from HIS takes the number as its code). The list is still the assets registered in
