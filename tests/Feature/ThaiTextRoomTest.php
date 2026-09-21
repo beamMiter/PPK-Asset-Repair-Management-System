@@ -133,11 +133,18 @@ class ThaiTextRoomTest extends TestCase
         [$fontPx, $linePx] = $this->metricsOfApply($m[1]);
         $this->assertRoom($fontPx, $linePx, '.ui-input');
 
-        // the field is still 44px: line + vertical padding + the two 1px borders (min-h keeps it from ever being shorter)
-        $this->assertSame(1, preg_match('/\bpy-\[(\d+)px\]/', $m[1], $p), 'vertical padding in px');
+        // Every kind of field (text, email, number, date, select) is exactly 44px, whatever its own inner layout — a date input has padding
+        // of its own, a number input its spin buttons — so the height is clamped from both sides. `min-height` and `max-height`, not
+        // `height`: Chromium only looks at `height`.
         $this->assertSame(1, preg_match('/\bmin-h-(\d+)\b/', $m[1], $minH), 'a min-height');
-        $this->assertSame(44.0, $linePx + 2 * (float) $p[1] + 2, 'line + padding + borders = 44px, as the old h-11');
+        $this->assertSame(1, preg_match('/\bmax-h-(\d+)\b/', $m[1], $maxH), 'a max-height');
         $this->assertSame(44, (int) $minH[1] * 4);
+        $this->assertSame(44, (int) $maxH[1] * 4, 'the same as the min-height: all fields are one size');
+
+        // No vertical padding: the browser centres the text in a content box (44 − 2px of border) that is at least a line tall. A padding
+        // would push a date or number field, whose inner layout is taller than a text field's, off the middle.
+        $this->assertDoesNotMatchRegularExpression('/(?<![-\w])p[ytb]-(?!0\b)/', $m[1], 'no vertical padding on .ui-input (py-0 is fine)');
+        $this->assertGreaterThanOrEqual($linePx, 44 - 2, 'the content box holds the line');
     }
 
     /** No text input is written with a fixed height either: it would get `line-height: normal` and be cut the same way. */

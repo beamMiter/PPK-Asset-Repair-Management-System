@@ -167,8 +167,10 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Chromium (`text_control_inner_elements.cc`) removes its line-height — sets it to `normal`, the font's ascent + descent — when the input
   has a **fixed height** taller than the line-height. `.ui-input` (58 fields, every `<input>` of the forms) was `h-11`, so it was cut
   exactly 3px under the baseline whatever line-height it declared (measured on a screenshot of the request form: ู had 3 rows of ink
-  inside the field and 5 outside it). It now has no fixed height — `min-h-11` + `py-[9px]` + a 1.5rem line + the two 1px borders is the
-  same 44px — so its line-height applies. *Other text inputs and selects* (the sign-in / register forms, the profile page, the filter
+  inside the field and 5 outside it). It now has no `height` — Chromium only looks at that — and is clamped with `min-h-11` + `max-h-11` instead (and no
+  vertical padding, a 1.5rem line): every kind of field, text, number, date or select, is exactly 44px whatever its own inner layout
+  (a date input has padding of its own, a number input spin buttons; an automatic height had made them taller than a text field), the
+  browser centres the text, and the line-height applies. *Other text inputs and selects* (the sign-in / register forms, the profile page, the filter
   bars) have an automatic height and take `line-height: 1.5rem` from `@tailwindcss/forms`, which is 24px on the default 16px font —
   0.19px of room, none for anti-aliasing; one base rule, `line-height: max(1.5rem, 1.625em)`, raises those to 1.625 em when the font is
   big enough for 24px to be too tight (16px → 26px, so the sign-in inputs are 44px tall like the rest) and never lowers it (13px

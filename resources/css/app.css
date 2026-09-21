@@ -34,13 +34,15 @@
         @apply ml-1 text-[11px] font-normal italic text-slate-500;
     }
 
-    /* NO fixed height (no h-11): for a text input with a fixed height taller than its line-height, Chromium drops the line-height of
-       the input's inner editor (it becomes `normal`, the font's ascent + descent = 18px at 14px) and clips the text there — 3px under
-       the baseline, so the foot of the Thai lower vowels ุ ู (4.65px deep) was eaten whatever line-height said. An automatic height
-       keeps it: leading-6 (24px) + py-[9px] + the two 1px borders is the same 44px, and min-h-11 keeps it from ever being shorter.
+    /* NO `height` (no h-11): for a text input with a fixed height taller than its line-height, Chromium drops the line-height of the
+       input's inner editor (it becomes `normal`, the font's ascent + descent = 18px at 14px) and clips the text there — 3px under
+       the baseline, so the foot of the Thai lower vowels ุ ู (4.65px deep) was eaten whatever line-height said. Chromium only looks at
+       `height`, so the size is clamped with min-h-11 + max-h-11 instead: every kind of field — text, number, date, select — is exactly
+       44px whatever its own inner layout (a date input has padding of its own, a number input spin buttons), and its line-height
+       (leading-6, 24px) applies. No vertical padding: the browser centres the text in the 42px content box, which holds the line.
        tests/Feature/ThaiTextRoomTest.php pins all of this from the font file. */
     .ui-input {
-        @apply mt-2 w-full min-h-11 rounded-md border border-slate-200 bg-white px-3 py-[9px] text-sm leading-6 text-slate-900
+        @apply mt-2 w-full min-h-11 max-h-11 rounded-md border border-slate-200 bg-white px-3 py-0 text-sm leading-6 text-slate-900
                placeholder:text-slate-400 outline-none transition-all
                focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100
                disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed;
