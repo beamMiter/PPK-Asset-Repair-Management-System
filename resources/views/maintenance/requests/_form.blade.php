@@ -170,7 +170,12 @@
             </section>
 
             <section>
-                <x-ui.section-head no="4" title="ไฟล์แนบ" subtitle="แนบไฟล์ / ถ่ายรูปจากมือถือ" />
+                <x-ui.section-head no="4" title="ไฟล์แนบ" subtitle="แนบไฟล์ / ถ่ายรูปจากมือถือ">
+                    <x-slot:actions>
+                        <x-ui.attach-buttons any="mr_files_any_btn" camera="mr_files_camera_btn"
+                            any-label="แนบไฟล์เอกสาร" camera-label="ถ่ายรูปจากกล้อง" />
+                    </x-slot:actions>
+                </x-ui.section-head>
 
                 @php $attachments = is_iterable($attachments ?? null) ? $attachments : []; @endphp
 
@@ -265,16 +270,9 @@
                 <input id="mr_files_any" type="file" multiple accept="image/*,application/pdf" class="hidden">
                 <input id="mr_files_camera" type="file" accept="image/*" capture="environment" class="hidden">
 
-                <div class="space-y-3">
-                    <div class="flex items-center gap-3">
-                        {{-- ปุ่มแนบไฟล์ + ปุ่มกล้อง (Icon Only) --}}
-                        <x-ui.attach-buttons any="mr_files_any_btn" camera="mr_files_camera_btn"
-                            any-label="แนบไฟล์เอกสาร" camera-label="ถ่ายรูปจากกล้อง" />
-
-                        <div class="text-[11px] sm:text-[12px] text-slate-500 font-medium leading-tight">
-                            รองรับรูปภาพ / PDF <br class="sm:hidden"> (แนบไฟล์ หรือ ถ่ายรูป)
-                        </div>
-                    </div>
+                {{-- the paperclip and camera are in the heading, top right --}}
+                <div class="text-[11px] sm:text-[12px] text-slate-500 font-medium leading-tight">
+                    รองรับรูปภาพ / PDF (แนบไฟล์ หรือ ถ่ายรูป)
                 </div>
 
                 {{-- Preview list --}}

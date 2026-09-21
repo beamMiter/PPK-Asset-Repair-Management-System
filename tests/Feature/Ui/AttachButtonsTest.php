@@ -105,34 +105,85 @@ class AttachButtonsTest extends TestCase
         }
     }
 
-    public function test_on_the_job_page_the_icons_sit_top_right_of_the_files_section_like_the_assign_icon(): void
+    /**
+     * The paperclip and the camera are the right-hand end of the heading of their section — the same corner on every page, the corner
+     * where the assign-team icon sits on the job page — not in the body, not in a form row beside a hint.
+     */
+    private function assertTopRight(string $html, array $ids, string $title, string $where): void
+    {
+        $xp = $this->xpath($html);
+
+        foreach ($ids as $id) {
+            $it = '//*[@id="'.$id.'"]';
+            $this->assertSame(1, $xp->query($it)->length, "$where: one #$id");
+
+            // the heading is the first block of the section, and the section's title is in it
+            $header = $xp->query($it.'/ancestor::section[1]/div[1]')->item(0);
+            $this->assertNotNull($header, "$where: #$id sits in a section");
+            $this->assertStringContainsString($title, $header->textContent, "$where: #$id is in the heading of \"$title\"");
+            $this->assertStringContainsString('justify-between', $header->getAttribute('class'), "$where: the heading is a left / right row");
+
+            // ...in its right-hand block (the one after the title block)
+            $this->assertSame(2, $xp->query('div', $header)->length, "$where: the heading has a title block and an icon block");
+            $this->assertSame(1, $xp->query('div[last()]//*[@id="'.$id.'"]', $header)->length, "$where: #$id is in the right-hand block");
+            $this->assertSame(0, $xp->query('div[1]//*[@id="'.$id.'"]', $header)->length, "$where: #$id is not with the title");
+        }
+    }
+
+    public function test_the_icons_sit_top_right_of_their_section_on_every_page(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $reporter = User::factory()->create(['role' => 'member']);
         $req = MaintenanceRequest::factory()->create([
-            'asset_id' => Asset::factory()->create()->id, 'reporter_id' => $reporter->id, 'technician_id' => null, 'status' => 'in_progress',
+            'asset_id' => Asset::factory()->create()->id, 'reporter_id' => $reporter->id, 'technician_id' => null, 'status' => 'pending',
         ]);
+        $asset = Asset::factory()->create();
+        $pair = ['mr_files_any_btn', 'mr_files_camera_btn'];
 
-        $html = $this->actingAs($admin)->get(route('maintenance.requests.show', $req))->assertOk()->getContent();
+        $create = $this->actingAs($reporter)->get(route('maintenance.requests.create'))->assertOk()->getContent();
+        $this->assertTopRight($create, $pair, 'ไฟล์แนบ', 'request form');
+
+        $edit = $this->actingAs($admin)->get(route('maintenance.requests.edit', $req))->assertOk()->getContent();
+        $this->assertTopRight($edit, $pair, 'ไฟล์แนบ', 'request edit page');
+
+        $job = $this->actingAs($admin)->get(route('maintenance.requests.show', $req))->assertOk()->getContent();
+        $this->assertTopRight($job, $pair, 'ไฟล์แนบ', 'job page');
+
+        foreach ([
+            'asset form (create)' => route('assets.create'),
+            'asset form (edit)' => route('assets.edit', $asset),
+        ] as $where => $url) {
+            $html = $this->actingAs($admin)->get($url)->assertOk()->getContent();
+            $this->assertTopRight($html, ['hero_image_any_btn', 'hero_image_camera_btn'], 'ภาพประกอบครุภัณฑ์', "$where, picture");
+            $this->assertTopRight($html, ['att_files_any_btn', 'att_files_camera_btn'], 'ไฟล์แนบ', "$where, files");
+        }
+    }
+
+    public function test_the_file_inputs_the_icons_open_are_still_in_the_form(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $html = $this->actingAs($admin)->get(route('assets.create'))->assertOk()->getContent();
         $xp = $this->xpath($html);
 
-        foreach (['mr_files_any_btn', 'mr_files_camera_btn'] as $id) {
-            // in the header of the section (its first block, the one with the title), not down in the upload form
-            $header = $xp->query('//*[@id="'.$id.'"]/ancestor::section[1]/div[1]')->item(0);
-            $this->assertNotNull($header, "#$id sits in a section");
-            $this->assertStringContainsString('ไฟล์แนบ', $header->textContent, "#$id is in the header of the files section");
-            $this->assertSame(0, $xp->query('//*[@id="'.$id.'"]/ancestor::form')->length, "#$id is not inside the upload form");
-
-            // ...on the right: the last block of the header, after the title (the same place as the assign icon of section 5)
-            $this->assertSame(
-                1,
-                $xp->query('//*[@id="'.$id.'"]/ancestor::div[contains(@class,"justify-between")][1]/div[last()]//*[@id="'.$id.'"]')->length,
-                "#$id is the right-hand block of the header"
-            );
+        // moved into the heading with the icons: still inside the <form>, so what is chosen is still submitted, and still hidden
+        foreach (['hero_image_any', 'hero_image_camera', 'att_files_submit', 'att_files_any', 'att_files_camera'] as $id) {
+            $input = $xp->query('//input[@id="'.$id.'"]')->item(0);
+            $this->assertNotNull($input, "#$id exists");
+            $this->assertSame(1, $xp->query('ancestor::form', $input)->length, "#$id is inside the form");
+            $this->assertStringContainsString('hidden', $input->getAttribute('class'), "#$id stays hidden");
         }
 
-        // the header shows them only to someone who may attach: a reporter after the job is closed may not
-        $req->forceFill(['status' => 'closed'])->saveQuietly();
+        $this->assertStringNotContainsString('เลือกรูปภาพครุภัณฑ์', $html, 'no orphan label left where the icons used to be');
+        $this->assertStringNotContainsString('เลือกไฟล์เอกสารเพิ่มเติม', $html, 'no orphan label left where the icons used to be');
+    }
+
+    public function test_on_the_job_page_only_someone_who_may_attach_gets_the_icons(): void
+    {
+        $reporter = User::factory()->create(['role' => 'member']);
+        $req = MaintenanceRequest::factory()->create([
+            'asset_id' => Asset::factory()->create()->id, 'reporter_id' => $reporter->id, 'technician_id' => null, 'status' => 'closed',
+        ]);
+
         $closed = $this->actingAs($reporter)->get(route('maintenance.requests.show', $req))->assertOk()->getContent();
         $this->assertNull($this->element($closed, 'mr_files_any_btn'), 'no paperclip when attaching is not allowed');
         $this->assertNull($this->element($closed, 'mr_files_camera_btn'), 'no camera when attaching is not allowed');

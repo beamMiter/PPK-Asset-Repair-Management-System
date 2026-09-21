@@ -307,21 +307,23 @@
 
             {{-- STEP 5: รูปครุภัณฑ์ --}}
             <section>
-                <x-ui.section-head no="5" title="ภาพประกอบครุภัณฑ์" subtitle="ภาพถ่ายหรือภาพประกอบหลัก" />
-
-                <div class="space-y-5 pt-1">
+                <x-ui.section-head no="5" title="ภาพประกอบครุภัณฑ์" subtitle="ภาพถ่ายหรือภาพประกอบหลัก">
                     @if (!$readonly)
-                        <label class="ui-label">เลือกรูปภาพครุภัณฑ์</label>
-                        <div class="flex items-center gap-2">
+                        {{-- the paperclip and camera: top right of the heading, on every page; the hidden inputs they open travel with them --}}
+                        <x-slot:actions>
                             <input id="hero_image_any" type="file" name="hero_image" accept="image/*"
                                 class="hidden">
                             <input id="hero_image_camera" type="file" name="hero_image" accept="image/*"
                                 capture="environment" class="hidden">
 
                             <x-ui.attach-buttons any="hero_image_any_btn" camera="hero_image_camera_btn" any-label="เลือกรูปภาพ" />
-                        </div>
+                        </x-slot:actions>
+                    @endif
+                </x-ui.section-head>
 
-                        <div class="mt-3 p-3 rounded-md bg-amber-50 border border-amber-200">
+                <div class="space-y-5 pt-1">
+                    @if (!$readonly)
+                        <div class="p-3 rounded-md bg-amber-50 border border-amber-200">
                             <div class="flex gap-2">
                                 <svg class="h-5 w-5 text-amber-600 shrink-0" viewBox="0 0 24 24" fill="none"
                                     stroke="currentColor" stroke-width="2">
@@ -381,12 +383,9 @@
 
             {{-- STEP 6: ไฟล์แนบ --}}
             <section>
-                <x-ui.section-head no="6" title="ไฟล์แนบ" subtitle="เอกสาร คู่มือ หรือรูปภาพเพิ่มเติม" />
-
-                <div class="space-y-5 pt-1">
+                <x-ui.section-head no="6" title="ไฟล์แนบ" subtitle="เอกสาร คู่มือ หรือรูปภาพเพิ่มเติม">
                     @if (!$readonly)
-                        <label class="ui-label">เลือกไฟล์เอกสารเพิ่มเติม</label>
-                        <div class="flex items-center gap-2">
+                        <x-slot:actions>
                             <input id="att_files_submit" type="file" name="files[]" multiple class="hidden">
                             <input id="att_files_any" type="file" multiple accept="image/*,application/pdf"
                                 class="hidden">
@@ -394,9 +393,13 @@
                                 class="hidden">
 
                             <x-ui.attach-buttons any="att_files_any_btn" camera="att_files_camera_btn" any-label="เลือกไฟล์แนบ" />
-                        </div>
+                        </x-slot:actions>
+                    @endif
+                </x-ui.section-head>
 
-                        <div class="mt-3 p-3 rounded-md bg-amber-50 border border-amber-200">
+                <div class="space-y-5 pt-1">
+                    @if (!$readonly)
+                        <div class="p-3 rounded-md bg-amber-50 border border-amber-200">
                             <div class="flex gap-2">
                                 <svg class="h-5 w-5 text-amber-600 shrink-0" viewBox="0 0 24 24" fill="none"
                                     stroke="currentColor" stroke-width="2">

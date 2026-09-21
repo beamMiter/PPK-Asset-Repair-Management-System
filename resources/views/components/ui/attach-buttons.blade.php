@@ -2,12 +2,15 @@
   The two ways to add a file, as bare icons: a paperclip (pick a file) and a camera (take a photo). No box, no border, no background —
   just the icon, with a soft circle on hover (the `ghost` variant at `icon-lg`, the look of the icons in the chat header). They are
   still real <button>s, so the keyboard and screen readers work, and each says what it is on hover (title) and to a screen reader
-  (aria-label). Put them wherever a file can be added, so every page looks the same. The ids are the ones the page's script binds.
+  (aria-label). Put them wherever a file can be added, so every page looks the same — in the `actions` slot of the section's heading,
+  its top right corner (the corner where the assign-team icon sits on the job page). The ids are the ones the page's script binds.
 
-  <x-ui.attach-buttons any="mr_files_any_btn" camera="mr_files_camera_btn" />
+  <x-ui.section-head no="4" title="ไฟล์แนบ" subtitle="...">
+      <x-slot:actions><x-ui.attach-buttons any="mr_files_any_btn" camera="mr_files_camera_btn" /></x-slot:actions>
+  </x-ui.section-head>
   <x-ui.attach-buttons any="hero_image_any_btn" camera="hero_image_camera_btn" any-label="เลือกรูปภาพ" />
 
-  Renders the two buttons only (no wrapper): put them in your own flex row with whatever else belongs beside them.
+  Renders the two buttons only (no wrapper); the heading's slot lays them out in a row.
 --}}
 @props([
     'any',

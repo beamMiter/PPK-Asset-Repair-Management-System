@@ -193,7 +193,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   sits in the section below (and only for someone who may attach). That green text button is now a bare `group_add` icon in the same
   style (`ghost`, `icon-lg`; `title` and `aria-label` "มอบหมายทีมเจ้าหน้าที่", same id, so the dialog opens as before), on the job page
   and on the edit page. Both section headers stay on one row on a phone (the text button used to drop under the title). The request
-  form and the asset form keep their icons beside their hint text. `AttachButtonsTest`, `tests/Feature/Ui/AssignIconTest.php`.
+  form, the request edit page and the asset form (the picture and the files sections) do the same, so the paperclip and camera are in
+  the same corner on every page: `<x-ui.section-head>` has a new `actions` slot for icon tools at the right-hand end of the heading
+  (an empty slot leaves no gap). In the request form the hint "รองรับรูปภาพ / PDF" stays as a line under the heading; in the asset form
+  the labels "เลือกรูปภาพครุภัณฑ์" / "เลือกไฟล์เอกสารเพิ่มเติม" that stood above the icons are gone (the section titles say it), and the
+  hidden file inputs travel with the icons, still inside the form. `AttachButtonsTest`, `AssignIconTest`, `ButtonComponentTest`.
 - **The × on the picture of the asset form did nothing.** A hidden, never-shown "ล้างรูปภาพ" button had the same id
   (`hero_image_remove_btn`) as the round × on the preview and came first in the page, so the script bound "remove picture" to the
   button nobody could see. The dead button is gone; the × is the only element with the id.
