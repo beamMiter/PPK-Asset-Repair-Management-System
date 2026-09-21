@@ -133,17 +133,19 @@ class SlaPerformanceController extends Controller
             ->get();
 
         $breachedTickets = []; $atRiskTickets = [];
+        // slaDeadline(): a job on hold has its clock stopped, so it is late only if it was already late when it was put on hold
         foreach ($activeTickets as $ticket) {
-            if ($nowDatetime->greaterThan($ticket->sla_due_date)) {
+            $deadline = $ticket->slaDeadline($nowDatetime);
+            if ($nowDatetime->greaterThan($deadline)) {
                 $breachedTickets[] = $ticket;
-            } elseif ($warningThreshold->greaterThan($ticket->sla_due_date)) {
+            } elseif ($warningThreshold->greaterThan($deadline)) {
                 $atRiskTickets[] = $ticket;
             }
         }
 
         // เรียงจากเกินมากสุดไปน้อยสุด (เวลาที่น้อยที่สุดคือเกินมากที่สุด)
-        usort($breachedTickets, fn($a, $b) => $a->sla_due_date <=> $b->sla_due_date);
-        usort($atRiskTickets, fn($a, $b) => $a->sla_due_date <=> $b->sla_due_date);
+        usort($breachedTickets, fn($a, $b) => $a->slaDeadline($nowDatetime) <=> $b->slaDeadline($nowDatetime));
+        usort($atRiskTickets, fn($a, $b) => $a->slaDeadline($nowDatetime) <=> $b->slaDeadline($nowDatetime));
 
         // Built up entirely by the loop below — the compliant branch increments
         // 'ทำตาม SLA' per resolved request, so it must start at 0 (seeding it
@@ -171,10 +173,11 @@ class SlaPerformanceController extends Controller
                     MaintenanceRequest::STATUS_REJECTED
                 ])) {
                     if ($req->sla_due_date) {
-                        if ($nowDatetime->greaterThan($req->sla_due_date)) {
+                        $deadline = $req->slaDeadline($nowDatetime);
+                        if ($nowDatetime->greaterThan($deadline)) {
                             $statusDist['เกินเวลา']++; 
                             $monthBreached[] = $req;
-                        } elseif ($warningThreshold->greaterThan($req->sla_due_date)) {
+                        } elseif ($warningThreshold->greaterThan($deadline)) {
                             $statusDist['มีความเสี่ยง']++;
                         } else { 
                             $statusDist['ตามกำหนด']++; 

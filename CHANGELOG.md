@@ -132,6 +132,15 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a scan of `created_at`). No screen deletes a request today (`DELETE /api/repair-requests/{id}` answers 403 to everybody — the
   policy has no `delete` method, so the admin bypass is never consulted), so the deletion half is a guard for when something
   does. `RequestAssetAndNumberingTest` (5 tests).
+- **The SLA clock: the type chosen later, and a job on hold.** The deadlines were worked out once, when the request was made. A
+  request made without a type (optional in the form) had no deadline for good — choosing the type afterwards did nothing, so the
+  SLA page never listed it — and one moved to another type kept the old type's. The deadlines are now set whenever the type is
+  chosen or changed on a job that is still open (resolution = request date + the type's minutes + the time already spent on
+  hold; the response deadline only until the job is acknowledged); a finished job is history, and a type without minutes leaves
+  the deadline as it is. And a job on hold, whose clock is stopped, was listed under "เกินเวลา" (list, KPI, chart) as soon as its
+  raw deadline passed and flipped back after it resumed: `MaintenanceRequest::slaDeadline()` moves the deadline out with the
+  time on hold, so it is late only if it was already late when it was put on hold. The job page's "เกินกำหนด SLA" banner uses it too
+  and no longer calls a cancelled or rejected job overdue. `RequestSlaClockTest` (9 tests).
 
 ### Added
 

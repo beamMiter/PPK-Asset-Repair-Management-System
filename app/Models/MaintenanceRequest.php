@@ -285,17 +285,14 @@ class MaintenanceRequest extends Model
             }
 
             // --- Auto-calculate SLA Targets from Type ---
-            if ($model->type_id) {
-                $type = \App\Models\MaintenanceRequestType::find($model->type_id);
-                if ($type) {
-                    $baseDate = $model->request_date ?? now();
-                    if ($type->default_response_minutes) {
-                        $model->response_due_date = $baseDate->copy()->addMinutes($type->default_response_minutes);
-                    }
-                    if ($type->default_resolution_minutes) {
-                        $model->sla_due_date = $baseDate->copy()->addMinutes($type->default_resolution_minutes);
-                    }
-                }
+            $model->applyTypeTargets();
+        });
+
+        // The type chosen (or changed) after the request was made: the deadlines follow it. A request made without a type
+        // used to keep no deadline for good, and one moved to another type kept the old type's. A job that is over is history.
+        static::updating(function (self $model) {
+            if ($model->isDirty('type_id') && in_array((string) $model->status, self::OPEN_STATUSES, true)) {
+                $model->applyTypeTargets();
             }
         });
 
@@ -458,6 +455,49 @@ class MaintenanceRequest extends Model
     public function needsTeam(): bool
     {
         return in_array((string) $this->status, self::TEAM_REQUIRED_STATUSES, true);
+    }
+
+    /**
+     * SLA deadlines from the type: resolution = request date + the type's minutes + the time already spent on hold; response
+     * = request date + the type's minutes (until the job is acknowledged — after that it is history). A type without minutes,
+     * or none, leaves what is there.
+     */
+    public function applyTypeTargets(): void
+    {
+        $type = $this->type_id ? MaintenanceRequestType::find($this->type_id) : null;
+        if (! $type) {
+            return;
+        }
+
+        $base = $this->request_date ?? now();
+
+        if ($type->default_response_minutes && ! $this->acknowledged_at) {
+            $this->response_due_date = $base->copy()->addMinutes($type->default_response_minutes);
+        }
+        if ($type->default_resolution_minutes) {
+            $this->sla_due_date = $base->copy()->addMinutes($type->default_resolution_minutes + (int) $this->paused_duration_minutes);
+        }
+    }
+
+    /**
+     * The resolution deadline as of $now. A job on hold has its clock stopped, so its deadline keeps moving out with the
+     * time it has been on hold (that time is added to `sla_due_date` for good when the job resumes) — it is late only if it
+     * was already late when it was put on hold.
+     */
+    public function slaDeadline(?\Carbon\Carbon $now = null): ?\Carbon\Carbon
+    {
+        if (! $this->sla_due_date) {
+            return null;
+        }
+
+        $due = $this->sla_due_date->copy();
+
+        if ((string) $this->status === self::STATUS_ON_HOLD && $this->on_hold_at) {
+            $now ??= now();
+            $due->addSeconds(max(0, $now->getTimestamp() - $this->on_hold_at->getTimestamp()));
+        }
+
+        return $due;
     }
 
     public function type()

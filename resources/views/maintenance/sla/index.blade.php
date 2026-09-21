@@ -484,7 +484,7 @@
                                 @forelse (collect($breachedTickets)->take($ticketLimit) as $t)
                                     @php
                                         $now = \Carbon\Carbon::now();
-                                        $diffInMins = (int) $t->sla_due_date->diffInMinutes($now);
+                                        $diffInMins = (int) $t->slaDeadline($now)->diffInMinutes($now);
                                         $days = floor($diffInMins / (60 * 24));
                                         $hrs = floor(($diffInMins % (60 * 24)) / 60);
                                         $mins = $diffInMins % 60;
@@ -551,7 +551,7 @@
                                 @forelse (collect($atRiskTickets)->take($ticketLimit) as $t)
                                     @php
                                         $now = \Carbon\Carbon::now();
-                                        $diffInMins = (int) $now->diffInMinutes($t->sla_due_date);
+                                        $diffInMins = (int) $now->diffInMinutes($t->slaDeadline($now));
                                         // 4 hours warning baseline (total = 240 mins)
                                         $pct = min(100, max(0, 100 - ($diffInMins / (4 * 60)) * 100));
                                         $hrs = floor($diffInMins / 60);
