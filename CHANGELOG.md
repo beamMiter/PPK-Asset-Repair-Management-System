@@ -180,6 +180,16 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   1.65px short), checks each rule at every font size in use, and fails if an `<input>` gets a fixed height (class or inline style) or an
   `<input>` / `<select>` is written with `text-xs` / `text-sm` and no `leading-*`. Not changed: textareas (they do not clip) and the rows
   of the dropdown list. Needs `npm run build` in production.
+- **"Attach a file" and "take a photo" are icons everywhere.** The request form already had a paperclip and a camera as two square
+  icon buttons; the job page had a text button "เลือกไฟล์เพิ่ม", the camera, and a third "แนบไฟล์" beside them (two buttons that read
+  as the same thing), and the asset form had text buttons "เลือกรูปภาพ" / "เลือกไฟล์แนบ" beside the camera. All four places now use
+  one component, `<x-ui.attach-buttons>` (paperclip + camera, icon only; each says what it is on hover and to a screen reader), with
+  the ids their scripts already bind. On the job page the upload button ("แนบไฟล์") moved into the "ไฟล์ที่เลือก" box, which is hidden
+  until a file is chosen — with nothing to upload there is no button, so the row shows two icons instead of three buttons.
+  `tests/Feature/Ui/AttachButtonsTest.php`.
+- **The × on the picture of the asset form did nothing.** A hidden, never-shown "ล้างรูปภาพ" button had the same id
+  (`hero_image_remove_btn`) as the round × on the preview and came first in the page, so the script bound "remove picture" to the
+  button nobody could see. The dead button is gone; the × is the only element with the id.
 - **The asset picker of the request form could not be searched by HIS number.** It searches the option text, which was only
   "code - name"; the HIS registry number (รหัสทะเบียน รพจ) is now part of it — `AST-001 - name (รพจ. 6500123)`, not repeated when it
   is the asset code itself (an asset registered from HIS takes the number as its code). The list is still the assets registered in

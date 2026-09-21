@@ -18,9 +18,7 @@
             <input id="mr_files_camera" type="file" accept="image/*" capture="environment" class="hidden">
 
             <div class="flex items-center gap-2">
-                <x-ui.button id="mr_files_any_btn" icon="attach_file">เลือกไฟล์เพิ่ม</x-ui.button>
-
-                <x-ui.button id="mr_files_camera_btn" size="square" icon="photo_camera" aria-label="ถ่ายรูป" title="ถ่ายรูป" />
+                <x-ui.attach-buttons any="mr_files_any_btn" camera="mr_files_camera_btn" any-label="เลือกไฟล์เพิ่ม" />
             </div>
 
             <div class="mt-3 p-3 rounded-md bg-amber-50 border border-amber-200">
@@ -42,10 +40,11 @@
                 <div class="text-xs font-medium text-slate-600">ไฟล์ที่เลือก</div>
                 <div id="mr_files_list"
                     class="mt-2 divide-y divide-slate-200 rounded-md border {{ $line }} bg-white"></div>
-            </div>
 
-            <div class="flex justify-end pt-2">
-                <x-ui.button type="submit" variant="primary" icon="upload_file">แนบไฟล์</x-ui.button>
+                {{-- the upload belongs to the chosen files: nothing to upload, no button --}}
+                <div class="flex justify-end pt-3">
+                    <x-ui.button type="submit" variant="primary" icon="upload_file">แนบไฟล์</x-ui.button>
+                </div>
             </div>
         </form>
 

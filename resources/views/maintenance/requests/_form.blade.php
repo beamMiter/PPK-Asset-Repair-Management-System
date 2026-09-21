@@ -267,13 +267,9 @@
 
                 <div class="space-y-3">
                     <div class="flex items-center gap-3">
-                        {{-- ปุ่มแนบไฟล์ (Icon Only) --}}
-                        <x-ui.button id="mr_files_any_btn" size="square" icon="attach_file"
-                            aria-label="แนบไฟล์เอกสาร" title="แนบไฟล์เอกสาร" />
-
-                        {{-- ปุ่มกล้อง (Icon Only) --}}
-                        <x-ui.button id="mr_files_camera_btn" size="square" icon="photo_camera"
-                            aria-label="ถ่ายรูป" title="ถ่ายรูปจากกล้อง" />
+                        {{-- ปุ่มแนบไฟล์ + ปุ่มกล้อง (Icon Only) --}}
+                        <x-ui.attach-buttons any="mr_files_any_btn" camera="mr_files_camera_btn"
+                            any-label="แนบไฟล์เอกสาร" camera-label="ถ่ายรูปจากกล้อง" />
 
                         <div class="text-[11px] sm:text-[12px] text-slate-500 font-medium leading-tight">
                             รองรับรูปภาพ / PDF <br class="sm:hidden"> (แนบไฟล์ หรือ ถ่ายรูป)

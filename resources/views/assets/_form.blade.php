@@ -318,11 +318,7 @@
                             <input id="hero_image_camera" type="file" name="hero_image" accept="image/*"
                                 capture="environment" class="hidden">
 
-                            <x-ui.button id="hero_image_any_btn" icon="attach_file">เลือกรูปภาพ</x-ui.button>
-
-                            <x-ui.button id="hero_image_camera_btn" size="square" icon="photo_camera" aria-label="ถ่ายรูป" title="ถ่ายรูป" />
-
-                            <x-ui.button id="hero_image_remove_btn" variant="danger-outline" class="hidden">ล้างรูปภาพ</x-ui.button>
+                            <x-ui.attach-buttons any="hero_image_any_btn" camera="hero_image_camera_btn" any-label="เลือกรูปภาพ" />
                         </div>
 
                         <div class="mt-3 p-3 rounded-md bg-amber-50 border border-amber-200">
@@ -397,9 +393,7 @@
                             <input id="att_files_camera" type="file" accept="image/*" capture="environment"
                                 class="hidden">
 
-                            <x-ui.button id="att_files_any_btn" icon="attach_file">เลือกไฟล์แนบ</x-ui.button>
-
-                            <x-ui.button id="att_files_camera_btn" size="square" icon="photo_camera" aria-label="ถ่ายรูป" title="ถ่ายรูป" />
+                            <x-ui.attach-buttons any="att_files_any_btn" camera="att_files_camera_btn" any-label="เลือกไฟล์แนบ" />
                         </div>
 
                         <div class="mt-3 p-3 rounded-md bg-amber-50 border border-amber-200">
