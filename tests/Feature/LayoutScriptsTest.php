@@ -265,17 +265,4 @@ class LayoutScriptsTest extends TestCase
         $this->assertStringContainsString('navbar-pinwheel', $html, 'the bar is still rendered');
         $this->assertStringNotContainsString('.navbar-pinwheel {', $html, 'and its rules are not repeated inline on every page');
     }
-
-    /**
-     * TomSelect's theme defines `--ts-pr-caret: 0` (no unit), so its own `right: max(var(--ts-pr-caret), 8px)` for the clear (×)
-     * button that initTomSelect adds to optional selects is invalid: `right` falls back to `auto` and the × sat at the start of
-     * the control, on top of the first character of the value. The layout gives it a `right` of its own.
-     */
-    public function test_the_clear_button_of_the_selects_has_a_valid_position_of_its_own(): void
-    {
-        $css = file_get_contents(resource_path('css/layout.css'));
-
-        $this->assertMatchesRegularExpression('/\.ts-wrapper\.single\s+\.ts-control\s*>\s*\.clear-button\s*\{[^}]*\bright:\s*[0-9.]+(rem|px)\s*!important/s', $css);
-        $this->assertMatchesRegularExpression('/\.ts-wrapper\.single\s+\.ts-control\s*>\s*\.clear-button\s*\{[^}]*\bleft:\s*auto\s*!important/s', $css);
-    }
 }

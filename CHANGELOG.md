@@ -156,8 +156,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`select.ts-basic` / `.ts-department`: the asset, department and type of the request form, the asset form, the user form, the
   job-type select of My Jobs) had `allowEmptyOption: true`, which made the empty option a chosen value — its words sat in the field,
   and stayed there while you typed to search. The empty option is now the placeholder (grey, gone as soon as you type; the field's
-  `data-placeholder`, else the words of the empty option, else "— ไม่ระบุ —"), and an optional field gets a clear (×) button to go
-  back to "not specified" (a `required` one does not). `tests/js/layout.test.mjs`. Needs `npm run build` in production.
+  `data-placeholder`, else the words of the empty option, else "— ไม่ระบุ —"). Going back to "not specified" is the first row of
+  the list — the empty option, as it always was — and choosing it clears the field (a `required` select has no such row); there is
+  no button inside the field. `tests/js/layout.test.mjs`. Needs `npm run build` in production.
 - **The asset picker of the request form could not be searched by HIS number.** It searches the option text, which was only
   "code - name"; the HIS registry number (รหัสทะเบียน รพจ) is now part of it — `AST-001 - name (รพจ. 6500123)`, not repeated when it
   is the asset code itself (an asset registered from HIS takes the number as its code). The list is still the assets registered in
@@ -165,16 +166,16 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the real HIS API is connected. The HIS part is drawn in the colour the HIS number has on the asset table (bold blue,
   `font-semibold text-blue-700`), in the list and in the chosen value: the option carries `data-his` and `initTomSelect` renders
   it apart, while the text stays whole so the search still finds it. `RequestFormAssetOptionTest` (2 tests), `tests/js/layout.test.mjs`.
-- **The clear (×) button sat on top of the first character of the value, and a form's second select never turned yellow.**
-  (1) The × added to optional selects (TomSelect's `clear_button` plugin) is placed by its own CSS with
-  `right: max(var(--ts-pr-caret), 8px)`, but the theme defines `--ts-pr-caret: 0` — no unit — so that declaration is invalid,
-  `right` falls back to `auto`, and the × landed at the start of the control, over the first letter, whenever a field with a value was
-  hovered or focused. `layout.css` now gives it a valid `right`. (2) The "edited field" highlight (yellow border) bound a select
-  through `wrapper.parentElement.querySelector('select')` — the *first* select of the wrapper's parent. TomSelect puts its wrapper
-  next to the select, and the request form keeps the asset and the department in one `<section>`, so the department's wrapper was
-  matched to the asset select (already bound) and skipped: it never turned yellow, and changing it did not count as an unsaved edit
-  either. Selects are now bound one by one, each to its own wrapper (`ts.wrapper`). The JS tests' fake TomSelect now puts its wrapper
-  beside the select like the real one — the old fake wrapped the select, which hid this. Needs `npm run build` in production.
+- **A form's second select never turned yellow (and did not count as an unsaved edit).** The "edited field" highlight bound a
+  select through `wrapper.parentElement.querySelector('select')` — the *first* select of the wrapper's parent. TomSelect puts its
+  wrapper next to the select, and the request form keeps the asset and the department in one `<section>`, so the department's
+  wrapper was matched to the asset select (already bound) and skipped: it never turned yellow, and changing it did not count as an
+  unsaved edit either. Selects are now bound one by one, each to its own wrapper (`ts.wrapper`). The JS tests' fake TomSelect now
+  puts its wrapper beside the select like the real one — the old fake wrapped the select, which hid this.
+- **No × inside the select fields.** A clear (×) button had been added to optional selects (TomSelect's `clear_button` plugin) to
+  get back to "not specified" once the empty option stopped being a value; nobody asked for it, and its own CSS
+  (`right: max(var(--ts-pr-caret), 8px)` with the theme's unit-less `--ts-pr-caret: 0`) put it on top of the first letter of the
+  value. It is gone; the way back is the first row of the list (see above), and the row is checked against the real TomSelect.
 
 ### Added
 

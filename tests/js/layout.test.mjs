@@ -344,8 +344,9 @@ test('textareas grow to their content, selects get TomSelect with a placeholder,
 
 // The empty option of a form select ("— ไม่ระบุ —") means "nothing chosen". `allowEmptyOption: true` made TomSelect treat it as a
 // chosen value, so its words stayed in the field like real text (and stayed when you typed to search). It has to be the
-// placeholder — grey, and gone as soon as you type — with a clear (×) button to go back to "not specified".
-test('an empty option is a placeholder, not a chosen value; a clear button takes a value back', () => {
+// placeholder — grey, and gone as soon as you type. Getting back to "not specified" is a first row of the list (as it always was),
+// not a × inside the field: choosing that row clears the field, which then shows its placeholder again.
+test('an empty option is a placeholder, not a chosen value; a first row of the list takes a value back — no clear button', () => {
   const world = boot();
   const page = world.go((body, w) => {
     const emptyOption = (text) => { const o = w.el('option', { value: '' }); o.textContent = text; return o; };
@@ -359,17 +360,38 @@ test('an empty option is a placeholder, not a chosen value; a clear button takes
     return { named, fromOption, bare, must };
   });
   const opt = (sel) => world.calls.selectOptions[world.calls.selects.indexOf(sel)];
+  // what TomSelect does with the callbacks: onInitialize once the widget is built, onItemAdd for every chosen row
+  const run = (sel) => {
+    const seen = { added: [], cleared: 0 };
+    const ts = { addOption: (o) => seen.added.push(o), clear: () => { seen.cleared++; } };
+    opt(sel).onInitialize.call(ts);
+    return { seen, choose: (value) => opt(sel).onItemAdd.call(ts, value) };
+  };
 
   for (const sel of [page.named, page.fromOption, page.bare, page.must]) {
     assert.notEqual(opt(sel).allowEmptyOption, true, 'the empty option is not a value to display');
+    assert.equal(opt(sel).plugins, undefined, 'no clear (×) button inside the field');
   }
 
   assert.equal(opt(page.named).placeholder, '— เลือกทรัพย์สิน —', 'data-placeholder wins');
   assert.equal(opt(page.fromOption).placeholder, '— เลือกหมวดหมู่ —', 'else the words of the empty option');
   assert.equal(opt(page.bare).placeholder, '— ไม่ระบุ —', 'else the default');
 
-  assert.ok(opt(page.named).plugins?.clear_button, 'an optional field can be cleared');
-  assert.ok(!opt(page.must).plugins?.clear_button, 'a required field cannot');
+  // an optional select with an empty option gets that option back as the first row of the list
+  const named = run(page.named);
+  assert.equal(named.seen.added.length, 1);
+  assert.equal(named.seen.added[0].text, '— ไม่ระบุ —', 'the words of its empty option');
+  assert.equal(named.seen.added[0].value, '__none__');
+  assert.equal(opt(page.named).sortField[0].field, 'noneFirst', 'sorted before the alphabetical rest');
+  assert.equal(named.seen.added[0].noneFirst, 0);
+  named.choose('42');
+  assert.equal(named.seen.cleared, 0, 'a real value stays');
+  named.choose('__none__');
+  assert.equal(named.seen.cleared, 1, 'the row is a way out: choosing it clears the field, it is never a value');
+
+  assert.equal(run(page.fromOption).seen.added[0].text, '— เลือกหมวดหมู่ —');
+  assert.equal(run(page.bare).seen.added.length, 0, 'nothing to go back to when there is no empty option');
+  assert.equal(run(page.must).seen.added.length, 0, 'and a required field cannot be emptied');
 });
 
 // The asset options carry their HIS number ("AST-001 - name (รพจ. 6500123)", `data-his` on the <option>). The text stays whole — that is

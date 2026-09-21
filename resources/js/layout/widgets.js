@@ -10,6 +10,10 @@ export function initDropdowns(win) {
     });
 }
 
+// The first row of the list of an optional select: the words of its empty option ("— ไม่ระบุ —"). It is a way out, never a value:
+// choosing it clears the field, which then shows its placeholder again.
+const NONE = '__none__';
+
 // The colour the HIS number (เลข รพจ) has on the asset table (assets/index): bold blue.
 const HIS_CLASS = 'text-blue-700 font-semibold';
 
@@ -34,7 +38,8 @@ export function initTomSelect(win, root) {
 
         // The empty option of a form select ("— ไม่ระบุ —") means "nothing chosen": it is the placeholder — grey, and gone as soon
         // as you type — not a chosen value. (`allowEmptyOption: true` made TomSelect show its words as if they were the value,
-        // and they stayed in the field while you searched.) A clear (×) button takes a chosen value back to "not specified".
+        // and they stayed in the field while you searched.) Getting back to "not specified" is a first row of the list — the
+        // empty option, as it always was — not a button inside the field.
         const emptyOption = el.querySelector('option[value=""]');
         const emptyLabel = emptyOption ? String(emptyOption.textContent || '').trim() : '';
         const placeholder = el.getAttribute('data-placeholder') || el.getAttribute('placeholder') || emptyLabel || '— ไม่ระบุ —';
@@ -43,11 +48,16 @@ export function initTomSelect(win, root) {
         new win.TomSelect(el, {
             create: false,
             maxOptions: 2000,
-            sortField: { field: 'text', direction: 'asc' },
+            sortField: [{ field: 'noneFirst', direction: 'asc' }, { field: 'text', direction: 'asc' }],
             placeholder,
             searchField: ['text'],
-            plugins: required ? {} : { clear_button: { title: 'ล้างค่าที่เลือก' } },
             ...(el.querySelector('option[data-his]') ? { render: { option: renderWithHis, item: renderWithHis } } : {}),
+            onInitialize() {
+                if (emptyOption && !required) this.addOption({ value: NONE, text: emptyLabel || placeholder, noneFirst: 0 });
+            },
+            onItemAdd(value) {
+                if (value === NONE) this.clear();
+            },
         });
     });
 }
