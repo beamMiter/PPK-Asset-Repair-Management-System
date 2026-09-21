@@ -4,17 +4,16 @@ services:
       context: .
       dockerfile: .docker/Dockerfile
       args:
-        PHP_VERSION: "8.2"
+        PHP_VERSION: "8.4"
     image: arm-system/php-app
     container_name: arm-app
+    env_file: .env
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
     volumes:
-      - ./:/var/www/html
+      - ./:/var/www/html:delegated
       - ./storage:/var/www/html/storage
-      # If present, override Laravel env inside the container without touching your local .env
-      - ./.env.docker:/var/www/html/.env
     expose:
       - "9000"
     depends_on:
@@ -26,7 +25,7 @@ services:
     ports:
       - "8000:80"
     volumes:
-      - ./:/var/www/html
+      - ./:/var/www/html:delegated
       - ./.docker/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - app
@@ -71,21 +70,19 @@ services:
       context: .
       dockerfile: .docker/Dockerfile
       args:
-        PHP_VERSION: "8.2"
+        PHP_VERSION: "8.4"
     image: arm-system/php-app
     container_name: arm-worker
+    env_file: .env
     depends_on:
       - app
       - redis
     working_dir: /var/www/html
-    command: php artisan queue:work --verbose --tries=1 --timeout=90
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
     volumes:
-      - ./:/var/www/html
-      # If present, override Laravel env inside the container without touching your local .env
-      - ./.env.docker:/var/www/html/.env
+      - ./:/var/www/html:delegated
 
 volumes:
   dbdata:
