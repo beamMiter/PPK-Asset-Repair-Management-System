@@ -143,6 +143,12 @@ class MaintenanceTransitionService
                 $this->syncAssignments($locked, array_values($currentTeamIds), $actorId);
             }
 
+            // "รับเรื่อง" makes the technician who pressed it part of the job. Nothing else did: he was not on the team, so the
+            // job page (where he goes next) and every later step were closed to him — and to every other technician.
+            if ($isStatusChange && $locked->status === MR::STATUS_ACCEPTED && $actorId) {
+                $this->joinTeam($locked, $actorId);
+            }
+
             if ($techChanged) {
                 $locked->loadMissing('technician:id,name');
             }
@@ -227,6 +233,35 @@ class MaintenanceTransitionService
                 $as->save();
             }
         }
+    }
+
+    /**
+     * Put a technician on the job (no lead: the person in charge is whoever starts it). Admins and supervisors who accept on
+     * someone's behalf stay supervisors — they can already do everything — and do not become the worker.
+     */
+    protected function joinTeam(MR $req, int $userId): void
+    {
+        $role = User::query()->whereKey($userId)->value('role');
+        if (! in_array($role, User::workerRoles(), true)) {
+            return;
+        }
+
+        $assignment = MaintenanceAssignment::where('maintenance_request_id', $req->id)->where('user_id', $userId)->first();
+        if ($assignment && $assignment->status !== MaintenanceAssignment::STATUS_CANCELLED) {
+            return;
+        }
+
+        MaintenanceAssignment::updateOrCreate(
+            ['maintenance_request_id' => $req->id, 'user_id' => $userId],
+            [
+                'role'            => $role,
+                'is_lead'         => false,
+                'status'          => MaintenanceAssignment::STATUS_IN_PROGRESS,
+                'assigned_at'     => $assignment?->assigned_at ?? now(),
+                'response_status' => MaintenanceAssignment::RESP_ACCEPTED,
+                'responded_at'    => now(),
+            ]
+        );
     }
 
     protected function defaultNoteForStatus(string $status, ?int $actorId, MR $req): string

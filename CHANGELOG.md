@@ -107,6 +107,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   on hold needs one), and answers a refused move with the state map's 409 instead of 422. Also: the `acknowledge` policy now lets
   the worker a job is already assigned to acknowledge it (accept and reject already did; the transition tests relied on it).
   `tests/Feature/RequestStatusPathTest.php` (7 tests).
+- **A technician who pressed "รับเรื่อง" was thrown off the job.** Accepting did not put him on the job's team, and the job page
+  only opens for the reporter, the team and admins — so the redirect after the button went back to the dashboard with "no
+  permission", and so did every other technician (he also could not put it on hold or resolve it later). Accepting now adds the
+  technician who pressed it (admins and supervisors who accept on someone's behalf do not become the worker), and a job that is
+  accepted with nobody on it can be opened by every technician, since every technician may start it (self-dispatch). No test
+  drove the acknowledge / accept / hold / resume / cancel / reject buttons before; `RequestLifecycleEndpointsTest` does.
 
 ### Added
 

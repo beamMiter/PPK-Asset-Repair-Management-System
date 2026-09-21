@@ -61,6 +61,14 @@ class MaintenanceRequestPolicy
         return empty($req->technician_id) || ($user !== null && (int) $req->technician_id === (int) $user->id);
     }
 
+    /** Accepted and nobody is on it yet: every technician may start it (self-dispatch), so every technician may open it. */
+    protected function isOpenForStart(MR $req): bool
+    {
+        return $req->status === MR::STATUS_ACCEPTED
+            && empty($req->technician_id)
+            && ! $req->assignments()->where('status', '!=', MaintenanceAssignment::STATUS_CANCELLED)->exists();
+    }
+
     protected function isOpenForAccept(User $user, MR $req): bool
     {
         if ($req->status !== MR::STATUS_ACKNOWLEDGED) return false;
@@ -81,7 +89,7 @@ class MaintenanceRequestPolicy
         if ($this->isAdminTeam($user)) return Response::allow();
 
         // เจ้าหน้าที่ดูได้กว้างขึ้น (ดูได้เมื่ออยู่ในคิวรอรับทราบ หรือ รอคนมาตอบรับ)
-        if ($this->isWorker($user) && ($this->isOpenForAcknowledge($req, $user) || $this->isOpenForAccept($user, $req))) return Response::allow();
+        if ($this->isWorker($user) && ($this->isOpenForAcknowledge($req, $user) || $this->isOpenForAccept($user, $req) || $this->isOpenForStart($req))) return Response::allow();
 
         // ผู้ที่ถูกมอบหมาย/รับผิดชอบ
         if ($this->isAssignedWorker($user, $req)) return Response::allow();
