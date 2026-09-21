@@ -123,6 +123,15 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   progress, on hold or resolved refuses an empty list (`PUT /api/repair-requests/{id}` with `user_ids: []` too, 422);
   and only working staff (admin, supervisor, technician roles, not suspended) can be picked, also for a hand-made request.
   `RequestAssignmentRulesTest` (7 tests).
+- **An asset stayed "in repair" for good when its request moved away or was deleted, and a deleted request's number was handed
+  out again.** Changing a pending request's asset (the edit form lets the reporter do it) only marked the *new* asset busy; the
+  one it left kept "in repair" although nothing was open on it any more. A deleted (trashed) request kept its asset busy, and
+  `generateLegacyRequestNo()` read the highest number among non-deleted rows, so the next new request got the deleted one's number
+  and failed on the unique key — every new request from then on. The asset it left / deleted is now released when no other open
+  request is on it, a restored request takes its asset again, and numbering counts trashed rows (by the year's prefix rather than
+  a scan of `created_at`). No screen deletes a request today (`DELETE /api/repair-requests/{id}` answers 403 to everybody — the
+  policy has no `delete` method, so the admin bypass is never consulted), so the deletion half is a guard for when something
+  does. `RequestAssetAndNumberingTest` (5 tests).
 
 ### Added
 

@@ -251,8 +251,10 @@ class MaintenanceRequest extends Model
         $type = '10'; // legacy fixed type
 
         // ใช้ MAX(request_no) แทน count() เพื่อป้องกัน race condition
-        $lastNo = static::query()
-            ->whereYear('created_at', now()->year)
+        // withTrashed(): a deleted request keeps its number in the table (unique key), so it must count — otherwise the
+        // next request is given the same number and fails. The prefix (Thai year + type) also starts a new run each year.
+        $lastNo = static::withTrashed()
+            ->where('request_no', 'like', $yy . $type . '%')
             ->lockForUpdate()
             ->max('request_no');
 
@@ -304,12 +306,44 @@ class MaintenanceRequest extends Model
         static::updated(function (self $model) {
             if ($model->isDirty(['status', 'asset_id'])) {
                 $model->syncAssetStatus();
+
+                // moved to another asset: the one it left may have nothing open any more
+                if ($model->isDirty('asset_id') && $model->getOriginal('asset_id')) {
+                    static::releaseAssetIfIdle((int) $model->getOriginal('asset_id'));
+                }
             }
         });
 
+        // A deleted request no longer keeps its asset busy (syncAssetStatus would not free it: it reads the request's own,
+        // unchanged, status) — and a restored one does again.
         static::deleted(function (self $model) {
+            if ($model->asset_id) {
+                static::releaseAssetIfIdle((int) $model->asset_id);
+            }
+        });
+
+        static::restored(function (self $model) {
             $model->syncAssetStatus();
         });
+    }
+
+    /**
+     * Give an asset back ("in repair" → "active") when no open request is left on it. Requests in the trash do not count.
+     */
+    public static function releaseAssetIfIdle(int $assetId): void
+    {
+        $asset = Asset::find($assetId);
+        if (! $asset || $asset->status !== 'in_repair') {
+            return;
+        }
+
+        $busy = static::query()->where('asset_id', $assetId)->whereIn('status', self::OPEN_STATUSES)->exists();
+        if ($busy) {
+            return;
+        }
+
+        $asset->update(['status' => 'active']);
+        \Illuminate\Support\Facades\Log::info('[MaintenanceRequest::releaseAssetIfIdle] Asset restored to active', ['asset_id' => $assetId]);
     }
 
     public function scopeStatus($q, ?string $s)
