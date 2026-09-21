@@ -418,6 +418,24 @@ textarea {
     display: none !important;
 }
 
+/* The clear (×) button that initTomSelect gives every optional select (TomSelect's clear_button plugin). The plugin's CSS places it with
+   `right: max(var(--ts-pr-caret), 8px)`, but the theme defines `--ts-pr-caret: 0` — no unit — so `max(0, 8px)` is invalid, `right`
+   falls back to `auto` and the × sat at the start of the control, on top of the first character of the value (it shows on hover /
+   focus of a field that has a value). Give it a `right` that is valid. */
+.ts-wrapper.single .ts-control > .clear-button {
+    right: .75rem !important;
+    left: auto !important;
+    z-index: 2;
+    padding: .25rem;
+    font-size: 1rem;
+    line-height: 1;
+    color: #94a3b8; /* slate-400, like the search icon */
+}
+
+.ts-wrapper.single .ts-control > .clear-button:hover {
+    color: #475569; /* slate-600 */
+}
+
 .ts-dropdown {
     border-radius: 0.5rem !important;
     border: 1px solid #e2e8f0 !important;

@@ -165,6 +165,16 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the real HIS API is connected. The HIS part is drawn in the colour the HIS number has on the asset table (bold blue,
   `font-semibold text-blue-700`), in the list and in the chosen value: the option carries `data-his` and `initTomSelect` renders
   it apart, while the text stays whole so the search still finds it. `RequestFormAssetOptionTest` (2 tests), `tests/js/layout.test.mjs`.
+- **The clear (×) button sat on top of the first character of the value, and a form's second select never turned yellow.**
+  (1) The × added to optional selects (TomSelect's `clear_button` plugin) is placed by its own CSS with
+  `right: max(var(--ts-pr-caret), 8px)`, but the theme defines `--ts-pr-caret: 0` — no unit — so that declaration is invalid,
+  `right` falls back to `auto`, and the × landed at the start of the control, over the first letter, whenever a field with a value was
+  hovered or focused. `layout.css` now gives it a valid `right`. (2) The "edited field" highlight (yellow border) bound a select
+  through `wrapper.parentElement.querySelector('select')` — the *first* select of the wrapper's parent. TomSelect puts its wrapper
+  next to the select, and the request form keeps the asset and the department in one `<section>`, so the department's wrapper was
+  matched to the asset select (already bound) and skipped: it never turned yellow, and changing it did not count as an unsaved edit
+  either. Selects are now bound one by one, each to its own wrapper (`ts.wrapper`). The JS tests' fake TomSelect now puts its wrapper
+  beside the select like the real one — the old fake wrapped the select, which hid this. Needs `npm run build` in production.
 
 ### Added
 

@@ -57,15 +57,17 @@ export function installDirtyCheck(win) {
                 }
 
                 if (win.TomSelect) {
-                    form.querySelectorAll('.ts-wrapper').forEach((wrapper) => {
-                        const select = wrapper.parentElement.querySelector('select');
-                        if (select?.tomselect && !select.dataset.dirtyTsBound) {
-                            select.dataset.dirtyTsBound = '1';
-                            select.tomselect.on('change', () => {
-                                dirty = true;
-                                wrapper.classList.add('is-dirty-field');
-                            });
-                        }
+                    // Go by select, not by wrapper: TomSelect puts its wrapper right after the select, so a wrapper's parent
+                    // can hold several selects (asset + department share a <section>) and "the first select of the parent"
+                    // was the wrong one for every wrapper but the first — those never turned yellow.
+                    form.querySelectorAll('select').forEach((select) => {
+                        const ts = select.tomselect;
+                        if (!ts || select.dataset.dirtyTsBound) return;
+                        select.dataset.dirtyTsBound = '1';
+                        ts.on('change', () => {
+                            dirty = true;
+                            ts.wrapper.classList.add('is-dirty-field');
+                        });
                     });
                 }
             });

@@ -34,8 +34,7 @@ function appPage(body, world) {
   ref.hidden = el('input', { type: 'hidden', name: '_token' });
   ref.area = el('textarea', { class: 'overflow-hidden' }); ref.area.scrollHeight = 120;
   ref.select = el('select', { class: 'ts-basic' });
-  ref.wrapper = el('div', { class: 'ts-wrapper' }); ref.wrapper.append(ref.select);
-  ref.form = el('form', { method: 'post' }).append(ref.text, ref.hidden, ref.area, ref.wrapper);
+  ref.form = el('form', { method: 'post' }).append(ref.text, ref.hidden, ref.area, ref.select);
   ref.getForm = el('form', { method: 'GET' }).append(ref.getInput = el('input', { type: 'text' }));
   ref.optOut = el('form', { method: 'post', class: 'no-dirty-check' }).append(ref.optOutInput = el('input', { type: 'text' }));
   ref.leave = el('a', { href: '/maintenance/requests' });
@@ -58,7 +57,17 @@ function boot({ mobile = false, storage = {}, extra = {}, page = appPage, confir
   const calls = { confirm: [], dropdowns: [], selects: [], selectOptions: [], errors: [] };
   const world = createWorld({ mobile, storage });
   world.win.bootstrap = { Dropdown: class { static getInstance(el) { return el._dd; } constructor(el, o) { el._dd = this; calls.dropdowns.push([el, o]); } } };
-  world.win.TomSelect = class { constructor(el, options) { el.tomselect = this; this.h = {}; calls.selects.push(el); calls.selectOptions.push(options); } on(t, f) { (this.h[t] ||= []).push(f); } };
+  world.win.TomSelect = class {
+    constructor(el, options) {
+      el.tomselect = this; this.h = {}; calls.selects.push(el); calls.selectOptions.push(options);
+      // like the real one: the wrapper is a sibling inserted right after the <select> (not its parent), so several selects
+      // can share one parent and each has a wrapper of its own
+      this.wrapper = world.el('div', { class: 'ts-wrapper' });
+      const kids = el.parentElement.children;
+      kids.splice(kids.indexOf(el) + 1, 0, this.wrapper); this.wrapper.parentElement = el.parentElement;
+    }
+    on(t, f) { (this.h[t] ||= []).push(f); }
+  };
   world.win.Confirm = { show: async (o) => { calls.confirm.push(o); return confirmAnswer; } };
   world.win.console = { error: (...a) => calls.errors.push(a), log() {}, warn() {} };
   Object.assign(world.win, extra);
@@ -275,8 +284,38 @@ test('a TomSelect change counts as an edit and marks its wrapper', () => {
   const world = boot();
   const r = world.state.ref;
   r.select.tomselect.h.change[0]();
-  assert.ok(r.wrapper.classList.contains('is-dirty-field'));
+  assert.ok(r.select.tomselect.wrapper.classList.contains('is-dirty-field'));
   assert.equal(r.leave.dispatch('click').defaultPrevented, true);
+});
+
+// The request form has the asset and the department selects in ONE <section>. The change hook was looked up as "the first select
+// in the wrapper's parent", which is the asset select for both wrappers: the department was never bound, so it never turned
+// yellow (only the first select of a parent did).
+test('every TomSelect in a form gets its own change hook, even when several share one parent', () => {
+  const world = boot();
+  const page = world.go((body, w) => {
+    const asset = w.el('select', { class: 'ts-basic', name: 'asset_id' });
+    const dept = w.el('select', { class: 'ts-basic', name: 'department_id' });
+    const type = w.el('select', { class: 'ts-basic', name: 'type_id' });
+    const link = w.el('a', { href: '/elsewhere' });
+    const form = w.el('form', { method: 'post' }).append(w.el('section').append(asset).append(dept), w.el('section').append(type), link);
+    body.append(w.el('div', { id: 'layout' }).append(form));
+    return { asset, dept, type, link };
+  });
+
+  for (const sel of [page.asset, page.dept, page.type]) {
+    assert.equal(sel.tomselect.h.change.length, 1, 'one hook each');
+    assert.ok(!sel.tomselect.wrapper.classList.contains('is-dirty-field'), 'clean at the start');
+  }
+
+  page.dept.tomselect.h.change[0]();
+  assert.ok(page.dept.tomselect.wrapper.classList.contains('is-dirty-field'), 'the department turns yellow');
+  assert.ok(!page.asset.tomselect.wrapper.classList.contains('is-dirty-field'), 'and only it');
+  assert.ok(!page.type.tomselect.wrapper.classList.contains('is-dirty-field'));
+  assert.equal(page.link.dispatch('click').defaultPrevented, true, 'and it counts as an edit');
+
+  world.fireDocument('turbo:load');   // the page-load step runs again: nothing is bound twice
+  assert.equal(page.dept.tomselect.h.change.length, 1);
 });
 
 test('without the confirm dialog the browser confirm() is used', () => {
