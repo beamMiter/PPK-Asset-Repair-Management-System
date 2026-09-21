@@ -93,6 +93,20 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Escape` now closes the toasts on screen at any time (it used to work only if it was the very first key pressed, because each
   toast registered a `{ once: true }` listener), and two declarations that were a truncated `text-shadow` and never applied are
   gone. `tests/js/toast.test.mjs` (17 tests).
+- **A job's status moves one way only — through the transition service, after the permission of that step's button.**
+  `PUT /maintenance/requests/{id}` / `PUT /api/repair-requests/{id}` accept a `status` from the team and used to save it into
+  the row *before* the service looked at it, so the service saw "no change" and checked nothing: the state map, the
+  reporter-approves rule, the SLA pause and the history were all skipped. An assigned technician could send `status=closed`
+  and close an in-progress job (no `resolved_at`, no approval by the reporter), an admin could reopen a closed job
+  (`closed → pending`, history "pending → pending", nobody recorded), resuming from hold left `paused_duration_minutes` at 0 and
+  the SLA deadline where it was, and a reporter could cancel a pending job the cancel button refuses. Now a `status` change
+  needs `MaintenanceRequestPolicy::moveTo` (the same rule as the button for that step) and then goes through
+  `applyTransition` (an illegal move = 409 and the rest of the edit is not saved). `POST /api/repair-requests/{id}/transition`
+  had the same gap — any assigned worker could do any step, incl. closing a job for the reporter — and asks `moveTo` too. The
+  edit form of the web UI has no status field, so no page changes. `PUT` also takes an optional `note` (the reason for the move;
+  on hold needs one), and answers a refused move with the state map's 409 instead of 422. Also: the `acknowledge` policy now lets
+  the worker a job is already assigned to acknowledge it (accept and reject already did; the transition tests relied on it).
+  `tests/Feature/RequestStatusPathTest.php` (7 tests).
 
 ### Added
 

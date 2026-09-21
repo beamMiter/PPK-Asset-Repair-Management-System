@@ -112,7 +112,10 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         // PUT /api/repair-requests/{req} — แก้ไขใบงาน · Gate 'update': admin/supervisor เสมอ · ผู้ที่ถูกมอบหมายเมื่อ
         //   accepted/in_progress/on_hold · ผู้แจ้งเมื่อยัง pending/acknowledged และยังไม่มีผู้รับผิดชอบ
         //   ใบงานที่จบแล้ว (resolved/closed/cancelled/rejected) แก้ไม่ได้ ยกเว้น admin/supervisor
-        //   ฟิลด์แยกตามบทบาท: ทีมงานเท่านั้นที่ส่ง technician_id / user_ids (ทีม) / สถานะใดก็ได้ ผู้แจ้งส่ง status ได้แค่ cancelled
+        //   ฟิลด์แยกตามบทบาท: ทีมงานเท่านั้นที่ส่ง technician_id / user_ids (ทีม) / status
+        //   status = การเปลี่ยนสถานะจริง (เหมือน POST …/transition): ต้องมีสิทธิ์ของขั้นนั้นเท่ากับปุ่ม (เช่น closed = ผู้แจ้ง/admin,
+        //   ผู้แจ้งยกเลิกใบ pending ไม่ได้ → 403) แล้วผ่านตาราง ALLOWED_TRANSITIONS (ผิดกติกา = 409 และไม่บันทึกอะไรเลย)
+        //   note? = เหตุผลของการเปลี่ยนสถานะ (on_hold ต้องมี)
         Route::put('/{req}',              [MaintenanceRequestController::class, 'update'])->name('update');
 
         // DELETE /api/repair-requests/{req} — soft delete + บันทึก log delete_request → 200 {deleted:true, toast}
@@ -121,7 +124,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
         // POST /api/repair-requests/{req}/transition   body: status*, note?, technician_id?
         //   เปลี่ยนสถานะตาม MaintenanceRequest::ALLOWED_TRANSITIONS · Gate 'transition': admin/supervisor หรือผู้ที่ถูกมอบหมาย
-        //   เท่านั้น (ผู้อื่น 403) · ข้อมูลไม่ถูกต้อง = 422 · ย้ายสถานะผิดกติกา/ขาดเหตุผลที่ต้องระบุ = 409
+        //   เท่านั้น (ผู้อื่น 403) และต้องมีสิทธิ์ของขั้นนั้นเท่ากับปุ่ม (เช่น closed = ผู้แจ้ง/admin; ช่างในทีมปิดงานแทนผู้แจ้งไม่ได้ → 403)
+        //   · ข้อมูลไม่ถูกต้อง = 422 · ย้ายสถานะผิดกติกา/ขาดเหตุผลที่ต้องระบุ = 409
         Route::post('/{req}/transition',  [MaintenanceTransitionController::class, 'transition'])->name('transition');
 
         // GET /api/repair-requests/{req}/logs — ประวัติการเปลี่ยนแปลง ใหม่→เก่า 20 รายการ/หน้า (paginator ตรงๆ) · Gate 'view'

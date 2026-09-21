@@ -53,9 +53,12 @@ class MaintenanceRequestPolicy
             ->exists();
     }
 
-    protected function isOpenForAcknowledge(MR $req): bool
+    protected function isOpenForAcknowledge(MR $req, ?User $user = null): bool
     {
-        return empty($req->technician_id) && $req->status === MR::STATUS_PENDING;
+        if ($req->status !== MR::STATUS_PENDING) return false;
+
+        // nobody owns it yet — or it is already this worker's (accept / reject below say the same)
+        return empty($req->technician_id) || ($user !== null && (int) $req->technician_id === (int) $user->id);
     }
 
     protected function isOpenForAccept(User $user, MR $req): bool
@@ -78,7 +81,7 @@ class MaintenanceRequestPolicy
         if ($this->isAdminTeam($user)) return Response::allow();
 
         // เจ้าหน้าที่ดูได้กว้างขึ้น (ดูได้เมื่ออยู่ในคิวรอรับทราบ หรือ รอคนมาตอบรับ)
-        if ($this->isWorker($user) && ($this->isOpenForAcknowledge($req) || $this->isOpenForAccept($user, $req))) return Response::allow();
+        if ($this->isWorker($user) && ($this->isOpenForAcknowledge($req, $user) || $this->isOpenForAccept($user, $req))) return Response::allow();
 
         // ผู้ที่ถูกมอบหมาย/รับผิดชอบ
         if ($this->isAssignedWorker($user, $req)) return Response::allow();
@@ -127,6 +130,30 @@ class MaintenanceRequestPolicy
         return Response::deny('อนุญาตให้เปลี่ยนสถานะเฉพาะผู้รับผิดชอบงานนี้หรือผู้ดูแลระบบเท่านั้น');
     }
 
+    /**
+     * moveTo — may $user move $req to $target? Exactly what the button for that step asks, so the generic transition
+     * endpoint and `PUT … status` cannot do what the buttons refuse: a technician closing a job on the reporter's behalf,
+     * a job jumping from in_progress to closed, a reporter cancelling a pending request. Whether the step exists at all is
+     * still the transition map's call (409).
+     */
+    public function moveTo(User $user, MR $req, string $target): Response
+    {
+        $ability = match ($target) {
+            MR::STATUS_ACKNOWLEDGED => 'acknowledge',
+            MR::STATUS_ACCEPTED     => 'accept',
+            MR::STATUS_IN_PROGRESS  => $req->status === MR::STATUS_ON_HOLD ? 'resume' : 'startWork',
+            MR::STATUS_ON_HOLD      => 'hold',
+            MR::STATUS_RESOLVED     => 'resolve',
+            MR::STATUS_CLOSED       => 'close',
+            MR::STATUS_CANCELLED    => 'cancel',
+            MR::STATUS_REJECTED     => 'reject',
+            default                 => null,
+        };
+
+        // `pending` and the legacy `completed` are reachable from no status: the transition map refuses them for everybody
+        return $ability === null ? Response::allow() : $this->{$ability}($user, $req);
+    }
+
     // acknowledge
     public function acknowledge(User $user, MR $req): Response
     {
@@ -134,7 +161,7 @@ class MaintenanceRequestPolicy
 
         if (!$this->isWorker($user)) return Response::deny('เฉพาะเจ้าหน้าที่เท่านั้น');
 
-        if ($this->isOpenForAcknowledge($req)) return Response::allow();
+        if ($this->isOpenForAcknowledge($req, $user)) return Response::allow();
 
         return Response::deny('งานนี้ไม่อยู่ในสถานะที่รับทราบได้');
     }

@@ -113,13 +113,8 @@ class MaintenanceRequestService
             }
 
             if (!$isTeam) {
-                if (($data['status'] ?? null) === MR::STATUS_CANCELLED) {
-                    if (!in_array($req->status, [MR::STATUS_PENDING, MR::STATUS_ACCEPTED], true) || !empty($req->technician_id)) {
-                        unset($data['status']);
-                    }
-                } else {
-                    unset($data['status']);
-                }
+                // a reporter cancels with the cancel button (the policy for `moveTo` refuses it here), never with an edit
+                unset($data['status']);
 
                 if (array_key_exists('type_id', $data) && !($req->status === MR::STATUS_PENDING && empty($req->technician_id))) {
                     unset($data['type_id']);
@@ -148,9 +143,16 @@ class MaintenanceRequestService
                 $forceUpdateTeam = false;
             }
 
+            // The status is never written by fill(): moving a job is a transition, and the state map, the times, the paused
+            // time and the history all live in applyTransition(). (It used to be saved here first, so by the time the service
+            // looked it saw "no change" and checked nothing.)
+            $targetStatus = $data['status'] ?? null;
+            $note         = $data['note'] ?? null;
+            unset($data['status'], $data['note']);
+
             $req->fill($data);
 
-            if ($isTeam && ($data['status'] ?? null) === MR::STATUS_ACCEPTED && empty($req->technician_id) && $actorId) {
+            if ($isTeam && $targetStatus === MR::STATUS_ACCEPTED && empty($req->technician_id) && $actorId) {
                 $req->technician_id = $actorId;
                 $incomingTechId     = $actorId;
             }
@@ -158,17 +160,14 @@ class MaintenanceRequestService
             $req->save();
 
             $techChanged   = $isTeam && $originalTechId !== $incomingTechId;
-            $statusChanged = array_key_exists('status', $data) && $originalStatus !== $req->status;
+            $statusChanged = $targetStatus !== null && $targetStatus !== $originalStatus;
 
             // Handle transition logs & assignments if status or tech changed
             if ($statusChanged || $techChanged) {
-                $transitionData = ['status' => $req->status];
+                $transitionData = ['status' => $statusChanged ? $targetStatus : $originalStatus];
                 if ($techChanged) $transitionData['technician_id'] = $incomingTechId;
-                
-                // Rollback status temporally for TransitionService to detect the change properly
-                $req->status = $originalStatus;
-                $req->technician_id = $originalTechId;
-                
+                if (!empty($note)) $transitionData['note'] = $note;
+
                 $this->transitionService->applyTransition($req, $transitionData, $actorId);
             } elseif ($forceUpdateTeam) {
                 $this->transitionService->syncAssignments($req, $incomingUserIds ?: [], $actorId);

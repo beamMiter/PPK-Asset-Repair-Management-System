@@ -268,6 +268,7 @@ class MaintenanceRequestController extends Controller
             'status' => $isTeam
                 ? ['nullable', \Illuminate\Validation\Rule::in(['pending', 'acknowledged', 'accepted', 'in_progress', 'on_hold', 'resolved', 'closed', 'cancelled', 'rejected'])]
                 : ['nullable', \Illuminate\Validation\Rule::in(['cancelled'])],
+            'note'            => ['nullable', 'string', 'max:2000'], // the reason / remark that goes with a `status` change (required for on_hold)
             'operation_date'   => ['nullable', 'date'],
             'operation_method' => ['nullable', \Illuminate\Validation\Rule::in(['requisition', 'service_fee', 'other'])],
             'property_code'    => ['nullable', 'string', 'max:100'],
@@ -291,10 +292,18 @@ class MaintenanceRequestController extends Controller
                 ->with('toast', \App\Support\Toast::warning($validator->errors()->first(), 3000));
         }
 
+        $validated = $validator->validated();
+
+        // a status change is a transition: it needs the permission of the button for that step (the state map is checked
+        // when it is applied, in the service)
+        if (! empty($validated['status']) && $validated['status'] !== $req->status) {
+            Gate::authorize('moveTo', [$req, $validated['status']]);
+        }
+
         try {
             $req = $service->updateRequest(
                 $req,
-                $validator->validated(),
+                $validated,
                 $user,
                 $request->file('files') ?? [],
                 $request->input('captions') ?? [],
@@ -313,7 +322,10 @@ class MaintenanceRequestController extends Controller
 
         } catch (\Exception $e) {
             if ($request->expectsJson()) {
-                return response()->json(['message' => $e->getMessage()], 422);
+                // a refused status move is the state map's abort(409), as on the transition endpoint
+                $code = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface ? $e->getStatusCode() : 422;
+
+                return response()->json(['message' => $e->getMessage()], $code);
             }
             return redirect()->back()
                 ->withInput()

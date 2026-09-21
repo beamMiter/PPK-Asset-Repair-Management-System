@@ -52,6 +52,12 @@ class MaintenanceTransitionController extends Controller
             return $this->respondWithToast($request, Toast::warning($msg, 2200), redirect()->back()->withErrors($validator)->withInput(), ['errors' => $validator->errors()], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        // being on the job is not enough: each step asks what its own button asks (only the reporter approves, …)
+        $target = $validator->validated()['status'] ?? null;
+        if ($target && $target !== $req->status) {
+            Gate::authorize('moveTo', [$req, $target]);
+        }
+
         try {
             $this->transitionService->applyTransition($req, $validator->validated(), $actorId);
             return $this->respondWithToast($request, Toast::success('อัปเดตสถานะใบงานเรียบร้อยแล้ว', 1800), redirect()->route('maintenance.requests.show', $req->id), ['data' => $req->fresh(['technician', 'assignments.user'])]);
