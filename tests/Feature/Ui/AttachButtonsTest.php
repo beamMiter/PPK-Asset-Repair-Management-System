@@ -105,6 +105,39 @@ class AttachButtonsTest extends TestCase
         }
     }
 
+    public function test_on_the_job_page_the_icons_sit_top_right_of_the_files_section_like_the_assign_icon(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $reporter = User::factory()->create(['role' => 'member']);
+        $req = MaintenanceRequest::factory()->create([
+            'asset_id' => Asset::factory()->create()->id, 'reporter_id' => $reporter->id, 'technician_id' => null, 'status' => 'in_progress',
+        ]);
+
+        $html = $this->actingAs($admin)->get(route('maintenance.requests.show', $req))->assertOk()->getContent();
+        $xp = $this->xpath($html);
+
+        foreach (['mr_files_any_btn', 'mr_files_camera_btn'] as $id) {
+            // in the header of the section (its first block, the one with the title), not down in the upload form
+            $header = $xp->query('//*[@id="'.$id.'"]/ancestor::section[1]/div[1]')->item(0);
+            $this->assertNotNull($header, "#$id sits in a section");
+            $this->assertStringContainsString('ไฟล์แนบ', $header->textContent, "#$id is in the header of the files section");
+            $this->assertSame(0, $xp->query('//*[@id="'.$id.'"]/ancestor::form')->length, "#$id is not inside the upload form");
+
+            // ...on the right: the last block of the header, after the title (the same place as the assign icon of section 5)
+            $this->assertSame(
+                1,
+                $xp->query('//*[@id="'.$id.'"]/ancestor::div[contains(@class,"justify-between")][1]/div[last()]//*[@id="'.$id.'"]')->length,
+                "#$id is the right-hand block of the header"
+            );
+        }
+
+        // the header shows them only to someone who may attach: a reporter after the job is closed may not
+        $req->forceFill(['status' => 'closed'])->saveQuietly();
+        $closed = $this->actingAs($reporter)->get(route('maintenance.requests.show', $req))->assertOk()->getContent();
+        $this->assertNull($this->element($closed, 'mr_files_any_btn'), 'no paperclip when attaching is not allowed');
+        $this->assertNull($this->element($closed, 'mr_files_camera_btn'), 'no camera when attaching is not allowed');
+    }
+
     public function test_the_job_page_offers_the_upload_only_once_files_are_chosen(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

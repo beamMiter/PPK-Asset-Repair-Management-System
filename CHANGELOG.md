@@ -188,6 +188,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   underneath, so the keyboard and screen readers work, and each says what it is on hover (`title`) and to a screen reader (`aria-label`);
   the ids their scripts bind are unchanged. On the job page the upload button ("แนบไฟล์") moved into the "ไฟล์ที่เลือก" box, which is
   hidden until a file is chosen: with nothing to upload there is no button. `tests/Feature/Ui/AttachButtonsTest.php`.
+- **Job page: the paperclip and camera sit top right, and "assign the team" is a bare icon too.** The two file icons used to be a row
+  inside the "ไฟล์แนบ" section; they are now the right-hand end of that section's header, in the corner where "มอบหมายทีมเจ้าหน้าที่"
+  sits in the section below (and only for someone who may attach). That green text button is now a bare `group_add` icon in the same
+  style (`ghost`, `icon-lg`; `title` and `aria-label` "มอบหมายทีมเจ้าหน้าที่", same id, so the dialog opens as before), on the job page
+  and on the edit page. Both section headers stay on one row on a phone (the text button used to drop under the title). The request
+  form and the asset form keep their icons beside their hint text. `AttachButtonsTest`, `tests/Feature/Ui/AssignIconTest.php`.
 - **The × on the picture of the asset form did nothing.** A hidden, never-shown "ล้างรูปภาพ" button had the same id
   (`hero_image_remove_btn`) as the round × on the preview and came first in the page, so the script bound "remove picture" to the
   button nobody could see. The dead button is gone; the × is the only element with the id.

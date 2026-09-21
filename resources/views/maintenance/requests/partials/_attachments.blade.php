@@ -1,11 +1,20 @@
 <section class="flex flex-col">
-    <div class="{{ $headCls }}">
-        <div class="{{ $noCls }}">4</div>
-        <div class="{{ $accentWrap }}">
-            <span class="{{ $accentBar }}"></span>
-            <div class="{{ $titleCls }}">ไฟล์แนบ</div>
-            <div class="{{ $subCls }}">รูป / เอกสารประกอบ</div>
+    <div class="flex items-start justify-between gap-4 {{ $headCls }}">
+        <div class="flex items-start gap-3 min-w-0">
+            <div class="{{ $noCls }}">4</div>
+            <div class="{{ $accentWrap }}">
+                <span class="{{ $accentBar }}"></span>
+                <div class="{{ $titleCls }}">ไฟล์แนบ</div>
+                <div class="{{ $subCls }}">รูป / เอกสารประกอบ</div>
+            </div>
         </div>
+
+        {{-- paperclip + camera: top right of the section, where the assign-staff icon of section 5 sits (-mt-1 puts the 40px icon's centre on the centre of the number circle) --}}
+        @can('attach', $req)
+            <div class="flex items-center gap-1 shrink-0 -mt-1">
+                <x-ui.attach-buttons any="mr_files_any_btn" camera="mr_files_camera_btn" any-label="เลือกไฟล์เพิ่ม" />
+            </div>
+        @endcan
     </div>
 
     <div>
@@ -17,11 +26,7 @@
             <input id="mr_files_any" type="file" multiple accept="image/*,application/pdf" class="hidden">
             <input id="mr_files_camera" type="file" accept="image/*" capture="environment" class="hidden">
 
-            <div class="flex items-center gap-2">
-                <x-ui.attach-buttons any="mr_files_any_btn" camera="mr_files_camera_btn" any-label="เลือกไฟล์เพิ่ม" />
-            </div>
-
-            <div class="mt-3 p-3 rounded-md bg-amber-50 border border-amber-200">
+            <div class="p-3 rounded-md bg-amber-50 border border-amber-200">
                 <div class="flex gap-2">
                     <svg class="h-5 w-5 text-amber-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2">
