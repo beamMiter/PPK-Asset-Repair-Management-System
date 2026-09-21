@@ -5,11 +5,13 @@ import SignaturePad from 'signature_pad'
 window.SignaturePad = SignaturePad
 import './sidebar-intro';
 import { installToast } from './toast';
+import { installImageFallback } from './image-fallback';
 import './bootstrap';
 import './repair/my-jobs';
 import './repair/dashboard';
 
 installToast(); // window.showToast, the `app:toast` event and the flashed session toast — once per session
+installImageFallback(); // a picture that will not load shows a "no picture" placeholder, not the browser's broken-image icon
 
 // Initialize Alpine.js globally for Blade components using x-data/x-show
 window.Alpine = Alpine
