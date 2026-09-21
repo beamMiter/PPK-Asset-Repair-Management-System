@@ -152,13 +152,15 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the edit and the new-request form, and the assign dialog; they are logged and replaced by a plain message (our own refusals —
   409s, "asset already disposed" — still show). A repeated move to the status a job is already in (a double click that got past
   the gate) wrote an "in progress → in progress" history row; it is now refused with 409. `RequestLifecycleHygieneTest` (7 tests).
-- **"— ไม่ระบุ —" stayed in the select fields as if it were the value.** Every form select that TomSelect wraps
+- **The default of a select ("— ไม่ระบุ —") stayed in the field like text you had typed.** Every form select that TomSelect wraps
   (`select.ts-basic` / `.ts-department`: the asset, department and type of the request form, the asset form, the user form, the
-  job-type select of My Jobs) had `allowEmptyOption: true`, which made the empty option a chosen value — its words sat in the field,
-  and stayed there while you typed to search. The empty option is now the placeholder (grey, gone as soon as you type; the field's
-  `data-placeholder`, else the words of the empty option, else "— ไม่ระบุ —"). Going back to "not specified" is the first row of
-  the list — the empty option, as it always was — and choosing it clears the field (a `required` select has no such row); there is
-  no button inside the field. `tests/js/layout.test.mjs`. Needs `npm run build` in production.
+  job-type select of My Jobs) showed its empty option as an ordinary value, in the same colour, and it stayed there while you
+  typed to search. It is still the default value — a real option, so picking it from the list gives "ไม่ระบุ" back, and the first
+  row of the list, set apart by a hairline — but it is drawn like a placeholder: muted grey in the field and in the list, and
+  hidden the moment you type (`is-typing` on the wrapper, set from the text box's own `input` event — TomSelect's `type` event
+  waits 300 ms), back when the text is deleted, the list closes or a value is picked. No button inside the field. Checked against
+  the real TomSelect (row order, the submitted value, one `change` per pick). `tests/js/layout.test.mjs`, `LayoutScriptsTest`.
+  Needs `npm run build` in production.
 - **The asset picker of the request form could not be searched by HIS number.** It searches the option text, which was only
   "code - name"; the HIS registry number (รหัสทะเบียน รพจ) is now part of it — `AST-001 - name (รพจ. 6500123)`, not repeated when it
   is the asset code itself (an asset registered from HIS takes the number as its code). The list is still the assets registered in
@@ -172,10 +174,6 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   wrapper was matched to the asset select (already bound) and skipped: it never turned yellow, and changing it did not count as an
   unsaved edit either. Selects are now bound one by one, each to its own wrapper (`ts.wrapper`). The JS tests' fake TomSelect now
   puts its wrapper beside the select like the real one — the old fake wrapped the select, which hid this.
-- **No × inside the select fields.** A clear (×) button had been added to optional selects (TomSelect's `clear_button` plugin) to
-  get back to "not specified" once the empty option stopped being a value; nobody asked for it, and its own CSS
-  (`right: max(var(--ts-pr-caret), 8px)` with the theme's unit-less `--ts-pr-caret: 0`) put it on top of the first letter of the
-  value. It is gone; the way back is the first row of the list (see above), and the row is checked against the real TomSelect.
 
 ### Added
 

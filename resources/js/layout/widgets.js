@@ -10,10 +10,6 @@ export function initDropdowns(win) {
     });
 }
 
-// The first row of the list of an optional select: the words of its empty option ("— ไม่ระบุ —"). It is a way out, never a value:
-// choosing it clears the field, which then shows its placeholder again.
-const NONE = '__none__';
-
 // The colour the HIS number (เลข รพจ) has on the asset table (assets/index): bold blue.
 const HIS_CLASS = 'text-blue-700 font-semibold';
 
@@ -31,33 +27,40 @@ function renderWithHis(data, escape) {
     return `<div>${escape(text)}</div>`;
 }
 
+/** While the text box has text in it the default ("ไม่ระบุ") value is hidden (layout.css: `.is-typing`), so it never sits in the way. */
+function setTyping(ts, typing) {
+    if (typing) ts.wrapper.classList.add('is-typing');
+    else ts.wrapper.classList.remove('is-typing');
+}
+
 export function initTomSelect(win, root) {
     if (!win.TomSelect) return;
     (root || win.document).querySelectorAll('select.ts-basic, select.ts-department').forEach((el) => {
         if (el.tomselect) return;
 
-        // The empty option of a form select ("— ไม่ระบุ —") means "nothing chosen": it is the placeholder — grey, and gone as soon
-        // as you type — not a chosen value. (`allowEmptyOption: true` made TomSelect show its words as if they were the value,
-        // and they stayed in the field while you searched.) Getting back to "not specified" is a first row of the list — the
-        // empty option, as it always was — not a button inside the field.
+        // The empty option of a form select ("— ไม่ระบุ —") is its default value: a real option, so picking it from the list gives
+        // "not specified" back. It is drawn like a placeholder (muted — layout.css), it is the first row of the list, and it steps
+        // aside while you type to search (`is-typing` on the wrapper) — it used to stay in the field as if it were what you typed.
         const emptyOption = el.querySelector('option[value=""]');
         const emptyLabel = emptyOption ? String(emptyOption.textContent || '').trim() : '';
         const placeholder = el.getAttribute('data-placeholder') || el.getAttribute('placeholder') || emptyLabel || '— ไม่ระบุ —';
-        const required = el.required || el.hasAttribute('required');
+        if (emptyOption) emptyOption.dataset.noneFirst = '0'; // TomSelect reads data-* of an <option> as its data: sorts it first
 
         new win.TomSelect(el, {
             create: false,
+            allowEmptyOption: true,
             maxOptions: 2000,
             sortField: [{ field: 'noneFirst', direction: 'asc' }, { field: 'text', direction: 'asc' }],
             placeholder,
             searchField: ['text'],
             ...(el.querySelector('option[data-his]') ? { render: { option: renderWithHis, item: renderWithHis } } : {}),
             onInitialize() {
-                if (emptyOption && !required) this.addOption({ value: NONE, text: emptyLabel || placeholder, noneFirst: 0 });
+                // on the text box's own `input` event, not TomSelect's `type` (which waits 300 ms): the words go the moment you type
+                this.control_input.addEventListener('input', () => setTyping(this, this.control_input.value !== ''));
             },
-            onItemAdd(value) {
-                if (value === NONE) this.clear();
-            },
+            onBlur() { setTyping(this, false); },
+            onDropdownClose() { setTyping(this, false); },
+            onItemAdd() { setTyping(this, false); },
         });
     });
 }

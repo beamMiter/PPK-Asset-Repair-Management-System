@@ -418,6 +418,26 @@ textarea {
     display: none !important;
 }
 
+/* "ไม่ระบุ" — the empty option of a select — is the default value. It reads like a placeholder: muted, in the field and in the
+   list (where it is the first row, set apart by a hairline), and out of the way while you type to search (`is-typing`, set by
+   initTomSelect) so it never stays in the field as if it were what you typed. */
+.ts-wrapper.single .ts-control > .item[data-value=""] {
+    color: #94a3b8 !important; /* slate-400, like the search icon */
+}
+
+.ts-wrapper.single.is-typing .ts-control > .item[data-value=""] {
+    display: none !important;
+}
+
+.ts-dropdown .option[data-value=""] {
+    color: #94a3b8;
+    border-bottom: 1px solid #f1f5f9; /* slate-100 */
+}
+
+.ts-dropdown .option.active[data-value=""] {
+    color: #047857; /* the hover green, like every other row */
+}
+
 .ts-dropdown {
     border-radius: 0.5rem !important;
     border: 1px solid #e2e8f0 !important;

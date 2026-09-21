@@ -265,4 +265,19 @@ class LayoutScriptsTest extends TestCase
         $this->assertStringContainsString('navbar-pinwheel', $html, 'the bar is still rendered');
         $this->assertStringNotContainsString('.navbar-pinwheel {', $html, 'and its rules are not repeated inline on every page');
     }
+
+    /**
+     * "ไม่ระบุ" — the empty option of a select — is its default value and reads like a placeholder: muted in the field and in the list,
+     * and hidden while you type (`is-typing`, set by initTomSelect from the text box's `input` event). The CSS is the half of that
+     * a JS test cannot see.
+     */
+    public function test_the_default_value_of_a_select_is_drawn_like_a_placeholder(): void
+    {
+        $css = file_get_contents(resource_path('css/layout.css'));
+
+        $this->assertMatchesRegularExpression('/\.ts-wrapper\.single\s+\.ts-control\s*>\s*\.item\[data-value=""\]\s*\{[^}]*color:\s*#94a3b8/s', $css, 'muted in the field');
+        $this->assertMatchesRegularExpression('/\.ts-wrapper\.single\.is-typing\s+\.ts-control\s*>\s*\.item\[data-value=""\]\s*\{[^}]*display:\s*none/s', $css, 'hidden while you type');
+        $this->assertMatchesRegularExpression('/\.ts-dropdown\s+\.option\[data-value=""\]\s*\{[^}]*color:\s*#94a3b8/s', $css, 'muted in the list');
+        $this->assertStringNotContainsString('clear-button', $css, 'no × inside the field');
+    }
 }

@@ -342,11 +342,10 @@ test('textareas grow to their content, selects get TomSelect with a placeholder,
   assert.equal(world.calls.selects[1], custom.s);
 });
 
-// The empty option of a form select ("— ไม่ระบุ —") means "nothing chosen". `allowEmptyOption: true` made TomSelect treat it as a
-// chosen value, so its words stayed in the field like real text (and stayed when you typed to search). It has to be the
-// placeholder — grey, and gone as soon as you type. Getting back to "not specified" is a first row of the list (as it always was),
-// not a × inside the field: choosing that row clears the field, which then shows its placeholder again.
-test('an empty option is a placeholder, not a chosen value; a first row of the list takes a value back — no clear button', () => {
+// The empty option of a form select ("— ไม่ระบุ —") is its default value. It is a real, selectable option (so picking it from the list
+// gives "ไม่ระบุ" back), it is the first row of the list, it is drawn like a placeholder (muted — layout.css) and it steps aside
+// while you type to search (`is-typing` on the wrapper), so it never stays in the way of what you type.
+test('the empty option is the default value: selectable, first in the list, and out of the way while you type', () => {
   const world = boot();
   const page = world.go((body, w) => {
     const emptyOption = (text) => { const o = w.el('option', { value: '' }); o.textContent = text; return o; };
@@ -354,44 +353,41 @@ test('an empty option is a placeholder, not a chosen value; a first row of the l
     const named = w.el('select', { class: 'ts-basic', 'data-placeholder': '— เลือกทรัพย์สิน —' }); named.append(emptyOption('— ไม่ระบุ —'));
     const fromOption = w.el('select', { class: 'ts-basic' }); fromOption.append(emptyOption('— เลือกหมวดหมู่ —'));
     const bare = w.el('select', { class: 'ts-basic' });
-    const must = w.el('select', { class: 'ts-basic', required: '' }); must.append(emptyOption('— เลือกบทบาท —'));
 
-    body.append(w.el('div', { id: 'layout' }).append(named).append(fromOption).append(bare).append(must));
-    return { named, fromOption, bare, must };
+    const box = w.el('input', { type: 'text' }); // stands for the text box TomSelect puts in the control
+    body.append(w.el('div', { id: 'layout' }).append(named).append(fromOption).append(bare).append(box));
+    return { named, fromOption, bare, box };
   });
   const opt = (sel) => world.calls.selectOptions[world.calls.selects.indexOf(sel)];
-  // what TomSelect does with the callbacks: onInitialize once the widget is built, onItemAdd for every chosen row
-  const run = (sel) => {
-    const seen = { added: [], cleared: 0 };
-    const ts = { addOption: (o) => seen.added.push(o), clear: () => { seen.cleared++; } };
-    opt(sel).onInitialize.call(ts);
-    return { seen, choose: (value) => opt(sel).onItemAdd.call(ts, value) };
-  };
 
-  for (const sel of [page.named, page.fromOption, page.bare, page.must]) {
-    assert.notEqual(opt(sel).allowEmptyOption, true, 'the empty option is not a value to display');
+  for (const sel of [page.named, page.fromOption, page.bare]) {
+    assert.equal(opt(sel).allowEmptyOption, true, 'the empty option is a real option: picking it gives "not specified" back');
     assert.equal(opt(sel).plugins, undefined, 'no clear (×) button inside the field');
+    assert.equal(opt(sel).sortField[0].field, 'noneFirst', 'sorted before the alphabetical rest');
   }
+  assert.equal(page.named.children[0].dataset.noneFirst, '0', 'TomSelect reads data-* of the option as its data: this is what sorts it first');
+  assert.equal(page.fromOption.children[0].dataset.noneFirst, '0');
 
   assert.equal(opt(page.named).placeholder, '— เลือกทรัพย์สิน —', 'data-placeholder wins');
   assert.equal(opt(page.fromOption).placeholder, '— เลือกหมวดหมู่ —', 'else the words of the empty option');
   assert.equal(opt(page.bare).placeholder, '— ไม่ระบุ —', 'else the default');
 
-  // an optional select with an empty option gets that option back as the first row of the list
-  const named = run(page.named);
-  assert.equal(named.seen.added.length, 1);
-  assert.equal(named.seen.added[0].text, '— ไม่ระบุ —', 'the words of its empty option');
-  assert.equal(named.seen.added[0].value, '__none__');
-  assert.equal(opt(page.named).sortField[0].field, 'noneFirst', 'sorted before the alphabetical rest');
-  assert.equal(named.seen.added[0].noneFirst, 0);
-  named.choose('42');
-  assert.equal(named.seen.cleared, 0, 'a real value stays');
-  named.choose('__none__');
-  assert.equal(named.seen.cleared, 1, 'the row is a way out: choosing it clears the field, it is never a value');
-
-  assert.equal(run(page.fromOption).seen.added[0].text, '— เลือกหมวดหมู่ —');
-  assert.equal(run(page.bare).seen.added.length, 0, 'nothing to go back to when there is no empty option');
-  assert.equal(run(page.must).seen.added.length, 0, 'and a required field cannot be emptied');
+  // typing hides it at once (CSS: .is-typing .item[data-value=""]) — on the text box's own `input` event: TomSelect's `type` event
+  // waits 300 ms (refreshThrottle), long enough to see the words sitting next to the first letter. It is back as soon as the text is
+  // deleted, the list closes, the field loses focus or something is picked.
+  const cfg = opt(page.named);
+  const input = page.box;
+  const ts = { wrapper: page.named.tomselect.wrapper, control_input: input };
+  const typing = () => ts.wrapper.classList.contains('is-typing');
+  const type = (text) => { input.value = text; input.dispatch('input'); };
+  cfg.onInitialize.call(ts);
+  type('ad');  assert.equal(typing(), true);
+  type('');    assert.equal(typing(), false, 'the text was deleted again');
+  for (const hook of ['onBlur', 'onDropdownClose', 'onItemAdd']) {
+    type('ad'); assert.equal(typing(), true);
+    cfg[hook].call(ts); assert.equal(typing(), false, `${hook} brings it back`);
+  }
+  assert.equal(cfg.onType, undefined, 'no reliance on the throttled `type` event');
 });
 
 // The asset options carry their HIS number ("AST-001 - name (รพจ. 6500123)", `data-his` on the <option>). The text stays whole — that is
