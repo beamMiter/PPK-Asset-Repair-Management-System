@@ -19,9 +19,10 @@
   size     md        h-11 (44px) — the same height as a form field (.ui-input), so a button beside an input lines up
                      and stays a comfortable tap target. Page + dialog actions.                       (default)
            sm        h-8 — dense spots: table rows, cards, inline helpers
-           square    same height as md, square — icon-only next to inputs (attach file, camera)
+           square    same height as md, square — icon-only next to inputs
            icon      h-8 w-8 round — icon-only, small (dialog close X). Icon-only buttons need `aria-label`
-           icon-lg   h-10 w-10 round, 24px icon — icon-only tools that should read at a glance (chat thread header)
+           icon-lg   h-10 w-10 round, 24px icon — icon-only tools that should read at a glance (chat thread header, the
+                     paperclip and camera of <x-ui.attach-buttons>: with variant ghost they are bare icons, no box)
   icon     Material Symbols name shown before the label
   split    with `icon`: put the icon in a darker block on the left (the form-submit look)
 

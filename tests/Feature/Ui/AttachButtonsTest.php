@@ -13,10 +13,12 @@ use Illuminate\Support\Facades\Blade;
 use Tests\TestCase;
 
 /**
- * "Attach a file" and "take a photo" are two icon-only square buttons (paperclip, camera) wherever a file can be added — the request
- * form already did it; the job page and the asset form used text buttons ("เลือกไฟล์เพิ่ม", "เลือกรูปภาพ", "เลือกไฟล์แนบ") and, on the
- * job page, a third "แนบไฟล์" beside the paperclip. The upload button of the job page belongs to the list of chosen files, so it only
- * shows once there is something to upload.
+ * "Attach a file" and "take a photo" are two bare icons (a paperclip, a camera) wherever a file can be added: no box, no border, no
+ * background — just the icon, with a soft circle on hover (the system's `ghost` variant at `icon-lg`, the look of the icons in the
+ * chat header). They are still real <button>s underneath, so the keyboard and screen readers work, and each says what it is on hover
+ * (title) and to a screen reader (aria-label). The request form did it as two square boxed buttons; the job page and the asset form
+ * used text buttons ("เลือกไฟล์เพิ่ม", "เลือกรูปภาพ", "เลือกไฟล์แนบ") and, on the job page, a third "แนบไฟล์" beside the paperclip. The
+ * upload button of the job page belongs to the list of chosen files, so it only shows once there is something to upload.
  */
 class AttachButtonsTest extends TestCase
 {
@@ -54,7 +56,7 @@ class AttachButtonsTest extends TestCase
         $this->assertNotSame('', $button->getAttribute('title'), "$what: #$id says what it is on hover");
     }
 
-    public function test_the_pair_is_two_icon_only_square_buttons(): void
+    public function test_the_pair_is_two_bare_icons(): void
     {
         $html = Blade::render('<x-ui.attach-buttons any="a_btn" camera="c_btn" />');
 
@@ -63,19 +65,24 @@ class AttachButtonsTest extends TestCase
         $this->assertSame('แนบไฟล์', $this->element($html, 'a_btn')->getAttribute('aria-label'));
         $this->assertSame('ถ่ายรูป', $this->element($html, 'c_btn')->getAttribute('aria-label'));
 
-        // the standard square button, not a look of its own
-        $square = Blade::render('<x-ui.button size="square" icon="attach_file" id="x" />');
-        $this->assertSame(
-            $this->element($square, 'x')->getAttribute('class'),
-            $this->element($html, 'a_btn')->getAttribute('class'),
-        );
+        // the system's bare-icon look (ghost, icon-lg — the icons of the chat header), not a look of its own
+        $ghost = Blade::render('<x-ui.button variant="ghost" size="icon-lg" icon="attach_file" id="x" />');
+        foreach (['a_btn' => 'the paperclip', 'c_btn' => 'the camera'] as $id => $what) {
+            $class = $this->element($html, $id)->getAttribute('class');
+            $this->assertSame($this->element($ghost, 'x')->getAttribute('class'), $class, "$what: the bare-icon look");
+
+            // ...which means no box: no border, no background at rest (only on hover)
+            $this->assertDoesNotMatchRegularExpression('/(?<![-\w:])border(?![-\w])/', $class, "$what: no border");
+            $this->assertDoesNotMatchRegularExpression('/(?<![-\w:])bg-/', $class, "$what: no background at rest");
+            $this->assertStringContainsString('hover:bg-slate-100', $class, "$what: a soft circle on hover");
+        }
 
         $named = Blade::render('<x-ui.attach-buttons any="a" camera="c" any-label="เลือกรูปภาพ" camera-label="ถ่ายรูปจากกล้อง" />');
         $this->assertSame('เลือกรูปภาพ', $this->element($named, 'a')->getAttribute('title'));
         $this->assertSame('ถ่ายรูปจากกล้อง', $this->element($named, 'c')->getAttribute('aria-label'));
     }
 
-    public function test_the_request_form_the_job_page_and_the_asset_form_all_use_icons_only(): void
+    public function test_the_request_form_the_job_page_and_the_asset_form_all_use_bare_icons(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $member = User::factory()->create(['role' => 'member']);
