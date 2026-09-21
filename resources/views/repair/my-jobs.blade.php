@@ -80,7 +80,7 @@
             'in_progress' => 'autorenew',
             'on_hold' => 'pause_circle',
             'resolved' => 'task_alt',
-            'closed' => 'verified',
+            'closed' => 'task',
             'cancelled' => 'cancel',
             'rejected' => 'error',
             default => 'info',

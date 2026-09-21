@@ -179,6 +179,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   phone close button and the full-height phone drawer. Its `<style>` sat inside `<aside>`, after the top bar's, so the file is
   linked after `topbar.css` (`LayoutScriptsTest` pins the order). No page overrides the sidebar. With this the only inline
   `<style>` left on a page of the app layout is the four `@font-face` rules (they need `asset()`); a test says so.
+- **"อนุมัติผลการซ่อมบำรุง" has one icon everywhere:** `task` (a page with a tick), the one the history timeline already
+  used. It was `verified` on the my-jobs list and in the manual (status legend, the side-menu link and the heading of
+  "การตรวจสอบและปิดงาน"), `fact_check` in the dashboard's status map, a plain `check` on the "อนุมัติปิดงาน" button (the
+  "เสร็จสิ้น" button already shares its icon with its status, `task_alt`) and `check_circle` in the "approved" dialog. The
+  SLA page's `verified` (on-time rate) and the manual's shield note about ratings are other things and stay.
+  `ApprovalIconTest` pins each place. (The dashboard's `$statusTH` / `$statusPill` / `$statusStyle` are declared but nothing
+  calls them; only the glyph name was changed there.)
 
 ### Removed
 

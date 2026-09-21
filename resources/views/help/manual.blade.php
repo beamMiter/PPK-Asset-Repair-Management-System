@@ -93,7 +93,7 @@
                                 <span
                                     class="active-indicator absolute left-0 top-0 bottom-0 w-1 bg-[#0F2D5C] opacity-0 transition-opacity"></span>
                                 <span
-                                    class="material-symbols-outlined text-[20px] lg:text-[22px] group-hover:scale-110 transition-transform">verified</span>
+                                    class="material-symbols-outlined text-[20px] lg:text-[22px] group-hover:scale-110 transition-transform">task</span>
                                 การตรวจสอบและปิดงาน
                             </a>
                         </div>
@@ -287,7 +287,7 @@
                                         'desc' => 'แก้ไขปัญหาเรียบร้อยแล้ว',
                                     ],
                                     [
-                                        'icon' => 'verified',
+                                        'icon' => 'task',
                                         'color' => 'text-emerald-800',
                                         'name' => 'อนุมัติผลการซ่อมบำรุง',
                                         'desc' => 'ตรวจสอบและยืนยันการรับมอบงาน',
@@ -323,7 +323,7 @@
                     {{-- Section: Completion & Closing --}}
                     <section id="completion" class="scroll-mt-24">
                         <h2 class="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-                            <span class="material-symbols-outlined text-[24px] text-emerald-600">verified</span>
+                            <span class="material-symbols-outlined text-[24px] text-emerald-600">task</span>
                             การตรวจสอบและปิดงาน
                         </h2>
 

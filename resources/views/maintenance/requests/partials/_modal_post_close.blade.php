@@ -9,7 +9,7 @@
                         <div class="bg-slate-50 px-6 py-8 text-center border-b border-slate-100">
                             <div
                                 class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4 ">
-                                <span class="material-symbols-outlined text-[48px]">check_circle</span>
+                                <span class="material-symbols-outlined text-[48px]">task</span>
                             </div>
                             <h3 class="text-xl font-bold text-slate-900">อนุมัติผลการซ่อมบำรุงเรียบร้อยแล้ว!</h3>
                             <p class="mt-2 text-sm text-slate-500">ขอบคุณที่ใช้บริการครับ คุณต้องการดำเนินการอย่างไรต่อ?

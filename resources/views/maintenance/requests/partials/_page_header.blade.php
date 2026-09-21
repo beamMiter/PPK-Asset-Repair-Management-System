@@ -93,7 +93,7 @@
                     @if ($canClose)
                         <form method="POST" action="{{ route('maintenance.requests.close', $req->id) }}">
                             @csrf
-                            <x-ui.button type="submit" variant="primary" icon="check" split>อนุมัติปิดงาน</x-ui.button>
+                            <x-ui.button type="submit" variant="primary" icon="task" split>อนุมัติปิดงาน</x-ui.button>
                         </form>
                     @endif
 

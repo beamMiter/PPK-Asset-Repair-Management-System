@@ -127,7 +127,7 @@
                 'border' => 'border-emerald-200',
             ],
             'closed' => [
-                'icon' => 'fact_check',
+                'icon' => 'task',
                 'color' => 'text-emerald-800',
                 'bg' => 'bg-emerald-50',
                 'border' => 'border-emerald-300',
