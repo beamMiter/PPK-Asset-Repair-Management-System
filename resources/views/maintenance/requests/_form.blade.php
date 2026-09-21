@@ -407,4 +407,4 @@
 
 <x-ui.form-actions :cancel-href="route('maintenance.requests.index')"
     :submit-label="$isEdit ? 'บันทึกการแก้ไข' : 'ส่งใบแจ้งซ่อมบำรุง'"
-    :submit-icon="$isEdit ? 'save' : 'send'" />
+    :submit-icon="$isEdit ? 'save' : 'check'" />

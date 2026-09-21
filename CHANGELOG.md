@@ -198,6 +198,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (an empty slot leaves no gap). In the request form the hint "รองรับรูปภาพ / PDF" stays as a line under the heading; in the asset form
   the labels "เลือกรูปภาพครุภัณฑ์" / "เลือกไฟล์เอกสารเพิ่มเติม" that stood above the icons are gone (the section titles say it), and the
   hidden file inputs travel with the icons, still inside the form. `AttachButtonsTest`, `AssignIconTest`, `ButtonComponentTest`.
+- **The button that sends a new repair request has a tick, not a paper plane.** "ส่งใบแจ้งซ่อมบำรุง" used the `send` icon; it is `check`
+  now, like the confirming buttons of the other pages. Editing a request keeps the save icon. `RequestFormSubmitIconTest`.
 - **The × on the picture of the asset form did nothing.** A hidden, never-shown "ล้างรูปภาพ" button had the same id
   (`hero_image_remove_btn`) as the round × on the preview and came first in the page, so the script bound "remove picture" to the
   button nobody could see. The dead button is gone; the × is the only element with the id.
