@@ -62,8 +62,22 @@ class MaintenanceTransitionController extends Controller
             $this->transitionService->applyTransition($req, $validator->validated(), $actorId);
             return $this->respondWithToast($request, Toast::success('อัปเดตสถานะใบงานเรียบร้อยแล้ว', 1800), redirect()->route('maintenance.requests.show', $req->id), ['data' => $req->fresh(['technician', 'assignments.user'])]);
         } catch (\Exception $e) {
-            return $this->respondWithToast($request, Toast::warning($e->getMessage(), 3000), redirect()->route('maintenance.requests.show', $req->id), ['message' => $e->getMessage()], $this->statusForException($e));
+            $msg = $this->friendlyMessage($e);
+            return $this->respondWithToast($request, Toast::warning($msg, 3000), redirect()->route('maintenance.requests.show', $req->id), ['message' => $msg], $this->statusForException($e));
         }
+    }
+
+    /**
+     * Refuse an action nobody may take *before* its body is validated: a 422 for a member who could not have done it anyway
+     * tells him what a valid request looks like. Null when the action is allowed.
+     */
+    protected function refuseUnless(Request $request, MR $req, string $ability)
+    {
+        if (Gate::allows($ability, $req)) {
+            return null;
+        }
+
+        return $this->respondWithToast($request, Toast::warning('คุณไม่มีสิทธิ์ทำรายการนี้', 2200), redirect()->route('maintenance.requests.show', $req->id), ['message' => 'คุณไม่มีสิทธิ์ทำรายการนี้'], 403);
     }
 
     /**
@@ -100,7 +114,8 @@ class MaintenanceTransitionController extends Controller
                 'action'  => $status,
                 'error'   => $e->getMessage()
             ]);
-            return $this->respondWithToast($request, Toast::warning($e->getMessage(), 2200), redirect()->route('maintenance.requests.show', $req->id), ['message' => $e->getMessage()], $this->statusForException($e));
+            $msg = $this->friendlyMessage($e);
+            return $this->respondWithToast($request, Toast::warning($msg, 2200), redirect()->route('maintenance.requests.show', $req->id), ['message' => $msg], $this->statusForException($e));
         }
     }
 
@@ -111,6 +126,8 @@ class MaintenanceTransitionController extends Controller
 
     public function rejectCase(Request $request, MR $req)
     {
+        if ($refused = $this->refuseUnless($request, $req, 'reject')) return $refused;
+
         $data = $request->validate([
             'reject_reason' => ['nullable', 'string', 'max:2000'],
             'remark'        => ['nullable', 'string', 'max:2000'], // fallback
@@ -133,6 +150,8 @@ class MaintenanceTransitionController extends Controller
 
     public function holdCase(Request $request, MR $req)
     {
+        if ($refused = $this->refuseUnless($request, $req, 'hold')) return $refused;
+
         $data = $request->validate(['note' => ['required', 'string', 'max:1000']]);
         return $this->handleAction($request, $req, 'hold', MR::STATUS_ON_HOLD, 'หยุดการซ่อมบำรุงชั่วคราวเรียบร้อยแล้ว', ['note' => trim($data['note'])]);
     }
@@ -144,6 +163,8 @@ class MaintenanceTransitionController extends Controller
 
     public function resolveCase(Request $request, MR $req)
     {
+        if ($refused = $this->refuseUnless($request, $req, 'resolve')) return $refused;
+
         $data = $request->validate(['resolution_note' => ['required', 'string', 'max:2000']]);
         return $this->handleAction($request, $req, 'resolve', MR::STATUS_RESOLVED, 'ซ่อมบำรุงเสร็จสิ้นเรียบร้อยแล้ว ระบบเตรียมส่งให้ผู้แจ้งตรวจสอบ', ['note' => trim($data['resolution_note'])]);
     }
@@ -174,12 +195,15 @@ class MaintenanceTransitionController extends Controller
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return $this->respondWithToast($request, Toast::warning('คุณไม่มีสิทธิ์ทำรายการนี้', 2200), redirect()->route('maintenance.requests.show', $req->id), ['message' => 'คุณไม่มีสิทธิ์ทำรายการนี้'], 403);
         } catch (\Exception $e) {
-            return $this->respondWithToast($request, Toast::warning($e->getMessage(), 2200), redirect()->route('maintenance.requests.show', $req->id), ['message' => $e->getMessage()], $this->statusForException($e));
+            $msg = $this->friendlyMessage($e);
+            return $this->respondWithToast($request, Toast::warning($msg, 2200), redirect()->route('maintenance.requests.show', $req->id), ['message' => $msg], $this->statusForException($e));
         }
     }
 
     public function cancelCase(Request $request, MR $req)
     {
+        if ($refused = $this->refuseUnless($request, $req, 'cancel')) return $refused;
+
         $data = $request->validate([
             'cancel_reason' => ['nullable', 'string', 'max:2000'],
         ]);

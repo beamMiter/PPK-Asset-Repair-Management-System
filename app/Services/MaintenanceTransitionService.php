@@ -36,6 +36,12 @@ class MaintenanceTransitionService
             $allowedNext = MR::ALLOWED_TRANSITIONS;
             $isStatusChange = ($from !== $targetStatus);
 
+            // The same status again — a double click that got past the gate, a client that repeats itself: nothing to do, and
+            // no "X → X" row in the history. (A payload with `technician_id` is the edit path saying who is in charge.)
+            if (! $isStatusChange && ! array_key_exists('technician_id', $data)) {
+                abort(409, 'ใบงานนี้อยู่ในสถานะนี้แล้ว');
+            }
+
             if ($isStatusChange) {
                 $nexts = $allowedNext[$from] ?? [];
                 if (!in_array($targetStatus, $nexts, true)) {
@@ -127,6 +133,12 @@ class MaintenanceTransitionService
             }
 
             $locked->save();
+
+            // Finishing / cancelling settles the team rows whether or not somebody is "in charge": only jobs with a
+            // technician_id used to (the assign dialog leaves it empty), so the others kept "in progress" rows for good.
+            if ($isStatusChange) {
+                $this->settleTeam($locked);
+            }
 
             $newTechId   = (int) ($locked->technician_id ?? 0);
             $techChanged = ($originalTechId !== $newTechId);
@@ -233,6 +245,24 @@ class MaintenanceTransitionService
                 $as->save();
             }
         }
+    }
+
+    /** resolved / closed → the team's part is done; cancelled / rejected → their rows are cancelled. Anything else: untouched. */
+    protected function settleTeam(MR $req): void
+    {
+        $to = match ($req->status) {
+            MR::STATUS_RESOLVED, MR::STATUS_CLOSED     => MaintenanceAssignment::STATUS_DONE,
+            MR::STATUS_CANCELLED, MR::STATUS_REJECTED  => MaintenanceAssignment::STATUS_CANCELLED,
+            default                                    => null,
+        };
+
+        if ($to === null) {
+            return;
+        }
+
+        MaintenanceAssignment::where('maintenance_request_id', $req->id)
+            ->where('status', '!=', MaintenanceAssignment::STATUS_CANCELLED)
+            ->update(['status' => $to, 'updated_at' => now()]);
     }
 
     /**

@@ -223,13 +223,15 @@ class MaintenanceRequestController extends Controller
                 ->with('toast', Toast::success('สร้างคำขอเรียบร้อย', 1800));
 
         } catch (\Exception $e) {
+            $msg = $this->friendlyMessage($e);
+
             if ($request->expectsJson()) {
-                return response()->json(['message' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+                return response()->json(['message' => $msg], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
 
             return redirect()->back()
                 ->withInput()
-                ->with('toast', Toast::warning($e->getMessage(), 3000));
+                ->with('toast', Toast::warning($msg, 3000));
         }
     }
 
@@ -325,11 +327,11 @@ class MaintenanceRequestController extends Controller
                 // a refused status move is the state map's abort(409), as on the transition endpoint
                 $code = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface ? $e->getStatusCode() : 422;
 
-                return response()->json(['message' => $e->getMessage()], $code);
+                return response()->json(['message' => $this->friendlyMessage($e)], $code);
             }
             return redirect()->back()
                 ->withInput()
-                ->with('toast', \App\Support\Toast::warning($e->getMessage(), 3000));
+                ->with('toast', \App\Support\Toast::warning($this->friendlyMessage($e), 3000));
         }
     }
 

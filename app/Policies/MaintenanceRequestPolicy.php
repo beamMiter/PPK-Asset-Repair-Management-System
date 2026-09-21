@@ -100,6 +100,14 @@ class MaintenanceRequestPolicy
         // ผู้ที่ถูกมอบหมาย/รับผิดชอบ
         if ($this->isAssignedWorker($user, $req)) return Response::allow();
 
+        // A cancelled / not-taken job marks its team "cancelled", but the people who were on it still see what became of it —
+        // the technician who cancels a job is sent to its page.
+        if (
+            $this->isWorker($user)
+            && in_array((string) $req->status, [MR::STATUS_CANCELLED, MR::STATUS_REJECTED], true)
+            && $req->assignments()->where('user_id', $user->id)->exists()
+        ) return Response::allow();
+
         // ผู้แจ้ง
         if ((int) $req->reporter_id === (int) $user->id) return Response::allow();
 
@@ -264,11 +272,12 @@ class MaintenanceRequestPolicy
             return Response::deny('อนุญาตให้ปิดซ่อมเฉพาะผู้ที่ได้รับมอบหมายเท่านั้น');
         }
 
-        if (in_array($req->status, [MR::STATUS_IN_PROGRESS, MR::STATUS_ON_HOLD], true)) {
+        // "on hold" is not a place to resolve from: the state map leaves it only for in_progress or cancelled
+        if ($req->status === MR::STATUS_IN_PROGRESS) {
             return Response::allow();
         }
 
-        return Response::deny('ต้องอยู่สถานะกำลังดำเนินการหรือพักไว้เท่านั้น');
+        return Response::deny('ต้องอยู่สถานะกำลังดำเนินการเท่านั้น (ถ้าพักอยู่ ให้กลับมาดำเนินการต่อก่อน)');
     }
 
     // close (ผู้แจ้งยืนยันปิดงาน + admin/supervisor)

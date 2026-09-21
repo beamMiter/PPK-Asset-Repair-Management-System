@@ -143,7 +143,7 @@ class MaintenanceAssignmentController extends Controller
                 'request_id' => $req->id,
                 'error'      => $e->getMessage()
             ]);
-            return back()->with('toast', Toast::error('เกิดข้อผิดพลาด: ' . $e->getMessage(), 3000));
+            return back()->with('toast', Toast::error('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง', 3000));   // the cause is in the log above
         }
     }
 }

@@ -141,6 +141,17 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   raw deadline passed and flipped back after it resumed: `MaintenanceRequest::slaDeadline()` moves the deadline out with the
   time on hold, so it is late only if it was already late when it was put on hold. The job page's "เกินกำหนด SLA" banner uses it too
   and no longer calls a cancelled or rejected job overdue. `RequestSlaClockTest` (9 tests).
+- **Loose ends around the job buttons.** *Resolve* was allowed on a job on hold by the policy while the state map only leaves
+  "on hold" for in-progress / cancelled (the button was hidden, a hand-made POST got a 409); it now follows the map. A finished
+  or cancelled job only settled its team rows (done / cancelled) when it had a `technician_id`, which the assign dialog leaves empty
+  — the others kept "in progress" rows for good, so the work order printed the team of a cancelled job as still working; every
+  finish / cancel now settles them (and the people who were on a cancelled or rejected job can still open its page — the
+  technician who cancels one is not thrown back to the dashboard). An outsider posting an invalid body to reject / cancel / hold /
+  resolve got a 422 before the permission check (telling him what a valid request looks like); permission now comes first.
+  Failures that were not ours (SQL with table names, a PHP error) were shown as they are in the toast / JSON of the job buttons,
+  the edit and the new-request form, and the assign dialog; they are logged and replaced by a plain message (our own refusals —
+  409s, "asset already disposed" — still show). A repeated move to the status a job is already in (a double click that got past
+  the gate) wrote an "in progress → in progress" history row; it is now refused with 409. `RequestLifecycleHygieneTest` (7 tests).
 
 ### Added
 

@@ -40,4 +40,21 @@ trait ApiResponseWithToast
         $payload = array_merge($jsonPayload, ['toast' => $toastData]);
         return response()->json($payload, $status);
     }
+
+    /**
+     * The text of a failure that is fit to show a user. Our own refusals — abort(409, …), the disposed-asset check (code 101) —
+     * are written for them; anything else (SQL with table names, a PHP error) is not: it is logged and replaced.
+     */
+    protected function friendlyMessage(\Throwable $e, string $fallback = 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'): string
+    {
+        if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface || (int) $e->getCode() === 101) {
+            return $e->getMessage();
+        }
+
+        \Illuminate\Support\Facades\Log::error('[' . static::class . '] ' . get_class($e) . ': ' . $e->getMessage(), [
+            'file' => $e->getFile(), 'line' => $e->getLine(),
+        ]);
+
+        return $fallback;
+    }
 }
