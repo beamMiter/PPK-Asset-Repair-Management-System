@@ -55,11 +55,14 @@
                             $label = trim(($a->asset_code ? $a->asset_code.' - ' : '').($a->name ?? ''));
                             // the HIS registry number (รหัสทะเบียน รพจ) is part of the option's text — that is what the picker
                             // searches — unless it is the asset code itself (an asset registered from HIS takes it as its code)
-                            if ($a->his_asset_id && (string) $a->his_asset_id !== (string) $a->asset_code) {
+                            $showHis = $a->his_asset_id && (string) $a->his_asset_id !== (string) $a->asset_code;
+                            if ($showHis) {
                                 $label .= ' (รพจ. '.$a->his_asset_id.')';
                             }
                         @endphp
-                        <option value="{{ $a->id }}" @selected((string) $v('asset_id') === (string) $a->id)>
+                        {{-- data-his: the picker draws that part of the text in the table's colour (layout/widgets.js) --}}
+                        <option value="{{ $a->id }}" @if ($showHis) data-his="{{ $a->his_asset_id }}" @endif
+                            @selected((string) $v('asset_id') === (string) $a->id)>
                             {{ $label ?: '—' }}
                         </option>
                     @endforeach

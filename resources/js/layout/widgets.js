@@ -10,6 +10,23 @@ export function initDropdowns(win) {
     });
 }
 
+// The colour the HIS number (เลข รพจ) has on the asset table (assets/index): bold blue.
+const HIS_CLASS = 'text-blue-700 font-semibold';
+
+/**
+ * An asset option carries its HIS number (`data-his` on the <option>): the text stays whole — "AST-001 - name (รพจ. 6500123)", that
+ * is what the picker searches — but the HIS part is drawn in the table's colour, in the list and in the chosen value.
+ */
+function renderWithHis(data, escape) {
+    const text = String(data.text ?? '').trim();
+    const his = data.his ? ` (รพจ. ${data.his})` : '';
+
+    if (his && text.endsWith(his)) {
+        return `<div>${escape(text.slice(0, -his.length))}<span class="${HIS_CLASS}">${escape(his)}</span></div>`;
+    }
+    return `<div>${escape(text)}</div>`;
+}
+
 export function initTomSelect(win, root) {
     if (!win.TomSelect) return;
     (root || win.document).querySelectorAll('select.ts-basic, select.ts-department').forEach((el) => {
@@ -30,6 +47,7 @@ export function initTomSelect(win, root) {
             placeholder,
             searchField: ['text'],
             plugins: required ? {} : { clear_button: { title: 'ล้างค่าที่เลือก' } },
+            ...(el.querySelector('option[data-his]') ? { render: { option: renderWithHis, item: renderWithHis } } : {}),
         });
     });
 }

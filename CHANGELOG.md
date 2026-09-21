@@ -162,7 +162,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   "code - name"; the HIS registry number (รหัสทะเบียน รพจ) is now part of it — `AST-001 - name (รพจ. 6500123)`, not repeated when it
   is the asset code itself (an asset registered from HIS takes the number as its code). The list is still the assets registered in
   this system: HIS is only a *mock* (`HisAssetSyncService::getMockHisData`, used by the "ดึงข้อมูล HIS" button of the asset form) until
-  the real HIS API is connected. `RequestFormAssetOptionTest` (2 tests).
+  the real HIS API is connected. The HIS part is drawn in the colour the HIS number has on the asset table (bold blue,
+  `font-semibold text-blue-700`), in the list and in the chosen value: the option carries `data-his` and `initTomSelect` renders
+  it apart, while the text stays whole so the search still finds it. `RequestFormAssetOptionTest` (2 tests), `tests/js/layout.test.mjs`.
 
 ### Added
 

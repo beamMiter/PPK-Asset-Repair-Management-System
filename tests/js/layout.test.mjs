@@ -333,6 +333,37 @@ test('an empty option is a placeholder, not a chosen value; a clear button takes
   assert.ok(!opt(page.must).plugins?.clear_button, 'a required field cannot');
 });
 
+// The asset options carry their HIS number ("AST-001 - name (รพจ. 6500123)", `data-his` on the <option>). The text stays whole — that is
+// what the picker searches — but the HIS part is drawn in the colour it has on the asset table (font-semibold text-blue-700).
+test('the HIS part of an asset option is drawn in the table colour; the text stays whole for the search', () => {
+  const world = boot();
+  const page = world.go((body, w) => {
+    const withHis = w.el('select', { class: 'ts-basic' });
+    withHis.append(w.el('option', { value: '1', 'data-his': '6500123' }));
+    const plain = w.el('select', { class: 'ts-basic' });
+    plain.append(w.el('option', { value: '2' }));
+    body.append(w.el('div', { id: 'layout' }).append(withHis).append(plain));
+    return { withHis, plain };
+  });
+  const opt = (sel) => world.calls.selectOptions[world.calls.selects.indexOf(sel)];
+  const escape = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const cfg = opt(page.withHis);
+  assert.equal(cfg.searchField.join(','), 'text', 'the whole text is searched, HIS number included');
+  assert.equal(typeof cfg.render.option, 'function');
+  assert.equal(cfg.render.item, cfg.render.option, 'the chosen value looks the same as the list');
+
+  const html = cfg.render.option({ text: '\n   AST-001 - เครื่องวัดความดัน (รพจ. 6500123)\n ', his: '6500123' }, escape);
+  assert.equal(html, '<div>AST-001 - เครื่องวัดความดัน<span class="text-blue-700 font-semibold"> (รพจ. 6500123)</span></div>');
+
+  assert.equal(cfg.render.option({ text: '<b>x</b> - y (รพจ. 1)', his: '1' }, escape),
+    '<div>&lt;b&gt;x&lt;/b&gt; - y<span class="text-blue-700 font-semibold"> (รพจ. 1)</span></div>', 'text is escaped');
+  assert.equal(cfg.render.option({ text: 'AST-002 - no his here' }, escape), '<div>AST-002 - no his here</div>', 'an option without one is plain');
+  assert.equal(cfg.render.option({ text: 'AST-003 - other text', his: '9' }, escape), '<div>AST-003 - other text</div>', 'never cuts what is not the suffix');
+
+  assert.equal(opt(page.plain).render, undefined, 'selects without a HIS number keep the default rendering');
+});
+
 test('window.initTomSelect / initAutoResize stay available to page scripts', () => {
   const world = boot();
   assert.equal(typeof world.win.initTomSelect, 'function');

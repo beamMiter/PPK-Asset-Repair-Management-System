@@ -36,6 +36,10 @@ class RequestFormAssetOptionTest extends TestCase
         $this->assertStringContainsString('HIS-5 - เครื่องอัลตราซาวด์', $html);
         $this->assertStringNotContainsString('รพจ. HIS-5)', $html, 'not repeated when it is the asset code itself');
         $this->assertMatchesRegularExpression('/AST-003 - เครื่องพิมพ์\s*<\/option>/u', $html, 'an asset without a HIS number stays as it was');
+
+        // the picker draws the HIS part in the table's colour from `data-his` (layout/widgets.js) — only where the part is shown
+        $this->assertSame(1, substr_count($html, 'data-his="'), 'one option carries it');
+        $this->assertStringContainsString('data-his="HIS-778899"', $html);
     }
 
     public function test_the_edit_form_does_too(): void
