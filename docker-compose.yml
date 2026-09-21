@@ -1,3 +1,16 @@
+# What the PHP containers (app, worker) share. `environment` wins over `env_file`, so whatever the host's .env says (it
+# usually points at localhost), inside the containers the database and redis are reached by their service names.
+x-php-environment: &php-environment
+  APP_ENV: local
+  APP_DEBUG: "true"
+  DB_CONNECTION: mysql
+  DB_HOST: db
+  DB_PORT: "3306"
+  DB_DATABASE: arm
+  DB_USERNAME: arm
+  DB_PASSWORD: arm
+  REDIS_HOST: redis
+
 services:
   app:
     build:
@@ -9,8 +22,9 @@ services:
     container_name: arm-app
     env_file: .env
     environment:
-      APP_ENV: local
-      APP_DEBUG: "true"
+      <<: *php-environment
+      # only this container migrates, so two never migrate at once
+      RUN_MIGRATIONS: "true"
     volumes:
       - ./:/var/www/html:delegated
       - ./storage:/var/www/html/storage
@@ -18,6 +32,13 @@ services:
       - "9000"
     depends_on:
       - db
+    # ready = the database answered and the migrations ran (entrypoint.sh writes /tmp/ready): the worker waits for that
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 5s
 
   web:
     image: nginx:1.25-alpine
@@ -39,6 +60,9 @@ services:
       - "5173:5173"
     volumes:
       - ./:/app
+      # the container's own node_modules: without this, `npm ci` here replaces the host's node_modules (macOS binaries)
+      # with Linux ones, and vite on the host stops working
+      - node_modules:/app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
       - VITE_HOST=0.0.0.0
@@ -74,15 +98,18 @@ services:
     image: arm-system/php-app
     container_name: arm-worker
     env_file: .env
+    # the image's command is php-fpm; the worker has to run the queue instead
+    command: php artisan queue:work --verbose --tries=1 --timeout=90
     depends_on:
-      - app
-      - redis
+      app:
+        condition: service_healthy
+      redis:
+        condition: service_started
     working_dir: /var/www/html
-    environment:
-      APP_ENV: local
-      APP_DEBUG: "true"
+    environment: *php-environment
     volumes:
       - ./:/var/www/html:delegated
 
 volumes:
   dbdata:
+  node_modules:
