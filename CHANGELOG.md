@@ -152,6 +152,17 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the edit and the new-request form, and the assign dialog; they are logged and replaced by a plain message (our own refusals —
   409s, "asset already disposed" — still show). A repeated move to the status a job is already in (a double click that got past
   the gate) wrote an "in progress → in progress" history row; it is now refused with 409. `RequestLifecycleHygieneTest` (7 tests).
+- **"— ไม่ระบุ —" stayed in the select fields as if it were the value.** Every form select that TomSelect wraps
+  (`select.ts-basic` / `.ts-department`: the asset, department and type of the request form, the asset form, the user form, the
+  job-type select of My Jobs) had `allowEmptyOption: true`, which made the empty option a chosen value — its words sat in the field,
+  and stayed there while you typed to search. The empty option is now the placeholder (grey, gone as soon as you type; the field's
+  `data-placeholder`, else the words of the empty option, else "— ไม่ระบุ —"), and an optional field gets a clear (×) button to go
+  back to "not specified" (a `required` one does not). `tests/js/layout.test.mjs`. Needs `npm run build` in production.
+- **The asset picker of the request form could not be searched by HIS number.** It searches the option text, which was only
+  "code - name"; the HIS registry number (รหัสทะเบียน รพจ) is now part of it — `AST-001 - name (รพจ. 6500123)`, not repeated when it
+  is the asset code itself (an asset registered from HIS takes the number as its code). The list is still the assets registered in
+  this system: HIS is only a *mock* (`HisAssetSyncService::getMockHisData`, used by the "ดึงข้อมูล HIS" button of the asset form) until
+  the real HIS API is connected. `RequestFormAssetOptionTest` (2 tests).
 
 ### Added
 

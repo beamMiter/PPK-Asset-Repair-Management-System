@@ -51,7 +51,14 @@
                 <select name="asset_id" class="ts-basic mt-2 w-full" data-placeholder="— เลือกทรัพย์สิน —">
                     <option value="">— ไม่ระบุ —</option>
                     @foreach ($assets as $a)
-                        @php $label = trim(($a->asset_code ? $a->asset_code.' - ' : '').($a->name ?? '')); @endphp
+                        @php
+                            $label = trim(($a->asset_code ? $a->asset_code.' - ' : '').($a->name ?? ''));
+                            // the HIS registry number (รหัสทะเบียน รพจ) is part of the option's text — that is what the picker
+                            // searches — unless it is the asset code itself (an asset registered from HIS takes it as its code)
+                            if ($a->his_asset_id && (string) $a->his_asset_id !== (string) $a->asset_code) {
+                                $label .= ' (รพจ. '.$a->his_asset_id.')';
+                            }
+                        @endphp
                         <option value="{{ $a->id }}" @selected((string) $v('asset_id') === (string) $a->id)>
                             {{ $label ?: '—' }}
                         </option>

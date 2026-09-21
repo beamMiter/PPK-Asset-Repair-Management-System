@@ -15,15 +15,21 @@ export function initTomSelect(win, root) {
     (root || win.document).querySelectorAll('select.ts-basic, select.ts-department').forEach((el) => {
         if (el.tomselect) return;
 
-        const placeholder = el.getAttribute('data-placeholder') || el.getAttribute('placeholder') || '— ไม่ระบุ —';
+        // The empty option of a form select ("— ไม่ระบุ —") means "nothing chosen": it is the placeholder — grey, and gone as soon
+        // as you type — not a chosen value. (`allowEmptyOption: true` made TomSelect show its words as if they were the value,
+        // and they stayed in the field while you searched.) A clear (×) button takes a chosen value back to "not specified".
+        const emptyOption = el.querySelector('option[value=""]');
+        const emptyLabel = emptyOption ? String(emptyOption.textContent || '').trim() : '';
+        const placeholder = el.getAttribute('data-placeholder') || el.getAttribute('placeholder') || emptyLabel || '— ไม่ระบุ —';
+        const required = el.required || el.hasAttribute('required');
 
         new win.TomSelect(el, {
             create: false,
-            allowEmptyOption: true,
             maxOptions: 2000,
             sortField: { field: 'text', direction: 'asc' },
             placeholder,
             searchField: ['text'],
+            plugins: required ? {} : { clear_button: { title: 'ล้างค่าที่เลือก' } },
         });
     });
 }

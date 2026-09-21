@@ -303,6 +303,36 @@ test('textareas grow to their content, selects get TomSelect with a placeholder,
   assert.equal(world.calls.selects[1], custom.s);
 });
 
+// The empty option of a form select ("— ไม่ระบุ —") means "nothing chosen". `allowEmptyOption: true` made TomSelect treat it as a
+// chosen value, so its words stayed in the field like real text (and stayed when you typed to search). It has to be the
+// placeholder — grey, and gone as soon as you type — with a clear (×) button to go back to "not specified".
+test('an empty option is a placeholder, not a chosen value; a clear button takes a value back', () => {
+  const world = boot();
+  const page = world.go((body, w) => {
+    const emptyOption = (text) => { const o = w.el('option', { value: '' }); o.textContent = text; return o; };
+
+    const named = w.el('select', { class: 'ts-basic', 'data-placeholder': '— เลือกทรัพย์สิน —' }); named.append(emptyOption('— ไม่ระบุ —'));
+    const fromOption = w.el('select', { class: 'ts-basic' }); fromOption.append(emptyOption('— เลือกหมวดหมู่ —'));
+    const bare = w.el('select', { class: 'ts-basic' });
+    const must = w.el('select', { class: 'ts-basic', required: '' }); must.append(emptyOption('— เลือกบทบาท —'));
+
+    body.append(w.el('div', { id: 'layout' }).append(named).append(fromOption).append(bare).append(must));
+    return { named, fromOption, bare, must };
+  });
+  const opt = (sel) => world.calls.selectOptions[world.calls.selects.indexOf(sel)];
+
+  for (const sel of [page.named, page.fromOption, page.bare, page.must]) {
+    assert.notEqual(opt(sel).allowEmptyOption, true, 'the empty option is not a value to display');
+  }
+
+  assert.equal(opt(page.named).placeholder, '— เลือกทรัพย์สิน —', 'data-placeholder wins');
+  assert.equal(opt(page.fromOption).placeholder, '— เลือกหมวดหมู่ —', 'else the words of the empty option');
+  assert.equal(opt(page.bare).placeholder, '— ไม่ระบุ —', 'else the default');
+
+  assert.ok(opt(page.named).plugins?.clear_button, 'an optional field can be cleared');
+  assert.ok(!opt(page.must).plugins?.clear_button, 'a required field cannot');
+});
+
 test('window.initTomSelect / initAutoResize stay available to page scripts', () => {
   const world = boot();
   assert.equal(typeof world.win.initTomSelect, 'function');

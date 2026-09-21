@@ -113,7 +113,7 @@ class MaintenanceRequestController extends Controller
 
     public function createPage()
     {
-        $assets = Asset::orderBy('asset_code')->get(['id', 'asset_code', 'name']);
+        $assets = Asset::orderBy('asset_code')->get(['id', 'asset_code', 'name', 'his_asset_id']);
         $users  = User::orderBy('name')->get(['id', 'name']);
         $depts  = Department::orderBy('name_th')->get(['id', 'code', 'name_th', 'name_en']);
         $types  = MaintenanceRequestType::activeForSelect();
@@ -381,7 +381,7 @@ class MaintenanceRequestController extends Controller
         Gate::authorize('update', $mr);
     
         // เตรียมข้อมูล Master Data สำหรับ Dropdown ในหน้า View
-        $assets = Asset::orderBy('asset_code')->get(['id', 'asset_code', 'name']);
+        $assets = Asset::orderBy('asset_code')->get(['id', 'asset_code', 'name', 'his_asset_id']);
         $users  = User::orderBy('name')->get(['id', 'name']);
         $depts  = Department::orderBy('name_th')->get(['id', 'code', 'name_th', 'name_en']);
     
