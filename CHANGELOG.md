@@ -200,6 +200,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   hidden file inputs travel with the icons, still inside the form. `AttachButtonsTest`, `AssignIconTest`, `ButtonComponentTest`.
 - **The button that sends a new repair request has a tick, not a paper plane.** "ส่งใบแจ้งซ่อมบำรุง" used the `send` icon; it is `check`
   now, like the confirming buttons of the other pages. Editing a request keeps the save icon. `RequestFormSubmitIconTest`.
+- **Job page: the workflow buttons are the size and shape of the buttons beside them.** รับทราบ, รับเรื่อง, ดำเนินการ, หยุดชั่วคราว,
+  กลับเข้าดำเนินการ, เสร็จสิ้น, อนุมัติปิดงาน, ประเมินความพึงพอใจ, ไม่รับเรื่อง and ยกเลิกการซ่อมบำรุง were `split` buttons (the icon in
+  a darker block of its own on the left, so wider and heavier on a wide screen); they are plain buttons now, the icon in front of the
+  label, exactly like แก้ไข, พิมพ์ PDF and กลับ in the same row. Same 44px height as before; nothing else about them changed (colours,
+  ids, forms, dialogs). The save buttons of the forms and of the cards on the job page keep the split look. `JobHeaderButtonsTest`.
 - **The × on the picture of the asset form did nothing.** A hidden, never-shown "ล้างรูปภาพ" button had the same id
   (`hero_image_remove_btn`) as the round × on the preview and came first in the page, so the script bound "remove picture" to the
   button nobody could see. The dead button is gone; the × is the only element with the id.

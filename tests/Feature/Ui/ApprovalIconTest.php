@@ -25,7 +25,7 @@ class ApprovalIconTest extends TestCase
 
     public function test_the_approve_button_and_the_approved_dialog_use_task(): void
     {
-        $this->assertStringContainsString('icon="task" split>อนุมัติปิดงาน', $this->source('maintenance/requests/partials/_page_header.blade.php'));
+        $this->assertStringContainsString('icon="task">อนุมัติปิดงาน', $this->source('maintenance/requests/partials/_page_header.blade.php'));
         $this->assertMatchesRegularExpression('/text-\[48px\]">task<\/span>/', $this->source('maintenance/requests/partials/_modal_post_close.blade.php'));
     }
 

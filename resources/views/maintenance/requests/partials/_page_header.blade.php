@@ -57,58 +57,58 @@
                     @if ($canAcknowledge)
                         <form method="POST" action="{{ route('maintenance.requests.acknowledge', $req->id) }}">
                             @csrf
-                            <x-ui.button type="submit" variant="brand" icon="approval_delegation" split>รับทราบ</x-ui.button>
+                            <x-ui.button type="submit" variant="brand" icon="approval_delegation">รับทราบ</x-ui.button>
                         </form>
                     @endif
 
                     @if ($canAccept)
                         <form method="POST" action="{{ route('maintenance.requests.accept', $req->id) }}">
                             @csrf
-                            <x-ui.button type="submit" variant="info" icon="check" split>รับเรื่อง</x-ui.button>
+                            <x-ui.button type="submit" variant="info" icon="check">รับเรื่อง</x-ui.button>
                         </form>
                     @endif
 
                     @if ($canStart)
                         <form method="POST" action="{{ route('maintenance.requests.start', $req->id) }}">
                             @csrf
-                            <x-ui.button type="submit" variant="primary" icon="keyboard_arrow_right" split>ดำเนินการ</x-ui.button>
+                            <x-ui.button type="submit" variant="primary" icon="keyboard_arrow_right">ดำเนินการ</x-ui.button>
                         </form>
                     @endif
 
                     @if ($canHold)
-                        <x-ui.button id="openHoldModalBtn" variant="warning" icon="pause_circle" split>หยุดชั่วคราว</x-ui.button>
+                        <x-ui.button id="openHoldModalBtn" variant="warning" icon="pause_circle">หยุดชั่วคราว</x-ui.button>
                     @endif
 
                     @if ($canResume)
                         <form method="POST" action="{{ route('maintenance.requests.resume', $req->id) }}">
                             @csrf
-                            <x-ui.button type="submit" variant="info" icon="keyboard_double_arrow_right" split>กลับเข้าดำเนินการ</x-ui.button>
+                            <x-ui.button type="submit" variant="info" icon="keyboard_double_arrow_right">กลับเข้าดำเนินการ</x-ui.button>
                         </form>
                     @endif
 
                     @if ($canResolve)
-                        <x-ui.button id="openResolveModalBtn" variant="primary" icon="task_alt" split>เสร็จสิ้น</x-ui.button>
+                        <x-ui.button id="openResolveModalBtn" variant="primary" icon="task_alt">เสร็จสิ้น</x-ui.button>
                     @endif
 
                     @if ($canClose)
                         <form method="POST" action="{{ route('maintenance.requests.close', $req->id) }}">
                             @csrf
-                            <x-ui.button type="submit" variant="primary" icon="task" split>อนุมัติปิดงาน</x-ui.button>
+                            <x-ui.button type="submit" variant="primary" icon="task">อนุมัติปิดงาน</x-ui.button>
                         </form>
                     @endif
 
                     @if ($req->status === \App\Models\MaintenanceRequest::STATUS_CLOSED)
                         @can('rate', $req)
-                            <x-ui.button x-data @click="$dispatch('open-rating-modal')" variant="warning" icon="star" split>ประเมินความพึงพอใจ</x-ui.button>
+                            <x-ui.button x-data @click="$dispatch('open-rating-modal')" variant="warning" icon="star">ประเมินความพึงพอใจ</x-ui.button>
                         @endcan
                     @endif
 
                     @if ($canReject)
-                        <x-ui.button id="openRejectModalBtn" variant="danger" icon="block" split>ไม่รับเรื่อง</x-ui.button>
+                        <x-ui.button id="openRejectModalBtn" variant="danger" icon="block">ไม่รับเรื่อง</x-ui.button>
                     @endif
 
                     @if ($canCancel)
-                        <x-ui.button id="openCancelModalBtn" variant="neutral" icon="cancel" split>ยกเลิกการซ่อมบำรุง</x-ui.button>
+                        <x-ui.button id="openCancelModalBtn" variant="neutral" icon="cancel">ยกเลิกการซ่อมบำรุง</x-ui.button>
                     @endif
 
                     {{-- Tools + navigation, same order as the asset page: actions first, กลับ last.
