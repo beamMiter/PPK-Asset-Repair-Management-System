@@ -3,12 +3,16 @@
 .gitignore
 node_modules
 vendor
-storage/app/public
-storage/framework/cache
-storage/framework/sessions
-storage/framework/views
+# Runtime data: uploads (public and private), cache, sessions, compiled views, logs. The Dockerfile creates the folders empty.
+storage/app
+storage/framework
 storage/logs
 public/storage
+# public/build is made by the front-end stage; public/hot is written by `vite dev` and would send the image's pages to it
+public/build
+public/hot
+# Caches made on the host: a cached config.php would win over the container's own environment
+bootstrap/cache/*.php
 # Local env & IDE
 .env
 .env.*
@@ -19,5 +23,3 @@ public/storage
 # Tests & coverage (keep if running in container CI)
 coverage
 .phpunit.result.cache
-bootstrap/cache/packages.php
-bootstrap/cache/services.php
