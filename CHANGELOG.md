@@ -161,14 +161,20 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   waits 300 ms), back when the text is deleted, the list closes or a value is picked. No button inside the field. Checked against
   the real TomSelect (row order, the submitted value, one `change` per pick). `tests/js/layout.test.mjs`, `LayoutScriptsTest`.
   Needs `npm run build` in production.
-- **The foot of the Thai lower vowel ู (and ุ) was cut off in the input fields.** Thai lower vowels hang further below the baseline
-  than the font's own descent — in Sarabun ู reaches 0.332 em down against a descent of 0.232 em — so a line needs about 1.5 em of
-  height to hold them. The shared `.ui-input` (58 fields: every `<input>` of the forms) and the select fields (TomSelect's item,
-  which is `overflow: hidden` for the "…" on a long value, and its text box) used Tailwind `text-sm`'s 1.25rem line on a 14px
-  font (1.43): the foot of ู stuck out 0.5px and was eaten. They now use a 1.5rem line (1.71). `.ui-input` lost its vertical
-  padding so its content box (the height is fixed, h-11) is still taller than the line — the fields keep their 44px and the text stays
-  centred. `ThaiTextRoomTest` reads the needed ratio from the Sarabun file itself (php-font-lib) and checks each of those rules
-  against it. Not changed: inputs that do not use `.ui-input`, and the rows of the dropdown list (they do not clip). Needs
+- **The foot of the Thai lower vowel ู (and ุ) was cut off in the input fields.** Thai lower vowels hang further below the
+  baseline than the font's own descent — in Sarabun ู reaches 0.332 em down against a descent of 0.232 em — so a line has to give
+  them room, and a text input clips its text at its line box (so does an `overflow: hidden` element). Three groups of fields were
+  too tight: the shared `.ui-input` (58 fields) and the select fields (TomSelect's item, which is `overflow: hidden` for the "…" on
+  a long value, and its text box) used Tailwind `text-sm`'s 1.25rem line on a 14px font — the foot of ู stuck out 0.65px; and every
+  *plain* text input and select (the sign-in / register forms, the profile page, the filter bars) takes `line-height: 1.5rem` from
+  `@tailwindcss/forms`, which is 24px on the default 16px font — 0.19px of room, none for anti-aliasing. Now: `.ui-input` and the
+  TomSelect fields use a 1.5rem line on their 14px font (`.ui-input` lost its vertical padding so its content box, the height is fixed
+  by h-11, still holds the line — same 44px field); and one base rule, `line-height: max(1.5rem, 1.625em)` on text inputs and selects,
+  raises the plain fields to 1.625 em when the font is big enough for 24px to be too tight (16px → 26px, so the sign-in inputs are
+  now 44px tall like the rest) and never lowers it (13px fields stay 24px, the filter bars keep their height). `ThaiTextRoomTest`
+  reads Sarabun's metrics from the font file, lays a line out the way Chrome does (whole-pixel ascent / descent, half a pixel kept
+  for anti-aliasing) and checks each of those rules at every font size in use; it also fails if an `<input>` / `<select>` is written
+  with `text-xs` / `text-sm` and no `leading-*`. Not changed: textareas (they do not clip) and the rows of the dropdown list. Needs
   `npm run build` in production.
 - **The asset picker of the request form could not be searched by HIS number.** It searches the option text, which was only
   "code - name"; the HIS registry number (รหัสทะเบียน รพจ) is now part of it — `AST-001 - name (รพจ. 6500123)`, not repeated when it

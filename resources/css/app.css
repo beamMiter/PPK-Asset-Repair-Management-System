@@ -4,6 +4,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Room for Thai in every plain text field ─────────────────────────────
+   @tailwindcss/forms gives every text input and select `line-height: 1.5rem` (24px) and `font-size: 1rem` unless a class says
+   otherwise. A text input clips its text at its line box, and Thai lower vowels (ุ ู) hang 0.1 em below Sarabun's descent: at
+   16px on a 24px line only 0.19px is left — no room for anti-aliasing — and the foot of ู is eaten. `max()` raises the line to
+   1.625 em when the font is big enough for 24px to be too tight (16px → 26px) and never lowers it (13px stays 24px, so the
+   filter bars keep their height). Same specificity as the plugin's rule (its selectors sit in :where()), and after it; classes such
+   as .ui-input and .leading-* win over it. Tests: ThaiTextRoomTest.
+─────────────────────────────────────────────────────────────────────── */
+@layer base {
+    input:where(:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color'], [type='hidden'], [type='submit'], [type='button'], [type='reset'], [type='image'])),
+    select {
+        line-height: max(1.5rem, 1.625em);
+    }
+}
+
 /* ─── Form field look — the single definition every form shares ──────────
    Named ui-* on purpose: Bootstrap (CDN) owns .btn / .form-control on the
    same pages. Buttons live in <x-ui.button>; fields are plain classes so
