@@ -475,7 +475,13 @@
                         {{-- Breached Tickets Tab Content --}}
                         <template x-if="activeTab === 'breached'">
                             <div class="flex flex-col gap-3 pt-4">
-                                @forelse (collect($breachedTickets)->take(20) as $t)
+                                @if (count($breachedTickets) > $ticketLimit)
+                                    <p class="text-[12px] text-slate-500" style="order: -1">
+                                        แสดง {{ $ticketLimit }} รายการที่เกินเวลานานที่สุด จากทั้งหมด
+                                        {{ count($breachedTickets) }} รายการ (ค้นหาได้เฉพาะรายการที่แสดง)
+                                    </p>
+                                @endif
+                                @forelse (collect($breachedTickets)->take($ticketLimit) as $t)
                                     @php
                                         $now = \Carbon\Carbon::now();
                                         $diffInMins = (int) $t->sla_due_date->diffInMinutes($now);
@@ -536,7 +542,13 @@
                         {{-- At Risk Tickets Tab Content --}}
                         <template x-if="activeTab === 'atRisk'">
                             <div class="flex flex-col gap-3 pt-4">
-                                @forelse (collect($atRiskTickets)->take(20) as $t)
+                                @if (count($atRiskTickets) > $ticketLimit)
+                                    <p class="text-[12px] text-slate-500" style="order: -1">
+                                        แสดง {{ $ticketLimit }} รายการที่ใกล้ครบกำหนดที่สุด จากทั้งหมด
+                                        {{ count($atRiskTickets) }} รายการ (ค้นหาได้เฉพาะรายการที่แสดง)
+                                    </p>
+                                @endif
+                                @forelse (collect($atRiskTickets)->take($ticketLimit) as $t)
                                     @php
                                         $now = \Carbon\Carbon::now();
                                         $diffInMins = (int) $now->diffInMinutes($t->sla_due_date);

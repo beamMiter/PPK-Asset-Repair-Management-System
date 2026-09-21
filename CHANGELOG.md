@@ -191,6 +191,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   accent bar rather than an icon (request list, asset page, the my-jobs card bar) are unchanged.
   `ApprovalIconTest` pins each place. (The dashboard's `$statusTH` / `$statusPill` / `$statusStyle` are declared but nothing
   calls them; only the glyph name and the icon colour were changed there.)
+- **SLA page: the "เกินเวลา" / "ใกล้ครบกำหนด" lists have a stated limit.** Each tab cut its rows at 20 inside the view without a
+  word, so a badge saying 45 sat over a list of 20, and the search box could not find the other 25. The limit is now one
+  named constant (`SlaPerformanceController::TICKET_LIST_LIMIT`, still 20), used by both tabs, and a cut list says
+  "แสดง 20 รายการที่เกินเวลานานที่สุด จากทั้งหมด 45 รายการ (ค้นหาได้เฉพาะรายการที่แสดง)" (the near-due tab: "ใกล้ครบกำหนดที่สุด").
+  The most overdue / the soonest due are the rows kept. The badges, the KPI counts and the PDF report keep the full list — the
+  cap is applied to the screen only (a test fails if the shared list is cut).
 
 ### Removed
 

@@ -10,9 +10,17 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class SlaPerformanceController extends Controller
 {
+    /**
+     * Most rows each tab of the page's "เกินเวลา" / "ใกล้ครบกำหนด" list shows (the most overdue / the soonest due first).
+     * The tab badges and the PDF report keep the full lists, so a cut list says how many it left out.
+     */
+    public const TICKET_LIST_LIMIT = 20;
+
     public function index(Request $request)
     {
         $data = $this->getSlaDashboardData($request);
+        $data['ticketLimit'] = self::TICKET_LIST_LIMIT;
+
         return view('maintenance.sla.index', $data);
     }
 
