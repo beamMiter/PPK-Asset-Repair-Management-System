@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
+use App\Support\InitialsAvatar;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -330,15 +331,10 @@ class User extends Authenticatable
         return $this->uiAvatarUrl(128);
     }
 
-    // สร้างรูปโปรไฟล์จำลองกรณีไม่มีการอัปโหลดรูป
+    // รูปโปรไฟล์จำลองกรณีไม่มีการอัปโหลดรูป: ตัวอักษรย่อของชื่อบนพื้นสี เป็น SVG ในตัว src เอง (ไม่ต้องขอไปที่เว็บอื่น)
     private function uiAvatarUrl(int $size = 256): string
     {
-        $name = urlencode($this->clean_name ?: 'User');
-        $palette = ['0D8ABC','0E2B51','16A34A','7C3AED','EA580C','DB2777','374151'];
-        $idx = crc32(strtolower($this->name ?? 'user')) % count($palette);
-        $bg  = $palette[$idx];
-
-        return "https://ui-avatars.com/api/?name={$name}&background={$bg}&color=fff&size={$size}&bold=true";
+        return InitialsAvatar::url($this->clean_name ?: 'User', $size, InitialsAvatar::colorFor($this->name ?? 'user'));
     }
 
     // คะแนนที่ User คนนี้ได้รับในฐานะเจ้าหน้าที่

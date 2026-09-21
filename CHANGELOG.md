@@ -205,6 +205,18 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a darker block of its own on the left, so wider and heavier on a wide screen); they are plain buttons now, the icon in front of the
   label, exactly like แก้ไข, พิมพ์ PDF and กลับ in the same row. Same 44px height as before; nothing else about them changed (colours,
   ids, forms, dialogs). The save buttons of the forms and of the cards on the job page keep the split look. `JobHeaderButtonsTest`.
+- **Changing page makes far fewer requests.** Turbo Drive replaces the `<body>` on every visit and re-creates what is in it, so a normal
+  page asked for about 15 things each time (30+ on lists with avatars), and Turbo 8 also prefetched the page of every link the pointer
+  rested on for 100 ms (17 links in the menu, each a full render). Four of the causes are gone (`NavigationCostTest`,
+  `InitialsAvatarTest`, `tests/js/avatar.test.mjs`): **(1)** `<meta name="turbo-prefetch" content="false">` in the three layouts;
+  **(2)** the avatar of someone with no photo was an image from `ui-avatars.com` — 4 per page, 23 on My Jobs, 34 on the user list, and
+  a hospital network with no internet waited on each — it is now their initials on a coloured square as an SVG carried in the `src`
+  (`App\Support\InitialsAvatar`, and `resources/js/avatar.js` for chat lines that arrive live), same colours as before, a leading
+  Thai vowel (เ แ โ ใ ไ) is not taken as the initial; **(3)** both `<audio>` elements were `preload="auto"` (one an mp3 from
+  `assets.mixkit.co`) — nothing is fetched now until a sound rings; **(4)** Bootstrap's bundle and TomSelect were `<script>`s at the end
+  of the body, fetched and run again by every visit (Bootstrap stacking its document listeners once more each time) — they are in the
+  `<head>` with `defer`, which Turbo keeps, and still run before the layout's modules. Not changed yet: the chat widget's poll on every
+  visit, the sidebar / top bar images re-created each visit, gzip and cache headers in `.docker/nginx.conf`, the chat sound's host.
 - **The × on the picture of the asset form did nothing.** A hidden, never-shown "ล้างรูปภาพ" button had the same id
   (`hero_image_remove_btn`) as the round × on the preview and came first in the page, so the script bound "remove picture" to the
   button nobody could see. The dead button is gone; the × is the only element with the id.

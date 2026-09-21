@@ -13,6 +13,8 @@
 // Messages that arrive live are built from DOM nodes: a sender's name is chosen by the sender (profile page), so it must never
 // go through `innerHTML`.
 
+import { initialsAvatarUrl } from '../avatar.js';
+
 export const POLL_MS = 5000;               // polling fallback, alongside the realtime channel
 export const STATUS_TIMEOUT_MS = 10000;    // still "connecting" after this long → show the polling (offline) state
 
@@ -51,7 +53,7 @@ export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr }) {
     } else {
         avatar = el(doc, 'div', 'relative shrink-0');
         const img = el(doc, 'img', 'h-10 w-10 rounded-full object-cover border border-gray-200');
-        img.src = m.user?.avatar_thumb_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.user?.name || '?')}&background=f1f5f9`;
+        img.src = m.user?.avatar_thumb_url || initialsAvatarUrl(m.user?.name);
         img.alt = 'Avt';
         avatar.append(img);
     }

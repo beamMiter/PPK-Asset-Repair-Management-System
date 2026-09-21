@@ -59,7 +59,7 @@
         </div>
 
         {{-- Notification Sound --}}
-        <audio id="chatNotifySound" preload="auto">
+        <audio id="chatNotifySound" preload="none">
             <source src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" type="audio/mpeg">
         </audio>
     </div>

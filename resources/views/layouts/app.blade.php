@@ -5,6 +5,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
+    {{-- Turbo prefetches a link's page when the pointer rests on it for 100 ms: a full render of a personal page for every link the mouse
+         crosses (17 in the menu), thrown away 10 s later. Off. --}}
+    <meta name="turbo-prefetch" content="false">
     <meta name="theme-color" content="#0E2B51">
 
     <link rel="icon" type="image/png" href="{{ asset('icon/maintenance.png') }}">
@@ -29,6 +32,13 @@
 
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0" />
+
+    {{-- The two CDN libraries the layout needs live HERE, not at the end of <body>: Turbo replaces the <body> on every visit and re-creates
+         the scripts in it, so they were fetched and run again on each page (and Bootstrap stacked its document listeners again). Scripts
+         in <head> are kept by Turbo and added only when a page brings one the document does not have yet. `defer`: run in document
+         order once the page is parsed — before the modules below and before DOMContentLoaded — without blocking the first paint. --}}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js" defer></script>
 
     @yield('head')
 
@@ -124,13 +134,9 @@
     @auth
         @if (Auth::user()->role !== 'member')
             {{-- the sound this user picked on the notification-sound page (falls back to the default) --}}
-            <audio id="notifySound" preload="auto" src="{{ Auth::user()->notificationSoundUrl() }}"></audio>
+            <audio id="notifySound" preload="none" src="{{ Auth::user()->notificationSoundUrl() }}"></audio>
         @endif
     @endauth
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 
     @yield('scripts')
     @stack('scripts')

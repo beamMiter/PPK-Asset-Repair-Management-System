@@ -217,7 +217,7 @@
                         <div class="flex items-start sm:items-center gap-3 w-full sm:flex-1 min-w-0">
                             <div
                                 class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 border border-gray-200 overflow-hidden mt-0.5 sm:mt-0">
-                                <img src="{{ $thread->author?->avatar_thumb_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($thread->author?->name ?? '?') . '&background=f1f5f9&color=475569' }}"
+                                <img src="{{ $thread->author?->avatar_thumb_url ?? \App\Support\InitialsAvatar::url($thread->author?->name ?? '?', 96) }}"
                                     class="h-full w-full object-cover" alt="Author">
                             </div>
                             <div class="flex flex-col min-w-0 flex-1">
@@ -337,7 +337,7 @@
                                         <div
                                             class="relative shrink-0 {{ $isConsecutive ? 'opacity-0 h-0 pointer-events-none' : '' }}">
                                             @if (!$isConsecutive)
-                                                <img src="{{ $m->user?->avatar_thumb_url ?? 'https://ui-avatars.com/api/?name=' . urlencode($m->user->name ?? '?') . '&background=f1f5f9' }}"
+                                                <img src="{{ $m->user?->avatar_thumb_url ?? \App\Support\InitialsAvatar::url($m->user->name ?? '?', 80) }}"
                                                     class="h-10 w-10 rounded-full object-cover border border-gray-200 "
                                                     alt="{{ $m->user?->name ?? 'User' }}">
                                             @else

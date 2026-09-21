@@ -205,7 +205,9 @@ test('my messages sit on the right as "You"; others show avatar and name, a foll
   world.emit(msg({ id: 13, user_id: 6, body: 'b', user: { name: 'วรรณา' } }));
   const [mine, first, follow] = world.rows();
   assert.ok(mine.className.includes('items-end') && mine.textContent.includes('You') && mine.textContent.includes('ของฉัน'));
-  assert.ok(first.querySelector('img').src.startsWith('https://ui-avatars.com/api/?name=' + encodeURIComponent('วรรณา')), 'no avatar: the initials service');
+  const src = first.querySelector('img').src;
+  assert.ok(src.startsWith('data:image/svg+xml'), 'no avatar: the initials, carried in the src — no request to another site');
+  assert.ok(decodeURIComponent(src).includes('>ว</text>'), 'the initial of วรรณา');
   assert.ok(first.textContent.includes('วรรณา'));
   assert.equal(follow.querySelectorAll('img').length, 0);
   assert.ok(follow.className.includes('mt-1') && first.className.includes('mt-4'));

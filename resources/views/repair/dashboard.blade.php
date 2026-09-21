@@ -390,7 +390,7 @@
                                 <div class="relative">
                                     <div
                                         class="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-[#0F2D5C]/20 to-[#0F2D5C]/5 group-hover:from-[#0F2D5C] group-hover:to-blue-500 transition-all duration-300">
-                                        <img src="{{ $tech['avatar'] ?: 'https://ui-avatars.com/api/?name=' . urlencode($tech['name']) . '&background=00275f&color=fff' }}"
+                                        <img src="{{ $tech['avatar'] ?: \App\Support\InitialsAvatar::url($tech['name'], 112) }}"
                                             alt="{{ $tech['name'] }}"
                                             class="w-full h-full rounded-full object-cover border-2 border-white " />
                                     </div>
