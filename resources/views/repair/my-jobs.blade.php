@@ -93,7 +93,7 @@
             'in_progress' => 'text-blue-600',
             'on_hold' => 'text-slate-500',
             'resolved' => 'text-emerald-700',
-            'closed' => 'text-emerald-800',
+            'closed' => 'text-emerald-700',
             'cancelled' => 'text-rose-600',
             'rejected' => 'text-rose-700',
             default => 'text-slate-500',

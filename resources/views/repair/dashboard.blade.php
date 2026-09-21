@@ -128,7 +128,7 @@
             ],
             'closed' => [
                 'icon' => 'task',
-                'color' => 'text-emerald-800',
+                'color' => 'text-emerald-500',
                 'bg' => 'bg-emerald-50',
                 'border' => 'border-emerald-300',
             ],
