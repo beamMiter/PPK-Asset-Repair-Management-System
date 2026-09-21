@@ -161,6 +161,15 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   waits 300 ms), back when the text is deleted, the list closes or a value is picked. No button inside the field. Checked against
   the real TomSelect (row order, the submitted value, one `change` per pick). `tests/js/layout.test.mjs`, `LayoutScriptsTest`.
   Needs `npm run build` in production.
+- **The foot of the Thai lower vowel ู (and ุ) was cut off in the input fields.** Thai lower vowels hang further below the baseline
+  than the font's own descent — in Sarabun ู reaches 0.332 em down against a descent of 0.232 em — so a line needs about 1.5 em of
+  height to hold them. The shared `.ui-input` (58 fields: every `<input>` of the forms) and the select fields (TomSelect's item,
+  which is `overflow: hidden` for the "…" on a long value, and its text box) used Tailwind `text-sm`'s 1.25rem line on a 14px
+  font (1.43): the foot of ู stuck out 0.5px and was eaten. They now use a 1.5rem line (1.71). `.ui-input` lost its vertical
+  padding so its content box (the height is fixed, h-11) is still taller than the line — the fields keep their 44px and the text stays
+  centred. `ThaiTextRoomTest` reads the needed ratio from the Sarabun file itself (php-font-lib) and checks each of those rules
+  against it. Not changed: inputs that do not use `.ui-input`, and the rows of the dropdown list (they do not clip). Needs
+  `npm run build` in production.
 - **The asset picker of the request form could not be searched by HIS number.** It searches the option text, which was only
   "code - name"; the HIS registry number (รหัสทะเบียน รพจ) is now part of it — `AST-001 - name (รพจ. 6500123)`, not repeated when it
   is the asset code itself (an asset registered from HIS takes the number as its code). The list is still the assets registered in

@@ -360,15 +360,19 @@ textarea {
     padding-left: 2.5rem !important;
     padding-right: 2.25rem !important;
     font-size: .875rem !important;
-    line-height: 1.25rem !important;
+    line-height: 1.5rem !important;
     display: flex !important;
     align-items: center !important;
 }
 
+/* 1.5rem, not 1.25rem: the item is `overflow: hidden` (for the "…" on a long value) and the text box clips at its line box, and Thai
+   lower vowels (ุ ู) hang 0.1 em below the font's descent — at a 20px line the foot of ู was 0.5px outside the box and was eaten.
+   The control has 8px of vertical padding of its own, so a 24px line still fits its 44px. (ThaiTextRoomTest reads the number
+   from the font.) */
 .ts-wrapper.single .ts-control input,
 .ts-wrapper.single .ts-control .item {
     font-size: .875rem !important;
-    line-height: 1.25rem !important;
+    line-height: 1.5rem !important;
 }
 
 /* The control is a fixed 44px tall, so the selected item and the search input must stay on ONE line.
