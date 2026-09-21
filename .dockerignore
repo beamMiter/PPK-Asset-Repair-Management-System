@@ -19,3 +19,5 @@ public/storage
 # Tests & coverage (keep if running in container CI)
 coverage
 .phpunit.result.cache
+bootstrap/cache/packages.php
+bootstrap/cache/services.php
