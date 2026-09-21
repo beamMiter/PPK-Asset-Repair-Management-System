@@ -17,7 +17,8 @@ class MaintenanceRequestPolicy
         // 'rate' is excluded from admin bypass so that the full rate() policy
         // always runs — this ensures the Rate button is hidden even for admins
         // once a job has already been rated (1:1 enforcement in the UI).
-        if ($ability === 'rate') {
+        // 'assign' is excluded too: not even an admin edits the team of a finished job (it is the record of who did the work).
+        if (in_array($ability, ['rate', 'assign'], true)) {
             return null;
         }
 
@@ -61,12 +62,17 @@ class MaintenanceRequestPolicy
         return empty($req->technician_id) || ($user !== null && (int) $req->technician_id === (int) $user->id);
     }
 
+    /** Nobody is on the job: no person in charge and no team member who has not been taken off. */
+    protected function hasNoTeam(MR $req): bool
+    {
+        return empty($req->technician_id)
+            && ! $req->assignments()->where('status', '!=', MaintenanceAssignment::STATUS_CANCELLED)->exists();
+    }
+
     /** Accepted and nobody is on it yet: every technician may start it (self-dispatch), so every technician may open it. */
     protected function isOpenForStart(MR $req): bool
     {
-        return $req->status === MR::STATUS_ACCEPTED
-            && empty($req->technician_id)
-            && ! $req->assignments()->where('status', '!=', MaintenanceAssignment::STATUS_CANCELLED)->exists();
+        return $req->status === MR::STATUS_ACCEPTED && $this->hasNoTeam($req);
     }
 
     protected function isOpenForAccept(User $user, MR $req): bool
@@ -335,10 +341,27 @@ class MaintenanceRequestPolicy
     // assign (มอบหมายทีม)
     public function assign(User $user, MR $req): Response
     {
-        // 1. Admin/Supervisor หรือทีมงาน (เจ้าหน้าที่/IT ฯลฯ) สามารถมอบหมายงานได้
-        // เพื่อรองรับการส่งต่องาน (Handoff) เช่น IT support รับเรื่องแล้วส่งต่อให้ Programmer
-        if ($this->isAdminTeam($user) || $this->isWorker($user)) {
+        // ทีมของงานที่สิ้นสุดแล้วคือบันทึกว่าใครทำ (ใบงาน PDF, คะแนนประเมินตามทีม) — ไม่มีใครแก้ได้ แม้แต่แอดมิน
+        if (in_array((string) $req->status, [MR::STATUS_CLOSED, MR::STATUS_CANCELLED, MR::STATUS_REJECTED], true)) {
+            return Response::deny('ใบงานนี้สิ้นสุดแล้ว ไม่สามารถเปลี่ยนทีมเจ้าหน้าที่ได้');
+        }
+
+        if ($this->isAdminTeam($user)) {
             return Response::allow();
+        }
+
+        // เจ้าหน้าที่: ส่งต่องานที่ตนอยู่ในทีม (Handoff เช่น IT support → Programmer) หรือจัดคนให้งานที่ยังไม่มีใครรับ
+        // — ไม่ใช่เข้าไปแก้ทีมของงานที่คนอื่นทำอยู่
+        if ($this->isWorker($user)) {
+            if ($req->status === MR::STATUS_RESOLVED) {
+                return Response::deny('ซ่อมเสร็จแล้ว การแก้ทีมเป็นหน้าที่ของผู้ดูแลระบบ/หัวหน้า');
+            }
+
+            if ($this->isAssignedWorker($user, $req) || $this->hasNoTeam($req)) {
+                return Response::allow();
+            }
+
+            return Response::deny('เปลี่ยนทีมได้เฉพาะเจ้าหน้าที่ที่อยู่ในงานนี้ หรืองานที่ยังไม่มีผู้รับผิดชอบ');
         }
 
         return Response::deny('อนุญาตให้มอบหมายทีมเจ้าหน้าที่เฉพาะผู้ดูแลหรือทีมเจ้าหน้าที่เท่านั้น');

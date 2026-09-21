@@ -22,7 +22,10 @@ class MaintenanceAssignmentController extends Controller
         // ตัด lead_user_id ออกจากการ validate ไปเลย ไม่ใช้แล้ว
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'user_ids'   => ['nullable', 'array'],
-            'user_ids.*' => ['integer', Rule::exists('users', 'id')->whereNull('suspended_at')],
+            // only working staff: the picker offers nobody else, and a hand-made request must not either
+            'user_ids.*' => ['integer', Rule::exists('users', 'id')->whereNull('suspended_at')->whereIn('role', User::teamRoles())],
+        ], [
+            'user_ids.*.exists' => 'เลือกได้เฉพาะเจ้าหน้าที่ในทีมที่ยังใช้งานอยู่',
         ]);
 
         if ($validator->fails()) {
@@ -40,6 +43,11 @@ class MaintenanceAssignmentController extends Controller
             ->map(fn($v) => (int) $v)
             ->unique()
             ->values();
+
+        // every box unticked would leave a job somebody is working on with nobody on it (only staff could then touch it)
+        if ($userIds->isEmpty() && $req->needsTeam()) {
+            return back()->with('toast', Toast::warning('งานนี้ดำเนินการอยู่ ต้องเลือกเจ้าหน้าที่อย่างน้อย 1 คน', 3500));
+        }
 
         $workers = User::query()
             ->whereIn('id', $userIds->all())

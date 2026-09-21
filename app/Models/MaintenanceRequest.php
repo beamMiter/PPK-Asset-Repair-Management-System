@@ -111,6 +111,14 @@ class MaintenanceRequest extends Model
         self::STATUS_ON_HOLD,
     ];
 
+    /** Somebody has taken the job and it is not over yet: it must never be left with nobody on it. */
+    public const TEAM_REQUIRED_STATUSES = [
+        self::STATUS_ACCEPTED,
+        self::STATUS_IN_PROGRESS,
+        self::STATUS_ON_HOLD,
+        self::STATUS_RESOLVED,
+    ];
+
     /**
      * Transition map: สถานะปัจจุบัน => สถานะที่อนุญาตให้เปลี่ยนไปได้
      */
@@ -411,6 +419,11 @@ class MaintenanceRequest extends Model
     public function hasStatus(string $status): bool
     {
         return (string) $this->status === $status;
+    }
+
+    public function needsTeam(): bool
+    {
+        return in_array((string) $this->status, self::TEAM_REQUIRED_STATUSES, true);
     }
 
     public function type()

@@ -108,6 +108,10 @@ class MaintenanceRequestService
             $incomingUserIds = $data['user_ids'] ?? null;
             $forceUpdateTeam = array_key_exists('update_team_flag', $data) || array_key_exists('user_ids', $data);
 
+            if ($isTeam && $forceUpdateTeam && empty($incomingUserIds) && $req->needsTeam()) {
+                abort(422, 'งานนี้ดำเนินการอยู่ ต้องเลือกเจ้าหน้าที่อย่างน้อย 1 คน');
+            }
+
             if ($forceUpdateTeam && empty($incomingUserIds) && !array_key_exists('technician_id', $data)) {
                 $incomingTechId = 0;
             }

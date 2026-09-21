@@ -113,6 +113,16 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   technician who pressed it (admins and supervisors who accept on someone's behalf do not become the worker), and a job that is
   accepted with nobody on it can be opened by every technician, since every technician may start it (self-dispatch). No test
   drove the acknowledge / accept / hold / resume / cancel / reject buttons before; `RequestLifecycleEndpointsTest` does.
+- **The assign-team dialog had no rules.** Any technician could change the team of any job in any status, and the dialog took
+  any account and an empty list: a technician who was not on a *closed* job could put himself on it (the worker who did it
+  was cancelled, the job showed "in progress" again, and the rating followed the newest assignment), submitting with every box
+  unticked left an in-progress job with nobody on it (from then on only an admin could hold or resolve it), and a plain
+  member account could be put on a team. Now: nobody — admins included — changes the team of a closed, cancelled or rejected
+  job (it is the record of who did the work); on a resolved job only admins and supervisors do; a technician changes the team
+  of a job he is on (hand-over) or of a job nobody is on yet (dispatch), not somebody else's; a job that is accepted, in
+  progress, on hold or resolved refuses an empty list (`PUT /api/repair-requests/{id}` with `user_ids: []` too, 422);
+  and only working staff (admin, supervisor, technician roles, not suspended) can be picked, also for a hand-made request.
+  `RequestAssignmentRulesTest` (7 tests).
 
 ### Added
 

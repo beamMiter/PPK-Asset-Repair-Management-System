@@ -277,7 +277,7 @@ class MaintenanceRequestController extends Controller
             'issue_software'   => ['nullable', 'boolean'],
             'issue_hardware'   => ['nullable', 'boolean'],
             'user_ids'         => ['nullable', 'array'],
-            'user_ids.*'       => ['integer', Rule::exists('users', 'id')->whereNull('suspended_at')],
+            'user_ids.*'       => ['integer', Rule::exists('users', 'id')->whereNull('suspended_at')->whereIn('role', User::teamRoles())],
         ];
 
         $validator = Validator::make($request->all(), $rules);
