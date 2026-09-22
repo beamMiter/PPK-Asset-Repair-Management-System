@@ -3,6 +3,25 @@
 @section('title', 'SLA Dashboard')
 
 @section('page-header')
+    @php
+        // The three quick-range links below (and the "แสดงข้อมูล:" summary further down) both need to know which one, if
+        // any, is currently applied — computed once, from the exact same `from` each link itself sends, so the two
+        // things showing it never fall out of step with each other (they used to: the summary compared against
+        // subMonths(5)->startOfMonth() / subMonths(11)->startOfMonth(), which never once matched what these links
+        // actually send — subMonths(6)->addDay() / subYear()->addDay() — so "แสดงข้อมูล:" always read "ช่วงวันที่", never
+        // "6 เดือน" or "12 เดือน", even right after clicking one).
+        $slaShortcuts = [
+            'six' => ['label' => '6 เดือน', 'from' => now()->subMonths(6)->addDay()->format('Y-m-d')],
+            'twelve' => ['label' => '12 เดือน', 'from' => now()->subYear()->addDay()->format('Y-m-d')],
+            'year' => ['label' => 'ปีนี้', 'from' => null],
+        ];
+        $activeShortcut = null;
+        if (!request('from') && !request('to')) {
+            $activeShortcut = 'year';
+        } elseif (!request('to')) {
+            $activeShortcut = collect($slaShortcuts)->search(fn ($s, $key) => $key !== 'year' && $s['from'] === request('from')) ?: null;
+        }
+    @endphp
     <div class="sticky top-16 z-20 bg-white/90 backdrop-blur border-b border-slate-200" x-data="{ showFilters: window.innerWidth >= 768 }">
         <div class="px-4 md:px-6 lg:px-8 py-4">
             <div class="flex flex-wrap items-start justify-between gap-4">
@@ -28,22 +47,12 @@
                         <span class="material-symbols-outlined text-[16px]">filter_list</span>
                         <span x-text="showFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรอง'"></span>
                     </button>
-                    <button type="button" @click="showSignModal = true"
-                        class="inline-flex items-center overflow-hidden rounded border border-slate-200 bg-white text-[13px] font-bold text-slate-700 hover:bg-slate-50 transition-all group">
-                        <span
-                            class="px-2.5 py-2 bg-slate-50 flex items-center justify-center text-slate-500 group-hover:text-slate-700 border-r border-slate-100">
-                            <span class="material-symbols-outlined text-[17px]">print</span>
-                        </span>
-                        <span class="px-3 py-2 leading-none">รายงานสรุป</span>
-                    </button>
-                    <button type="button" onclick="window.location.reload()"
-                        class="inline-flex items-center overflow-hidden rounded bg-[#0F2D5C] text-[13px] font-bold text-white hover:bg-[#0F2D5C]/90 transition-all group active:scale-95">
-                        <span
-                            class="px-2.5 py-2 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/10">
-                            <span class="material-symbols-outlined text-[17px]">refresh</span>
-                        </span>
-                        <span class="px-3 py-2 leading-none">ล่าสุด</span>
-                    </button>
+                    {{-- Bare icons, not the split (icon-block + label) look these two used to have on their own — the
+                         same shape as the paperclip/camera pair and the job page's assign-team icon elsewhere in the app. --}}
+                    <x-ui.button type="button" @click="showSignModal = true" variant="secondary" size="square"
+                        icon="print" aria-label="รายงานสรุป" title="รายงานสรุป" />
+                    <x-ui.button type="button" onclick="window.location.reload()" variant="brand" size="square"
+                        icon="refresh" aria-label="รีเฟรชข้อมูลล่าสุด" title="รีเฟรชข้อมูลล่าสุด" />
 
                     {{-- Signature Modal Teleport --}}
                     <template x-teleport="body">
@@ -162,14 +171,17 @@
 
                     <div class="h-4 w-[1px] bg-slate-200 mx-1 hidden md:block"></div>
 
-                    <div class="flex items-center gap-3">
+                    {{-- Quick ranges, as a small set of pills rather than plain underlined links: which one (if any) is
+                         applied right now is shown filled navy, not just implied by matching a date in the inputs above. --}}
+                    <div class="flex items-center gap-2" role="group" aria-label="ช่วงเวลาด่วน">
                         <span class="text-[12px] font-medium text-slate-500">ทางลัด:</span>
-                        <a href="{{ url()->current() }}?from={{ now()->subMonths(6)->addDay()->format('Y-m-d') }}"
-                            class="text-[12px] font-medium text-[#0F2D5C] hover:underline">6 เดือน</a>
-                        <a href="{{ url()->current() }}?from={{ now()->subYear()->addDay()->format('Y-m-d') }}"
-                            class="text-[12px] font-medium text-[#0F2D5C] hover:underline">12 เดือน</a>
-                        <a href="{{ url()->current() }}"
-                            class="text-[12px] font-medium text-[#0F2D5C] hover:underline">ปีนี้</a>
+                        @foreach ($slaShortcuts as $key => $shortcut)
+                            <a href="{{ $shortcut['from'] ? url()->current() . '?from=' . $shortcut['from'] : url()->current() }}"
+                                @if ($activeShortcut === $key) aria-current="true" @endif
+                                class="rounded-md border px-2.5 py-1 text-[12px] font-semibold transition-colors {{ $activeShortcut === $key ? 'border-[#0F2D5C] bg-[#0F2D5C] text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50' }}">
+                                {{ $shortcut['label'] }}
+                            </a>
+                        @endforeach
                     </div>
 
                     @if (request('from') || request('to'))
@@ -218,18 +230,12 @@
                             return $date->day . ' ' . $months[$date->month] . ' ' . ($date->year + 543);
                         };
 
-                        // ตรวจสอบว่าเป็นช่วงเวลาแนะนำตัวไหน
-                        $periodLabel = 'ช่วงวันที่';
-                        $sixMonths = now()->subMonths(5)->startOfMonth()->format('Y-m-d');
-                        $twelveMonths = now()->subMonths(11)->startOfMonth()->format('Y-m-d');
-
-                        if (!request('from') && !request('to')) {
-                            $periodLabel = 'ปีนี้';
+                        // ช่วงเวลาที่ใช้อยู่ตอนนี้ — มาจาก $activeShortcut ตัวเดียวกับที่ทำให้ปุ่มทางลัดด้านบนติดสถานะ
+                        // "เลือกอยู่" ไม่ใช่คำนวณแยกอีกชุด (ของเดิมคำนวณแยก และคลาดกับ from ที่ลิงก์ทางลัดส่งจริง ทำให้
+                        // บรรทัดนี้ไม่เคยขึ้น "6 เดือน" / "12 เดือน" แม้เพิ่งกดปุ่มนั้นมา)
+                        $periodLabel = $activeShortcut ? $slaShortcuts[$activeShortcut]['label'] : 'ช่วงวันที่';
+                        if ($activeShortcut === 'year') {
                             $fromDate = now()->startOfYear();
-                        } elseif (request('from') === $sixMonths) {
-                            $periodLabel = '6 เดือน';
-                        } elseif (request('from') === $twelveMonths) {
-                            $periodLabel = '12 เดือน';
                         }
                     @endphp
 
