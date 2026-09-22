@@ -8,18 +8,23 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- **SLA dashboard: the quick date-range shortcuts never showed which one was applied, and "แสดงข้อมูล:" was wrong about
-  it too.** "รายงานสรุป" and "ล่าสุด" were split buttons (icon block + label) of their own, which the shared
-  `<x-ui.button icon="..." split>` already draws. They are bare icons now — no box of any size, not even a bordered
-  square — the same `ghost`/`icon-lg` look as the live chat page's own refresh icon (`chat/index.blade.php`,
-  `#btnHeaderRefresh`) and the paperclip/camera pair elsewhere. The three quick ranges (6 เดือน / 12 เดือน / ปีนี้)
-  were plain underlined links; they are a small set of
-  pills now, the one that's applied filled navy — which needed knowing which one is applied, and the page already
-  computed that once, for the "แสดงข้อมูล:" summary below the filters, but compared `request('from')` against dates
-  worked out a different way (`subMonths(5)->startOfMonth()` / `subMonths(11)->startOfMonth()`) than the ones the
-  links themselves send (`subMonths(6)->addDay()` / `subYear()->addDay()`) — so that line read "ช่วงวันที่" even right
-  after clicking "6 เดือน" or "12 เดือน", never the shortcut's own name. Both places now read the one `$activeShortcut`
-  the links' own dates produce. `SlaShortcutsTest`.
+- **SLA dashboard: the quick date-range shortcuts never showed which one was applied, "แสดงข้อมูล:" was wrong about
+  it too, and the icon-only tools were easy to miss.** "รายงานสรุป" and "ล่าสุด" were split buttons (icon block +
+  label) of their own, which the shared `<x-ui.button icon="..." split>` already draws. They are bare icons now — no
+  box of any size, not even a bordered square — sized the same as the live chat page's own refresh icon
+  (`chat/index.blade.php`, `#btnHeaderRefresh`) and the paperclip/camera pair elsewhere, but in a new `ghost-brand`
+  variant (navy icon, navy-tinted hover, still no border or background at rest) rather than plain `ghost`'s neutral
+  grey — this whole page is navy (the apply button, the active shortcut pill, every focus ring), and grey read as too
+  faint to notice against it. "แสดงผล" (apply the date range) was the one filter-submit button in the app that was a
+  rectangle with a word on it; it is the same round, filled, magnifying-glass icon button the request/asset/user
+  list pages already use for their own search-submit button. The three quick ranges (6 เดือน / 12 เดือน / ปีนี้) were
+  plain underlined links; they are a small set of pills now, the one that's applied filled navy — which needed
+  knowing which one is applied, and the page already computed that once, for the "แสดงข้อมูล:" summary below the
+  filters, but compared `request('from')` against dates worked out a different way (`subMonths(5)->startOfMonth()` /
+  `subMonths(11)->startOfMonth()`) than the ones the links themselves send (`subMonths(6)->addDay()` /
+  `subYear()->addDay()`) — so that line read "ช่วงวันที่" even right after clicking "6 เดือน" or "12 เดือน", never the
+  shortcut's own name. Both places now read the one `$activeShortcut` the links' own dates produce.
+  `SlaShortcutsTest`, `ButtonComponentTest`.
 - **Docker: an uploaded file landed in the project folder, not a separate store.** `app` (and `web`, `worker`) bind-mount the
   whole project (`./:/var/www/html`) for live-reload dev, so a file the app wrote to `storage/app/public` (or `/private`)
   came out at that same path on the host — inside the git checkout, next to `app/` and `resources/`, not a store decoupled

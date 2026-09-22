@@ -47,12 +47,14 @@
                         <span class="material-symbols-outlined text-[16px]">filter_list</span>
                         <span x-text="showFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรอง'"></span>
                     </button>
-                    {{-- Bare icons, not a bordered/filled button of any size: the same `ghost`, `icon-lg` (40px, a 24px
-                         glyph) as the live chat page's own refresh icon (chat/index.blade.php, #btnHeaderRefresh) and
-                         the paperclip/camera pair and job-page assign-team icon elsewhere in the app. --}}
-                    <x-ui.button type="button" @click="showSignModal = true" variant="ghost" size="icon-lg"
+                    {{-- Bare icons, not a bordered/filled button of any size — same `icon-lg` (40px, a 24px glyph) as the
+                         live chat page's own refresh icon (chat/index.blade.php, #btnHeaderRefresh) and the paperclip/
+                         camera pair and job-page assign-team icon elsewhere. `ghost-brand`, not plain `ghost`: this whole
+                         page is navy (the submit button, the active shortcut pill, every focus ring), and plain ghost's
+                         neutral grey read as too faint to notice against it. --}}
+                    <x-ui.button type="button" @click="showSignModal = true" variant="ghost-brand" size="icon-lg"
                         icon="print" aria-label="รายงานสรุป" title="รายงานสรุป" />
-                    <x-ui.button type="button" onclick="window.location.reload()" variant="ghost" size="icon-lg"
+                    <x-ui.button type="button" onclick="window.location.reload()" variant="ghost-brand" size="icon-lg"
                         icon="refresh" aria-label="รีเฟรชข้อมูลล่าสุด" title="รีเฟรชข้อมูลล่าสุด" />
 
                     {{-- Signature Modal Teleport --}}
@@ -165,9 +167,17 @@
                                 class="rounded-md border border-slate-200 px-2 py-1.5 text-[13px] focus:ring-2 focus:ring-[#0F2D5C]/20 outline-none">
                         </div>
                     </div>
+                    {{-- The same round, filled, icon-only filter-submit button the request/asset/user lists use (a
+                         44px navy or emerald circle with a magnifying glass, title "ค้นหา") — "แสดงผล" was the one
+                         filter-apply button in the app that was a rectangle with a word on it instead. --}}
                     <button type="submit"
-                        class="px-4 py-1.5 bg-[#0F2D5C] text-white rounded-md text-[13px] font-bold hover:bg-[#0F2D5C]/90 transition-all">
-                        แสดงผล
+                        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#0F2D5C] text-white hover:bg-[#0F2D5C]/90 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/45 focus:ring-offset-1"
+                        title="แสดงผล" aria-label="แสดงผล">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M21 21l-4.3-4.3M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
                     </button>
 
                     <div class="h-4 w-[1px] bg-slate-200 mx-1 hidden md:block"></div>

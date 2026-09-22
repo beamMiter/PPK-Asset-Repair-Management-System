@@ -64,6 +64,7 @@ class ButtonComponentTest extends TestCase
             'ghost' => 'text-slate-400',
             'ghost-danger' => 'text-rose-500',
             'ghost-warning' => 'text-amber-600',
+            'ghost-brand' => 'text-[#0F2D5C]',
         ];
         foreach ($expected as $variant => $class) {
             $this->assertStringContainsString($class, $this->render("<x-ui.button variant=\"$variant\">x</x-ui.button>"), $variant);

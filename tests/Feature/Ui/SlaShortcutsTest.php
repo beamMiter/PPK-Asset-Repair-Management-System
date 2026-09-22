@@ -48,10 +48,11 @@ class SlaShortcutsTest extends TestCase
     {
         $xp = $this->xpath($this->page());
 
-        // the system's bare-icon look (ghost, icon-lg — the live chat page's own refresh icon,
-        // chat/index.blade.php #btnHeaderRefresh), not a bordered or filled button of its own
-        $ghost = $this->xpath(\Illuminate\Support\Facades\Blade::render(
-            '<x-ui.button variant="ghost" size="icon-lg" icon="print" id="x" />'
+        // the bare-icon look, but coloured for this navy-branded page: `ghost-brand`, not plain `ghost` — the same
+        // shape (size, no border, no background at rest) as chat's refresh icon, but readable against a page where
+        // everything else (the submit button, the active shortcut pill, every focus ring) is navy, not neutral grey
+        $ghostBrand = $this->xpath(\Illuminate\Support\Facades\Blade::render(
+            '<x-ui.button variant="ghost-brand" size="icon-lg" icon="print" id="x" />'
         ))->query('//*[@id="x"]')->item(0)->getAttribute('class');
 
         foreach (['print' => 'รายงานสรุป', 'refresh' => 'รีเฟรชข้อมูลล่าสุด'] as $glyph => $label) {
@@ -63,10 +64,33 @@ class SlaShortcutsTest extends TestCase
             $this->assertSame('', $words, "$glyph: no visible label, only the icon");
 
             $class = $button->getAttribute('class');
-            $this->assertSame($ghost, $class, "$glyph: the system's bare-icon look, same size as chat's refresh icon");
+            $this->assertSame($ghostBrand, $class, "$glyph: the page's bare-icon look (ghost-brand), same size as chat's refresh icon");
+            $this->assertStringContainsString('text-[#0F2D5C]', $class, "$glyph: navy, not the neutral grey of plain ghost");
             $this->assertDoesNotMatchRegularExpression('/(?<![-\w:])border(?![-\w])/', $class, "$glyph: no border");
-            $this->assertDoesNotMatchRegularExpression('/(?<![-\w:])bg-/', $class, "$glyph: no background at rest");
-            $this->assertStringContainsString('hover:bg-slate-100', $class, "$glyph: a soft circle on hover");
+            $this->assertStringContainsString('hover:bg-[#0F2D5C]/10', $class, "$glyph: a soft navy tint on hover");
+            $this->assertStringNotContainsString('bg-', str_replace('hover:bg-[#0F2D5C]/10', '', $class), "$glyph: no background at rest — only that hover tint");
+        }
+    }
+
+    public function test_the_apply_button_is_the_same_round_icon_search_button_the_other_lists_use(): void
+    {
+        $html = $this->page();
+        $xp = $this->xpath($html);
+
+        // the magnifying-glass path is the same one request/asset/user list pages use for their own search-submit
+        // button — a distinctive fingerprint, since the page also has a logout button and a bulk-save button, both
+        // also <button type="submit">
+        $button = $xp->query('//button[@type="submit"][.//svg/path[contains(@d,"M21 21l-4.3-4.3")]]')->item(0);
+        $this->assertNotNull($button, 'the submit button of the filter form');
+        $this->assertSame('แสดงผล', $button->getAttribute('title'));
+        $this->assertSame('แสดงผล', $button->getAttribute('aria-label'));
+        $this->assertSame('', trim(preg_replace('/\s+/', ' ', $button->textContent)), 'no "แสดงผล" text label — the icon and the title/aria-label say it');
+        $this->assertSame(1, $xp->query('.//svg', $button)->length, 'an icon, not a bare rectangle of text');
+
+        $class = $button->getAttribute('class');
+        // the exact look request/asset list pages use for their own filter-submit button (h-11 w-11 rounded-full, filled)
+        foreach (['h-11', 'w-11', 'rounded-full', 'bg-[#0F2D5C]'] as $needle) {
+            $this->assertStringContainsString($needle, $class, "the apply button: $needle, matching the other lists' search button");
         }
     }
 
