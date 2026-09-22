@@ -48,6 +48,12 @@ class SlaShortcutsTest extends TestCase
     {
         $xp = $this->xpath($this->page());
 
+        // the system's bare-icon look (ghost, icon-lg — the live chat page's own refresh icon,
+        // chat/index.blade.php #btnHeaderRefresh), not a bordered or filled button of its own
+        $ghost = $this->xpath(\Illuminate\Support\Facades\Blade::render(
+            '<x-ui.button variant="ghost" size="icon-lg" icon="print" id="x" />'
+        ))->query('//*[@id="x"]')->item(0)->getAttribute('class');
+
         foreach (['print' => 'รายงานสรุป', 'refresh' => 'รีเฟรชข้อมูลล่าสุด'] as $glyph => $label) {
             $button = $xp->query('//button[.//span[normalize-space()="'.$glyph.'"]]')->item(0);
             $this->assertNotNull($button, "the $glyph button is there");
@@ -55,6 +61,12 @@ class SlaShortcutsTest extends TestCase
             $this->assertSame($label, $button->getAttribute('title'), "$glyph: says what it is on hover");
             $words = trim(preg_replace('/\s+/', ' ', str_replace($glyph, '', $button->textContent)));
             $this->assertSame('', $words, "$glyph: no visible label, only the icon");
+
+            $class = $button->getAttribute('class');
+            $this->assertSame($ghost, $class, "$glyph: the system's bare-icon look, same size as chat's refresh icon");
+            $this->assertDoesNotMatchRegularExpression('/(?<![-\w:])border(?![-\w])/', $class, "$glyph: no border");
+            $this->assertDoesNotMatchRegularExpression('/(?<![-\w:])bg-/', $class, "$glyph: no background at rest");
+            $this->assertStringContainsString('hover:bg-slate-100', $class, "$glyph: a soft circle on hover");
         }
     }
 

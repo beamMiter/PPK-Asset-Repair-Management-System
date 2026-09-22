@@ -10,8 +10,10 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **SLA dashboard: the quick date-range shortcuts never showed which one was applied, and "แสดงข้อมูล:" was wrong about
   it too.** "รายงานสรุป" and "ล่าสุด" were split buttons (icon block + label) of their own, which the shared
-  `<x-ui.button icon="..." split>` already draws — they are bare icons now, the same shape as the paperclip/camera pair
-  elsewhere. The three quick ranges (6 เดือน / 12 เดือน / ปีนี้) were plain underlined links; they are a small set of
+  `<x-ui.button icon="..." split>` already draws. They are bare icons now — no box of any size, not even a bordered
+  square — the same `ghost`/`icon-lg` look as the live chat page's own refresh icon (`chat/index.blade.php`,
+  `#btnHeaderRefresh`) and the paperclip/camera pair elsewhere. The three quick ranges (6 เดือน / 12 เดือน / ปีนี้)
+  were plain underlined links; they are a small set of
   pills now, the one that's applied filled navy — which needed knowing which one is applied, and the page already
   computed that once, for the "แสดงข้อมูล:" summary below the filters, but compared `request('from')` against dates
   worked out a different way (`subMonths(5)->startOfMonth()` / `subMonths(11)->startOfMonth()`) than the ones the

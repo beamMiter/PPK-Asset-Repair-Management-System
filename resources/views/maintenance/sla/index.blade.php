@@ -47,11 +47,12 @@
                         <span class="material-symbols-outlined text-[16px]">filter_list</span>
                         <span x-text="showFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรอง'"></span>
                     </button>
-                    {{-- Bare icons, not the split (icon-block + label) look these two used to have on their own — the
-                         same shape as the paperclip/camera pair and the job page's assign-team icon elsewhere in the app. --}}
-                    <x-ui.button type="button" @click="showSignModal = true" variant="secondary" size="square"
+                    {{-- Bare icons, not a bordered/filled button of any size: the same `ghost`, `icon-lg` (40px, a 24px
+                         glyph) as the live chat page's own refresh icon (chat/index.blade.php, #btnHeaderRefresh) and
+                         the paperclip/camera pair and job-page assign-team icon elsewhere in the app. --}}
+                    <x-ui.button type="button" @click="showSignModal = true" variant="ghost" size="icon-lg"
                         icon="print" aria-label="รายงานสรุป" title="รายงานสรุป" />
-                    <x-ui.button type="button" onclick="window.location.reload()" variant="brand" size="square"
+                    <x-ui.button type="button" onclick="window.location.reload()" variant="ghost" size="icon-lg"
                         icon="refresh" aria-label="รีเฟรชข้อมูลล่าสุด" title="รีเฟรชข้อมูลล่าสุด" />
 
                     {{-- Signature Modal Teleport --}}
