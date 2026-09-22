@@ -21,7 +21,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   replied. Opening a thread now advances the pointer to its newest message, the same way sending one already did.
   `ChatReadTrackingTest`.
 - **The "ใหม่" label in the chat widget was a boxed green pill.** Every unread row got a filled, ringed badge, which read as
-  loud on a list where most rows have one. It is red text now, no fill, no border. `tests/js/chat-fab.test.mjs`.
+  loud on a list where most rows have one. It is blue text now, no fill, no border — blue rather than red so it does not
+  compete with the FAB's own red unread dot. `tests/js/chat-fab.test.mjs`.
 - **Login feedback:** a failed sign-in was completely silent. The auth layout now renders the
   session toast (`<x-toast />` only consumed it), the messages under the CID / password fields
   are shown, and every login message is in Thai. A lock-out after 5 attempts now says to wait N

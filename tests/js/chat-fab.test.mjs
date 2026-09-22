@@ -151,12 +151,12 @@ test('the list shows at most ten threads, with the unread pill capped at 99+ and
   assert.ok(rows(world).every((a) => a.hasAttribute('data-no-loader')), 'opening a thread from the drawer skips the page spinner');
 });
 
-test('the "ใหม่" label on an unread row is red text, not a boxed pill', async () => {
+test('the "ใหม่" label on an unread row is blue text, not a boxed pill', async () => {
   const world = boot({ answers: [[item({ unread: 3 })]] });
   await settle();
   const label = Array.from(rows(world)[0].querySelectorAll('span')).find((s) => s.textContent.includes('ใหม่'));
   assert.ok(label, 'the label is there');
-  assert.match(label.className, /text-rose-600/, 'red text');
+  assert.match(label.className, /text-blue-600/, 'blue text');
   assert.doesNotMatch(label.className, /bg-|ring-|rounded-full/, 'no fill, no border, no pill shape');
 });
 
