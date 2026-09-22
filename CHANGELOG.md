@@ -33,6 +33,10 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   baseline-up, so the font's own em-box centre sits a touch above it): `pb-0.5` eats 2px off the bottom of the box only —
   its height stays a fixed 20px, so the circle itself does not move — which nudges the centred content up about 1px.
   `ChatBadgeShapeTest`.
+- **The "closed" dialog's backdrop did not match every other dialog's.** Assign team, reject/cancel/hold/close confirm, the
+  history log and the shared confirm dialog all dim the page with `bg-slate-900/40 backdrop-blur-sm`; the dialog that pops
+  up right after approving a job's repair (`_modal_post_close`, "อนุมัติผลการซ่อมบำรุงเรียบร้อยแล้ว!") used a darker tint
+  and a heavier blur of its own. It now matches. `ModalBackdropTest`.
 - **Login feedback:** a failed sign-in was completely silent. The auth layout now renders the
   session toast (`<x-toast />` only consumed it), the messages under the CID / password fields
   are shown, and every login message is in Thai. A lock-out after 5 attempts now says to wait N

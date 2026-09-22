@@ -1,7 +1,7 @@
         {{-- Post-Close Action Modal --}}
         @if (session('show_post_close_modal'))
             <div id="postCloseModal"
-                class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+                class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
                 <div
                     class="relative z-[10000] w-full max-w-md transform transition-all animate-in fade-in zoom-in duration-300">
                     <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white ">
