@@ -13,10 +13,12 @@
                 </svg>
             </div>
             {{-- a fixed height equal to the min-width, and flex centring: without a height, text-[11px] with no line-height
-                 gave the span a taller line box than its 20px width, so `rounded-full` drew an oval, not a circle, and the
-                 digit sat wherever the line box put it, not the middle --}}
+                 gave the span a taller line box than its 20px width, so `rounded-full` drew an oval, not a circle. `font-sans`
+                 (not the page's default Sarabun) because Sarabun's ascent is unusually tall — headroom for Thai marks
+                 stacked above a vowel — so even at leading-none a plain digit's ink sits low in the line box; the badge
+                 never shows Thai, so a normal-metrics font keeps a numeral centred instead. --}}
             <span id="chatBadge"
-                class="absolute -top-1 -right-1 hidden h-5 min-w-5 inline-flex items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-semibold leading-none text-white">
+                class="absolute -top-1 -right-1 hidden h-5 min-w-5 inline-flex items-center justify-center rounded-full bg-rose-500 px-1 font-sans text-[11px] font-semibold leading-none text-white">
             </span>
         </button>
 
