@@ -278,6 +278,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Every popup card has a smaller corner radius.** Assign team (the job page's own copy and the edit page's), the
+  history log, the four confirm dialogs, the "closed" dialog, the shared confirm dialog, the profile photo cropper and
+  the chat widget's drawer were `rounded-2xl` (16px), and the "closed" dialog was `rounded-3xl` (24px, rounder than the
+  rest). All of them are `rounded-xl` (12px) now — smaller than either, and the same as each other. The rating dialog
+  (`rounded-sm`, 2px) is untouched: it was already smaller than the new size, and the ask was to shrink the ones that
+  were too round, not round up the one that wasn't. `DialogRadiusTest`.
 - Header icons restored on the request list, assets, chat, users, maintenance-types and
   notification-settings pages (Material Symbols, same style as My Jobs).
 - **Buttons only have to match inside a pattern group** (form pages, list-page row actions, dialogs, back button) —

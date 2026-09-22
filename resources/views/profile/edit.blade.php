@@ -158,7 +158,7 @@
     <div id="cropper-modal" class="fixed inset-0 z-[100] hidden overflow-y-auto">
         <div class="flex min-h-screen items-center justify-center p-4">
             <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"></div>
-            <div class="relative w-full max-w-xl rounded-2xl bg-white overflow-hidden">
+            <div class="relative w-full max-w-xl rounded-xl bg-white overflow-hidden">
                 <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                     <h3 class="text-lg font-bold text-slate-900">ตัดรูปโปรไฟล์</h3>
                     <button type="button" id="cropper-close" class="text-slate-400 hover:text-slate-600">

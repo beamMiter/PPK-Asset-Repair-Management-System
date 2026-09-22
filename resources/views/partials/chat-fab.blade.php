@@ -29,7 +29,7 @@
         {{-- Drawer รายการกระทู้ --}}
         <div id="chatDrawer"
             class="pointer-events-none fixed right-4 bottom-24 sm:bottom-28 sm:right-6 w-[92vw] max-w-[420px] translate-y-4 opacity-0 transition-all duration-200
-              rounded-2xl border border-zinc-200 bg-white ">
+              rounded-xl border border-zinc-200 bg-white ">
             <div class="pointer-events-auto flex max-h-[70vh] flex-col">
 
                 {{-- Header --}}
