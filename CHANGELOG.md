@@ -23,6 +23,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **The "ใหม่" label in the chat widget was a boxed green pill.** Every unread row got a filled, ringed badge, which read as
   loud on a list where most rows have one. It is blue text now, no fill, no border — blue rather than red so it does not
   compete with the FAB's own red unread dot. `tests/js/chat-fab.test.mjs`.
+- **The unread count on the chat FAB was not quite round, and the digit was not centred.** `#chatBadge` had a min-width but
+  no height and no line-height, so at 11px the browser's default line box was taller than the 20px min-width —
+  `rounded-full` drew an oval, and the digit sat wherever that line box put it. A fixed height equal to the min-width,
+  plus flex centring, makes it a circle for one or two digits (still a pill for "99+") with the digit dead centre.
+  `ChatBadgeShapeTest`.
 - **Login feedback:** a failed sign-in was completely silent. The auth layout now renders the
   session toast (`<x-toast />` only consumed it), the messages under the CID / password fields
   are shown, and every login message is in Thai. A lock-out after 5 attempts now says to wait N

@@ -12,8 +12,11 @@
                     <path d="M4 5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H9.83l-3.9 3.9A1 1 0 0 1 4 20.9V5z" />
                 </svg>
             </div>
+            {{-- a fixed height equal to the min-width, and flex centring: without a height, text-[11px] with no line-height
+                 gave the span a taller line box than its 20px width, so `rounded-full` drew an oval, not a circle, and the
+                 digit sat wherever the line box put it, not the middle --}}
             <span id="chatBadge"
-                class="absolute -top-1 -right-1 hidden min-w-5 rounded-full bg-rose-500 px-1.5 text-center text-[11px] font-semibold text-white">
+                class="absolute -top-1 -right-1 hidden h-5 min-w-5 inline-flex items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-semibold leading-none text-white">
             </span>
         </button>
 
