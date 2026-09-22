@@ -8,6 +8,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Docker: an uploaded file landed in the project folder, not a separate store.** `app` (and `web`, `worker`) bind-mount the
+  whole project (`./:/var/www/html`) for live-reload dev, so a file the app wrote to `storage/app/public` (or `/private`)
+  came out at that same path on the host — inside the git checkout, next to `app/` and `resources/`, not a store decoupled
+  from the source tree. Two named volumes (`storage_uploads`, `storage_private`) are now layered on that path in `app`,
+  `worker` and `web` (nginx reads uploads from the same `storage_uploads`, matching `.docker/nginx.conf`'s
+  `location ^~ /storage/`), so a container's uploads live in their own store, not the bind-mounted project folder.
+  `Storage::disk()` and the request/asset attachment code are unchanged — this is a Docker volume fix, not an app one.
 - **Login feedback:** a failed sign-in was completely silent. The auth layout now renders the
   session toast (`<x-toast />` only consumed it), the messages under the CID / password fields
   are shown, and every login message is in Thai. A lock-out after 5 attempts now says to wait N

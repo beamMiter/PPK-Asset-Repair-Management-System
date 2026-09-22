@@ -28,6 +28,12 @@ services:
     volumes:
       - ./:/var/www/html:delegated
       - ./storage:/var/www/html/storage
+      # Uploaded files (attachments, avatars, private files) live in their own volumes, layered on top of the bind mount
+      # above: without this, `./:/var/www/html` mounts the whole project, so a file the container writes to
+      # storage/app/public lands in the same host folder as the source code — physically the checkout, not a separate
+      # store. Named volumes here keep it out of the project tree; `web` shares storage_uploads to serve them.
+      - storage_uploads:/var/www/html/storage/app/public
+      - storage_private:/var/www/html/storage/app/private
     expose:
       - "9000"
     depends_on:
@@ -47,6 +53,9 @@ services:
       - "8000:80"
     volumes:
       - ./:/var/www/html:delegated
+      # the same volume `app` writes uploads to — nginx's `location ^~ /storage/` (.docker/nginx.conf) reads straight
+      # from storage/app/public, so it has to be the same store, not another copy from the plain bind mount
+      - storage_uploads:/var/www/html/storage/app/public
       - ./.docker/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - app
@@ -109,7 +118,13 @@ services:
     environment: *php-environment
     volumes:
       - ./:/var/www/html:delegated
+      # same reasoning as `app`: keep whatever the worker writes (e.g. a queued job that touches an attachment) out of
+      # the project tree, and in the same store `app` and `web` use
+      - storage_uploads:/var/www/html/storage/app/public
+      - storage_private:/var/www/html/storage/app/private
 
 volumes:
   dbdata:
   node_modules:
+  storage_uploads:
+  storage_private:
