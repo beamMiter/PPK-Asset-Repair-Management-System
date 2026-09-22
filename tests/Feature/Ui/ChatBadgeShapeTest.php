@@ -21,7 +21,7 @@ class ChatBadgeShapeTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_the_unread_badge_is_a_flex_centred_circle(): void
+    private function badgeClass(): string
     {
         $html = $this->actingAs(User::factory()->create(['role' => 'admin']))
             ->get(route('maintenance.requests.index'))->assertOk()->getContent();
@@ -30,7 +30,13 @@ class ChatBadgeShapeTest extends TestCase
         @$dom->loadHTML('<?xml encoding="utf-8" ?>'.$html);
         $badge = (new DOMXPath($dom))->query('//*[@id="chatBadge"]')->item(0);
         $this->assertNotNull($badge, '#chatBadge is on the page');
-        $class = $badge->getAttribute('class');
+
+        return $badge->getAttribute('class');
+    }
+
+    public function test_the_unread_badge_is_a_flex_centred_circle(): void
+    {
+        $class = $this->badgeClass();
 
         // a circle needs equal height and width for the one- or two-digit case: a fixed height matching the min-width
         $this->assertMatchesRegularExpression('/(?<![\w-])h-5(?![\w-])/', $class, 'a fixed height');
@@ -47,13 +53,7 @@ class ChatBadgeShapeTest extends TestCase
 
     public function test_the_badge_opts_out_of_the_pages_thai_font(): void
     {
-        $html = $this->actingAs(User::factory()->create(['role' => 'admin']))
-            ->get(route('maintenance.requests.index'))->assertOk()->getContent();
-
-        $dom = new DOMDocument;
-        @$dom->loadHTML('<?xml encoding="utf-8" ?>'.$html);
-        $badge = (new DOMXPath($dom))->query('//*[@id="chatBadge"]')->item(0);
-        $class = $badge->getAttribute('class');
+        $class = $this->badgeClass();
 
         // `.font-sans` (a class selector) beats the `html, body { font-family: Sarabun }` rule in resources/css/layout.css
         // (a plain-element selector) on specificity alone, whichever file loads last — Sarabun's ascent is tuned for Thai
@@ -62,5 +62,21 @@ class ChatBadgeShapeTest extends TestCase
 
         $css = file_get_contents(resource_path('css/layout.css'));
         $this->assertMatchesRegularExpression('/^(html,\s*)?body\s*\{[^}]*font-family:\s*[\'"]Sarabun/m', $css, 'the rule font-sans has to outrank is still a plain element selector');
+    }
+
+    public function test_the_digit_is_nudged_up_without_moving_the_circle(): void
+    {
+        $class = $this->badgeClass();
+
+        // even in a normal font a digit's ink sits baseline-up, so the em-box's own centre sits a touch above the ink's
+        // centre — pb-0.5 eats 2px off the bottom of the box (not off its total height: Tailwind's preflight makes every
+        // box border-box), so the centred content shifts up ~1px while the circle stays the fixed h-5 it was
+        $this->assertMatchesRegularExpression('/(?<![\w-])pb-0\.5(?![\w-])/', $class, 'bottom-only padding nudges the centred content up');
+        $this->assertMatchesRegularExpression('/(?<![\w-])h-5(?![\w-])/', $class, 'height is still the fixed one pb-0.5 must not grow');
+
+        // proof the box stays border-box regardless of padding: preflight.css (Tailwind's own base reset, unrelated to
+        // this app's classes) sets it on every element, so pb-0.5 shrinks the content area rather than growing h-5
+        $preflight = file_get_contents(base_path('node_modules/tailwindcss/lib/css/preflight.css'));
+        $this->assertMatchesRegularExpression('/\*,\s*::before,\s*::after\s*\{[^}]*box-sizing:\s*border-box/s', $preflight, 'tailwind preflight sets border-box on every element');
     }
 }

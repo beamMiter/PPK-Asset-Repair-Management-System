@@ -16,9 +16,13 @@
                  gave the span a taller line box than its 20px width, so `rounded-full` drew an oval, not a circle. `font-sans`
                  (not the page's default Sarabun) because Sarabun's ascent is unusually tall — headroom for Thai marks
                  stacked above a vowel — so even at leading-none a plain digit's ink sits low in the line box; the badge
-                 never shows Thai, so a normal-metrics font keeps a numeral centred instead. --}}
+                 never shows Thai, so a normal-metrics font keeps a numeral centred instead. A digit still optically sits a
+                 little low even in a normal font (its ink is baseline-up, so the em-box's centre sits a touch above the
+                 ink's own centre): `pb-0.5` eats 2px off the bottom of the box only (height stays a fixed 20px — Tailwind's
+                 preflight makes every box border-box — so the circle itself doesn't move), nudging the centred content up
+                 about 1px without moving the circle around it. --}}
             <span id="chatBadge"
-                class="absolute -top-1 -right-1 hidden h-5 min-w-5 inline-flex items-center justify-center rounded-full bg-rose-500 px-1 font-sans text-[11px] font-semibold leading-none text-white">
+                class="absolute -top-1 -right-1 hidden h-5 min-w-5 inline-flex items-center justify-center rounded-full bg-rose-500 px-1 pb-0.5 font-sans text-[11px] font-semibold leading-none text-white">
             </span>
         </button>
 
