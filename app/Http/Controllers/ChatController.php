@@ -44,6 +44,12 @@ class ChatController extends Controller
 
                 $totalMessages = $activeThread->messages()->count();
                 $lastAt = $messages->last()?->created_at ?? $activeThread->created_at;
+
+                // Opening a thread reads it. Without this, only posting a message ever advanced the pointer
+                // (storeMessage below), so the widget's "ใหม่" badge for a thread never cleared just by looking at it.
+                if ($lastMessageId = $activeThread->messages()->max('id')) {
+                    $this->markThreadRead((int) Auth::id(), (int) $activeThread->id, (int) $lastMessageId);
+                }
             }
         }
 

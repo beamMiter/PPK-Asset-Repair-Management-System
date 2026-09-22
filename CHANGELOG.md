@@ -15,6 +15,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `worker` and `web` (nginx reads uploads from the same `storage_uploads`, matching `.docker/nginx.conf`'s
   `location ^~ /storage/`), so a container's uploads live in their own store, not the bind-mounted project folder.
   `Storage::disk()` and the request/asset attachment code are unchanged — this is a Docker volume fix, not an app one.
+- **Opening a chat thread from the widget did not mark it read.** The web chat controller only advanced a user's read
+  pointer when they posted a message; viewing one (`GET /chat?thread_id=…`, what the widget's "My Topics" links to) never
+  did, so a thread you had just read stayed "unread" — the widget's badge and "ใหม่" label kept alerting on it until you
+  replied. Opening a thread now advances the pointer to its newest message, the same way sending one already did.
+  `ChatReadTrackingTest`.
+- **The "ใหม่" label in the chat widget was a boxed green pill.** Every unread row got a filled, ringed badge, which read as
+  loud on a list where most rows have one. It is red text now, no fill, no border. `tests/js/chat-fab.test.mjs`.
 - **Login feedback:** a failed sign-in was completely silent. The auth layout now renders the
   session toast (`<x-toast />` only consumed it), the messages under the CID / password fields
   are shown, and every login message is in Thai. A lock-out after 5 attempts now says to wait N

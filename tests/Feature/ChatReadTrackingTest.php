@@ -45,6 +45,35 @@ class ChatReadTrackingTest extends TestCase
         );
     }
 
+    public function test_opening_a_thread_marks_it_read(): void
+    {
+        $author = User::factory()->create(['role' => 'it_support']);
+        $other  = User::factory()->create(['role' => 'it_support']);
+
+        $thread = ChatThread::create(['title' => 'T', 'author_id' => $author->id, 'is_locked' => false]);
+        $this->actingAs($other)->post(route('chat.messages.store', $thread), ['body' => 'new message']);
+
+        // before opening it, the widget correctly shows it unread
+        $before = collect($this->actingAs($author)->getJson(route('chat.my_updates'))->json())->firstWhere('id', $thread->id);
+        $this->assertSame(1, $before['unread'], 'unread before opening the thread');
+
+        // clicking into the thread from the widget is a GET to chat.index with its id — that visit should read it
+        $this->actingAs($author)->get(route('chat.index', ['thread_id' => $thread->id]))->assertOk();
+
+        $after = collect($this->actingAs($author)->getJson(route('chat.my_updates'))->json())->firstWhere('id', $thread->id);
+        $this->assertSame(0, $after['unread'], 'still unread after opening it: the widget would keep alerting');
+    }
+
+    public function test_opening_a_thread_with_no_messages_does_not_error(): void
+    {
+        $author = User::factory()->create(['role' => 'it_support']);
+        $thread = ChatThread::create(['title' => 'Empty', 'author_id' => $author->id, 'is_locked' => false]);
+
+        $this->actingAs($author)->get(route('chat.index', ['thread_id' => $thread->id]))->assertOk();
+
+        $this->assertDatabaseMissing('chat_thread_reads', ['chat_thread_id' => $thread->id]);
+    }
+
     public function test_web_my_updates_reports_real_unread(): void
     {
         $author = User::factory()->create(['role' => 'it_support']);

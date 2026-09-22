@@ -70,7 +70,8 @@ export function buildItem(doc, it) {
     const top = el(doc, 'div', 'flex items-center gap-2');
     top.append(el(doc, 'div', 'truncate font-medium text-[14px]', it.title || 'Untitled'));
     if ((it.unread || 0) > 0) {
-        top.append(el(doc, 'span', 'ml-auto inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-emerald-200',
+        // just red text — no pill, no border: a box around every unread row was too loud for a list where most rows have one
+        top.append(el(doc, 'span', 'ml-auto shrink-0 text-[11px] font-semibold text-rose-600',
             `ใหม่ ${it.unread > 99 ? '99+' : it.unread}`));
     }
 

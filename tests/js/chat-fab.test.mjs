@@ -151,6 +151,15 @@ test('the list shows at most ten threads, with the unread pill capped at 99+ and
   assert.ok(rows(world).every((a) => a.hasAttribute('data-no-loader')), 'opening a thread from the drawer skips the page spinner');
 });
 
+test('the "ใหม่" label on an unread row is red text, not a boxed pill', async () => {
+  const world = boot({ answers: [[item({ unread: 3 })]] });
+  await settle();
+  const label = Array.from(rows(world)[0].querySelectorAll('span')).find((s) => s.textContent.includes('ใหม่'));
+  assert.ok(label, 'the label is there');
+  assert.match(label.className, /text-rose-600/, 'red text');
+  assert.doesNotMatch(label.className, /bg-|ring-|rounded-full/, 'no fill, no border, no pill shape');
+});
+
 test('the search box filters by title, sender and message text', async () => {
   const world = boot({ answers: [[item({ id: 1, title: 'เครื่องพิมพ์' }), item({ id: 2, title: 'เน็ตช้า', last_user_name: 'Wanna', last_body: 'switch ชั้น 2' })]] });
   await settle();
