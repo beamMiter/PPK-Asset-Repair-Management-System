@@ -175,7 +175,7 @@ class ChatController extends Controller
         session(['toast' => [
             'type' => 'success',
             'message' => 'ล็อกกระทู้เรียบร้อยแล้ว ผู้ใช้อื่นจะไม่สามารถส่งข้อความได้',
-            'title' => 'Lock Thread'
+            'title' => 'ล็อกกระทู้'
         ]]);
 
         return back();
@@ -191,7 +191,7 @@ class ChatController extends Controller
         session(['toast' => [
             'type' => 'success',
             'message' => 'ปลดล็อกกระทู้เรียบร้อยแล้ว เปิดรับการสนทนาตามปกติ',
-            'title' => 'Unlock Thread'
+            'title' => 'ปลดล็อกกระทู้'
         ]]);
 
         return back();
@@ -211,7 +211,7 @@ class ChatController extends Controller
         session(['toast' => [
             'type' => 'success',
             'message' => 'ลบกระทู้เรียบร้อยแล้ว ข้อมูลทั้งหมดถูกซ่อนจากระบบ',
-            'title' => 'Delete Thread'
+            'title' => 'ลบกระทู้'
         ]]);
 
         return redirect()->route('chat.index');

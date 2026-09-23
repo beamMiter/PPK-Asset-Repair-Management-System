@@ -65,7 +65,7 @@ class AuthenticatedSessionController extends Controller
 
         return redirect('/')->with('toast', [
             'type'     => 'info',
-            'message'  => 'Logout successful',
+            'message'  => 'ออกจากระบบเรียบร้อยแล้ว',
             'position' => 'tr',
             'timeout'  => 2400,
         ]);
