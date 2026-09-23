@@ -84,7 +84,7 @@
 
                 <label class="block text-sm font-medium text-slate-700 mt-4">สถานที่ / ตำแหน่งงาน</label>
                 <input type="text" name="location_text" value="{{ $v('location_text') }}" autocomplete="off"
-                    class="ui-input">
+                    class="ui-input" maxlength="255">
             </section>
 
             <section>
@@ -106,10 +106,10 @@
                     หัวข้อ <span class="text-rose-600">*</span>
                 </label>
                 <input type="text" name="title" value="{{ $v('title') }}" autocomplete="off"
-                    class="ui-input" required>
+                    class="ui-input" required maxlength="255">
 
                 <label class="block text-sm font-medium text-slate-700 mt-4">รายละเอียด / อาการเสีย</label>
-                <textarea name="description" rows="6" class="ui-textarea">{{ $v('description') }}</textarea>
+                <textarea name="description" rows="6" class="ui-textarea" maxlength="5000" data-counter>{{ $v('description') }}</textarea>
             </section>
         </div>
 
@@ -135,31 +135,31 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-700">เบอร์โทร (ถ้ามี)</label>
                             <input type="text" name="reporter_phone" value="{{ $v('reporter_phone') }}"
-                                class="ui-input">
+                                class="ui-input" maxlength="30">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">อีเมล (ถ้ามี)</label>
                             <input type="email" name="reporter_email"
-                                value="{{ $v('reporter_email', $user->email) }}" class="ui-input">
+                                value="{{ $v('reporter_email', $user->email) }}" class="ui-input" maxlength="255">
                         </div>
                     @else
                         <div>
                             <label class="block text-sm font-medium text-slate-700">ชื่อผู้แจ้ง</label>
                             <input type="text" name="reporter_name" value="{{ $v('reporter_name') }}"
-                                class="ui-input">
+                                class="ui-input" maxlength="255">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">เบอร์โทร</label>
                             <input type="text" name="reporter_phone" value="{{ $v('reporter_phone') }}"
-                                class="ui-input">
+                                class="ui-input" maxlength="30">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">อีเมล</label>
                             <input type="email" name="reporter_email" value="{{ $v('reporter_email') }}"
-                                class="ui-input">
+                                class="ui-input" maxlength="255">
                         </div>
                     @endif
                 </div>

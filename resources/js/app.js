@@ -6,6 +6,8 @@ window.SignaturePad = SignaturePad
 import './sidebar-intro';
 import { installToast } from './toast';
 import { installImageFallback } from './image-fallback';
+import { installFileGuard } from './layout/file-guard';
+import { installCharCounter } from './layout/char-counter';
 import './bootstrap';
 import './repair/my-jobs';
 import './repair/dashboard';
@@ -13,6 +15,8 @@ import { slaPrintDialog } from './maintenance/sla/print-dialog';
 
 installToast(); // window.showToast, the `app:toast` event and the flashed session toast — once per session
 installImageFallback(); // a picture that will not load shows a "no picture" placeholder, not the browser's broken-image icon
+installFileGuard(); // a file input with data-max-kb / data-ext refuses a file that is too big or of the wrong kind, with a toast
+installCharCounter(); // a textarea with maxlength + data-counter shows "123 / 1000" and says when a paste was cut
 
 // Initialize Alpine.js globally for Blade components using x-data/x-show
 window.Alpine = Alpine

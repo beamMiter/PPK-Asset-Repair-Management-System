@@ -43,7 +43,7 @@
                     ชื่อผู้ใช้ <span class="text-rose-500">*</span>
                 </label>
                 <input id="name" name="name" type="text" value="{{ old('name', $user->name) }}" required
-                    class="ui-input">
+                    class="ui-input" maxlength="255">
             </div>
 
             {{-- เลขบัตรประชาชน --}}
@@ -61,7 +61,7 @@
                     อีเมล (ถ้ามี)
                 </label>
                 <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}"
-                    class="ui-input">
+                    class="ui-input" maxlength="255">
             </div>
         </div>
     </div>

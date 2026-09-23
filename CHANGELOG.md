@@ -22,6 +22,17 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Text fields let you type past what the server takes, and a file was refused only after it was uploaded.** A text longer
+  than the server's `max:` was sent, refused, and on a page that prints no errors the form came back with nothing said — or the
+  browser cut a long paste silently, so text you thought you had written was not there. Every text field a form limits now
+  carries the server's own `maxlength` (the request form and its edit page, the job modals and operation log, the asset form,
+  the user, profile, sign-up, job-type and chat-title fields), read from the server's refusal in `FormFieldLimitsTest`, so a
+  rule changed on one side and forgotten on the other is what fails. The long text areas (reasons, notes, the request
+  description) also show "123 / 1000" and warn when a paste was cut (`layout/char-counter.js`, opt in with `data-counter`).
+  The notification-sound input refuses a file over 2 MB or that is not .mp3 / .wav the moment it is chosen, with a toast,
+  instead of after the upload (`layout/file-guard.js`, from `data-max-kb` / `data-ext`; the limit is
+  `NotificationSettingController::SOUND_MAX_KB`, the same number the upload rule uses). Cancelling that file dialog no longer
+  throws. `tests/js/char-counter.test.mjs`, `tests/js/file-guard.test.mjs`.
 - **A form the server refused said nothing on most pages.** A form that fails validation is sent back with its errors, and only a
   handful of pages print them (login, register, the profile, the asset form…). The job modals (พักชั่วคราว / ซ่อมเสร็จ /
   ยกเลิก / ไม่รับเรื่อง), the notification-sound and SLA settings and the chat bounced back with nothing said — probing every

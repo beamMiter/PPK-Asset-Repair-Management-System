@@ -16,7 +16,7 @@
                             <textarea name="reject_reason" rows="3" required style="min-height:unset;height:auto;"
                                 class="mt-2 w-full rounded-md border {{ $line }} bg-white px-3 py-2 text-sm resize-none overflow-hidden
                                focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
-                                placeholder="เช่น ข้อมูลไม่ครบถ้วน, แจ้งซ้ำ, หรือไม่ใช่หน้าที่ของทีมเจ้าหน้าที่..."></textarea>
+                                placeholder="เช่น ข้อมูลไม่ครบถ้วน, แจ้งซ้ำ, หรือไม่ใช่หน้าที่ของทีมเจ้าหน้าที่..." maxlength="2000" data-counter></textarea>
                         </div>
                         <div class="flex justify-end gap-2 pt-2">
                             <x-ui.button id="cancelRejectModalBtn">ยกเลิก</x-ui.button>
@@ -45,7 +45,7 @@
                             <textarea name="cancel_reason" rows="3" required style="min-height:unset;height:auto;"
                                 class="mt-2 w-full rounded-md border {{ $line }} bg-white px-3 py-2 text-sm resize-none overflow-hidden
                                focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
-                                placeholder="เช่น แจ้งผิดหน่วยงาน, ซ่อมเองได้แล้ว, หรือขอยกเลิกรายการนี้..."></textarea>
+                                placeholder="เช่น แจ้งผิดหน่วยงาน, ซ่อมเองได้แล้ว, หรือขอยกเลิกรายการนี้..." maxlength="2000" data-counter></textarea>
                         </div>
                         <div class="flex justify-end gap-2 pt-2">
                             <x-ui.button id="cancelCancelModalBtn">ปิด</x-ui.button>
@@ -74,7 +74,7 @@
                             <textarea name="note" rows="3" required style="min-height:unset;height:auto;"
                                 class="mt-2 w-full rounded-md border {{ $line }} bg-white px-3 py-2 text-sm resize-none overflow-hidden
                            focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
-                                placeholder="เช่น รออะไหล่, รอเบิกเครื่องมือ, หรือเหตุผลอื่น ๆ..."></textarea>
+                                placeholder="เช่น รออะไหล่, รอเบิกเครื่องมือ, หรือเหตุผลอื่น ๆ..." maxlength="1000" data-counter></textarea>
                         </div>
                         <div class="flex justify-end gap-2 pt-2">
                             <x-ui.button id="cancelHoldModalBtn">ยกเลิก</x-ui.button>
@@ -103,7 +103,7 @@
                             <textarea name="resolution_note" rows="3" required style="min-height:unset;height:auto;"
                                 class="mt-2 w-full rounded-md border {{ $line }} bg-white px-3 py-2 text-sm resize-none overflow-hidden
                                focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                                placeholder="เช่น เปลี่ยนอะไหล่, ซ่อมแผงวงจรสำเร็จ, ผ่านการสอบเทียบแล้ว..."></textarea>
+                                placeholder="เช่น เปลี่ยนอะไหล่, ซ่อมแผงวงจรสำเร็จ, ผ่านการสอบเทียบแล้ว..." maxlength="2000" data-counter></textarea>
                         </div>
                         <div class="flex justify-end gap-2 pt-2">
                             <x-ui.button id="cancelResolveModalBtn">ยกเลิก</x-ui.button>

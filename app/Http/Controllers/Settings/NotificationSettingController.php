@@ -12,6 +12,9 @@ use Illuminate\Support\Str;
 
 class NotificationSettingController extends Controller
 {
+    /** The largest sound file, in KB (Laravel's `max:` for a file): the upload rule, the message, and the file input's data-max-kb on the page. */
+    public const SOUND_MAX_KB = 2048;
+
     private const SOUND_EXTS   = ['mp3', 'wav', 'ogg'];
     private const LOCKED_SOUND = 'new-request.mp3';
 
@@ -81,10 +84,10 @@ class NotificationSettingController extends Controller
     public function uploadSound(Request $request)
     {
         $request->validate([
-            'sound_file' => ['required', 'file', 'max:2048', 'mimes:mp3,wav', 'mimetypes:audio/mpeg,audio/wav,audio/x-wav,audio/wave'],
+            'sound_file' => ['required', 'file', 'max:' . self::SOUND_MAX_KB, 'mimes:mp3,wav', 'mimetypes:audio/mpeg,audio/wav,audio/x-wav,audio/wave'],
         ], [
             'sound_file.required'  => 'กรุณาเลือกไฟล์เสียง',
-            'sound_file.max'       => 'ไฟล์ต้องมีขนาดไม่เกิน 2MB',
+            'sound_file.max'       => 'ไฟล์ต้องมีขนาดไม่เกิน ' . intdiv(self::SOUND_MAX_KB, 1024) . 'MB',
             'sound_file.mimes'     => 'รองรับเฉพาะไฟล์ .mp3 และ .wav',
             'sound_file.mimetypes' => 'รองรับเฉพาะไฟล์เสียง .mp3 และ .wav',
         ]);

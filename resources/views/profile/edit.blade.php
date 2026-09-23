@@ -111,7 +111,7 @@
                         <div class="md:col-span-2">
                             <input id="name" name="name" type="text" value="{{ old('name', $user->name) }}"
                                 required
-                                class="w-full rounded-lg border-slate-200 text-[15px] py-2.5 focus:ring-emerald-600 focus:border-emerald-600 @error('name') border-rose-400 @enderror">
+                                class="w-full rounded-lg border-slate-200 text-[15px] py-2.5 focus:ring-emerald-600 focus:border-emerald-600 @error('name') border-rose-400 @enderror" maxlength="255">
                             @error('name')
                                 <p class="mt-1 text-[12px] text-rose-600">{{ $message }}</p>
                             @enderror
@@ -124,7 +124,7 @@
                             class="text-[14px] font-bold text-slate-500 uppercase tracking-wide">อีเมล</label>
                         <div class="md:col-span-2">
                             <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}"
-                                class="w-full rounded-lg border-slate-200 text-[15px] py-2.5 focus:ring-emerald-600 focus:border-emerald-600 @error('email') border-rose-400 @enderror">
+                                class="w-full rounded-lg border-slate-200 text-[15px] py-2.5 focus:ring-emerald-600 focus:border-emerald-600 @error('email') border-rose-400 @enderror" maxlength="255">
                         </div>
                     </div>
 

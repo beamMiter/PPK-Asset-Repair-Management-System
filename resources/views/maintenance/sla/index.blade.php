@@ -140,7 +140,7 @@
                                         <label class="block text-[13px] font-medium text-slate-700 mb-2">ข้อสังเกต / ข้อเสนอแนะ <span class="font-normal text-slate-400">(ไม่บังคับ)</span></label>
                                         <textarea x-model="note" rows="3" maxlength="1000"
                                             placeholder="เช่น สาเหตุที่งานล่าช้า หรือแนวทางแก้ไข"
-                                            class="w-full rounded-md border border-slate-200 px-3 py-2 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/30"></textarea>
+                                            class="w-full rounded-md border border-slate-200 px-3 py-2 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/30" data-counter></textarea>
                                     </section>
 
                                     {{-- 3. the preparer signs --}}

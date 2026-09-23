@@ -510,7 +510,7 @@
                             <input type="text" id="modal-thread-title" x-model="newThreadTitle" x-ref="titleInput"
                                 @keydown.enter="submitThread()" x-init="$watch('showCreateModal', value => { if (value) { $nextTick(() => $refs.titleInput.focus()); } })"
                                 placeholder="กรุณากรอกหัวข้อกระทู้..."
-                                class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35 transition-all">
+                                class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35 transition-all" maxlength="180">
                             <p class="mt-2 text-[11px] text-slate-500 italic">*
                                 หัวข้อนี้จะปรากฏให้ผู้ใช้อื่นเห็นในรายการกระทู้</p>
                         </div>

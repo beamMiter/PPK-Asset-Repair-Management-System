@@ -141,6 +141,15 @@ export class FakeElement extends Target {
     return this;
   }
   appendChild(k) { this.append(k); return k; }
+  after(node) {
+    const siblings = this.parentElement.children;
+    node.parentElement = this.parentElement;
+    siblings.splice(siblings.indexOf(this) + 1, 0, node);
+  }
+  get nextElementSibling() {
+    const siblings = this.parentElement ? this.parentElement.children.filter((k) => k.tagName) : [];
+    return siblings[siblings.indexOf(this) + 1] || null;
+  }
   remove() {
     if (!this.parentElement) return;
     this.parentElement.children = this.parentElement.children.filter((k) => k !== this);

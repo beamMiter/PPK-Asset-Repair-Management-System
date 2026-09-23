@@ -73,9 +73,13 @@
 
                         <div
                             class="relative w-full py-12 flex flex-col items-center justify-center group-hover:bg-white transition-all">
+                            {{-- data-max-kb / data-ext: layout/file-guard.js refuses a file over the limit or of another kind with a toast, as it is
+                                 chosen. The limit is the server's own (NotificationSettingController::SOUND_MAX_KB). Cancelling the file dialog
+                                 leaves no file: the label goes back to the prompt instead of throwing. --}}
                             <input type="file" name="sound_file" id="sound_file" accept=".mp3,.wav" required
+                                data-max-kb="{{ \App\Http\Controllers\Settings\NotificationSettingController::SOUND_MAX_KB }}" data-ext="mp3,wav"
                                 class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                onchange="document.getElementById('file-name-display').innerText = this.files[0].name">
+                                onchange="document.getElementById('file-name-display').innerText = this.files[0] ? this.files[0].name : 'คลิกเพื่อเลือกไฟล์ .mp3 หรือ .wav'">
 
                             <i class="fa-solid fa-music text-slate-300 mb-5" style="font-size: 50px !important;"></i>
 
@@ -83,7 +87,7 @@
                                 <p id="file-name-display" class="text-[15px] text-slate-600 font-medium">
                                     คลิกเพื่อเลือกไฟล์ .mp3 หรือ .wav
                                 </p>
-                                <p class="text-[12px] text-slate-400 mt-2">(ขนาดไม่เกิน 2MB)</p>
+                                <p class="text-[12px] text-slate-400 mt-2">(ขนาดไม่เกิน {{ intdiv(\App\Http\Controllers\Settings\NotificationSettingController::SOUND_MAX_KB, 1024) }}MB)</p>
                             </div>
                         </div>
 

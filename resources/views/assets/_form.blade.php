@@ -43,7 +43,7 @@
                             <div class="{{ $displayBox }} font-semibold">{{ $asset->name ?? '—' }}</div>
                         @else
                             <input type="text" id="name" name="name" value="{{ $v('name') }}"
-                                class="ui-input" placeholder="ระบุชื่อเรียกครุภัณฑ์" required>
+                                class="ui-input" placeholder="ระบุชื่อเรียกครุภัณฑ์" required maxlength="255">
                             @error('name')
                                 <p class="mt-1 text-[11px] text-rose-600 font-medium">{{ $message }}</p>
                             @enderror
@@ -59,7 +59,7 @@
                             <div class="{{ $displayBox }} font-semibold">{{ $asset->asset_code ?? '—' }}</div>
                         @else
                             <input type="text" id="asset_code" name="asset_code" value="{{ $v('asset_code') }}"
-                                class="ui-input" placeholder="รหัสภายในโรงพยาบาล" required>
+                                class="ui-input" placeholder="รหัสภายในโรงพยาบาล" required maxlength="100">
                             @error('asset_code')
                                 <p class="mt-1 text-[11px] text-rose-600 font-medium">{{ $message }}</p>
                             @enderror
@@ -72,7 +72,7 @@
                             <div class="{{ $displayBox }}">{{ $asset->type ?? '—' }}</div>
                         @else
                             <input id="type" type="text" name="type" value="{{ $v('type') }}"
-                                class="ui-input" placeholder="เช่น การแพทย์, เทคโนโลยีสารสนเทศ">
+                                class="ui-input" placeholder="เช่น การแพทย์, เทคโนโลยีสารสนเทศ" maxlength="100">
                         @endif
                     </div>
 
@@ -86,7 +86,7 @@
                             <div class="flex gap-2">
                                 <input type="text" id="his_asset_id" name="his_asset_id"
                                     value="{{ $v('his_asset_id') }}" class="ui-input flex-1"
-                                    placeholder="RPJ-XXXXXX">
+                                    placeholder="RPJ-XXXXXX" maxlength="100">
                                 <x-ui.button id="btn-fetch-his" variant="info" icon="cloud_download" class="mt-2">ดึงข้อมูล HIS</x-ui.button>
                             </div>
                         @endif
@@ -106,7 +106,7 @@
                                 <div class="{{ $displayBox }}">{{ $asset->brand ?? '—' }}</div>
                             @else
                                 <input id="brand" type="text" name="brand" value="{{ $v('brand') }}"
-                                    class="ui-input">
+                                    class="ui-input" maxlength="100">
                             @endif
                         </div>
                         <div>
@@ -115,7 +115,7 @@
                                 <div class="{{ $displayBox }}">{{ $asset->model ?? '—' }}</div>
                             @else
                                 <input id="model" type="text" name="model" value="{{ $v('model') }}"
-                                    class="ui-input">
+                                    class="ui-input" maxlength="100">
                             @endif
                         </div>
                     </div>
@@ -127,7 +127,7 @@
                             <div class="{{ $displayBox }} font-mono">{{ $asset->serial_number ?? '—' }}</div>
                         @else
                             <input id="serial_number" type="text" name="serial_number"
-                                value="{{ $v('serial_number') }}" class="ui-input">
+                                value="{{ $v('serial_number') }}" class="ui-input" maxlength="100">
                         @endif
                     </div>
 
@@ -149,7 +149,7 @@
                             <div class="{{ $displayBox }} text-emerald-700">{{ $asset->location ?? '—' }}</div>
                         @else
                             <input id="location" type="text" name="location" value="{{ $v('location') }}"
-                                class="ui-input" placeholder="ระบุตำแหน่งที่ตั้ง">
+                                class="ui-input" placeholder="ระบุตำแหน่งที่ตั้ง" maxlength="255">
                         @endif
                     </div>
                 </div>
@@ -166,7 +166,7 @@
                             <div class="{{ $displayBox }}">{{ $asset->vendor_name ?? '—' }}</div>
                         @else
                             <input id="vendor_name" type="text" name="vendor_name"
-                                value="{{ $v('vendor_name') }}" class="ui-input">
+                                value="{{ $v('vendor_name') }}" class="ui-input" maxlength="255">
                         @endif
                     </div>
 
@@ -177,7 +177,7 @@
                         @else
                             <input id="vendor_phone" type="text" name="vendor_phone"
                                 value="{{ $v('vendor_phone') }}" class="ui-input"
-                                placeholder="081-xxx-xxxx">
+                                placeholder="081-xxx-xxxx" maxlength="50">
                         @endif
                     </div>
 

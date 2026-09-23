@@ -277,7 +277,7 @@
                             <label class="block text-sm font-medium text-slate-700">ระบุรพจ. (รหัสครุภัณฑ์)</label>
                             <input type="text" name="property_code"
                                 value="{{ old('property_code', $opLog->property_code ?? ($mr->asset?->asset_code ?? '')) }}"
-                                class="ui-input" placeholder="เช่น 68101068718">
+                                class="ui-input" placeholder="เช่น 68101068718" maxlength="100">
                         </div>
 
                         <div>
@@ -310,7 +310,7 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-700">หมายเหตุ / รายละเอียดประกอบ</label>
                             <textarea name="remark" rows="4" style="{{ $textareaStyle }}" class="ui-textarea resize-none overflow-hidden"
-                                placeholder="เช่น ตรวจเช็คแล้วพบว่า..., ผู้ใช้ทดสอบแล้วเรียบร้อย">{{ old('remark', $opLog->remark ?? '') }}</textarea>
+                                placeholder="เช่น ตรวจเช็คแล้วพบว่า..., ผู้ใช้ทดสอบแล้วเรียบร้อย" maxlength="5000" data-counter>{{ old('remark', $opLog->remark ?? '') }}</textarea>
                         </div>
 
                         <div class="pt-2 flex justify-end">
