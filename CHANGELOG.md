@@ -23,17 +23,27 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - **The printed SLA report ran to four pages and its signature did not sit on the signature line.** The report is
-  rebuilt to end on one A4 page for a normal report (16 late jobs in 8 departments, signed, was four pages): a smaller
-  body, the status split shown as figures instead of a table, the departments in two columns, and column widths taken
+  rebuilt to end on one A4 page for a normal report (the sample of 16 late jobs in 8 departments was four pages; about
+  ten jobs fit one page, and the dialog above lets the user choose which): a smaller body, the status split shown as figures instead of a table, the departments in two columns, and column widths taken
   from the real values (Thai has no spaces to wrap at, so a value wider than its column printed over the next one). A
   really long list of late jobs still runs on to a second page rather than being cut, with its header row repeated and
   the signature block kept whole. The signature canvas hands over its whole area, so the strokes floated a hand's
   breadth above the line: the empty margin is now trimmed (`App\Support\ReportSignature`) and the picture sits on a
-  dotted line between "ลงชื่อ" and "ผู้ส่งรายงาน", with the name and date under it. The report also now states the period
+  dotted line after "ลงชื่อ", with the name, the role and the date under it. The report also now states the period
   it covers (the headings said "this month" while the default is the year so far), prints dates with Thai month names
   and the Buddhist year like the SLA page, and shows the status in Thai instead of the raw code (`In_progress`). Covered
   by `SlaReportLayoutTest` and `ReportSignatureTest`; `phpunit.xml` gets a 512M memory limit because the suite, run in one
   process, was already close to the 128M default and each PDF test builds a whole dompdf document.
+- **Thai tone marks vanished in every PDF: "ที่" printed as "ที", "ทั้งหมด" as "ทังหมด", "เฉลี่ย" as "เฉลีย".** A browser
+  puts a tone mark on an upper vowel with the font's GSUB/GPOS tables (a smaller mark, moved up and along); dompdf reads
+  neither, so it drew the mark at its default place — inside the vowel, where it cannot be seen. The layout is now left to
+  HarfBuzz once: `scripts/build-thai-pdf-fonts.py` builds `sarabunpdf_normal.ttf` / `sarabunpdf_bold.ttf` (Sarabun, SIL OFL,
+  plus ~100 / ~160 ready-made glyphs for vowel + tone, tone + ำ, and a lone vowel or tone over ป ฝ ฟ, reached through
+  private-use characters), and `App\Support\ThaiPdfText` swaps each such cluster for its character in the HTML before dompdf
+  sees it. Used by the SLA report for now; the work order and asset sheet print the same way and can adopt it with one call
+  and one font-family name. The font is registered by fixed names in `installed-fonts.json` (with its `.ufm`), not by
+  `@font-face`: dompdf's own registration copies the font under a hash of the machine's path and left that absolute path in
+  the tracked json. `ThaiPdfTextTest`.
 - **Running the test suite reset every password and signed everyone out.** `phpunit.xml` had `RefreshDatabase` running
   `migrate:fresh` against the same MySQL database the app itself (and anyone logged in) uses — every test run wiped
   the `sessions` table and reset every user's password to the seeder's, so a login attempt right after tests ran

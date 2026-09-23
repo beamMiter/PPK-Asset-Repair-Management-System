@@ -102,8 +102,11 @@ class FontFilesTest extends TestCase
             preg_match_all('#/BaseFont\s*/([A-Za-z0-9+_-]+)#', $res->getContent(), $m);
             $fonts = array_unique($m[1]);
 
-            $this->assertContains('Sarabun-Regular', $fonts, "$name regular");
-            $this->assertContains('Sarabun-Bold', $fonts, "$name bold");
+            // the SLA report uses Sarabun with the tone-mark-over-vowel glyphs added (SarabunPDF, see ThaiPdfText)
+            $family = $name === 'sla report' ? 'SarabunPDF' : 'Sarabun';
+
+            $this->assertContains("$family-Regular", $fonts, "$name regular");
+            $this->assertContains("$family-Bold", $fonts, "$name bold");
         }
     }
 

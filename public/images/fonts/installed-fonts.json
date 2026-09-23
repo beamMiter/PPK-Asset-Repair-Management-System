@@ -2,5 +2,9 @@
     "sarabun": {
         "normal": "sarabun_normal_1d76db13c1cf69c3ad299bdc482601fa",
         "bold": "sarabun_bold_8c0661501e2c703ceaf9618201a4afcc"
+    },
+    "sarabunpdf": {
+        "normal": "sarabunpdf_normal",
+        "bold": "sarabunpdf_bold"
     }
 }

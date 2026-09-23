@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MaintenanceRequest;
 use App\Support\ReportSignature;
 use App\Support\ThaiDate;
+use App\Support\ThaiPdfText;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -63,7 +64,8 @@ class SlaPerformanceController extends Controller
         $data['hospital'] = $hospital;
         $data['reportDate'] = Carbon::now();
 
-        $pdf = Pdf::loadView('maintenance.sla.report', $data)
+        // the tone marks over vowels are drawn by glyphs only the report's font has: see ThaiPdfText
+        $pdf = Pdf::loadHTML(ThaiPdfText::compose(view('maintenance.sla.report', $data)->render()))
             ->setPaper('A4', 'portrait');
 
         $this->addPageFooter($pdf, $data['reportDate']);
@@ -82,15 +84,15 @@ class SlaPerformanceController extends Controller
         $dompdf = $pdf->getDomPDF();
         $canvas = $dompdf->getCanvas();
         $metrics = $dompdf->getFontMetrics();
-        $font = $metrics->getFont('sarabun', 'normal');
+        $font = $metrics->getFont('sarabunpdf', 'normal');
         $size = 8.5;
         $grey = [0.39, 0.45, 0.55];
         $margin = 36.85;   // the 13 mm side margin of the report's @page
         $y = $canvas->get_height() - 22;
 
-        $canvas->page_text($margin, $y, 'รายงานสรุป SLA · ข้อมูล ณ ' . ThaiDate::longWithTime($reportDate), $font, $size, $grey);
+        $canvas->page_text($margin, $y, ThaiPdfText::compose('รายงานสรุป SLA · ข้อมูล ณ ' . ThaiDate::longWithTime($reportDate)), $font, $size, $grey);
 
-        $pageLabel = 'หน้า {PAGE_NUM} / {PAGE_COUNT}';
+        $pageLabel = ThaiPdfText::compose('หน้า {PAGE_NUM} / {PAGE_COUNT}');
         $labelWidth = $metrics->getTextWidth('หน้า 99 / 99', $font, $size);
         $canvas->page_text($canvas->get_width() - $margin - $labelWidth, $y, $pageLabel, $font, $size, $grey);
     }

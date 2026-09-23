@@ -15,23 +15,15 @@
             margin: 10mm 13mm 10mm 13mm;
         }
 
-        @font-face {
-            font-family: 'sarabun';
-            font-style: normal;
-            font-weight: normal;
-            src: url("{{ public_path('images/fonts/Sarabun-Regular.ttf') }}") format('truetype');
-        }
-
-        @font-face {
-            font-family: 'sarabun';
-            font-style: normal;
-            font-weight: bold;
-            src: url("{{ public_path('images/fonts/Sarabun-Bold.ttf') }}") format('truetype');
-        }
-
+        /*
+         * The font is 'sarabunpdf' — Sarabun with the tone-mark-over-vowel glyphs built in (scripts/build-thai-pdf-fonts.py), installed in
+         * public/images/fonts/installed-fonts.json, so no @font-face. dompdf cannot place a tone mark on a vowel itself ("ที่" printed
+         * as "ที"): the controller swaps those clusters for characters only this font has (App\Support\ThaiPdfText), so the text has to
+         * be in this font.
+         */
         body {
             margin: 0;
-            font-family: 'sarabun', sans-serif;
+            font-family: 'sarabunpdf', sans-serif;
             font-size: 11pt;
             line-height: 1.25;
             color: #333;
