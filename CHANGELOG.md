@@ -392,6 +392,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- **The "สร้างทะเบียนแจ้งซ่อม" button in the Main Dashboard hero.** Every role lands on this dashboard after login
+  (`RouteServiceProvider::HOME`, no role branching in `DashboardController::index`), and the button went to the same
+  place ("+ สร้างใบแจ้งซ่อม") the request list page already offers, one click from the sidebar. A KPI overview page —
+  charts, department/asset breakdowns, technician workload, no other action on it — is not where a create button
+  belongs, and it duplicated one that already exists. The hero is now just the title and the "updated" line.
+  `DashboardHeroTest`.
 - **Deleting a user from the app** (route `admin.users.destroy`, `UserController::destroy`, the "ลบ" buttons in the
   user list and the "danger zone" on the edit page). Users are referenced by requests, logs, assignments, ratings and
   chat with `ON DELETE CASCADE` / `SET NULL`, so a delete destroyed other people's data (whole chat threads with every
