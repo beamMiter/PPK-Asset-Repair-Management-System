@@ -80,7 +80,9 @@ class ChatSeeder extends Seeder
                 ]],
 
             ['title' => 'ประกาศ: ปิดปรับปรุงเครือข่ายคืนวันเสาร์ 22.00–24.00', 'by' => 'sup', 'age' => 5, 'locked' => true,
-                'read' => ['pharm' => 0, 'er' => 0],
+                // 'you' read up to their own reply (message 3 of 4) — the closing message came in after that, so it
+                // still shows "ใหม่ 1" for the dev/admin account, same as the other threads with something unread
+                'read' => ['pharm' => 0, 'er' => 0, 'you' => 3],
                 'messages' => [
                     ['sup', 0, 'แจ้งทุกหน่วยงาน: คืนวันเสาร์นี้ 22.00-24.00 น. ปิดปรับปรุงเครือข่ายหลัก ระบบ HIS และอินเทอร์เน็ตอาจใช้งานไม่ได้ชั่วคราว'],
                     ['net', 15, 'เตรียมอุปกรณ์สำรองและตั้งข้อความแจ้งเตือนบนหน้าจอระบบไว้แล้วครับ'],
