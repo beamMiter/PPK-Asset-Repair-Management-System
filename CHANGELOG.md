@@ -8,6 +8,18 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Running the test suite reset every password and signed everyone out.** `phpunit.xml` had `RefreshDatabase` running
+  `migrate:fresh` against the same MySQL database the app itself (and anyone logged in) uses — every test run wiped
+  the `sessions` table and reset every user's password to the seeder's, so a login attempt right after tests ran
+  could fail for a real reason (wrong password, or literally no account left) that had nothing to do with the login
+  code. Tests now point at a separate database on the same MySQL server (same host/port/user); the dev database is
+  untouched by a full test run.
+- **Filter-bar selects (สถานะ, ประเภทงาน, บทบาท, หน่วยงาน, เรียงลำดับข้อมูล) had column widths that did not match what
+  their own options needed** — worked out from Sarabun's advance widths against the pixel width each `lg:col-span-N`
+  resolves to. The request list's สถานะ and ประเภทงาน had it backwards (สถานะ's longest label needed more room than
+  ประเภทงาน's did); the user list's บทบาท had a column to spare that หน่วยงาน needed more than it did; the technician
+  rating page's เรียงลำดับข้อมูล ("ผลงานดีที่สุด (Impact Score)") was in a row with 5+ columns going unused.
+  `FilterSelectWidthTest`.
 - **SLA dashboard: the quick date-range shortcuts never showed which one was applied, "แสดงข้อมูล:" was wrong about
   it too, and the icon-only tools were easy to miss.** "รายงานสรุป" and "ล่าสุด" were split buttons (icon block +
   label) of their own, which the shared `<x-ui.button icon="..." split>` already draws. They are bare icons now — no
