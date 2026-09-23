@@ -102,7 +102,10 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'th'),
+    // Thai, always: the staff are Thai, the messages a form gives back (lang/th) and the dates (Carbon) follow this.
+    // Not read from .env any more: a checkout's .env carrying APP_LOCALE=en (the framework's stock value) silently made every validation
+    // toast English, and a test run depend on the machine it ran on.
+    'locale' => 'th',
 
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 

@@ -18,7 +18,7 @@ class AuthenticatedSessionController extends Controller
 
             session()->put('toast', [
                 'type'     => 'success',
-                'message'  => 'Login successful',
+                'message'  => 'เข้าสู่ระบบสำเร็จ',
                 'position' => 'br',
                 'timeout'  => 2800,
             ]);

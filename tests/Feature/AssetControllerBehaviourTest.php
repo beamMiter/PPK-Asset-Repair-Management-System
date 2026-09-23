@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Asset;
+use App\Support\AssetInput;
+use Illuminate\Support\MessageBag;
 use App\Models\Department;
 use App\Models\MaintenanceRequest;
 use App\Models\User;
@@ -59,7 +61,7 @@ class AssetControllerBehaviourTest extends TestCase
         $this->assertSame(2200, $res->json('toast.timeout'));
     }
 
-    public function test_unknown_fields_are_named_as_is_and_serial_and_warranty_have_thai_names(): void
+    public function test_the_failed_fields_are_named_in_thai_and_a_field_nobody_named_keeps_its_key(): void
     {
         $existing = Asset::factory()->create(['serial_number' => 'SN-1']);
 
@@ -67,7 +69,13 @@ class AssetControllerBehaviourTest extends TestCase
             'serial_number' => 'SN-1', 'warranty_start' => '2026-01-10', 'warranty_expire' => '2026-01-01', 'price' => -5,
         ]));
 
-        $this->assertSame('ข้อมูลไม่ถูกต้อง: Serial, หมดประกัน, price', session('toast.message'));
+        // Serial and หมดประกัน keep the names the asset form always used; price now has one in lang/th/validation.php instead of "price"
+        $this->assertSame('ข้อมูลไม่ถูกต้อง: Serial, หมดประกัน, ราคา', session('toast.message'));
+        $this->assertSame(
+            'ข้อมูลไม่ถูกต้อง: field_nobody_named, ไฟล์แนบ',
+            AssetInput::failureMessage(new MessageBag(['field_nobody_named' => ['x'], 'files.0' => ['x'], 'files.1' => ['y']])),
+            'no Thai name: the raw key; files.0 and files.1 are one field, ไฟล์แนบ, said once',
+        );
         $this->assertSame(1, Asset::where('id', $existing->id)->count());
     }
 

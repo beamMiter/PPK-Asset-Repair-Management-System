@@ -22,6 +22,17 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Validation toasts were in English ("The title field is required.") in a system whose staff are Thai.** The app ran with
+  locale `en`: `config/app.php` said `env('APP_LOCALE', 'th')` and a checkout's `.env` carried the framework's stock `en`, so
+  `lang/th/validation.php` was never read — and that file lacked 46 of the framework's keys (among them `password.*`, so a
+  weak password on the register / reset forms was refused in English) and had a Thai name for 15 fields only. The locale is
+  `th` in the code now (`.env`'s `APP_LOCALE` is no longer read; remove it there if you like), the file has every key of
+  the framework's own and a Thai name for every field a form can get wrong (technical terms — SLA, HIS, Serial — stay in
+  English inside a Thai sentence). Same cause, smaller: the login toast said "Login successful"; a non-admin deleting a chat
+  thread got a 403 page in English (now a Thai toast, like every other refusal); the asset form's "ข้อมูลไม่ถูกต้อง: …" named
+  a field with no Thai name by its raw key (`brand`, `price`) and now looks the name up in the same file. Because Carbon
+  follows the locale, dates read Thai too: the chat list's "5 นาทีที่แล้ว", the SLA trend chart's "ก.ย. 2026".
+  `ValidationMessagesThaiTest` compares the file with the framework's, so a Laravel upgrade that adds a rule says so.
 - **The SLA print dialog warned with a browser `alert()`, and said nothing at all when a print was refused.** A missing
   signature was an `alert()`; the server refusing a print (a signature that is not an image, a selection that is not a
   list of ids, a note over 1000 characters) bounced back to the page with errors that page never shows — nothing was said;

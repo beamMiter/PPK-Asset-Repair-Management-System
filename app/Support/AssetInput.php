@@ -53,11 +53,20 @@ final class AssetInput
         ];
     }
 
-    /** "ข้อมูลไม่ถูกต้อง: <the fields that failed>" — Thai names for the common ones, the raw key otherwise. */
+    /** "ข้อมูลไม่ถูกต้อง: <the fields that failed>" — by the names above, else the Thai one in lang/th/validation.php, the raw key last. */
     public static function failureMessage(MessageBag $errors): string
     {
+        // the whole table, looked up by key: the names have dots in them ("files.*"), which trans('validation.attributes.files.*') would
+        // read as nesting — the validator itself reads the table the same way
+        $attributes = trans('validation.attributes');
+        $attributes = is_array($attributes) ? $attributes : [];
+
         $bad = collect($errors->keys())
-            ->map(fn ($field) => self::FIELD_NAMES[$field] ?? $field)
+            ->map(fn ($field) => self::FIELD_NAMES[$field]
+                ?? $attributes[$field]
+                ?? $attributes[preg_replace('/\.\d+/', '.*', $field)]   // files.0 -> files.*
+                ?? $field)
+            ->unique()
             ->implode(', ');
 
         return $bad ? 'ข้อมูลไม่ถูกต้อง: '.$bad : 'ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';

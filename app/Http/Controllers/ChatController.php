@@ -202,7 +202,8 @@ class ChatController extends Controller
         $user = Auth::user();
 
         if (! $user || $user->role !== 'admin') {
-            abort(403, 'Forbidden. Only administrators can delete threads.');
+            // AccessDeniedHttpException, not abort(403): bootstrap/app.php turns that one into a toast on the page the user was on
+            throw new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException('เฉพาะผู้ดูแลระบบเท่านั้นที่ลบกระทู้ได้');
         }
 
         $thread->delete();
