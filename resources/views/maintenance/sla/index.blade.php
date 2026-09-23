@@ -22,6 +22,16 @@
             $activeShortcut = collect($slaShortcuts)->search(fn ($s, $key) => $key !== 'year' && $s['from'] === request('from')) ?: null;
         }
     @endphp
+    @php
+        // every late job (not just the 20 the panel shows): the print dialog lets the user choose among all of them
+        $printRows = collect($breachedTickets)->map(fn ($t) => [
+            'id' => $t->id,
+            'no' => (string) $t->request_no,
+            'title' => (string) $t->title,
+            'dept' => (string) ($t->department?->name_th ?? ($t->department?->name_en ?? '-')),
+            'late' => $t->overdueLabel(now()),
+        ])->values();
+    @endphp
     <div class="sticky top-16 z-20 bg-white/90 backdrop-blur border-b border-slate-200" x-data="{ showFilters: window.innerWidth >= 768 }">
         <div class="px-4 md:px-6 lg:px-8 py-4">
             <div class="flex flex-wrap items-start justify-between gap-4">
@@ -57,7 +67,7 @@
                     <x-ui.button type="button" onclick="window.location.reload()" variant="ghost-brand" size="icon-lg"
                         icon="refresh" aria-label="รีเฟรชข้อมูลล่าสุด" title="รีเฟรชข้อมูลล่าสุด" />
 
-                    {{-- Signature Modal Teleport --}}
+                    {{-- Print dialog: which late jobs go in the report, a note, and the preparer's signature. Teleported to the body. --}}
                     <template x-teleport="body">
                         <div x-show="showSignModal"
                             class="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
@@ -66,28 +76,40 @@
                             x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                             style="display: none;">
 
-                            <div class="bg-white rounded-xl w-full max-w-lg overflow-hidden border border-slate-200"
+                            <div class="bg-white rounded-xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
                                 @click.away="showSignModal = false" x-data="{
                                     pad: null,
+                                    rows: @js($printRows),
+                                    selected: @js($printRows->pluck('id')),
+                                    q: '',
+                                    note: '',
+                                    get shown() {
+                                        const q = this.q.trim().toLowerCase();
+                                        return q === '' ? this.rows : this.rows.filter(r => (r.no + ' ' + r.title + ' ' + r.dept).toLowerCase().includes(q));
+                                    },
+                                    isOn(id) { return this.selected.includes(id); },
+                                    toggle(id) { this.selected = this.isOn(id) ? this.selected.filter(x => x !== id) : [...this.selected, id]; },
+                                    selectShown() { this.selected = [...this.selected, ...this.shown.map(r => r.id).filter(id => !this.isOn(id))]; },
+                                    clearShown() { const off = new Set(this.shown.map(r => r.id)); this.selected = this.selected.filter(id => !off.has(id)); },
                                     initPad() {
                                         const canvas = this.$refs.canvas;
                                         if (!canvas) return;
-                                
+
                                         if (canvas.offsetWidth === 0) {
                                             setTimeout(() => this.initPad(), 50);
                                             return;
                                         }
-                                
+
                                         const ratio = Math.max(window.devicePixelRatio || 1, 1);
                                         canvas.width = canvas.offsetWidth * ratio;
                                         canvas.height = canvas.offsetHeight * ratio;
                                         canvas.getContext('2d').scale(ratio, ratio);
-                                
+
                                         if (typeof SignaturePad === 'undefined') {
                                             console.error('SignaturePad is not defined');
                                             return;
                                         }
-                                
+
                                         this.pad = new SignaturePad(canvas, {
                                             backgroundColor: 'rgba(255, 255, 255, 0)',
                                             penColor: '#0F2D5C',
@@ -103,26 +125,81 @@
                                             alert('กรุณาลงนามก่อนพิมพ์รายงาน');
                                             return;
                                         }
-                                        const dataUrl = this.pad.toDataURL('image/png');
-                                        document.getElementById('sig-input').value = dataUrl;
+                                        document.getElementById('sig-input').value = this.pad.toDataURL('image/png');
+                                        document.getElementById('tickets-input').value = this.selected.join(',');
+                                        document.getElementById('note-input').value = this.note;
                                         document.getElementById('pdf-form').submit();
                                         this.showSignModal = false;
                                     }
                                 }" x-init="$watch('showSignModal', value => { if (value) { $nextTick(() => initPad()); } })">
 
                                 <div
-                                    class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                                    <h3 class="text-lg font-semibold text-slate-900">ลงชื่อเพื่อพิมม์รายงาน</h3>
+                                    class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+                                    <h3 class="text-lg font-semibold text-slate-900">พิมพ์รายงานสรุป SLA</h3>
                                     <button @click="showSignModal = false"
                                         class="text-slate-400 hover:text-slate-600 transition-colors">
                                         <span class="material-symbols-outlined">close</span>
                                     </button>
                                 </div>
 
-                                <div class="p-6">
-                                    <div class="mb-4">
-                                        <label
-                                            class="block text-[13px] font-medium text-slate-700 mb-2">ลายเซ็นผู้อนุมัติ</label>
+                                <div class="p-6 overflow-y-auto space-y-6">
+                                    {{-- 1. which late jobs the report lists --}}
+                                    <section>
+                                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                            <label class="block text-[13px] font-medium text-slate-700">งานที่เกินเวลาที่จะแสดงในรายงาน</label>
+                                            <span class="text-[12px] text-slate-500" x-show="rows.length > 0">
+                                                เลือก <b class="text-slate-800" x-text="selected.length"></b> จาก <span x-text="rows.length"></span> รายการ
+                                            </span>
+                                        </div>
+
+                                        <template x-if="rows.length === 0">
+                                            <p class="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-center text-[13px] text-slate-500">
+                                                ไม่มีงานที่เกินเวลาในขณะนี้ รายงานจะไม่มีตารางรายการ
+                                            </p>
+                                        </template>
+
+                                        <template x-if="rows.length > 0">
+                                            <div>
+                                                <div class="flex flex-wrap items-center gap-2 mb-2">
+                                                    <input type="text" x-model="q" placeholder="ค้นหาเลขที่ ชื่อปัญหา หรือแผนก..."
+                                                        class="min-w-0 flex-1 rounded-md border border-slate-200 px-3 py-1.5 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/30">
+                                                    <button type="button" @click="selectShown()"
+                                                        class="text-[12px] font-semibold text-[#0F2D5C] hover:underline">เลือกทั้งหมด</button>
+                                                    <button type="button" @click="clearShown()"
+                                                        class="text-[12px] font-semibold text-slate-500 hover:text-rose-600 hover:underline">ล้างที่เลือก</button>
+                                                </div>
+
+                                                <div class="max-h-56 overflow-y-auto rounded-md border border-slate-200 divide-y divide-slate-100">
+                                                    <template x-for="r in shown" :key="r.id">
+                                                        <label class="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-slate-50">
+                                                            <input type="checkbox" :checked="isOn(r.id)" @change="toggle(r.id)"
+                                                                class="h-4 w-4 shrink-0 rounded border-slate-300 text-[#0F2D5C] focus:ring-[#0F2D5C]/30">
+                                                            <span class="w-[88px] shrink-0 text-[12px] font-semibold text-slate-700" x-text="'#' + r.no"></span>
+                                                            <span class="min-w-0 flex-1 truncate text-[13px] text-slate-800" x-text="r.title"></span>
+                                                            <span class="hidden w-32 shrink-0 truncate text-[12px] text-slate-500 sm:block" x-text="r.dept"></span>
+                                                            <span class="shrink-0 text-[12px] font-bold text-rose-600" x-text="r.late"></span>
+                                                        </label>
+                                                    </template>
+                                                    <p x-show="shown.length === 0" class="px-3 py-4 text-center text-[13px] text-slate-500">ไม่พบรายการที่ค้นหา</p>
+                                                </div>
+                                                <p class="mt-2 text-[11px] text-slate-500" x-show="selected.length < rows.length">
+                                                    รายงานจะระบุว่าแสดงเฉพาะบางรายการ (เช่น "แสดง <span x-text="selected.length"></span> จากทั้งหมด <span x-text="rows.length"></span> รายการ")
+                                                </p>
+                                            </div>
+                                        </template>
+                                    </section>
+
+                                    {{-- 2. a note that goes on the paper --}}
+                                    <section>
+                                        <label class="block text-[13px] font-medium text-slate-700 mb-2">ข้อสังเกต / ข้อเสนอแนะ <span class="font-normal text-slate-400">(ไม่บังคับ)</span></label>
+                                        <textarea x-model="note" rows="3" maxlength="1000"
+                                            placeholder="เช่น สาเหตุที่งานล่าช้า หรือแนวทางแก้ไข"
+                                            class="w-full rounded-md border border-slate-200 px-3 py-2 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/30"></textarea>
+                                    </section>
+
+                                    {{-- 3. the preparer signs --}}
+                                    <section>
+                                        <label class="block text-[13px] font-medium text-slate-700 mb-2">ลายเซ็นผู้จัดทำรายงาน</label>
                                         <div class="border-2 border-dashed border-slate-200 rounded-md bg-slate-50 overflow-hidden relative"
                                             style="height: 200px;">
                                             <canvas x-ref="canvas" class="w-full h-full cursor-crosshair"></canvas>
@@ -132,11 +209,11 @@
                                             </div>
                                         </div>
                                         <p class="mt-2 text-[11px] text-slate-500 italic text-center">*
-                                            ลายเซ็นนี้จะปรากฏในหน้าสุดท้ายของรายงาน PDF</p>
-                                    </div>
+                                            ลายเซ็นนี้จะปรากฏที่ช่อง "ผู้จัดทำรายงาน" ส่วนช่อง "ผู้อนุมัติ" เว้นไว้ให้เซ็นบนกระดาษ</p>
+                                    </section>
                                 </div>
 
-                                <div class="px-6 py-4 bg-slate-50 flex justify-end gap-3">
+                                <div class="px-6 py-4 bg-slate-50 flex justify-end gap-3 shrink-0">
                                     <button @click="showSignModal = false"
                                         class="px-4 py-2 text-[13px] font-bold text-slate-600 hover:text-slate-800">ยกเลิก</button>
                                     <button @click="submitReport()"
@@ -279,16 +356,14 @@
     <div class="w-full flex flex-col text-slate-900">
         <div class="w-full p-4 md:p-6 max-w-[1664px] mx-auto">
 
-            {{-- signature form --}}
+            {{-- what the print dialog submits: the range, the chosen jobs, a note and the signature --}}
             <form id="pdf-form" action="{{ route('maintenance.sla.report') }}" method="POST" class="hidden">
                 @csrf
                 <input type="hidden" name="from" value="{{ request('from') }}">
                 <input type="hidden" name="to" value="{{ request('to') }}">
-                <input type="hidden" name="signature" id="sig-input">
-            </form>
-            <form id="report-form" action="{{ route('maintenance.sla.report') }}" method="POST" target="_blank"
-                style="display: none;">
-                @csrf
+                <input type="hidden" name="ticket_filter" value="1">
+                <input type="hidden" name="tickets" id="tickets-input">
+                <input type="hidden" name="note" id="note-input">
                 <input type="hidden" name="signature" id="sig-input">
             </form>
 
@@ -499,19 +574,7 @@
                                     </p>
                                 @endif
                                 @forelse (collect($breachedTickets)->take($ticketLimit) as $t)
-                                    @php
-                                        $now = \Carbon\Carbon::now();
-                                        $diffInMins = (int) $t->slaDeadline($now)->diffInMinutes($now);
-                                        $days = floor($diffInMins / (60 * 24));
-                                        $hrs = floor(($diffInMins % (60 * 24)) / 60);
-                                        $mins = $diffInMins % 60;
-
-                                        if ($days > 0) {
-                                            $timeStr = "+{$days} วัน {$hrs} ชม.";
-                                        } else {
-                                            $timeStr = "+{$hrs} ชม. {$mins} น.";
-                                        }
-                                    @endphp
+                                    @php $timeStr = $t->overdueLabel(); @endphp
                                     <a href="{{ route('maintenance.requests.show', $t->id) }}"
                                         class="p-3 border border-red-100 rounded-lg bg-red-50/30 flex items-start flex-wrap gap-3 hover:bg-red-50/60 transition-all group"
                                         x-bind:style="'order: ' + (sortAsc ? {{ $loop->index }} :

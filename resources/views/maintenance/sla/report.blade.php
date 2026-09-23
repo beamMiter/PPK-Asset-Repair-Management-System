@@ -187,20 +187,50 @@
             margin: 2px 0 0 0;
         }
 
-        /* ===== signature: "ลงชื่อ [signature on the line] ผู้ส่งรายงาน", name and date centred under the line ===== */
+        .note-box {
+            margin-top: 8px;
+            border: 1px solid #cbd5e1;
+            padding: 3px 8px;
+            font-size: 10pt;
+        }
+
+        .note-box .label {
+            font-weight: bold;
+            color: #1e40af;
+        }
+
+        .subtitle {
+            margin: -2px 0 3px 0;
+            font-size: 9pt;
+            color: #64748b;
+        }
+
+        .subtitle.partial {
+            color: #b45309;
+        }
+
+        /* how the figures are worked out: what a reader (or an auditor) needs to take the numbers at face value */
+        .method {
+            margin-top: 8px;
+            font-size: 8pt;
+            line-height: 1.2;
+            color: #64748b;
+        }
+
+        /* ===== signatures: two blocks, "ลงชื่อ [line]" with the name, the role and the date centred under the line ===== */
         .sign-wrap {
-            margin-top: 10px;
+            margin-top: 12px;
             page-break-inside: avoid;
         }
 
         .sign-wrap > tbody > tr > td {
-            padding: 0;
+            padding: 0 8px;
             vertical-align: top;
         }
 
         .sign {
             table-layout: fixed;
-            font-size: 11pt;
+            font-size: 10.5pt;
         }
 
         .sign td {
@@ -209,12 +239,9 @@
             white-space: nowrap;
         }
 
-        .sign .tail {
-            text-align: right;
-        }
-
+        /* the same height with or without a picture (50 px at most): two blocks side by side must put their lines, names and dates level */
         .sign .line {
-            height: 40px;
+            height: 54px;
             text-align: center;
             border-bottom: 1px dotted #000;
         }
@@ -227,17 +254,22 @@
 
         .sign .under {
             text-align: center;
-            padding-top: 4px;
+            padding-top: 3px;
+        }
+
+        .sign .role {
+            font-weight: bold;
         }
     </style>
 </head>
 
 <body>
     @php
-        // Thai month names and the Buddhist year, as the SLA page shows its dates (the app's own locale is en, so Carbon would print
-        // "24 September 2026" in a Thai document)
-        $thaiDate = fn ($d) => $d->copy()->locale('th')->translatedFormat('j F') . ' ' . ($d->year + 543);
-        $thaiDateTime = fn ($d) => $d->format('d/m/') . ($d->year + 543) . $d->format(' H:i');
+        // optional inputs: the report is also built without a note, a preparer or a chosen subset
+        $note = $note ?? '';
+        $preparedBy = $preparedBy ?? null;
+        $breachedTotal = $breachedTotal ?? count($breachedTickets);
+        $thaiDate = fn ($d) => \App\Support\ThaiDate::long($d);
     @endphp
 
     <table class="head">
@@ -258,8 +290,13 @@
     <table class="meta">
         <tr>
             <td>ช่วงข้อมูล: {{ $thaiDate($periodStart) }} – {{ $thaiDate($periodEnd) }}</td>
-            <td style="text-align: right;">วันที่ออกรายงาน: {{ $thaiDate($reportDate) }}</td>
+            <td style="text-align: right;">วันที่ออกรายงาน: {{ \App\Support\ThaiDate::longWithTime($reportDate) }}</td>
         </tr>
+        @if ($preparedBy)
+            <tr>
+                <td colspan="2">จัดทำโดย: {{ $preparedBy }}</td>
+            </tr>
+        @endif
     </table>
 
     @php
@@ -292,10 +329,14 @@
     </table>
     <table class="metrics">
         <tr>
+            <td class="metric-card" style="width: 20%;">
+                <span class="metric-value" style="color: #334155;">{{ array_sum($chartData['distribution']['data']) }}</span>
+                <span class="metric-label"><b>งานทั้งหมดในช่วง</b></span>
+            </td>
             @foreach ($chartData['distribution']['labels'] as $index => $label)
-                <td class="metric-card">
+                <td class="metric-card" style="width: 20%;">
                     <span class="metric-value" style="color: {{ $statusColor[$label] ?? '#1e40af' }};">{{ $chartData['distribution']['data'][$index] }}</span>
-                    <span class="metric-label">งาน{{ $label }} (รายการ)</span>
+                    <span class="metric-label">{{ $label }}</span>
                 </td>
             @endforeach
         </tr>
@@ -318,7 +359,7 @@
                                 <tbody>
                                     @foreach ($deptColumns[$col] as [$dept, $count])
                                         <tr>
-                                            <td>{{ $dept }}</td>
+                                            <td>{{ \App\Support\ThaiText::words($dept) }}</td>
                                             <td class="num">{{ $count }}</td>
                                         </tr>
                                     @endforeach
@@ -337,65 +378,99 @@
     @endif
 
     {{-- a live snapshot (every open job that is late right now), not limited to the period above --}}
-    <div class="section-title danger">รายการงานที่เกินเวลา ณ วันที่ออกรายงาน
-        <span class="en">Breached Tickets · {{ count($breachedTickets) }} รายการ</span>
-    </div>
-    @if (count($breachedTickets) > 0)
+    @php $shown = count($breachedTickets); @endphp
+    <div class="section-title danger">รายการงานที่เกินเวลา ณ วันที่ออกรายงาน <span class="en">Breached Tickets</span></div>
+    @if ($breachedTotal > 0)
+        {{-- a list the reader chose from must say so: a cut list read as the whole picture would understate the backlog --}}
+        @if ($shown < $breachedTotal)
+            <div class="subtitle partial">แสดง {{ $shown }} จากงานที่เกินเวลาทั้งหมด {{ $breachedTotal }} รายการ (เลือกพิมพ์เฉพาะบางรายการ)</div>
+        @else
+            <div class="subtitle">ทั้งหมด {{ $breachedTotal }} รายการ เรียงจากเกินกำหนดนานที่สุด</div>
+        @endif
+    @endif
+    @if ($shown > 0)
         <table class="data tickets">
             <thead>
                 <tr>
                     {{-- fixed layout takes its widths from this row (dompdf ignores <col>) --}}
-                    <th style="width: 10.5%;">เลขที่</th>
-                    <th style="width: 35%;">รายการ</th>
-                    <th style="width: 22%;">แผนก</th>
-                    <th style="width: 15%;">สถานะปัจจุบัน</th>
-                    <th style="width: 17.5%;">กำหนดเสร็จ</th>
+                    <th style="width: 10%;">เลขที่</th>
+                    <th style="width: 29%;">รายการ</th>
+                    <th style="width: 19%;">แผนก</th>
+                    <th style="width: 16%;">ผู้รับผิดชอบ</th>
+                    <th style="width: 14%;">สถานะ</th>
+                    <th style="width: 12%;">ล่าช้า</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($breachedTickets as $ticket)
                     <tr>
                         <td>{{ $ticket->request_no }}</td>
-                        <td>{{ $ticket->title }}</td>
-                        <td>{{ $ticket->department?->name_th ?? ($ticket->department?->name_en ?? '-') }}</td>
-                        <td>{{ $ticket->statusLabel() }}</td>
-                        <td>{{ $thaiDateTime($ticket->sla_due_date) }}</td>
+                        <td>{{ \App\Support\ThaiText::words($ticket->title) }}</td>
+                        <td>{{ \App\Support\ThaiText::words($ticket->department?->name_th ?? ($ticket->department?->name_en ?? '-')) }}</td>
+                        <td>{{ \App\Support\ThaiText::words($ticket->technician?->name ?? 'ยังไม่ระบุ') }}</td>
+                        <td>{{ \App\Support\ThaiText::words($ticket->statusLabel()) }}</td>
+                        <td>{{ $ticket->overdueLabel($reportDate) }}</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
+    @elseif ($breachedTotal > 0)
+        <p class="muted">ไม่ได้เลือกรายการงานที่เกินเวลามาแสดง</p>
     @else
         <p class="muted">ไม่มีงานที่เกินเวลา ณ วันที่ออกรายงาน</p>
     @endif
 
+    @if ($note !== '')
+        <div class="note-box">
+            <span class="label">ข้อสังเกต / ข้อเสนอแนะ:</span>
+            {!! nl2br((string) \App\Support\ThaiText::words($note)) !!}
+        </div>
+    @endif
+
+    <div class="method">
+        วิธีคิด: อัตราบรรลุ SLA = งานที่ซ่อมเสร็จภายในกำหนด ÷ งานที่ซ่อมเสร็จทั้งหมดในช่วงข้อมูล ·
+        เวลาตอบกลับ = แจ้งซ่อม → รับทราบ, เวลารับงาน = รับทราบ → รับเรื่อง, เวลาแก้ไข = แจ้งซ่อม → ซ่อมเสร็จ (ไม่นับช่วงที่หยุดชั่วคราว) ·
+        "งานทั้งหมดในช่วง" ไม่รวมงานที่ยกเลิกและงานที่ไม่รับเรื่อง ·
+        รายการงานที่เกินเวลาคืองานที่ยังไม่เสร็จและเลยกำหนด ณ เวลาที่ออกรายงาน ไม่จำกัดตามช่วงข้อมูล และ "ล่าช้า" นับจากกำหนดเสร็จ
+    </div>
+
+    @php
+        // the drawn signature is the preparer's: whoever prints the report signs it on screen; the approver signs the paper
+        $signers = [
+            ['role' => 'ผู้จัดทำรายงาน', 'name' => $preparedBy, 'signature' => $signature ?? null],
+            ['role' => 'ผู้อนุมัติ', 'name' => null, 'signature' => null],
+        ];
+    @endphp
     <table class="sign-wrap">
         <tr>
-            <td style="width: 46%;"></td>
-            <td>
-                <table class="sign">
-                    <tr>
-                        {{-- fixed layout takes its widths from this row: inline, and in % (a class width or a px width is ignored) --}}
-                        <td class="lead" style="width: 10%;">ลงชื่อ</td>
-                        <td class="line">
-                            @if (! empty($signature))
-                                <img src="{{ $signature['src'] }}" width="{{ $signature['width'] }}"
-                                    height="{{ $signature['height'] }}">
-                            @endif
-                        </td>
-                        <td class="tail" style="width: 19%;">ผู้ส่งรายงาน</td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td class="under">( ........................................ )</td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td></td>
-                        <td class="under">วันที่ ....../....../..........</td>
-                        <td></td>
-                    </tr>
-                </table>
-            </td>
+            @foreach ($signers as $signer)
+                <td style="width: 50%;">
+                    <table class="sign">
+                        <tr>
+                            {{-- fixed layout takes its widths from this row: inline, and in % (a class width or a px width is ignored) --}}
+                            <td style="width: 15%;">ลงชื่อ</td>
+                            <td class="line">
+                                @if (! empty($signer['signature']))
+                                    <img src="{{ $signer['signature']['src'] }}" width="{{ $signer['signature']['width'] }}"
+                                        height="{{ $signer['signature']['height'] }}">
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td class="under">( {{ $signer['name'] ?: '........................................' }} )</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td class="under role">{{ $signer['role'] }}</td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td class="under">วันที่ ....../....../..........</td>
+                        </tr>
+                    </table>
+                </td>
+            @endforeach
         </tr>
     </table>
 

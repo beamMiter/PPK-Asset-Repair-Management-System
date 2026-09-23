@@ -500,6 +500,28 @@ class MaintenanceRequest extends Model
         return $due;
     }
 
+    /**
+     * How far past its SLA deadline the job is at $now, as the SLA page words it: "+2 วัน 3 ชม." or, under a day, "+5 ชม. 12 น."
+     * (a job on hold has its clock stopped: see slaDeadline()). "-" for a job with no deadline.
+     */
+    public function overdueLabel(?\Carbon\Carbon $now = null): string
+    {
+        $now ??= now();
+        $deadline = $this->slaDeadline($now);
+
+        if (! $deadline) {
+            return '-';
+        }
+
+        $minutes = (int) $deadline->diffInMinutes($now);
+        $days = intdiv($minutes, 60 * 24);
+        $hours = intdiv($minutes % (60 * 24), 60);
+
+        return $days > 0
+            ? "+{$days} วัน {$hours} ชม."
+            : "+{$hours} ชม. " . ($minutes % 60) . ' น.';
+    }
+
     public function type()
     {
         return $this->belongsTo(\App\Models\MaintenanceRequestType::class, 'type_id');

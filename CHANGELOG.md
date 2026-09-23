@@ -6,6 +6,20 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Choose which late jobs go in the printed SLA report, and a fuller report.** Printing every late job cannot always fit
+  one page, so the print button now opens a dialog listing *every* late job (the panel on the page shows only the
+  20 most overdue) with a tick box each, a search, select all / clear and a count. Ticking fewer prints only those, and
+  the paper says so ("แสดง 8 จากงานที่เกินเวลาทั้งหมด 16 รายการ"): a cut list read as the whole picture would understate
+  the backlog. Up to about ten jobs still end on one A4 page. The dialog also takes a note (ข้อสังเกต / ข้อเสนอแนะ)
+  that is printed on the report. The report itself gains: the time the data is as of, who prepared it, the total number
+  of jobs in the period, the person responsible and how late each job is (replacing the due date), a short "how the
+  figures are worked out" so the numbers can be taken at face value, page numbers, and two signature blocks (the
+  preparer's drawn on screen with their name under it, the approver's left for the paper). Long Thai text now breaks
+  between words (`App\Support\ThaiText`) instead of in the middle of one. Covered by `SlaReportLayoutTest` and
+  `ThaiFormattingTest`.
+
 ### Fixed
 
 - **The printed SLA report ran to four pages and its signature did not sit on the signature line.** The report is

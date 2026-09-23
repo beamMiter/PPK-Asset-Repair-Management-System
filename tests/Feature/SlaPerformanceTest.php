@@ -61,6 +61,17 @@ class SlaPerformanceTest extends TestCase
         ]);
     }
 
+    /** The "เกินเวลา" / "ใกล้ครบกำหนด" panel of the page: the print dialog above it lists every late job too, by design. */
+    private function panel(string $html): string
+    {
+        $from = strpos($html, "searchGlobal: ''");
+        $to = strpos($html, 'isEdited: false');
+        $this->assertNotFalse($from);
+        $this->assertNotFalse($to);
+
+        return substr($html, $from, $to - $from);
+    }
+
     /**
      * The "เกินเวลา" and "ใกล้ครบกำหนด" tabs used to cut their rows at 20 in the view without a word (the badge said 45, the
      * list held 20). The limit is now one named constant, applied to both tabs, and a cut list says how many it left out.
@@ -81,17 +92,25 @@ class SlaPerformanceTest extends TestCase
 
         $resp = $this->actingAs($this->admin())->get(route('maintenance.sla.index'))->assertOk();
         $html = $resp->getContent();
+        $panel = $this->panel($html);
 
-        $this->assertSame($limit, substr_count($html, 'p-3 border border-red-100 rounded-lg'), 'overdue rows');
-        $this->assertSame($limit, substr_count($html, 'p-3 border border-amber-100 rounded-lg'), 'near-due rows');
+        $this->assertSame($limit, substr_count($panel, 'p-3 border border-red-100 rounded-lg'), 'overdue rows');
+        $this->assertSame($limit, substr_count($panel, 'p-3 border border-amber-100 rounded-lg'), 'near-due rows');
 
         // the rows kept are the most overdue and the soonest due
-        $resp->assertSee(sprintf('BRK-%02d', $over), false)->assertDontSee('BRK-01', false);
-        $resp->assertSee('RSK-01', false)->assertDontSee(sprintf('RSK-%02d', $near), false);
+        $this->assertStringContainsString(sprintf('BRK-%02d', $over), $panel);
+        $this->assertStringNotContainsString('BRK-01', $panel);
+        $this->assertStringContainsString('RSK-01', $panel);
+        $this->assertStringNotContainsString(sprintf('RSK-%02d', $near), $panel);
 
-        $this->assertMatchesRegularExpression("/แสดง {$limit} รายการที่เกินเวลานานที่สุด จากทั้งหมด\s+{$over} รายการ/u", $html);
-        $this->assertMatchesRegularExpression("/แสดง {$limit} รายการที่ใกล้ครบกำหนดที่สุด จากทั้งหมด\s+{$near} รายการ/u", $html);
+        $this->assertMatchesRegularExpression("/แสดง {$limit} รายการที่เกินเวลานานที่สุด จากทั้งหมด\s+{$over} รายการ/u", $panel);
+        $this->assertMatchesRegularExpression("/แสดง {$limit} รายการที่ใกล้ครบกำหนดที่สุด จากทั้งหมด\s+{$near} รายการ/u", $panel);
         $this->assertSame($limit, $resp->viewData('ticketLimit'));
+
+        // ...but the print dialog offers every late job, the ones the panel left out included: what goes in the report is chosen there
+        foreach (range(1, $over) as $i) {
+            $this->assertStringContainsString(sprintf('BRK-%02d', $i), $html, "BRK-$i offered in the print dialog");
+        }
     }
 
     /** The cap is only for the screen: the totals and the list the PDF report is built from stay complete. */
@@ -114,11 +133,12 @@ class SlaPerformanceTest extends TestCase
         $this->activeTicket('BRK-A', now()->subHours(2));
         $this->activeTicket('RSK-A', now()->addMinutes(30));
 
-        $this->actingAs($this->admin())->get(route('maintenance.sla.index'))
-            ->assertOk()
-            ->assertSee('BRK-A', false)
-            ->assertSee('RSK-A', false)
-            ->assertDontSee('จากทั้งหมด');
+        $resp = $this->actingAs($this->admin())->get(route('maintenance.sla.index'))->assertOk();
+        $panel = $this->panel($resp->getContent());
+
+        $this->assertStringContainsString('BRK-A', $panel);
+        $this->assertStringContainsString('RSK-A', $panel);
+        $this->assertStringNotContainsString('จากทั้งหมด', $panel);
     }
 
     /** SLA6: the report signature must be an inline image data URI. */

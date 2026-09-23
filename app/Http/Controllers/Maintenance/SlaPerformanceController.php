@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Maintenance;
 use App\Http\Controllers\Controller;
 use App\Models\MaintenanceRequest;
 use App\Support\ReportSignature;
+use App\Support\ThaiDate;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -28,15 +29,29 @@ class SlaPerformanceController extends Controller
     public function report(Request $request)
     {
         $data = $this->getSlaDashboardData($request);
-        
+
         // signature is a data: URI from a canvas in the dashboard; only accept
         // an inline image so nothing else can be piped into the PDF's <img src>.
         $validated = $request->validate([
-            'signature' => ['nullable', 'string', 'starts_with:data:image/', 'max:500000'],
+            'signature'     => ['nullable', 'string', 'starts_with:data:image/', 'max:500000'],
+            // which late jobs to list: "1,5,9" of the ids the print dialog offered; `ticket_filter` says the dialog was used, so
+            // that choosing none prints an empty list instead of falling back to every job
+            'ticket_filter' => ['nullable', 'boolean'],
+            'tickets'       => ['nullable', 'string', 'max:20000', 'regex:/^\d+(,\d+)*$/'],
+            'note'          => ['nullable', 'string', 'max:1000'],
         ]);
         if (! empty($validated['signature'])) {
             $data['signature'] = ReportSignature::fromDataUri($validated['signature']);
         }
+
+        $data['breachedTotal'] = count($data['breachedTickets']);
+        if ($request->boolean('ticket_filter')) {
+            $chosen = array_flip(array_map('intval', explode(',', (string) ($validated['tickets'] ?? ''))));
+            $data['breachedTickets'] = array_values(array_filter($data['breachedTickets'], fn ($t) => isset($chosen[$t->id])));
+        }
+
+        $data['note'] = trim((string) ($validated['note'] ?? ''));
+        $data['preparedBy'] = $request->user()?->name;
 
         $hospital = [
             'name_th'  => 'โรงพยาบาลพระปกเกล้า',
@@ -44,14 +59,40 @@ class SlaPerformanceController extends Controller
             'subtitle' => 'SLA Performance Summary Report',
             'logo'     => public_path('images/logoppk1.png'),
         ];
-        
+
         $data['hospital'] = $hospital;
         $data['reportDate'] = Carbon::now();
 
         $pdf = Pdf::loadView('maintenance.sla.report', $data)
             ->setPaper('A4', 'portrait');
 
+        $this->addPageFooter($pdf, $data['reportDate']);
+
         return $pdf->stream('sla-report-' . Carbon::now()->format('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * "รายงานสรุป SLA · ข้อมูล ณ …" on the left and "หน้า 1 / 2" on the right of every page. The page count is only known once the
+     * document is laid out, so it is rendered first and the footer drawn onto each page after (dompdf's page_text, not a script).
+     */
+    private function addPageFooter(\Barryvdh\DomPDF\PDF $pdf, Carbon $reportDate): void
+    {
+        $pdf->render();
+
+        $dompdf = $pdf->getDomPDF();
+        $canvas = $dompdf->getCanvas();
+        $metrics = $dompdf->getFontMetrics();
+        $font = $metrics->getFont('sarabun', 'normal');
+        $size = 8.5;
+        $grey = [0.39, 0.45, 0.55];
+        $margin = 36.85;   // the 13 mm side margin of the report's @page
+        $y = $canvas->get_height() - 22;
+
+        $canvas->page_text($margin, $y, 'รายงานสรุป SLA · ข้อมูล ณ ' . ThaiDate::longWithTime($reportDate), $font, $size, $grey);
+
+        $pageLabel = 'หน้า {PAGE_NUM} / {PAGE_COUNT}';
+        $labelWidth = $metrics->getTextWidth('หน้า 99 / 99', $font, $size);
+        $canvas->page_text($canvas->get_width() - $margin - $labelWidth, $y, $pageLabel, $font, $size, $grey);
     }
 
     /** A `?from=` / `?to=` date, or null when it is missing or not a date (a typo in the URL must not be a 500). */
