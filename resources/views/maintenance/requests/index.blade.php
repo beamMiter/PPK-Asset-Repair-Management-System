@@ -96,7 +96,9 @@
                             </div>
                         </div>
 
-                        <div class="md:col-span-2">
+                        {{-- 3 columns, not 2: the longest status ("หยุดการซ่อมบำรุงชั่วคราว") needs more room than the
+                             longest type name did — they had it backwards (see ประเภทงาน below). --}}
+                        <div class="md:col-span-3">
                             <label for="status" class="mb-1 block text-[12px] text-slate-600">สถานะ</label>
                             <select id="status" name="status"
                                 class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35">
@@ -108,8 +110,9 @@
                             </select>
                         </div>
 
-                        {{-- ✅ NEW: filter type --}}
-                        <div class="md:col-span-3">
+                        {{-- ✅ NEW: filter type — 2 columns: its longest option ("ยังไม่ระบุประเภท") is shorter than
+                             any status label, so it had a column to spare while สถานะ ran short of one. --}}
+                        <div class="md:col-span-2">
                             <label for="type_id" class="mb-1 block text-[12px] text-slate-600">ประเภทงาน</label>
                             <select id="type_id" name="type_id"
                                 class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35">

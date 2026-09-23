@@ -121,7 +121,9 @@
                             </span>
                         </div>
                     </div>
-                    <div class="md:col-span-3 lg:col-span-2">
+                    {{-- 5 / 4, not 3 / 2: its longest option ("ผลงานดีที่สุด (Impact Score)") is one of the longest of
+                         any select in the app — the row had 5+ columns going unused, so widening it costs nothing. --}}
+                    <div class="md:col-span-5 lg:col-span-4">
                         <label for="sortSelector" class="mb-1 block text-[12px] text-slate-600">เรียงลำดับข้อมูล</label>
                         <select id="sortSelector"
                             class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35">

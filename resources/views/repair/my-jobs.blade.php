@@ -258,7 +258,9 @@
                     <form method="GET" action="{{ route($myJobsRoute) }}"
                         class="mt-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end" onsubmit="showLoader()">
 
-                        <div class="md:col-span-12 lg:col-span-3 min-w-0">
+                        {{-- lg:2, not 3: freed a column for สถานะใบงาน below, whose longest label needed it more than
+                             a placeholder hint does (a clipped placeholder loses nothing already chosen). --}}
+                        <div class="md:col-span-12 lg:col-span-2 min-w-0">
                             <label for="q" class="mb-1 block text-[12px] text-slate-600">คำค้นหา</label>
                             <div class="relative">
                                 <input id="q" type="text" name="q" value="{{ $q }}"
@@ -289,7 +291,9 @@
                             </select>
                         </div>
 
-                        <div class="md:col-span-3 lg:col-span-2">
+                        {{-- lg:3, not 2: its longest label ("อนุมัติผลการซ่อมบำรุง") barely fit a 2-column box (คำค้นหา
+                             gave up the column that used to leave it that tight). --}}
+                        <div class="md:col-span-3 lg:col-span-3">
                             <label for="status" class="mb-1 block text-[12px] text-slate-600">สถานะใบงาน</label>
                             <select id="status" name="status"
                                 class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800

@@ -61,8 +61,9 @@
                     x-show="showFilters" x-collapse x-cloak
                     class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end md:!grid" onsubmit="showLoader()">
 
-                    {{-- Search --}}
-                    <div class="md:col-span-4 lg:col-span-4 min-w-0">
+                    {{-- Search — 5, not 4: the column บทบาท gave up (it only needed 2), a search box benefits more
+                         from extra room than a select whose longest option already fits. --}}
+                    <div class="md:col-span-5 lg:col-span-5 min-w-0">
                         <label for="s" class="mb-1 block text-[12px] text-slate-600">คำค้นหา</label>
                         <div class="relative">
                             <input id="s" name="s" value="{{ $filters['s'] }}"
@@ -80,8 +81,9 @@
                         </div>
                     </div>
 
-                    {{-- Role --}}
-                    <div class="md:col-span-3 lg:col-span-3 min-w-0">
+                    {{-- Role — 2, not 3: its longest option ("เจ้าหน้าที่ซ่อมบำรุง") is shorter than หน่วยงาน's, which
+                         needs every one of its 3 columns for "กลุ่มงานเทคโนโลยีสารสนเทศ". --}}
+                    <div class="md:col-span-2 lg:col-span-2 min-w-0">
                         <label for="role" class="mb-1 block text-[12px] text-slate-600">บทบาท</label>
                         <select id="role" name="role"
                             class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800
