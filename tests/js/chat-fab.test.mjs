@@ -160,6 +160,24 @@ test('the "ใหม่" label on an unread row is blue text, not a boxed pill',
   assert.doesNotMatch(label.className, /bg-|ring-|rounded-full/, 'no fill, no border, no pill shape');
 });
 
+test('a long thread title truncates instead of overlapping the "ใหม่" label', async () => {
+  // truncate on a flex item does nothing unless that item can actually shrink (min-w-0): without it, a title with no
+  // natural break point keeps its full width and the unread label — shrink-0, pushed right with ml-auto — has nowhere
+  // left to sit but on top of it
+  const long = 'เครื่องปรับอากาศห้องประชุมชั้น3 อาคารผู้ป่วยนอกไม่เย็นตรวจสอบด่วนที่สุดขอบคุณครับ';
+  const world = boot({ answers: [[item({ title: long, unread: 2 })]] });
+  await settle();
+
+  const row = rows(world)[0];
+  const titleEl = Array.from(row.querySelectorAll('div')).find((d) => d.textContent === long);
+  assert.ok(titleEl, 'the title node is there');
+  assert.match(titleEl.className, /truncate/, 'still meant to truncate');
+  assert.match(titleEl.className, /(?<![-\w])min-w-0(?![-\w])/, 'but truncate does nothing without min-w-0 on a flex item');
+
+  const label = Array.from(row.querySelectorAll('span')).find((s) => s.textContent.includes('ใหม่'));
+  assert.match(label.className, /(?<![-\w])shrink-0(?![-\w])/, 'the label itself never shrinks — the title has to, so it stays fully readable');
+});
+
 test('the search box filters by title, sender and message text', async () => {
   const world = boot({ answers: [[item({ id: 1, title: 'เครื่องพิมพ์' }), item({ id: 2, title: 'เน็ตช้า', last_user_name: 'Wanna', last_body: 'switch ชั้น 2' })]] });
   await settle();

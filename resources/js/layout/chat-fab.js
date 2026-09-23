@@ -68,7 +68,9 @@ export function buildItem(doc, it) {
     }
 
     const top = el(doc, 'div', 'flex items-center gap-2');
-    top.append(el(doc, 'div', 'truncate font-medium text-[14px]', it.title || 'Untitled'));
+    // min-w-0: truncate does nothing on a flex item that refuses to shrink — without it a long title (the "ใหม่" label
+    // beside it is shrink-0) kept its full width and the label had nowhere left to sit but on top of the title
+    top.append(el(doc, 'div', 'min-w-0 flex-1 truncate font-medium text-[14px]', it.title || 'Untitled'));
     if ((it.unread || 0) > 0) {
         // just blue text — no pill, no border: a box around every unread row was too loud for a list where most rows have
         // one; blue (the system's "info" tone) so it reads as "new", not as a warning the way the FAB's own red dot does

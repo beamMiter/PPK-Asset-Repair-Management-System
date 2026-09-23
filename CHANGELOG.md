@@ -40,6 +40,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **The "ใหม่" label in the chat widget was a boxed green pill.** Every unread row got a filled, ringed badge, which read as
   loud on a list where most rows have one. It is blue text now, no fill, no border — blue rather than red so it does not
   compete with the FAB's own red unread dot. `tests/js/chat-fab.test.mjs`.
+- **A long thread title in the chat widget could run under the "ใหม่" label instead of truncating.** The title's
+  `truncate` class does nothing on a flex item that refuses to shrink, and it had no `min-w-0`: a title with no early
+  break point kept its full width, and the label — `shrink-0`, pushed to the end with `ml-auto` — had nowhere left to
+  sit but on top of it. `min-w-0 flex-1` on the title fixes it, the same pair its own parent row already used one
+  level up. `tests/js/chat-fab.test.mjs`.
 - **The unread count on the chat FAB was not quite round, and the digit sat low.** `#chatBadge` had a min-width but no
   height and no line-height, so at 11px the browser's default line box was taller than the 20px min-width —
   `rounded-full` drew an oval. A fixed height equal to the min-width plus flex centring made it a circle, but the digit
