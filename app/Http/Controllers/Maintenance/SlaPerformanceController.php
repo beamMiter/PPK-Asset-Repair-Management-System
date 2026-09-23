@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Maintenance;
 
 use App\Http\Controllers\Controller;
 use App\Models\MaintenanceRequest;
+use App\Support\ReportSignature;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -34,7 +35,7 @@ class SlaPerformanceController extends Controller
             'signature' => ['nullable', 'string', 'starts_with:data:image/', 'max:500000'],
         ]);
         if (! empty($validated['signature'])) {
-            $data['signature'] = $validated['signature'];
+            $data['signature'] = ReportSignature::fromDataUri($validated['signature']);
         }
 
         $hospital = [
@@ -45,7 +46,7 @@ class SlaPerformanceController extends Controller
         ];
         
         $data['hospital'] = $hospital;
-        $data['reportDate'] = Carbon::now()->translatedFormat('d F Y');
+        $data['reportDate'] = Carbon::now();
 
         $pdf = Pdf::loadView('maintenance.sla.report', $data)
             ->setPaper('A4', 'portrait');
@@ -248,7 +249,8 @@ class SlaPerformanceController extends Controller
             'department' => ['labels' => array_keys($breachesByDept), 'data' => array_values($breachesByDept)]
         ];
 
-        return compact('jobTypes', 'dashboard', 'breachedTickets', 'atRiskTickets', 'chartData');
+        return compact('jobTypes', 'dashboard', 'breachedTickets', 'atRiskTickets', 'chartData')
+            + ['periodStart' => $start, 'periodEnd' => $end];
     }
 
     /**

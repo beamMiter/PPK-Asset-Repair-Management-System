@@ -8,6 +8,18 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The printed SLA report ran to four pages and its signature did not sit on the signature line.** The report is
+  rebuilt to end on one A4 page for a normal report (16 late jobs in 8 departments, signed, was four pages): a smaller
+  body, the status split shown as figures instead of a table, the departments in two columns, and column widths taken
+  from the real values (Thai has no spaces to wrap at, so a value wider than its column printed over the next one). A
+  really long list of late jobs still runs on to a second page rather than being cut, with its header row repeated and
+  the signature block kept whole. The signature canvas hands over its whole area, so the strokes floated a hand's
+  breadth above the line: the empty margin is now trimmed (`App\Support\ReportSignature`) and the picture sits on a
+  dotted line between "ลงชื่อ" and "ผู้ส่งรายงาน", with the name and date under it. The report also now states the period
+  it covers (the headings said "this month" while the default is the year so far), prints dates with Thai month names
+  and the Buddhist year like the SLA page, and shows the status in Thai instead of the raw code (`In_progress`). Covered
+  by `SlaReportLayoutTest` and `ReportSignatureTest`; `phpunit.xml` gets a 512M memory limit because the suite, run in one
+  process, was already close to the 128M default and each PDF test builds a whole dompdf document.
 - **Running the test suite reset every password and signed everyone out.** `phpunit.xml` had `RefreshDatabase` running
   `migrate:fresh` against the same MySQL database the app itself (and anyone logged in) uses — every test run wiped
   the `sessions` table and reset every user's password to the seeder's, so a login attempt right after tests ran

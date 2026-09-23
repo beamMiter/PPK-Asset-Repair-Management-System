@@ -18,6 +18,9 @@
         </include>
     </source>
     <php>
+        <!-- The whole suite runs in one process and the PDF tests each build a full dompdf document: 128M (the CLI default) was
+             already close before the report layout tests, and ran out in the last third of the run. -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

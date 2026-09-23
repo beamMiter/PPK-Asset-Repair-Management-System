@@ -78,7 +78,7 @@ class FontFilesTest extends TestCase
 
         $workOrder = $this->actingAs($admin)->get(route('maintenance.requests.work-order', ['req' => $req, 'html' => 1]))->assertOk()->getContent();
         $assetSheet = view('assets.print', ['asset' => $asset->load(['categoryRef', 'department'])->loadCount(['maintenanceRequests as maintenance_requests_count', 'requestAttachments as attachments_count']), 'hospital' => ['name_th' => 'x', 'name_en' => 'x', 'subtitle' => 'x', 'logo' => '']])->render();
-        $sla = view('maintenance.sla.report', ['hospital' => ['name_th' => 'x', 'name_en' => 'x', 'subtitle' => 'x', 'logo' => ''], 'reportDate' => 'x'] + $this->slaData())->render();
+        $sla = view('maintenance.sla.report', ['hospital' => ['name_th' => 'x', 'name_en' => 'x', 'subtitle' => 'x', 'logo' => ''], 'reportDate' => now()] + $this->slaData())->render();
 
         foreach (['work order' => $workOrder, 'asset sheet' => $assetSheet, 'sla report' => $sla] as $name => $html) {
             $this->assertSame([], $this->missing($this->fontFilesDeclaredIn($html)), $name);
