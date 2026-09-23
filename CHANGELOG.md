@@ -22,6 +22,17 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The SLA print dialog warned with a browser `alert()`, and said nothing at all when a print was refused.** A missing
+  signature was an `alert()`; the server refusing a print (a signature that is not an image, a selection that is not a
+  list of ids, a note over 1000 characters) bounced back to the page with errors that page never shows — nothing was said;
+  and a report that failed to build was a 500 page. All of these are toasts now, in Thai: no signature (warning), a
+  signature pad that never started (error, "refresh the page"), printing with no late job chosen (warning, asks to press
+  again to confirm — a report with a summary alone is allowed, but rarely meant), "กำลังสร้างรายงาน PDF..." while the PDF
+  is made (the page is still there for a second or two), a refused print (error with the reason), a failed build (error;
+  the exception is reported, the user stays on the page). A second click while the PDF is being built no longer sends it
+  twice. The dialog's script moved out of a 70-line Blade attribute into `resources/js/maintenance/sla/print-dialog.js`
+  (an Alpine component, registered in `app.js` so it exists on a Turbo visit too) so it can be tested:
+  `tests/js/sla-print-dialog.test.mjs`, and `SlaReportLayoutTest` for the server side.
 - **The printed SLA report ran to four pages and its signature did not sit on the signature line.** The report is
   rebuilt to end on one A4 page for a normal report (the sample of 16 late jobs in 8 departments was four pages; about
   ten jobs fit one page, and the dialog above lets the user choose which): a smaller body, the status split shown as figures instead of a table, the departments in two columns, and column widths taken

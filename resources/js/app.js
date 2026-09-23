@@ -9,12 +9,14 @@ import { installImageFallback } from './image-fallback';
 import './bootstrap';
 import './repair/my-jobs';
 import './repair/dashboard';
+import { slaPrintDialog } from './maintenance/sla/print-dialog';
 
 installToast(); // window.showToast, the `app:toast` event and the flashed session toast — once per session
 installImageFallback(); // a picture that will not load shows a "no picture" placeholder, not the browser's broken-image icon
 
 // Initialize Alpine.js globally for Blade components using x-data/x-show
 window.Alpine = Alpine
+Alpine.data('slaPrintDialog', slaPrintDialog) // the SLA page's print dialog: registered here so it exists on a Turbo visit too
 
 // Alpine + Turbo: start Alpine once, let it observe DOM mutations for Turbo swaps
 document.addEventListener('turbo:load', () => {

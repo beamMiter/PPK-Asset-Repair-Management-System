@@ -7,6 +7,8 @@ use App\Models\MaintenanceRequest;
 use App\Support\ReportSignature;
 use App\Support\ThaiDate;
 use App\Support\ThaiPdfText;
+use App\Support\Toast;
+use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -33,44 +35,61 @@ class SlaPerformanceController extends Controller
 
         // signature is a data: URI from a canvas in the dashboard; only accept
         // an inline image so nothing else can be piped into the PDF's <img src>.
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'signature'     => ['nullable', 'string', 'starts_with:data:image/', 'max:500000'],
             // which late jobs to list: "1,5,9" of the ids the print dialog offered; `ticket_filter` says the dialog was used, so
             // that choosing none prints an empty list instead of falling back to every job
             'ticket_filter' => ['nullable', 'boolean'],
             'tickets'       => ['nullable', 'string', 'max:20000', 'regex:/^\d+(,\d+)*$/'],
             'note'          => ['nullable', 'string', 'max:1000'],
+        ], [
+            'signature.*'     => 'ลายเซ็นไม่ถูกต้อง กรุณาเซ็นชื่อใหม่อีกครั้ง',
+            'ticket_filter.*' => 'รายการงานที่เลือกไม่ถูกต้อง กรุณาเลือกใหม่อีกครั้ง',
+            'tickets.*'       => 'รายการงานที่เลือกไม่ถูกต้อง กรุณาเลือกใหม่อีกครั้ง',
+            'note.*'          => 'ข้อสังเกต / ข้อเสนอแนะต้องไม่เกิน :max ตัวอักษร',
         ]);
-        if (! empty($validated['signature'])) {
-            $data['signature'] = ReportSignature::fromDataUri($validated['signature']);
+
+        // this page shows no field errors, so a refusal is said in a toast
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->with('toast', Toast::error($validator->errors()->first(), 4000));
         }
+        $validated = $validator->validated();
 
-        $data['breachedTotal'] = count($data['breachedTickets']);
-        if ($request->boolean('ticket_filter')) {
-            $chosen = array_flip(array_map('intval', explode(',', (string) ($validated['tickets'] ?? ''))));
-            $data['breachedTickets'] = array_values(array_filter($data['breachedTickets'], fn ($t) => isset($chosen[$t->id])));
+        try {
+            if (! empty($validated['signature'])) {
+                $data['signature'] = ReportSignature::fromDataUri($validated['signature']);
+            }
+
+            $data['breachedTotal'] = count($data['breachedTickets']);
+            if ($request->boolean('ticket_filter')) {
+                $chosen = array_flip(array_map('intval', explode(',', (string) ($validated['tickets'] ?? ''))));
+                $data['breachedTickets'] = array_values(array_filter($data['breachedTickets'], fn ($t) => isset($chosen[$t->id])));
+            }
+
+            $data['note'] = trim((string) ($validated['note'] ?? ''));
+            $data['preparedBy'] = $request->user()?->name;
+
+            $data['hospital'] = [
+                'name_th'  => 'โรงพยาบาลพระปกเกล้า',
+                'name_en'  => 'PHRAPOKKLAO HOSPITAL',
+                'subtitle' => 'SLA Performance Summary Report',
+                'logo'     => public_path('images/logoppk1.png'),
+            ];
+            $data['reportDate'] = Carbon::now();
+
+            // the tone marks over vowels are drawn by glyphs only the report's font has: see ThaiPdfText
+            $pdf = Pdf::loadHTML(ThaiPdfText::compose(view('maintenance.sla.report', $data)->render()))
+                ->setPaper('A4', 'portrait');
+
+            $this->addPageFooter($pdf, $data['reportDate']);
+
+            return $pdf->stream('sla-report-' . Carbon::now()->format('Y-m-d') . '.pdf');
+        } catch (\Throwable $e) {
+            // a broken font, a template error: the user gets a toast on the page they were on, not a 500 page in place of the report
+            report($e);
+
+            return back()->with('toast', Toast::error('สร้างรายงาน PDF ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 4000));
         }
-
-        $data['note'] = trim((string) ($validated['note'] ?? ''));
-        $data['preparedBy'] = $request->user()?->name;
-
-        $hospital = [
-            'name_th'  => 'โรงพยาบาลพระปกเกล้า',
-            'name_en'  => 'PHRAPOKKLAO HOSPITAL',
-            'subtitle' => 'SLA Performance Summary Report',
-            'logo'     => public_path('images/logoppk1.png'),
-        ];
-
-        $data['hospital'] = $hospital;
-        $data['reportDate'] = Carbon::now();
-
-        // the tone marks over vowels are drawn by glyphs only the report's font has: see ThaiPdfText
-        $pdf = Pdf::loadHTML(ThaiPdfText::compose(view('maintenance.sla.report', $data)->render()))
-            ->setPaper('A4', 'portrait');
-
-        $this->addPageFooter($pdf, $data['reportDate']);
-
-        return $pdf->stream('sla-report-' . Carbon::now()->format('Y-m-d') . '.pdf');
     }
 
     /**

@@ -178,12 +178,38 @@ class SlaReportLayoutTest extends TestCase
         $this->assertSame([$jobs[0]->request_no], $this->listed());
     }
 
-    public function test_a_malformed_selection_or_an_over_long_note_is_turned_down(): void
+    /**
+     * The SLA page shows no field errors, so a refused print used to bounce back to it with nothing said. It is a toast now.
+     */
+    public function test_a_refused_print_says_why_in_a_toast(): void
     {
         $this->lateJobs(1);
+        $from = route('maintenance.sla.index');
+        $admin = $this->admin();
 
-        $this->printReport(['ticket_filter' => 1, 'tickets' => '1; DROP TABLE users'])->assertSessionHasErrors('tickets');
-        $this->printReport(['note' => str_repeat('ก', 1001)])->assertSessionHasErrors('note');
+        $cases = [
+            'tickets'   => [['ticket_filter' => 1, 'tickets' => '1; DROP TABLE users'], 'รายการงานที่เลือกไม่ถูกต้อง กรุณาเลือกใหม่อีกครั้ง'],
+            'note'      => [['note' => str_repeat('ก', 1001)], 'ข้อสังเกต / ข้อเสนอแนะต้องไม่เกิน 1000 ตัวอักษร'],
+            'signature' => [['signature' => 'https://evil.example/x.png'], 'ลายเซ็นไม่ถูกต้อง กรุณาเซ็นชื่อใหม่อีกครั้ง'],
+        ];
+
+        foreach ($cases as $field => [$input, $message]) {
+            $this->actingAs($admin)->from($from)->post(route('maintenance.sla.report'), $input)
+                ->assertRedirect($from)
+                ->assertSessionHasErrors($field)
+                ->assertSessionHas('toast', fn ($toast) => $toast['type'] === 'error' && $toast['message'] === $message);
+        }
+    }
+
+    public function test_a_report_that_cannot_be_built_says_so_in_a_toast_instead_of_a_500_page(): void
+    {
+        $this->lateJobs(1);
+        View::composer('maintenance.sla.report', fn () => throw new \RuntimeException('the font is gone'));
+        $from = route('maintenance.sla.index');
+
+        $this->actingAs($this->admin())->from($from)->post(route('maintenance.sla.report'))
+            ->assertRedirect($from)
+            ->assertSessionHas('toast', fn ($toast) => $toast['type'] === 'error' && str_contains($toast['message'], 'สร้างรายงาน PDF ไม่สำเร็จ'));
     }
 
     /* ------------------------------------------------------------------ what the paper says */

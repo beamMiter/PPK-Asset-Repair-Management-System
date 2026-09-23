@@ -77,61 +77,7 @@
                             style="display: none;">
 
                             <div class="bg-white rounded-xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
-                                @click.away="showSignModal = false" x-data="{
-                                    pad: null,
-                                    rows: @js($printRows),
-                                    selected: @js($printRows->pluck('id')),
-                                    q: '',
-                                    note: '',
-                                    get shown() {
-                                        const q = this.q.trim().toLowerCase();
-                                        return q === '' ? this.rows : this.rows.filter(r => (r.no + ' ' + r.title + ' ' + r.dept).toLowerCase().includes(q));
-                                    },
-                                    isOn(id) { return this.selected.includes(id); },
-                                    toggle(id) { this.selected = this.isOn(id) ? this.selected.filter(x => x !== id) : [...this.selected, id]; },
-                                    selectShown() { this.selected = [...this.selected, ...this.shown.map(r => r.id).filter(id => !this.isOn(id))]; },
-                                    clearShown() { const off = new Set(this.shown.map(r => r.id)); this.selected = this.selected.filter(id => !off.has(id)); },
-                                    initPad() {
-                                        const canvas = this.$refs.canvas;
-                                        if (!canvas) return;
-
-                                        if (canvas.offsetWidth === 0) {
-                                            setTimeout(() => this.initPad(), 50);
-                                            return;
-                                        }
-
-                                        const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                                        canvas.width = canvas.offsetWidth * ratio;
-                                        canvas.height = canvas.offsetHeight * ratio;
-                                        canvas.getContext('2d').scale(ratio, ratio);
-
-                                        if (typeof SignaturePad === 'undefined') {
-                                            console.error('SignaturePad is not defined');
-                                            return;
-                                        }
-
-                                        this.pad = new SignaturePad(canvas, {
-                                            backgroundColor: 'rgba(255, 255, 255, 0)',
-                                            penColor: '#0F2D5C',
-                                            minWidth: 1.5,
-                                            maxWidth: 4
-                                        });
-                                    },
-                                    clearPad() {
-                                        this.pad && this.pad.clear();
-                                    },
-                                    submitReport() {
-                                        if (!this.pad || this.pad.isEmpty()) {
-                                            alert('กรุณาลงนามก่อนพิมพ์รายงาน');
-                                            return;
-                                        }
-                                        document.getElementById('sig-input').value = this.pad.toDataURL('image/png');
-                                        document.getElementById('tickets-input').value = this.selected.join(',');
-                                        document.getElementById('note-input').value = this.note;
-                                        document.getElementById('pdf-form').submit();
-                                        this.showSignModal = false;
-                                    }
-                                }" x-init="$watch('showSignModal', value => { if (value) { $nextTick(() => initPad()); } })">
+                                @click.away="showSignModal = false" x-data="slaPrintDialog(@js($printRows))">
 
                                 <div
                                     class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
