@@ -78,6 +78,34 @@ return Application::configure(basePath: dirname(__DIR__))
     */
     ->withExceptions(function (Exceptions $exceptions) {
 
+        /*
+        |-----------------------------
+        | WEB: a refused form says why in a toast
+        |-----------------------------
+        | A form that fails validation is sent back with its errors, and only a handful of pages print them: the modals of a job
+        | (พักชั่วคราว / ซ่อมเสร็จ / ยกเลิก / ไม่รับเรื่อง), the notification-sound and SLA settings, the chat all bounced back and said
+        | nothing. The first message goes in a toast too. Left alone: JSON / API requests (they get their 422), and a request that
+        | already flashed a toast of its own (the profile form, an action that words its refusal itself).
+        */
+        $exceptions->respond(function ($response, \Throwable $e, Request $request) {
+            if (
+                ! $e instanceof ValidationException
+                || ! $response instanceof \Illuminate\Http\RedirectResponse
+                || $request->expectsJson() || $request->is('api/*')
+                || ! $request->hasSession()
+                // only a toast flashed by THIS request counts: one left over from the last request is flash data on its way out
+                || in_array('toast', $request->session()->get('_flash.new', []), true)
+            ) {
+                return $response;
+            }
+
+            $messages = collect($e->errors())->flatten();
+            $more = $messages->count() - 1;
+            $text = $messages->first() . ($more > 0 ? " (และมีอีก {$more} ข้อ)" : '');
+
+            return $response->with('toast', \App\Support\Toast::warning($text, 4200));
+        });
+
         $exceptions->render(function (\Throwable $e, Request $request) {
 
             /*

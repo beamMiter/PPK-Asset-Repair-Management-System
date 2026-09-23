@@ -22,6 +22,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A form the server refused said nothing on most pages.** A form that fails validation is sent back with its errors, and only a
+  handful of pages print them (login, register, the profile, the asset form…). The job modals (พักชั่วคราว / ซ่อมเสร็จ /
+  ยกเลิก / ไม่รับเรื่อง), the notification-sound and SLA settings and the chat bounced back with nothing said — probing every
+  web write route with bad input found no form left silent after this. `bootstrap/app.php` adds the first message as a toast
+  to every such web refusal, with "(และมีอีก N ข้อ)" when there are more. Left alone: JSON / API requests (they get their
+  422), and a request that already flashed a toast of its own this request (the profile form). The pause modal now calls its
+  field "เหตุผลในการพักชั่วคราว", not "หมายเหตุ". `ValidationToastTest`.
 - **Validation toasts were in English ("The title field is required.") in a system whose staff are Thai.** The app ran with
   locale `en`: `config/app.php` said `env('APP_LOCALE', 'th')` and a checkout's `.env` carried the framework's stock `en`, so
   `lang/th/validation.php` was never read — and that file lacked 46 of the framework's keys (among them `password.*`, so a

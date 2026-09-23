@@ -152,7 +152,7 @@ class MaintenanceTransitionController extends Controller
     {
         if ($refused = $this->refuseUnless($request, $req, 'hold')) return $refused;
 
-        $data = $request->validate(['note' => ['required', 'string', 'max:1000']]);
+        $data = $request->validate(['note' => ['required', 'string', 'max:1000']], [], ['note' => 'เหตุผลในการพักชั่วคราว']);
         return $this->handleAction($request, $req, 'hold', MR::STATUS_ON_HOLD, 'หยุดการซ่อมบำรุงชั่วคราวเรียบร้อยแล้ว', ['note' => trim($data['note'])]);
     }
 
