@@ -22,7 +22,7 @@ class ChatController extends Controller
             ->with('author:id,name')
             ->withCount('messages')
             ->with(['latestMessage' => fn($qq) => $qq->with('user:id,name')])
-            ->when($scope === 'mine', fn($qq) => $qq->involving($meId))
+            ->when($scope === 'mine', fn($qq) => $qq->inMyList($meId))
             ->when($q, fn($qq) => $qq->where('title', 'like', "%{$q}%"))
             ->orderByDesc('created_at')
             ->paginate(15)
@@ -59,10 +59,14 @@ class ChatController extends Controller
         $me = Auth::user();
         $canManageLock = $me && $me->role !== 'member';
 
-        // what each list holds, for the two tabs (not narrowed by the search)
-        $counts = ['all' => ChatThread::count(), 'mine' => ChatThread::involving($meId)->count()];
+        // the open thread and me: can I hide it from my list (I took part, and have not), or bring it back (I hid it)?
+        $hiddenByMe = $activeThread ? $this->hasHiddenThread($meId, (int) $activeThread->id) : false;
+        $canHide = $activeThread && ! $hiddenByMe && ChatThread::involving($meId)->whereKey($activeThread->id)->exists();
 
-        return view('chat.index', compact('threads', 'activeThread', 'messages', 'totalMessages', 'lastAt', 'me', 'canManageLock', 'scope', 'counts'));
+        // what each list holds, for the two tabs (not narrowed by the search)
+        $counts = ['all' => ChatThread::count(), 'mine' => ChatThread::inMyList($meId)->count()];
+
+        return view('chat.index', compact('threads', 'activeThread', 'messages', 'totalMessages', 'lastAt', 'me', 'canManageLock', 'scope', 'counts', 'hiddenByMe', 'canHide'));
     }
 
     public function storeThread(Request $r)
@@ -125,7 +129,7 @@ class ChatController extends Controller
         // Advance the sender's own read pointer (the API path already did this;
         // without it their unread badge never clears for their own posts).
         if ($message->user_id) {
-            $this->markThreadRead((int) $message->user_id, (int) $thread->id, (int) $message->id);
+            $this->markThreadRead((int) $message->user_id, (int) $thread->id, (int) $message->id, reappear: true);
         }
 
         SafeBroadcast::send(new \App\Events\ChatMessageSent($message));
@@ -138,7 +142,7 @@ class ChatController extends Controller
         $u = $request->user();
 
         $threads = ChatThread::query()
-            ->involving((int) $u->id)   // ตั้งเอง หรือเคยคอมเมนต์
+            ->forTheWidget((int) $u->id)   // ตั้งเอง หรือเคยคอมเมนต์ - ไม่รวมที่ซ่อนไว้ และที่ล็อกแล้วอ่านหมดแล้ว
             ->with(['messages' => function ($q) {
                 $q->with('user:id,name')->latest('id')->limit(1);
             }])
@@ -155,6 +159,7 @@ class ChatController extends Controller
                 'id'              => $t->id,
                 'title'           => $t->title ?? ('กระทู้ #' . $t->id),
                 'show_url'        => route('chat.show', $t),
+                'hide_url'        => route('chat.hide', $t),
                 'unread'          => $this->unreadCount((int) $t->id, $pointers[$t->id] ?? null, (int) ($t->messages_count ?? 0)),
                 'last_user_name'  => $last?->user?->name,
                 'last_user_avatar'=> $last?->user?->avatar_thumb_url,
@@ -218,6 +223,40 @@ class ChatController extends Controller
         ]]);
 
         return redirect()->route('chat.index');
+    }
+
+    // ========= Hide from / show again in "กระทู้ที่มีส่วนร่วม" (per person; nothing is deleted) =========
+
+    public function hide(Request $request, ChatThread $thread)
+    {
+        $userId = (int) Auth::id();
+
+        if (! ChatThread::involving($userId)->whereKey($thread->id)->exists()) {
+            return $this->hiddenAnswer($request, false, 'คุณยังไม่ได้มีส่วนร่วมในกระทู้นี้ จึงไม่มีอะไรให้ซ่อน', 'warning', 422);
+        }
+
+        $this->hideThread($userId, (int) $thread->id);
+
+        return $this->hiddenAnswer($request, true, 'ซ่อนกระทู้นี้จากกระทู้ที่มีส่วนร่วมแล้ว ยังหาเจอและอ่านได้ในแท็บทั้งหมด และจะกลับมาเมื่อคุณพิมพ์ในกระทู้นี้อีกครั้ง');
+    }
+
+    public function unhide(Request $request, ChatThread $thread)
+    {
+        $this->showThreadAgain((int) Auth::id(), (int) $thread->id);
+
+        return $this->hiddenAnswer($request, false, 'แสดงกระทู้นี้ในกระทู้ที่มีส่วนร่วมอีกครั้งแล้ว');
+    }
+
+    /** JSON for the widget's fetch, a flashed toast for a form post. */
+    protected function hiddenAnswer(Request $request, bool $hidden, string $message, string $type = 'success', int $status = 200)
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['hidden' => $hidden, 'message' => $message], $status);
+        }
+
+        session(['toast' => ['type' => $type, 'message' => $message, 'title' => $hidden ? 'ซ่อนกระทู้' : 'กระทู้ที่มีส่วนร่วม']]);
+
+        return back();
     }
 
     protected function authorizeLocking(ChatThread $thread): void

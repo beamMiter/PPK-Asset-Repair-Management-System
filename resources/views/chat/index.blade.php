@@ -264,6 +264,22 @@
                                     :aria-label="$lockLabel" />
                             @endif
 
+                            {{-- Out of my "กระทู้ที่มีส่วนร่วม" (the tab and the widget) and back in; nothing is deleted, for me or for anyone --}}
+                            @if ($canHide ?? false)
+                                <form method="POST" action="{{ route('chat.hide', $thread) }}" class="inline-flex">
+                                    @csrf
+                                    <x-ui.button type="submit" variant="ghost" size="icon-lg" icon="visibility_off"
+                                        title="ซ่อนจากกระทู้ที่มีส่วนร่วม" aria-label="ซ่อนจากกระทู้ที่มีส่วนร่วม" />
+                                </form>
+                            @elseif ($hiddenByMe ?? false)
+                                <form method="POST" action="{{ route('chat.unhide', $thread) }}" class="inline-flex">
+                                    @csrf
+                                    @method('DELETE')
+                                    <x-ui.button type="submit" variant="ghost" size="icon-lg" icon="visibility"
+                                        title="แสดงในกระทู้ที่มีส่วนร่วมอีกครั้ง" aria-label="แสดงในกระทู้ที่มีส่วนร่วมอีกครั้ง" />
+                                </form>
+                            @endif
+
                             @if (Auth::user()->role === 'admin')
                                 <x-ui.button variant="ghost-danger" size="icon-lg" icon="delete"
                                     @click="showDeleteModal = true" title="ลบกระทู้" aria-label="ลบกระทู้" />

@@ -51,8 +51,13 @@ function el(doc, tag, className, text) {
     return node;
 }
 
-/** One row of the drawer. Every piece of text that came from the server is set as text. */
-export function buildItem(doc, it) {
+const HIDE_LABEL = 'ซ่อนจากกระทู้ที่มีส่วนร่วม';
+
+/**
+ * One row of the drawer: the link to the thread, and beside it (not inside it: a button in a link is not valid) the button that hides
+ * the thread from this list. Every piece of text that came from the server is set as text.
+ */
+export function buildItem(doc, it, onHide) {
     const a = el(doc, 'a', 'group flex items-start gap-3 rounded-xl px-3 py-2 hover:bg-zinc-50');
     a.href = it.show_url;
     a.setAttribute('data-no-loader', '');
@@ -86,7 +91,19 @@ export function buildItem(doc, it) {
     body.append(top, last, el(doc, 'div', 'mt-0.5 text-[11px] text-zinc-400', fmtTime(it.last_created_at)));
 
     a.append(avatar, body);
-    return a;
+
+    const row = el(doc, 'div', 'group relative');
+    row.append(a);
+    if (it.hide_url && onHide) {
+        const hide = el(doc, 'button', 'absolute bottom-1.5 right-2 inline-flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-300');
+        hide.type = 'button';
+        hide.setAttribute('title', HIDE_LABEL);
+        hide.setAttribute('aria-label', HIDE_LABEL);
+        hide.append(el(doc, 'span', 'material-symbols-outlined text-[16px] leading-none', 'visibility_off'));
+        hide.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); onHide(it); });
+        row.append(hide);
+    }
+    return row;
 }
 
 const INSTALLED = Symbol.for('ppk.chatFab.installed');
@@ -145,10 +162,31 @@ export function installChatFab(win = window) {
         };
 
         p.renderEmpty = () => { listEl.innerHTML = EMPTY_HTML; };
+
+        // Hide a thread from this list (per person; nothing is deleted, and writing in it brings it back). The row goes at once.
+        p.hide = async (it) => {
+            try {
+                const res = await win.fetch(it.hide_url, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': doc.querySelector('meta[name=csrf-token]')?.getAttribute('content') ?? '',
+                    },
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                p.allItems = p.allItems.filter((x) => x.id !== it.id);
+                p.applyFilter();
+                win.showToast?.({ type: 'success', message: 'ซ่อนกระทู้นี้แล้ว ยังหาเจอในแท็บทั้งหมดของหน้าแชท' });
+            } catch (e) {
+                win.console?.error('chat.hide failed', e);
+                win.showToast?.({ type: 'error', message: 'ซ่อนกระทู้ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
+            }
+        };
         p.renderList = (items) => {
             listEl.innerHTML = '';
             if (!items.length) { p.renderEmpty(); return; }
-            for (const it of items.slice(0, 10)) listEl.appendChild(buildItem(doc, it)); // at most 10 rows
+            for (const it of items.slice(0, 10)) listEl.appendChild(buildItem(doc, it, p.hide)); // at most 10 rows
         };
         p.applyFilter = () => {
             const q = (search.value || '').toLowerCase().trim();

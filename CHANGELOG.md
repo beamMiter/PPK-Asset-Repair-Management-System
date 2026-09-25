@@ -8,6 +8,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A person can hide a thread from "กระทู้ที่มีส่วนร่วม", and a locked thread they have read leaves the widget.** Whoever once wrote in
+  a thread had it in the tab and the floating widget for good, its every new message counting toward their badge, and only an admin
+  could delete it (for everybody). The button "ซ่อนจากกระทู้ที่มีส่วนร่วม" (the thread's header, and on each row of the widget) hides it
+  for that person alone: it is read up to its last message, leaves the tab, its count, the widget and the badge, and stays in "ทั้งหมด",
+  readable. It comes back when they write in it again (reading it, or somebody else writing, does not bring it back), or when they
+  press "แสดงในกระทู้ที่มีส่วนร่วมอีกครั้ง". A locked thread that a person has read to the end also drops out of the widget - nobody can
+  add to it - and returns when it is unlocked; the tab keeps listing it. `chat_thread_reads.hidden_at` (migration; run
+  `php artisan migrate`), `POST` / `DELETE /api/threads/{id}/hide`, `hidden_by_me` in the API's list. `ChatHideThreadTest`.
 - **The chat page can show only the threads I took part in.** The floating widget's "กระทู้ที่มีส่วนร่วม" was the only place that knew which
   threads a person had started or written in (and it shows the latest 15). The thread list on the chat page has two tabs now, "ทั้งหมด"
   and "กระทู้ที่มีส่วนร่วม", each with its count; the second is every thread I started or wrote in - opening a thread to read it does not

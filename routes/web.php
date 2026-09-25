@@ -120,6 +120,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/chat/my-updates', [ChatController::class, 'myUpdates'])->name('chat.my_updates');
     Route::post('/chat/threads/{thread}/lock', [ChatController::class, 'lock'])->name('chat.lock');
     Route::post('/chat/threads/{thread}/unlock', [ChatController::class, 'unlock'])->name('chat.unlock');
+    Route::post('/chat/threads/{thread}/hide', [ChatController::class, 'hide'])->name('chat.hide');
+    Route::delete('/chat/threads/{thread}/hide', [ChatController::class, 'unhide'])->name('chat.unhide');
     Route::delete('/chat/threads/{thread}', [ChatController::class, 'destroy'])->name('chat.destroy');
 
     // Assets

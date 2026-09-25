@@ -65,7 +65,7 @@ function boot({ answers = [[]], page = fabPage, storage = {}, session = {}, noti
   return world;
 }
 
-const rows = (world) => world.ref.list.children;
+const rows = (world) => world.ref.list.children.map((row) => (row.tagName === 'A' ? row : row.querySelector('a')));   // each row: the link, and beside it a hide button
 
 // ── the timer ──────────────────────────────────────────────────────────────────────────────────────────────────────
 test('one poll timer for the whole session: N visits still mean one poll per interval, not N', async () => {
@@ -325,3 +325,75 @@ test('an empty list shows the empty state; blocked sessionStorage does not break
   await blocked.go();
   assert.equal(rows(blocked).length, 1);
 });
+
+// ── hiding a thread from "กระทู้ที่มีส่วนร่วม" ─────────────────────────────────────────────────────────────────────────────
+const hideable = (over = {}) => item({ show_url: `/chat/threads/${over.id ?? 1}`, hide_url: `/chat/threads/${over.id ?? 1}/hide`, ...over });
+const hideButton = (world, i = 0) => world.ref.list.children[i].querySelector('button');
+
+/** the drawer of a page that carries the CSRF meta tag and a toast function, as the real layout does */
+function bootHideable(answers) {
+  const world = boot({ answers });
+  world.toasts = [];
+  world.win.showToast = (o) => world.toasts.push(o);
+  world.body.append(world.el('meta', { name: 'csrf-token', content: 'tok-123' }));
+  return world;
+}
+
+test('a row that can be hidden has its button beside the link, not inside it, with its words in title and aria-label', async () => {
+  const world = boot({ answers: [[hideable(), item({ id: 2, title: 'ไม่มีลิงก์ซ่อน' })]] });
+  await settle();
+  const [withButton, without] = world.ref.list.children;
+  assert.equal(withButton.querySelector('a').querySelectorAll('button').length, 0, 'a button inside a link is not valid');
+  const btn = hideButton(world);
+  assert.equal(btn.getAttribute('title'), 'ซ่อนจากกระทู้ที่มีส่วนร่วม');
+  assert.equal(btn.getAttribute('aria-label'), 'ซ่อนจากกระทู้ที่มีส่วนร่วม');
+  assert.equal(btn.type, 'button');
+  assert.equal(without.querySelectorAll('button').length, 0, 'no hide_url from the server, no button');
+});
+
+test('pressing it asks the server to hide that thread, drops the row and says so; the link is not followed', async () => {
+  const world = bootHideable([[hideable({ id: 1 }), hideable({ id: 2, title: 'เน็ตช้า' })], { hidden: true }]);
+  await settle();
+  const click = hideButton(world, 0).dispatch('click');
+  await settle();
+
+  const [url, init] = world.fetches.at(-1);
+  assert.equal(url, '/chat/threads/1/hide');
+  assert.equal(init.method, 'POST');
+  assert.equal(init.headers['X-CSRF-TOKEN'], 'tok-123');
+  assert.equal(init.headers.Accept, 'application/json');
+  assert.equal(rows(world).length, 1);
+  assert.ok(rows(world)[0].textContent.includes('เน็ตช้า'), 'the other row stays');
+  assert.equal(world.toasts.length, 1);
+  assert.equal(world.toasts[0].type, 'success');
+  assert.ok(click.defaultPrevented && click._stop, 'the click is not passed on: the row is not opened');
+});
+
+test('hiding the last row leaves the empty state; a search that shows a row still hides it properly', async () => {
+  const world = bootHideable([[hideable({ id: 1 })], { hidden: true }]);
+  await settle();
+  hideButton(world).dispatch('click'); await settle();
+  assert.ok(world.ref.list.innerHTML.includes('ยังไม่มีกระทู้'));
+});
+
+test('a hidden thread does not come back on the next poll (the server no longer lists it)', async () => {
+  const world = bootHideable([[hideable({ id: 1 }), hideable({ id: 2 })], { hidden: true }]);
+  await settle();
+  hideButton(world, 0).dispatch('click'); await settle();
+  world.queue.splice(0, world.queue.length, [hideable({ id: 2 })]);
+  world.advance(Fab.POLL_MS); await settle();
+  assert.equal(rows(world).length, 1);
+  assert.equal(rows(world)[0].href, '/chat/threads/2');
+});
+
+test('when the server refuses or the network fails the row stays and the toast says so', async () => {
+  for (const failure of [500, new Error('offline')]) {
+    const world = bootHideable([[hideable({ id: 1 })], failure]);
+    await settle();
+    hideButton(world).dispatch('click'); await settle();
+    assert.equal(rows(world).length, 1, 'still there');
+    assert.equal(world.toasts.length, 1);
+    assert.equal(world.toasts[0].type, 'error');
+  }
+});
+

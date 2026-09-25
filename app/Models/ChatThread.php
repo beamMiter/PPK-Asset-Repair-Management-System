@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ChatThread extends Model
@@ -34,6 +35,39 @@ class ChatThread extends Model
         return $query->where(function (Builder $q) use ($userId) {
             $q->where('author_id', $userId)
                 ->orWhereHas('messages', fn ($messages) => $messages->where('user_id', $userId));
+        });
+    }
+
+    /**
+     * "กระทู้ที่มีส่วนร่วม" as a person sees it: the threads they took part in, minus the ones they hid (chat_thread_reads.hidden_at).
+     * The chat page's tab, its count and the API's `scope=mine` are this.
+     */
+    public function scopeInMyList(Builder $query, int $userId): Builder
+    {
+        return $query->involving($userId)->whereNotExists(function ($hidden) use ($userId) {
+            $hidden->select(DB::raw(1))->from('chat_thread_reads')
+                ->whereColumn('chat_thread_reads.chat_thread_id', 'chat_threads.id')
+                ->where('chat_thread_reads.user_id', $userId)
+                ->whereNotNull('chat_thread_reads.hidden_at');
+        });
+    }
+
+    /**
+     * What the floating widget lists: their list, minus a locked thread they have read to the end. Nobody can add to a locked thread,
+     * so there is nothing in it to catch up on; it stays in the page's tab, and it is back in the widget when it is unlocked.
+     */
+    public function scopeForTheWidget(Builder $query, int $userId): Builder
+    {
+        return $query->inMyList($userId)->where(function (Builder $q) use ($userId) {
+            $q->where('chat_threads.is_locked', false)->orWhereExists(function ($unread) use ($userId) {
+                $unread->select(DB::raw(1))->from('chat_messages')
+                    ->whereColumn('chat_messages.chat_thread_id', 'chat_threads.id')
+                    ->whereNull('chat_messages.deleted_at')
+                    ->whereRaw(
+                        'chat_messages.id > COALESCE((SELECT r.last_read_message_id FROM chat_thread_reads r WHERE r.user_id = ? AND r.chat_thread_id = chat_threads.id), 0)',
+                        [$userId],
+                    );
+            });
         });
     }
 

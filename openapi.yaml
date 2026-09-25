@@ -562,6 +562,46 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ChatThreadDetail' }
+  /threads/{id}/hide:
+    post:
+      tags: [Chat]
+      security: [{ bearerAuth: [] }]
+      summary: Hide a thread from my "กระทู้ที่มีส่วนร่วม"
+      description: >
+        Per person; nothing is deleted and nobody else is affected. The thread is read up to its last message, leaves `scope=mine`,
+        the widget list (`/chat/my-updates`) and the unread badge, and stays in the full list. It comes back when the caller posts in it.
+        A caller who neither started nor wrote in the thread gets 422.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Hidden
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HiddenState' }
+        '422':
+          description: The caller has no part in the thread
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HiddenState' }
+    delete:
+      tags: [Chat]
+      security: [{ bearerAuth: [] }]
+      summary: Show a hidden thread in my "กระทู้ที่มีส่วนร่วม" again
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Shown again
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HiddenState' }
   /threads/{id}/messages:
     get:
       tags: [Chat]
@@ -703,6 +743,7 @@ components:
         id: { type: integer }
         title: { type: string }
         is_locked: { type: boolean }
+        hidden_by_me: { type: boolean, description: "Hidden from the caller's กระทู้ที่มีส่วนร่วม (list only)" }
         created_at: { type: string }
         author:
           $ref: '#/components/schemas/UserBasic'
@@ -710,6 +751,11 @@ components:
         unread_count: { type: integer }
         latest_message:
           $ref: '#/components/schemas/ChatMessage'
+    HiddenState:
+      type: object
+      properties:
+        hidden: { type: boolean }
+        message: { type: string }
     ChatThreadDetail:
       allOf:
         - $ref: '#/components/schemas/ChatThread'

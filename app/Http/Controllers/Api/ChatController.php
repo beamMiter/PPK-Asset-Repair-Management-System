@@ -28,16 +28,17 @@ class ChatController extends Controller
             ->when($q !== '', function ($qq) use ($q) {
                 $qq->where('title', 'like', "%{$q}%");
             })
-            ->when($r->query('scope') === 'mine' && $userId, fn ($qq) => $qq->involving((int) $userId))   // only threads I started or wrote in
+            ->when($r->query('scope') === 'mine' && $userId, fn ($qq) => $qq->inMyList((int) $userId))   // only threads I started or wrote in
             ->orderByDesc('created_at')
             ->paginate(15); // เอา named argument ออกให้ compatible
 
         $readsMap = $userId
             ? $this->readPointers((int) $userId, $threads->getCollection()->pluck('id')->all())
             : [];
+        $hiddenIds = $userId ? $this->hiddenThreadIds((int) $userId, $threads->getCollection()->pluck('id')->all()) : [];
 
         $payload = [
-            'data' => $threads->getCollection()->map(function (ChatThread $th) use ($readsMap) {
+            'data' => $threads->getCollection()->map(function (ChatThread $th) use ($readsMap, $hiddenIds) {
                 $total  = $th->messages_count ?? 0;
                 $unread = $this->unreadCount((int) $th->id, $readsMap[$th->id] ?? null, (int) $total);
 
@@ -45,6 +46,7 @@ class ChatController extends Controller
                     'id'              => $th->id,
                     'title'           => $th->title,
                     'is_locked'       => (bool) $th->is_locked,
+                    'hidden_by_me'    => in_array((int) $th->id, $hiddenIds, true),   // hidden from my "กระทู้ที่มีส่วนร่วม"
                     'created_at'      => $th->created_at ? $th->created_at->toISOString() : null,
                     'author'          => $th->author ? [
                         'id'   => $th->author->id,
@@ -181,7 +183,7 @@ class ChatController extends Controller
         $msg->load('user:id,name');
 
         if ($msg->user_id) {
-            $this->markThreadRead((int) $msg->user_id, (int) $thread->id, (int) $msg->id);
+            $this->markThreadRead((int) $msg->user_id, (int) $thread->id, (int) $msg->id, reappear: true);
         }
 
         // Real-time fan-out, same as the web path.
@@ -228,6 +230,27 @@ class ChatController extends Controller
         ]);
     }
 
+    // Hide from / show again in "กระทู้ที่มีส่วนร่วม" — per person, nothing is deleted (same rules as the web path).
+    public function hide(Request $r, ChatThread $thread)
+    {
+        $userId = (int) $r->user()->id;
+
+        if (! ChatThread::involving($userId)->whereKey($thread->id)->exists()) {
+            return response()->json(['hidden' => false, 'message' => 'คุณยังไม่ได้มีส่วนร่วมในกระทู้นี้ จึงไม่มีอะไรให้ซ่อน'], 422);
+        }
+
+        $this->hideThread($userId, (int) $thread->id);
+
+        return response()->json(['hidden' => true, 'message' => 'ซ่อนกระทู้นี้จากกระทู้ที่มีส่วนร่วมแล้ว']);
+    }
+
+    public function unhide(Request $r, ChatThread $thread)
+    {
+        $this->showThreadAgain((int) $r->user()->id, (int) $thread->id);
+
+        return response()->json(['hidden' => false, 'message' => 'แสดงกระทู้นี้ในกระทู้ที่มีส่วนร่วมอีกครั้งแล้ว']);
+    }
+
     protected function authorizeLocking(ChatThread $thread)
     {
         $this->assertCanManageThread();
@@ -243,7 +266,7 @@ class ChatController extends Controller
 
         // เอาเฉพาะกระทู้ที่ "เราเกี่ยวข้อง" (เป็นคนตั้ง หรือเคยคอมเมนต์)
         $threads = ChatThread::query()
-            ->involving((int) $user->id)
+            ->forTheWidget((int) $user->id)
             ->with(['latestMessage.user'])
             ->withCount('messages')
             ->latest('updated_at')

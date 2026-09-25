@@ -175,6 +175,12 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     Route::post('/threads/{thread}/lock',   [ChatController::class, 'lock'])->name('threads.lock');
     Route::post('/threads/{thread}/unlock', [ChatController::class, 'unlock'])->name('threads.unlock');
 
+    // ซ่อนกระทู้จาก "กระทู้ที่มีส่วนร่วม" ของตัวเอง (ไม่ลบ ไม่กระทบคนอื่น) — DELETE = แสดงอีกครั้ง; กลับมาเองเมื่อเราพิมพ์ในกระทู้นั้น
+    //   POST   /api/threads/{thread}/hide   ต้องเคยมีส่วนร่วมในกระทู้นั้น ไม่งั้น 422
+    //   DELETE /api/threads/{thread}/hide
+    Route::post('/threads/{thread}/hide',    [ChatController::class, 'hide'])->name('threads.hide');
+    Route::delete('/threads/{thread}/hide',  [ChatController::class, 'unhide'])->name('threads.unhide');
+
     // GET /api/chat/my-updates — กระทู้ที่ฉันตั้งหรือเคยตอบ (30 ล่าสุด) พร้อมจำนวนที่ยังไม่ได้อ่าน
     Route::get('/chat/my-updates', [ChatController::class, 'myUpdates'])->name('api.chat.my_updates');
 
