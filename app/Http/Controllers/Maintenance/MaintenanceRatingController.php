@@ -38,7 +38,7 @@ class MaintenanceRatingController extends Controller
         $limitDate = now()->subDays($this->ratingDeadlineDays);
 
         return $this->reporterClosedQuery($user)
-            ->whereDoesntHave('rating')
+            ->whereDoesntHave('rating', fn ($rating) => $rating->where('rater_id', $user->id))
             // Match withinRatingWindow() exactly: the *first* of closed_at / resolved_at / completed_date, in the past, within
             // the deadline. An OR across the three columns used to surface rows the rating guard then rejected with
             // "เลยระยะเวลา".
@@ -103,14 +103,18 @@ class MaintenanceRatingController extends Controller
                 fn (MaintenanceRequest $r) => $r->setAttribute('rating_days_left', $this->ratingDaysLeft($r))
             );
         } else {
-            $query = $this->reporterClosedQuery($user)->with(['technician:id,name', 'rating'])
-                ->whereHas('rating', fn ($rating) => $score ? $rating->where('score', $score) : $rating);
+            // the reporter's OWN rating: one an admin gave to the same job is not theirs to see here, nor does it hide the job from
+            // the waiting list
+            $query = $this->reporterClosedQuery($user)
+                ->with(['technician:id,name', 'rating' => fn ($rating) => $rating->where('rater_id', $user->id)])
+                ->whereHas('rating', fn ($rating) => $rating->where('rater_id', $user->id)->when($score, fn ($q) => $q->where('score', $score)));
 
             // newest rating first
             $requests = $this->searchedFor($query, $term)
                 ->orderByDesc(
                     MaintenanceRating::select('created_at')
                         ->whereColumn('maintenance_request_id', 'maintenance_requests.id')
+                        ->where('rater_id', $user->id)
                         ->latest()
                         ->limit(1)
                 )
@@ -120,7 +124,9 @@ class MaintenanceRatingController extends Controller
 
         // The header and the tabs count everything, whatever the search or the filter has narrowed the list to.
         $pendingCount = $this->pendingRatingQuery($user)->count();
-        $totalRatedCount = $this->reporterClosedQuery($user)->whereHas('rating')->count();
+        $totalRatedCount = $this->reporterClosedQuery($user)
+            ->whereHas('rating', fn ($rating) => $rating->where('rater_id', $user->id))
+            ->count();
 
         // Jobs that are about to run out of time, over the whole list.
         $expiringCount = $this->pendingRatingQuery($user)

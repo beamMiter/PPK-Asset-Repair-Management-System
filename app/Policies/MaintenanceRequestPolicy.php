@@ -471,10 +471,9 @@ class MaintenanceRequestPolicy
             return Response::deny('สามารถประเมินได้เมื่ออนุมัติปิดงานเรียบร้อยแล้วเท่านั้น');
         }
 
-        // 3. ตรวจว่าเคยให้คะแนนแล้วหรือยัง (ป้องกันปุ่มแสดงซ้ำหลังให้คะแนน)
-        $alreadyRated = \App\Models\MaintenanceRating::query()
-            ->where('maintenance_request_id', $req->id)
-            ->exists();
+        // 3. ตรวจว่า "ผู้ใช้คนนี้" เคยให้คะแนนแล้วหรือยัง (ป้องกันปุ่มแสดงซ้ำหลังให้คะแนน) — a rating by somebody else (an admin's) does not
+        //    use up the reporter's: the guard and the unique key (request + rater) already count per person
+        $alreadyRated = \App\Models\MaintenanceRating::hasRated($req->id, $user->id);
 
         if ($alreadyRated) {
             return Response::deny('งานนี้มีการให้คะแนนไปแล้ว');
