@@ -23,6 +23,12 @@ class ThaiFormattingTest extends TestCase
         $this->assertSame('4 กันยายน 2569 เวลา 09:05 น.', ThaiDate::longWithTime($date));
     }
 
+    public function test_a_chat_time_is_the_thai_weekday_and_a_24_hour_clock(): void
+    {
+        $this->assertSame('วันเสาร์ 15:45', ThaiDate::weekdayTime(Carbon::create(2026, 9, 26, 15, 45)));
+        $this->assertSame('วันเสาร์ 00:05', ThaiDate::weekdayTime(Carbon::create(2026, 9, 26, 0, 5)));
+    }
+
     public function test_a_thai_phrase_is_put_in_a_span_per_word_so_a_line_can_break_between_them(): void
     {
         $html = (string) ThaiText::words('เครื่องคอมพิวเตอร์ห้องฉุกเฉินทำงานช้ามาก');

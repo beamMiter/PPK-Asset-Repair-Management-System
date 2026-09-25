@@ -34,6 +34,12 @@ final class ThaiDate
         return $date->format('d/m/') . ($date->year + 543) . $date->format(' H:i');
     }
 
+    /** วันเสาร์ 15:45 - a chat message's time: the weekday and the clock, 24-hour */
+    public static function weekdayTime(CarbonInterface $date): string
+    {
+        return 'วัน' . $date->copy()->locale('th')->translatedFormat('l H:i');   // Carbon names the day "เสาร์"; a Thai reader expects "วันเสาร์"
+    }
+
     /** 24 กันยายน 2569 เวลา 10:00 น. */
     public static function longWithTime(CarbonInterface $date): string
     {

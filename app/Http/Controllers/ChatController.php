@@ -103,7 +103,7 @@ class ChatController extends Controller
     public function storeMessage(Request $r, ChatThread $thread)
     {
         // ถ้าล็อกแล้ว ห้ามโพสต์
-        abort_if($thread->is_locked, 403, 'Thread locked');
+        abort_if($thread->is_locked, 403, 'กระทู้นี้ถูกล็อก ไม่สามารถส่งข้อความได้');
 
         $data = $r->validate([
             'body' => 'required|string|max:3000',

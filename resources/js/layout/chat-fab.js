@@ -1,4 +1,4 @@
-// The floating chat button and its "My Topics" drawer (partials/chat-fab.blade.php, on every page of the app layout).
+// The floating chat button and its "กระทู้ของฉัน" drawer (partials/chat-fab.blade.php, on every page of the app layout).
 // It used to be an inline <script> that Turbo Drive re-ran on every visit; each run started ANOTHER `setInterval`, so after
 // N page visits the browser polled `/chat/my-updates` N times every interval. Now the timer is created once, and each page
 // load only wires the freshly rendered button, drawer and list.
@@ -38,7 +38,7 @@ const OFFLINE_HTML = `
 function fmtTime(iso) {
     if (!iso) return '';
     try {
-        return new Date(iso).toLocaleString();
+        return new Date(iso).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
     } catch {
         return '';
     }

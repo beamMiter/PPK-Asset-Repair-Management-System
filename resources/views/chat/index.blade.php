@@ -35,9 +35,9 @@
         chatStatus: 'connecting', // 'connecting', 'online', 'offline'
         showEmojiPicker: false,
         curatedEmojis: {
-            'Smileys': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😋', '😛', '😜', '🧐', '😎', '🥳', '😡', '😭', '😱', '🤔', '🤫'],
-            'Hands & Hearts': ['👍', '👎', '👌', '✌️', '🤞', '🤟', '👏', '🙌', '🙏', '🤝', '💪', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '✨', '🔥', '💯'],
-            'Tasks & Objects': ['✅', '❌', '⚠️', '💡', '📝', '📌', '📎', '📂', '📅', '⏰', '💻', '📱', '🔋', '⚙️', '🛠', '🔧', '🔨', '📦', '📧', '🔔', '🚀', '🏁', '🔒', '🔓']
+            'หน้ายิ้ม': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😋', '😛', '😜', '🧐', '😎', '🥳', '😡', '😭', '😱', '🤔', '🤫'],
+            'มือและหัวใจ': ['👍', '👎', '👌', '✌️', '🤞', '🤟', '👏', '🙌', '🙏', '🤝', '💪', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '✨', '🔥', '💯'],
+            'งานและสิ่งของ': ['✅', '❌', '⚠️', '💡', '📝', '📌', '📎', '📂', '📅', '⏰', '💻', '📱', '🔋', '⚙️', '🛠', '🔧', '🔨', '📦', '📧', '🔔', '🚀', '🏁', '🔒', '🔓']
         },
         insertEmoji(emoji) {
             const el = document.getElementById('msgInput');
@@ -141,7 +141,7 @@
                                     <div class="flex flex-wrap gap-1.5 items-center">
                                         @if ($th->is_locked)
                                             <span
-                                                class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-600 border border-amber-200 uppercase tracking-wide">Locked</span>
+                                                class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-600 border border-amber-200">ล็อกแล้ว</span>
                                         @endif
                                         <h3
                                             class="truncate text-[14px] font-medium text-slate-800 {{ $isActive ? 'text-[#0F2D5C] font-semibold' : 'group-hover:text-[#0F2D5C]' }}">
@@ -157,7 +157,7 @@
                                 </div>
                                 <div class="flex items-center gap-x-2 text-[11px] text-slate-500">
                                     <span
-                                        class="font-medium text-slate-600 truncate max-w-[120px]">{{ $th->author->name ?? 'Unknown user' }}</span>
+                                        class="font-medium text-slate-600 truncate max-w-[120px]">{{ $th->author->name ?? 'ไม่ทราบผู้ใช้งาน' }}</span>
                                     <span class="w-1 h-1 rounded-full bg-slate-300"></span>
                                     <span>{{ $th->updated_at->diffForHumans() }}</span>
                                 </div>
@@ -213,7 +213,7 @@
                             <div
                                 class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 border border-gray-200 overflow-hidden mt-0.5 sm:mt-0">
                                 <img src="{{ $thread->author?->avatar_thumb_url ?? \App\Support\InitialsAvatar::url($thread->author?->name ?? '?', 96) }}"
-                                    class="h-full w-full object-cover" alt="Author">
+                                    class="h-full w-full object-cover" alt="ผู้สร้างกระทู้">
                             </div>
                             <div class="flex flex-col min-w-0 flex-1">
                                 <div class="flex items-center gap-2">
@@ -222,7 +222,7 @@
                                     </h1>
                                     @if ($thread->is_locked)
                                         <span
-                                            class="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-800 uppercase shrink-0">Locked</span>
+                                            class="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-800 shrink-0">ล็อกแล้ว</span>
                                     @endif
                                 </div>
                                 <div
@@ -287,7 +287,7 @@
                     @if ($messages->isEmpty())
                         {{-- Empty State --}}
                         <div class="flex h-full items-center justify-center" id="emptyStateMsg">
-                            <x-ui.empty-state icon="forum" hint="Send a message to start.">เริ่มการสนทนา</x-ui.empty-state>
+                            <x-ui.empty-state icon="forum" hint="ส่งข้อความเพื่อเริ่มการสนทนา">เริ่มการสนทนา</x-ui.empty-state>
                         </div>
                     @else
                         {{-- Message List (Untitled UI Design) --}}
@@ -307,8 +307,8 @@
                                         data-user-id="{{ $m->user_id }}">
                                         <div class="flex items-center gap-2 mb-1">
                                             <span
-                                                class="text-xs text-gray-500">{{ $m->created_at->format('l g:ia') }}</span>
-                                            <span class="text-[13px] font-semibold text-gray-900">You</span>
+                                                class="text-xs text-gray-500">{{ \App\Support\ThaiDate::weekdayTime($m->created_at) }}</span>
+                                            <span class="text-[13px] font-semibold text-gray-900">คุณ</span>
                                         </div>
                                         <div
                                             class="bg-blue-600 text-white rounded-2xl rounded-tr-none py-2.5 px-4 max-w-[85%] sm:max-w-[70%] text-[15px] leading-relaxed ">
@@ -324,7 +324,7 @@
                                             @if (!$isConsecutive)
                                                 <img src="{{ $m->user?->avatar_thumb_url ?? \App\Support\InitialsAvatar::url($m->user->name ?? '?', 80) }}"
                                                     class="h-10 w-10 rounded-full object-cover border border-gray-200 "
-                                                    alt="{{ $m->user?->name ?? 'User' }}">
+                                                    alt="{{ $m->user?->name ?? 'ผู้ใช้' }}">
                                             @else
                                                 <div class="w-10"></div>
                                             @endif
@@ -335,7 +335,7 @@
                                                     <span
                                                         class="text-[13px] font-semibold text-gray-900">{{ $m->user->name }}</span>
                                                     <span
-                                                        class="text-xs text-gray-500">{{ $m->created_at->format('l g:ia') }}</span>
+                                                        class="text-xs text-gray-500">{{ \App\Support\ThaiDate::weekdayTime($m->created_at) }}</span>
                                                 </div>
                                             @endif
                                             <div
@@ -359,7 +359,7 @@
                                 <div
                                     class="relative rounded-2xl border border-gray-200 bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all flex flex-col">
                                     <label for="msgInput" class="sr-only">พิมพ์ข้อความ</label>
-                                    <textarea id="msgInput" name="body" required maxlength="3000" placeholder="Send a message" rows="1"
+                                    <textarea id="msgInput" name="body" required maxlength="3000" placeholder="พิมพ์ข้อความ..." rows="1"
                                         class="block w-full resize-none border-0 bg-transparent py-3.5 px-4 text-[14.5px] text-gray-900 placeholder:text-gray-400 focus:ring-0 min-h-[52px] max-h-[160px] scrollbar-thin scrollbar-thumb-gray-200"></textarea>
 
                                     <div
@@ -368,7 +368,7 @@
                                             <div class="relative" @click.away="showEmojiPicker = false">
                                                 <button type="button" @click="showEmojiPicker = !showEmojiPicker"
                                                     class="rounded-full p-2 text-gray-400 hover:bg-gray-50 hover:text-gray-500 transition-colors {{ $thread->is_locked ? 'opacity-50 pointer-events-none' : '' }}"
-                                                    title="Emoji">
+                                                    title="อีโมจิ" aria-label="อีโมจิ">
                                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                                                         stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -393,7 +393,7 @@
                                                         <template x-for="(list, category) in curatedEmojis"
                                                             :key="category">
                                                             <div class="mb-4 last:mb-0">
-                                                                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1"
+                                                                <h4 class="text-[11px] font-bold text-slate-400 mb-2 px-1"
                                                                     x-text="category"></h4>
                                                                 <div class="grid grid-cols-7 sm:grid-cols-8 gap-1">
                                                                     <template x-for="emoji in list" :key="emoji">

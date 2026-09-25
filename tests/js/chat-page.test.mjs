@@ -198,13 +198,16 @@ test('a live message is appended once; the same or an older one arriving again i
 });
 
 // ── what a message looks like ──────────────────────────────────────────────────────────────────────────────────────
-test('my messages sit on the right as "You"; others show avatar and name, a follow-up from the same person does not', () => {
+test('my messages sit on the right as "คุณ"; others show avatar and name, a follow-up from the same person does not', () => {
   const world = boot({ answers: [[]] });
   world.emit(msg({ id: 11, user_id: 5, body: 'ของฉัน' }));
   world.emit(msg({ id: 12, user_id: 6, body: 'a', user: { name: 'วรรณา', avatar_thumb_url: '' } }));
   world.emit(msg({ id: 13, user_id: 6, body: 'b', user: { name: 'วรรณา' } }));
   const [mine, first, follow] = world.rows();
-  assert.ok(mine.className.includes('items-end') && mine.textContent.includes('You') && mine.textContent.includes('ของฉัน'));
+  assert.ok(mine.className.includes('items-end') && mine.textContent.includes('คุณ') && mine.textContent.includes('ของฉัน'));
+  assert.match(mine.textContent, /วัน[ก-๙]+ \d{2}:\d{2}/, 'the time is the Thai weekday and a 24-hour clock');
+  assert.ok(!/\b(AM|PM)\b/i.test(mine.textContent) && !/Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/.test(mine.textContent));
+  assert.equal(first.querySelector('img').alt, 'รูปผู้ใช้');
   const src = first.querySelector('img').src;
   assert.ok(src.startsWith('data:image/svg+xml'), 'no avatar: the initials, carried in the src — no request to another site');
   assert.ok(decodeURIComponent(src).includes('>ว</text>'), 'the initial of วรรณา');

@@ -35,9 +35,9 @@
                 {{-- Header --}}
                 <div class="flex items-center gap-2 border-b px-4 py-3">
                     <img src="{{ auth()->user()->avatar_thumb_url }}"
-                        class="h-8 w-8 rounded-full object-cover border border-zinc-200" alt="Avatar">
+                        class="h-8 w-8 rounded-full object-cover border border-zinc-200" alt="รูปโปรไฟล์">
                     <div class="mr-auto min-w-0">
-                        <div class="truncate font-medium">My Topics</div>
+                        <div class="truncate font-medium">กระทู้ของฉัน</div>
                         <div class="text-xs text-zinc-500">จากกระทู้ที่คุณมีส่วนร่วม</div>
                     </div>
                     <button id="chatClose" class="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100" aria-label="ปิด">
@@ -61,8 +61,7 @@
 
                 {{-- Footer --}}
                 <div class="border-t px-3 py-2 text-right">
-                    <a href="{{ route('chat.index') }}" data-no-loader class="text-[13px] text-[#0E2B51] hover:underline">Go
-                        All topics</a>
+                    <a href="{{ route('chat.index') }}" data-no-loader class="text-[13px] text-[#0E2B51] hover:underline">ไปที่กระทู้ทั้งหมด</a>
                 </div>
             </div>
         </div>

@@ -165,7 +165,7 @@ class ChatController extends Controller
     {
         // ถ้าล็อกแล้ว ห้ามโพสต์
         if ($thread->is_locked) {
-            abort(403, 'Thread locked');
+            abort(403, 'กระทู้นี้ถูกล็อก ไม่สามารถส่งข้อความได้');
         }
 
         $data = $r->validate([

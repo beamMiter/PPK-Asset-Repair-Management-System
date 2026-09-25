@@ -18,7 +18,7 @@ import { initialsAvatarUrl } from '../avatar.js';
 export const POLL_MS = 5000;               // polling fallback, alongside the realtime channel
 export const STATUS_TIMEOUT_MS = 10000;    // still "connecting" after this long → show the polling (offline) state
 
-const TIME_FORMAT = { weekday: 'long', hour: 'numeric', minute: '2-digit', hour12: true };
+const TIME_FORMAT = { weekday: 'long', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };   // วันเสาร์ 15:45, as ThaiDate::weekdayTime prints it
 
 function el(doc, tag, className, text) {
     const node = doc.createElement(tag);
@@ -38,7 +38,7 @@ export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr }) {
     if (isMe) {
         row.className = `chat-msg-row flex flex-col items-end w-full animate-bubble-in opacity-0 translate-y-2 ${gap}`;
         const head = el(doc, 'div', 'flex items-center gap-2 mb-1');
-        head.append(el(doc, 'span', 'text-xs text-gray-500', timeStr), el(doc, 'span', 'text-[13px] font-semibold text-gray-900', 'You'));
+        head.append(el(doc, 'span', 'text-xs text-gray-500', timeStr), el(doc, 'span', 'text-[13px] font-semibold text-gray-900', 'คุณ'));
         const bubble = el(doc, 'div', 'bg-blue-600 text-white rounded-2xl rounded-tr-none py-2.5 px-4 max-w-[85%] sm:max-w-[70%] text-[15px] leading-relaxed');
         bubble.append(body);
         row.append(head, bubble);
@@ -54,14 +54,14 @@ export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr }) {
         avatar = el(doc, 'div', 'relative shrink-0');
         const img = el(doc, 'img', 'h-10 w-10 rounded-full object-cover border border-gray-200');
         img.src = m.user?.avatar_thumb_url || initialsAvatarUrl(m.user?.name);
-        img.alt = 'Avt';
+        img.alt = 'รูปผู้ใช้';
         avatar.append(img);
     }
 
     const column = el(doc, 'div', 'flex flex-col items-start min-w-0 max-w-[85%] sm:max-w-[70%]');
     if (!isConsecutive) {
         const head = el(doc, 'div', 'flex items-center gap-2 mb-1');
-        head.append(el(doc, 'span', 'text-[13px] font-semibold text-gray-900', m.user?.name || 'Unknown'), el(doc, 'span', 'text-xs text-gray-500', timeStr));
+        head.append(el(doc, 'span', 'text-[13px] font-semibold text-gray-900', m.user?.name || 'ไม่ทราบผู้ใช้งาน'), el(doc, 'span', 'text-xs text-gray-500', timeStr));
         column.append(head);
     }
     const bubble = el(doc, 'div', `bg-gray-50 border border-gray-100/80 text-gray-900 rounded-2xl ${!isConsecutive ? 'rounded-tl-none' : ''} py-2.5 px-4 text-[15px] leading-relaxed`);
@@ -111,7 +111,7 @@ function mount(win) {
             box.appendChild(wrapper);
         }
 
-        const row = buildMessageRow(doc, m, { isMe, isConsecutive, timeStr: new Date().toLocaleString('en-US', TIME_FORMAT) });
+        const row = buildMessageRow(doc, m, { isMe, isConsecutive, timeStr: new Date().toLocaleString('th-TH', TIME_FORMAT) });
         wrapper.appendChild(row);
         win.setTimeout(() => row.classList.remove('translate-y-2', 'opacity-0'), 10);
     }
