@@ -10,20 +10,6 @@
     $chartLabels = $chartLabels ?? $technicians->pluck('name');
     $chartScores = ($chartAvg ?? $technicians->pluck('technician_ratings_avg_score'))->map(fn($v) => round($v, 2));
 
-    $levelLabel = fn($score) => $score >= 4.5
-        ? 'ดีมาก'
-        : ($score >= 4.0
-            ? 'ดี'
-            : ($score >= 3.0
-                ? 'ปานกลาง'
-                : 'ควรปรับปรุง'));
-
-    $levelTextClass = fn($score) => match (true) {
-        $score >= 4.0 => 'text-emerald-600',
-        $score >= 3.0 => 'text-amber-600',
-        default => 'text-rose-600',
-    };
-
     $getInitials = function ($name) {
         $name = trim((string) $name);
         $parts = preg_split('/\s+/u', $name) ?: [];
@@ -61,9 +47,9 @@
 
                 <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
                     <div class="flex items-start gap-3 flex-1 min-w-0">
-                        <img src="{{ asset('icon/popularity.webp') }}" class="w-8 h-8 object-contain mt-0.5" alt="">
+                        <span class="material-symbols-outlined text-[32px] text-[#0F2D5C] mt-0.5" aria-hidden="true">leaderboard</span>
                         <div>
-                            <h1 class="text-[17px] font-semibold text-slate-900 leading-tight">Technician Evaluation Summary
+                            <h1 class="text-[17px] font-semibold text-slate-900 leading-tight">สรุปผลการประเมินเจ้าหน้าที่
                             </h1>
                             <p class="text-[13px] text-slate-500 font-medium">
                                 สรุปผลการประเมินสะสมทั้งหมด
@@ -146,8 +132,7 @@
                 <div class="max-w-[1664px] mx-auto">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <div>
-                            <h2 class="text-[1.15rem] font-semibold text-[#0F2D5C] tracking-tight leading-tight">Evaluation
-                                Ranking</h2>
+                            <h2 class="text-[1.15rem] font-semibold text-[#0F2D5C] tracking-tight leading-tight">อันดับคะแนนการประเมิน</h2>
                             <p class="text-[11px] font-medium text-slate-400 mt-0.5">กราฟสรุปประสิทธิภาพสูงสุด 15 อันดับแรก
                             </p>
                         </div>
@@ -212,7 +197,6 @@
                         @forelse($technicians as $i => $t)
                             @php
                                 $avgScore = round($t->technician_ratings_avg_score, 2);
-                                $roundStar = round($avgScore);
                                 $avatarMain = data_get($t, 'avatar_url');
                                 $avatarThumb = data_get($t, 'avatar_thumb_url');
                             @endphp
@@ -244,38 +228,24 @@
                                         class="text-[11px] text-slate-500 whitespace-nowrap font-medium tracking-wide uppercase">{{ $t->role_label }}</span>
                                 </td>
                                 <td class="p-3 align-middle text-center font-semibold text-slate-900">
-                                    {{ number_format($avgScore, 2) }}
+                                    {{ $t->technician_ratings_count > 0 ? number_format($avgScore, 2) : '-' }}
                                 </td>
                                 <td class="p-3 align-middle text-center">
-                                    <span class="font-bold uppercase tracking-wide {{ $levelTextClass($avgScore) }}">
-                                        {{ $levelLabel($avgScore) }}
-                                    </span>
+                                    <x-rating.level :average="$avgScore" :count="$t->technician_ratings_count" />
                                 </td>
                                 <td class="p-3 align-middle text-center text-slate-600 font-medium">
                                     {{ number_format($t->technician_ratings_count) }}
                                 </td>
                                 <td class="p-3 align-middle text-center">
-                                    <div class="flex justify-center items-center gap-0.5">
-                                        @for ($s = 1; $s <= 5; $s++)
-                                            <svg xmlns="http://www.w3.org/2000/svg"
-                                                class="h-3 w-3 {{ $s <= $roundStar ? 'text-yellow-400' : 'text-slate-200' }}"
-                                                viewBox="0 0 20 20" fill="currentColor">
-                                                <path
-                                                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                            </svg>
-                                        @endfor
-                                    </div>
+                                    @if ($t->technician_ratings_count > 0)
+                                        <x-rating.stars :score="$avgScore" size="xs" class="justify-center" />
+                                    @else
+                                        <span class="text-slate-300">-</span>
+                                    @endif
                                 </td>
                                 <td class="p-3 align-middle text-center">
-                                    <a href="{{ route('technicians.rating.summary', $t->id) }}"
-                                        class="inline-flex items-center gap-1.5 rounded-md border border-indigo-300 bg-white px-2.5 md:px-3 py-1.5 text-[12px] font-medium text-indigo-700 hover:bg-indigo-50 transition-colors whitespace-nowrap justify-center">
-                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
-                                        </svg>
-                                        <span>ดูรายละเอียด</span>
-                                    </a>
+                                    <x-ui.button :href="route('technicians.rating.summary', $t->id)" size="sm"
+                                        icon="visibility">ดูรายละเอียด</x-ui.button>
                                 </td>
                             </tr>
                         @empty

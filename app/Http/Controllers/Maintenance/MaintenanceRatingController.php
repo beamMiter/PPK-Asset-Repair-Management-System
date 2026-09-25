@@ -18,54 +18,75 @@ class MaintenanceRatingController extends Controller
 {
     use HandlesMaintenanceRating;
 
+    /** A job with this many days or fewer left to rate is "about to run out" — the list's amber / red badges and its banner. */
+    public const EXPIRING_DAYS = 7;
+
+    /** The reporter's closed jobs that can still be rated: the same set withinRatingWindow() accepts. */
+    private function pendingRatingQuery(User $user)
+    {
+        $limitDate = now()->subDays($this->ratingDeadlineDays);
+
+        return MaintenanceRequest::query()
+            ->where('reporter_id', $user->id)
+            ->where('status', MaintenanceRequest::STATUS_CLOSED)
+            ->whereDoesntHave('rating')
+            // Match withinRatingWindow() exactly: the *first* of closed_at / resolved_at / completed_date, in the past, within
+            // the deadline. An OR across the three columns used to surface rows the rating guard then rejected with
+            // "เลยระยะเวลา".
+            ->whereRaw('COALESCE(closed_at, resolved_at, completed_date) BETWEEN ? AND ?', [$limitDate, now()]);
+    }
+
     public function evaluateList()
     {
         /** @var User $user */
         $user = Auth::user();
 
-        $limitDate = now()->subDays($this->ratingDeadlineDays);
-
-        $baseQuery = MaintenanceRequest::query()
-            ->where('reporter_id', $user->id)
-            ->where('status', MaintenanceRequest::STATUS_CLOSED);
-
-        // งานที่ยังไม่ให้คะแนน (Paginated: 10 per page)
-        // Match withinRatingWindow() exactly: the *first* of
-        // closed_at / resolved_at / completed_date, in the past, within the
-        // deadline. An OR across the three columns used to surface rows the
-        // rating guard then rejected with "เลยระยะเวลา".
-        $pendingRequests = (clone $baseQuery)
-            ->with(['technician:id,name', 'assignments.user:id,name,role'])
-            ->whereDoesntHave('rating')
-            ->whereRaw(
-                'COALESCE(closed_at, resolved_at, completed_date) BETWEEN ? AND ?',
-                [$limitDate, now()]
-            )
-            ->latest('id')
+        // งานที่ยังไม่ให้คะแนน (Paginated: 10 per page) — the one that runs out of time first comes first
+        $pendingRequests = $this->pendingRatingQuery($user)
+            ->with(['technician:id,name'])
+            ->orderByRaw('COALESCE(closed_at, resolved_at, completed_date) asc')
+            ->orderBy('id')
             ->paginate(10, ['*'], 'pending_page')
+            ->fragment('pending')
             ->withQueryString();
 
-        // งานที่ให้คะแนนแล้ว (Paginated: 10 per page)
-        $ratedRequests = (clone $baseQuery)
-            ->with([
-                'technician:id,name',
-                'rating',
-            ])
+        $pendingRequests->getCollection()->each(
+            fn (MaintenanceRequest $r) => $r->setAttribute('rating_days_left', $this->ratingDaysLeft($r))
+        );
+
+        // งานที่ให้คะแนนแล้ว (Paginated: 10 per page) — newest rating first
+        $ratedRequests = MaintenanceRequest::query()
+            ->where('reporter_id', $user->id)
+            ->where('status', MaintenanceRequest::STATUS_CLOSED)
+            ->with(['technician:id,name', 'rating'])
             ->whereHas('rating')
-            ->latest('closed_at')
+            ->orderByDesc(
+                MaintenanceRating::select('created_at')
+                    ->whereColumn('maintenance_request_id', 'maintenance_requests.id')
+                    ->latest()
+                    ->limit(1)
+            )
             ->paginate(10, ['*'], 'history_page')
+            ->fragment('history')
             ->withQueryString();
 
-        // NEW: Calculate Stats for the reporter
         $totalRatedCount = $ratedRequests->total();
         $pendingCount    = $pendingRequests->total();
-        
+
+        // Jobs that are about to run out of time, over the whole list (not just this page).
+        $expiringCount = $this->pendingRatingQuery($user)
+            ->whereRaw(
+                'COALESCE(closed_at, resolved_at, completed_date) <= ?',
+                [now()->subDays($this->ratingDeadlineDays - self::EXPIRING_DAYS)]
+            )
+            ->count();
+
         // ดึงคะแนนเฉลี่ยที่ผู้ใช้คนนี้เคยให้ (คำนวณจากสถิติจริง ไม่ใช่แค่ในหน้า)
-        $avgScore = $totalRatedCount > 0 
+        $avgScore = $totalRatedCount > 0
             ? round(MaintenanceRating::where('rater_id', $user->id)->avg('score'), 1)
             : 0;
 
-        $submissionRate = ($totalRatedCount + $pendingCount) > 0 
+        $submissionRate = ($totalRatedCount + $pendingCount) > 0
             ? round(($totalRatedCount / ($totalRatedCount + $pendingCount)) * 100, 1)
             : 100;
 
@@ -77,6 +98,9 @@ class MaintenanceRatingController extends Controller
             'avgScore'        => $avgScore,
             'totalRatedCount' => $totalRatedCount,
             'pendingCount'    => $pendingCount,
+            'expiringCount'   => $expiringCount,
+            'expiringDays'    => self::EXPIRING_DAYS,
+            'deadlineDays'    => $this->ratingDeadlineDays,
             'submissionRate'  => $submissionRate,
         ]);
     }
@@ -312,9 +336,28 @@ class MaintenanceRatingController extends Controller
             ];
         }
 
+        // 1–2 stars: the ratings that had to carry a comment
+        $lowCount = (int) ($scoreDistribution[1] ?? 0) + (int) ($scoreDistribution[2] ?? 0);
+
+        // Last six months, oldest first. A month nobody rated in is still listed, so a gap reads as a gap.
+        $months = collect(range(5, 0))->map(fn (int $ago) => now()->startOfMonth()->subMonths($ago));
+        $byMonth = $user->technicianRatings()
+            ->where('created_at', '>=', $months->first())
+            ->get(['score', 'created_at'])
+            ->groupBy(fn ($rating) => $rating->created_at->format('Y-m'));
+        $trend = $months->map(function ($month) use ($byMonth) {
+            $rows = $byMonth->get($month->format('Y-m'), collect());
+
+            return [
+                'month' => $month,
+                'count' => $rows->count(),
+                'avg'   => $rows->isNotEmpty() ? round((float) $rows->avg('score'), 2) : null,
+            ];
+        });
+
         // ความคิดเห็นล่าสุด (จำกัดเพียง 6 รายการ)
         $reviews = $user->technicianRatings()
-            ->with('rater:id,name,role')
+            ->with(['rater:id,name,role', 'request:id,request_no,title'])
             ->latest()
             ->take(6)
             ->get();
@@ -331,6 +374,12 @@ class MaintenanceRatingController extends Controller
             ->latest() // ใช้ created_at แทน completed_at ที่ไม่มีในตาราง
             ->take(5)
             ->get();
+
+        // what each of those jobs was rated
+        $jobScores = MaintenanceRating::query()
+            ->where('technician_id', $user->id)
+            ->whereIn('maintenance_request_id', $recentJobs->pluck('maintenance_request_id'))
+            ->pluck('score', 'maintenance_request_id');
 
         if (request()->wantsJson()) {
             return response()->json([
@@ -352,8 +401,37 @@ class MaintenanceRatingController extends Controller
         return view('maintenance.rating.technician-show', [
             'tech' => $user,
             'distribution' => $distribution,
+            'lowCount' => $lowCount,
+            'trend' => $trend,
+            'repairTime' => $this->averageRepairTime($user),
             'reviews' => $reviews,
-            'recentJobs' => $recentJobs
+            'recentJobs' => $recentJobs,
+            'jobScores' => $jobScores,
         ]);
+    }
+
+    /**
+     * How long this person's finished jobs took from start to "repaired", on average — over their latest 200, so a long career
+     * does not make the page slow. Null when no finished job has both times.
+     *
+     * @return array{minutes: int, jobs: int}|null
+     */
+    private function averageRepairTime(User $user): ?array
+    {
+        $jobs = MaintenanceRequest::query()
+            ->whereHas('assignments', fn ($q) => $q->where('user_id', $user->id)->where('status', 'done'))
+            ->whereNotNull('started_at')
+            ->whereNotNull('resolved_at')
+            ->latest('resolved_at')
+            ->limit(200)
+            ->get(['id', 'started_at', 'resolved_at']);
+
+        if ($jobs->isEmpty()) {
+            return null;
+        }
+
+        $minutes = $jobs->avg(fn ($job) => max(0.0, $job->started_at->diffInMinutes($job->resolved_at, true)));
+
+        return ['minutes' => (int) round($minutes), 'jobs' => $jobs->count()];
     }
 }

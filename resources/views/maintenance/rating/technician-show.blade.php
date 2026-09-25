@@ -7,77 +7,48 @@
     $totalReviews = (int) $tech->technician_ratings_count;
     $totalJobs = (int) $tech->technician_assignments_count;
 
-    $levelLabel =
-        $avgScore >= 4.5
-            ? 'ยอดเยี่ยม'
-            : ($avgScore >= 4.0
-                ? 'ดีมาก'
-                : ($avgScore >= 3.0
-                    ? 'ดี'
-                    : 'ควรปรับปรุง'));
+    // Too few ratings say little about a person: one 5-star review is not "consistently excellent".
+    $thin = \App\Support\RatingLevel::isThin($totalReviews);
 
-    $insightText =
-        $avgScore >= 4.5
-            ? $tech->name . ' มีผลงานเกินมาตรฐานอย่างสม่ำเสมอ แนะนำสำหรับงานที่มีความสำคัญสูงและซับซ้อน'
-            : ($avgScore >= 4.0
-                ? $tech->name . ' มีผลงานดีเยี่ยม สามารถรับงานได้หลากหลายประเภท'
-                : ($avgScore >= 3.0
-                    ? $tech->name . ' มีผลงานอยู่ในเกณฑ์ดี ควรพัฒนาทักษะเพิ่มเติม'
-                    : $tech->name . ' ควรได้รับการฝึกอบรมเพิ่มเติมเพื่อพัฒนาคุณภาพงาน'));
+    // Of the finished jobs, how many were rated at all (a rating is a choice of the person who reported the job)
+    $ratedShare = $totalJobs > 0 ? min(100, (int) round($totalReviews / $totalJobs * 100)) : null;
+    $lowShare = $totalReviews > 0 ? (int) round($lowCount / $totalReviews * 100) : 0;
 
-    $line = 'border-slate-200';
+    $duration = function (int $minutes): string {
+        if ($minutes < 60) {
+            return $minutes . ' นาที';
+        }
+        if ($minutes < 1440) {
+            return intdiv($minutes, 60) . ' ชม. ' . ($minutes % 60) . ' นาที';
+        }
 
-    $avatarColors = [
-        'bg-emerald-600',
-        'bg-indigo-600',
-        'bg-rose-500',
-        'bg-amber-500',
-        'bg-sky-600',
-        'bg-violet-600',
-        'bg-teal-600',
-    ];
+        return intdiv($minutes, 1440) . ' วัน ' . intdiv($minutes % 1440, 60) . ' ชม.';
+    };
+
+    $scoreTone = fn (int $score) => $score >= 4 ? 'text-emerald-700' : ($score === 3 ? 'text-amber-600' : 'text-rose-600');
+    $barTone = fn (int $stars) => $stars >= 4 ? 'bg-emerald-500' : ($stars === 3 ? 'bg-amber-400' : 'bg-rose-400');
+    $initials = fn (?string $name) => mb_strtoupper(mb_substr(trim((string) $name) ?: 'U', 0, 2));
+
+    $tile = 'rounded-md border border-slate-200 bg-white p-[16px]';
+    $tileLabel = 'text-[11px] font-semibold uppercase tracking-wider text-slate-400';
+    $card = 'rounded-md border border-slate-200 bg-white';
+    $cardHead = 'flex items-center justify-between gap-3 border-b border-slate-100 px-[16px] py-[12px]';
+    $cardTitle = 'text-[13px] font-semibold text-slate-800';
 @endphp
 
 @section('page-header')
-    <div class="w-full bg-white border-b {{ $line }}">
-        <div class="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 py-4">
+    <div class="w-full bg-white border-b border-slate-200">
+        <div class="px-4 md:px-6 lg:px-8 py-4">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div class="flex items-center gap-4 min-w-0">
-                    <div class="h-16 w-16 shrink-0 rounded-lg overflow-hidden border {{ $line }} bg-slate-100">
-                        @if ($tech->avatar_thumb_url)
-                            <img src="{{ $tech->avatar_thumb_url }}" alt="{{ $tech->name }}"
-                                class="h-full w-full object-cover">
-                        @else
-                            <div
-                                class="h-full w-full flex items-center justify-center bg-emerald-600 text-white text-2xl font-bold">
-                                {{ mb_substr($tech->name, 0, 1) }}
-                            </div>
-                        @endif
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                        <img src="{{ $tech->avatar_thumb_url }}" alt="{{ $tech->name }}" class="h-full w-full object-cover">
                     </div>
                     <div class="min-w-0">
-                        <h1 class="text-[22px] font-semibold text-slate-900 leading-tight">{{ $tech->name }}</h1>
-                        <div class="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-slate-500">
-                            <span class="flex items-center gap-1">
-                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
-                                    stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                                {{ $tech->role_label }}
-                            </span>
-                            @if ($tech->department_name)
-                                <span class="flex items-center gap-1">
-                                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor"
-                                        stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    {{ $tech->department_name }}
-                                </span>
-                            @endif
-                        </div>
+                        <h1 class="text-[17px] font-semibold text-slate-900 leading-tight truncate">{{ $tech->name }}</h1>
+                        <p class="text-[13px] text-slate-600">
+                            สรุปผลการประเมินความพึงพอใจ · {{ $tech->role_label }}@if ($tech->department_name) · {{ $tech->department_name }}@endif
+                        </p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
@@ -89,227 +60,263 @@
 @endsection
 
 @section('content')
-    <div class="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 pb-10">
+    <div class="w-full px-4 md:px-6 lg:px-8 py-6 flex flex-col gap-[20px]">
 
-        {{-- Row 1: Rating Distribution + Performance Insights --}}
-        <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+        @if ($thin)
+            <div class="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-[16px] py-[12px] text-[13px] text-amber-800">
+                <span class="material-symbols-outlined text-[18px] mt-px" aria-hidden="true">info</span>
+                <span>
+                    @if ($totalReviews === 0)
+                        ยังไม่มีการประเมินของเจ้าหน้าที่ท่านนี้ จึงยังไม่มีคะแนนให้แสดง
+                    @else
+                        มีการประเมินเพียง {{ $totalReviews }} ครั้ง (ควรมีอย่างน้อย {{ \App\Support\RatingLevel::ENOUGH_REVIEWS }} ครั้ง) —
+                        คะแนนเฉลี่ยยังไม่ควรใช้ตัดสินผลงาน
+                    @endif
+                </span>
+            </div>
+        @endif
 
-            {{-- Rating Distribution --}}
-            <div class="bg-white rounded-lg border {{ $line }} p-6">
-                <h3 class="text-[1.05rem] font-semibold text-[#0F2D5C] tracking-tight leading-tight mb-5">การกระจายคะแนน</h3>
-
-                {{-- Big Score + Stars --}}
-                <div class="flex items-end gap-3 mb-5">
-                    <span class="text-5xl font-bold text-slate-900 leading-none">{{ number_format($avgScore, 2) }}</span>
-                    <div class="pb-0.5">
-                        <div class="flex items-center gap-0.5 mb-1">
-                            @for ($i = 1; $i <= 5; $i++)
-                                <svg class="w-4 h-4 {{ $i <= round($avgScore) ? 'text-yellow-400' : 'text-slate-200' }}"
-                                    fill="currentColor" viewBox="0 0 20 20">
-                                    <path
-                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                            @endfor
-                        </div>
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">คะแนนเฉลี่ย</span>
-                    </div>
+        {{-- ===== ตัวชี้วัดหลัก ===== --}}
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-[12px]">
+            <div class="{{ $tile }}">
+                <div class="{{ $tileLabel }}">คะแนนเฉลี่ย</div>
+                <div class="mt-2 flex items-end gap-[8px]">
+                    <span class="text-[28px] leading-none font-semibold text-slate-900">{{ $totalReviews > 0 ? number_format($avgScore, 2) : '-' }}</span>
+                    @if ($totalReviews > 0)
+                        <x-rating.stars :score="$avgScore" class="pb-[2px]" />
+                    @endif
                 </div>
+                <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <x-rating.level :average="$avgScore" :count="$totalReviews" pill />
+                    @if ($totalReviews > 0)
+                        <span class="text-[11px] text-slate-400">{{ number_format($avgScore / 5 * 100, 1) }}% ของคะแนนเต็ม</span>
+                    @endif
+                </div>
+            </div>
 
-                {{-- Bars --}}
-                <div class="space-y-2.5">
+            <div class="{{ $tile }}">
+                <div class="{{ $tileLabel }}">จำนวนการประเมิน</div>
+                <div class="mt-2 text-[28px] leading-none font-semibold text-slate-900">{{ number_format($totalReviews) }}</div>
+                <div class="mt-2 text-[11px] text-slate-400">
+                    @if ($ratedShare !== null)
+                        ผู้แจ้งประเมิน {{ $ratedShare }}% ของงานที่เสร็จสิ้น
+                    @else
+                        ยังไม่มีงานที่เสร็จสิ้น
+                    @endif
+                </div>
+            </div>
+
+            <div class="{{ $tile }}">
+                <div class="{{ $tileLabel }}">งานที่เสร็จสิ้น</div>
+                <div class="mt-2 text-[28px] leading-none font-semibold text-slate-900">{{ number_format($totalJobs) }}</div>
+                <div class="mt-2 text-[11px] text-slate-400">
+                    @if ($repairTime)
+                        เวลาซ่อมเฉลี่ย {{ $duration($repairTime['minutes']) }} (จาก {{ $repairTime['jobs'] }} งานล่าสุด)
+                    @else
+                        ยังไม่มีเวลาซ่อมให้คำนวณ
+                    @endif
+                </div>
+            </div>
+
+            <div class="{{ $tile }}">
+                <div class="{{ $tileLabel }}">ได้ 1–2 ดาว</div>
+                <div class="mt-2 text-[28px] leading-none font-semibold {{ $lowCount > 0 ? 'text-rose-600' : 'text-slate-900' }}">{{ number_format($lowCount) }}</div>
+                <div class="mt-2 text-[11px] text-slate-400">
+                    @if ($totalReviews > 0)
+                        {{ $lowShare }}% ของการประเมินทั้งหมด
+                    @else
+                        -
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        {{-- ===== การกระจายคะแนน + แนวโน้ม ===== --}}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-[16px]">
+            <section class="{{ $card }}">
+                <div class="{{ $cardHead }}">
+                    <h2 class="{{ $cardTitle }}">การกระจายคะแนน</h2>
+                    <span class="text-[12px] text-slate-400">ทั้งหมด {{ number_format($totalReviews) }} ครั้ง</span>
+                </div>
+                <div class="space-y-[10px] p-[16px]">
                     @foreach ($distribution as $stars => $data)
                         <div class="flex items-center gap-3">
-                            <span class="text-[12px] text-slate-500 w-12 shrink-0">{{ $stars }} ดาว</span>
-                            <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                <div class="h-full bg-emerald-500 rounded-full" style="width: {{ $data['percent'] }}%">
-                                </div>
+                            <span class="w-12 shrink-0 text-[12px] text-slate-500">{{ $stars }} ดาว</span>
+                            <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                                <div class="h-full rounded-full {{ $barTone($stars) }}" style="width: {{ round($data['percent'], 1) }}%"></div>
                             </div>
-                            <span class="text-[12px] text-slate-400 w-6 text-right shrink-0">{{ $data['count'] }}</span>
+                            <span class="w-8 shrink-0 text-right text-[12px] text-slate-500">{{ $data['count'] }}</span>
                         </div>
                     @endforeach
                 </div>
+            </section>
 
-                <p class="mt-5 text-[12px] text-slate-400">จำนวนการประเมินทั้งหมด: <span
-                        class="font-semibold text-slate-600">{{ $totalReviews }}</span></p>
-            </div>
-
-            {{-- Performance Insights --}}
-            <div class="lg:col-span-2 bg-white rounded-lg border {{ $line }} p-6">
-                <h3 class="text-[1.05rem] font-semibold text-[#0F2D5C] tracking-tight leading-tight mb-5">ข้อมูลประสิทธิภาพการทำงาน</h3>
-
-                {{-- 3 Metrics — no border box, just layout --}}
-                <div class="grid grid-cols-3 gap-6 mb-6">
-                    <div>
-                        <div class="flex items-center gap-1.5 mb-2">
-                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">งานที่เสร็จสิ้น</span>
-                        </div>
-                        <div class="text-4xl font-bold text-slate-900">{{ $totalJobs }}</div>
-                    </div>
-
-                    <div>
-                        <div class="flex items-center gap-1.5 mb-2">
-                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ความพึงพอใจ</span>
-                        </div>
-                        <div class="text-4xl font-bold text-emerald-600">{{ number_format(($avgScore / 5) * 100, 1) }}%
-                        </div>
-                        <div class="text-[11px] text-slate-400 mt-1">คะแนน {{ number_format($avgScore, 1) }}/5 จากผู้ใช้บริการ
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="flex items-center gap-1.5 mb-2">
-                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">เป็นสมาชิกตั้งแต่</span>
-                        </div>
-                        <div class="text-4xl font-bold text-slate-900">{{ $tech->created_at->format('M y') }}</div>
-                        <div class="text-[11px] text-slate-400 mt-1">{{ $levelLabel }}</div>
-                    </div>
+            <section class="{{ $card }} lg:col-span-2">
+                <div class="{{ $cardHead }}">
+                    <h2 class="{{ $cardTitle }}">แนวโน้ม 6 เดือนล่าสุด</h2>
+                    <span class="text-[12px] text-slate-400">คะแนนเฉลี่ยรายเดือน (เต็ม 5)</span>
                 </div>
-
-                {{-- Insight box — left border accent style --}}
-                <div class="flex items-start gap-3 p-4 bg-blue-50 rounded-md border-l-4 border-blue-500">
-                    <svg class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div>
-                        <div class="text-[13px] font-bold text-blue-900 mb-0.5">ประสิทธิภาพเชิงกลยุทธ์</div>
-                        <div class="text-[12px] text-blue-700 leading-relaxed">{{ $insightText }}</div>
-                    </div>
+                <div class="space-y-[10px] p-[16px]">
+                    @foreach ($trend as $row)
+                        <div class="flex items-center gap-3">
+                            <span class="w-20 shrink-0 text-[12px] text-slate-500">{{ \App\Support\ThaiDate::monthYear($row['month']) }}</span>
+                            <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                                @if ($row['avg'] !== null)
+                                    <div class="h-full rounded-full {{ $barTone((int) round($row['avg'])) }}" style="width: {{ round($row['avg'] / 5 * 100, 1) }}%"></div>
+                                @endif
+                            </div>
+                            @if ($row['avg'] !== null)
+                                <span class="w-28 shrink-0 text-right text-[12px] text-slate-600">
+                                    <span class="font-semibold">{{ number_format($row['avg'], 2) }}</span>
+                                    <span class="text-slate-400">· {{ $row['count'] }} ครั้ง</span>
+                                </span>
+                            @else
+                                <span class="w-28 shrink-0 text-right text-[12px] text-slate-300">ไม่มีการประเมิน</span>
+                            @endif
+                        </div>
+                    @endforeach
                 </div>
-            </div>
+            </section>
         </div>
 
-        {{-- Row 2: Recent Work Orders --}}
-        <div class="bg-white rounded-lg border {{ $line }} mb-6 overflow-hidden">
-            <div class="flex items-center justify-between px-6 py-4 border-b {{ $line }}">
-                <h3 class="text-[1.05rem] font-semibold text-[#0F2D5C] tracking-tight leading-tight">รายการงานล่าสุด
-                </h3>
-                <a href="#" class="text-[13px] font-semibold text-indigo-600 hover:text-indigo-800">ดูประวัติทั้งหมด</a>
+        {{-- ===== รายการงานล่าสุด ===== --}}
+        <section class="{{ $card }} overflow-hidden">
+            <div class="{{ $cardHead }}">
+                <h2 class="{{ $cardTitle }}">งานที่เสร็จสิ้นล่าสุด</h2>
+                <span class="text-[12px] text-slate-400">5 รายการล่าสุด</span>
             </div>
-            <table class="w-full text-sm text-left">
-                <thead class="bg-slate-50 text-slate-500 text-[10px] font-semibold uppercase tracking-wider">
-                    <tr>
-                        <th class="px-6 py-3">เลขที่ใบแจ้งซ่อม</th>
-                        <th class="px-6 py-3">ผู้แจ้ง</th>
-                        <th class="px-6 py-3">วันที่เสร็จสิ้น</th>
-                        <th class="px-6 py-3 text-right">การจัดการ</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y {{ $line }}">
-                    @forelse($recentJobs as $job)
-                        <tr class="hover:bg-slate-50/50 transition-colors">
-                            <td class="px-6 py-3.5 font-semibold text-indigo-600">#{{ $job->maintenance_request_id }}</td>
-                            <td class="px-6 py-3.5 text-slate-700 text-[13px]">
-                                {{ $job->maintenanceRequest?->reporter?->name ?? 'ไม่ระบุชื่อ' }}</td>
-                            <td class="px-6 py-3.5 text-slate-500 text-[13px]">
-                                {{ $job->created_at ? $job->created_at->format('d M Y') : '-' }}</td>
-                            <td class="px-6 py-3.5 text-right">
-                                <a href="{{ route('maintenance.requests.show', $job->maintenance_request_id) }}"
-                                    class="text-[13px] font-bold text-indigo-600 hover:text-indigo-800">
-                                    ดูรายละเอียด &rarr;
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" class="px-6 py-10 text-center text-slate-400 italic text-[13px]">
-                                ไม่พบประวัติงานล่าสุด</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
 
-        {{-- Row 3: Recent Feedback --}}
-        <div class="mb-10">
-            <h3 class="text-[1.05rem] font-semibold text-[#0F2D5C] tracking-tight leading-tight mb-4">ความคิดเห็นล่าสุด</h3>
+            @if ($recentJobs->isEmpty())
+                <div class="py-10 text-center text-[13px] text-slate-400">ยังไม่มีงานที่เสร็จสิ้น</div>
+            @else
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full text-[13px]">
+                        <thead class="bg-white">
+                            <tr class="text-slate-600 border-b border-slate-200">
+                                <th class="p-3 text-left font-semibold whitespace-nowrap">เลขที่ใบงาน</th>
+                                <th class="p-3 text-left font-semibold">เรื่อง</th>
+                                <th class="p-3 text-left font-semibold whitespace-nowrap">ผู้แจ้ง</th>
+                                <th class="p-3 text-left font-semibold whitespace-nowrap">ปิดงานเมื่อ</th>
+                                <th class="p-3 text-center font-semibold whitespace-nowrap">คะแนนที่ได้</th>
+                                <th class="p-3 text-center font-semibold whitespace-nowrap">การดำเนินการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($recentJobs as $job)
+                                @php
+                                    $req = $job->maintenanceRequest;
+                                    $closedOn = $req?->closed_at ?? $req?->resolved_at ?? $req?->completed_date;
+                                    $jobScore = $jobScores[$job->maintenance_request_id] ?? null;
+                                @endphp
+                                <tr class="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
+                                    <td class="p-3 align-middle whitespace-nowrap font-semibold text-[#0F2D5C]">#{{ $req?->request_no ?? $job->maintenance_request_id }}</td>
+                                    <td class="p-3 align-middle min-w-[200px] text-slate-900"><span class="break-words line-clamp-2">{{ $req?->title ?? '-' }}</span></td>
+                                    <td class="p-3 align-middle text-slate-700">{{ $req?->reporter?->name ?? 'ไม่ระบุชื่อ' }}</td>
+                                    <td class="p-3 align-middle whitespace-nowrap text-slate-700">{{ $closedOn ? \App\Support\ThaiDate::short($closedOn) : '-' }}</td>
+                                    <td class="p-3 align-middle text-center whitespace-nowrap">
+                                        @if ($jobScore)
+                                            <span class="inline-flex items-center gap-[6px]">
+                                                <x-rating.stars :score="$jobScore" size="xs" />
+                                                <span class="text-[12px] font-semibold {{ $scoreTone((int) $jobScore) }}">{{ number_format($jobScore, 1) }}</span>
+                                            </span>
+                                        @else
+                                            <span class="text-[12px] text-slate-400">ยังไม่ได้ประเมิน</span>
+                                        @endif
+                                    </td>
+                                    <td class="p-3 align-middle text-center">
+                                        <x-ui.button :href="route('maintenance.requests.show', $job->maintenance_request_id)" size="sm"
+                                            icon="visibility">ดูรายละเอียด</x-ui.button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                @forelse($reviews as $review)
-                    @php
-                        $colorIndex = crc32(strtolower($review->rater?->name ?? 'u')) % count($avatarColors);
-                        $avatarBg = $avatarColors[$colorIndex];
-                    @endphp
-                    <div class="bg-white rounded-lg border {{ $line }} p-5">
-                        {{-- Header: avatar + name + role | stars --}}
-                        <div class="flex items-start justify-between gap-3 mb-4">
-                            <div class="flex items-center gap-3">
-                                <div
-                                    class="h-10 w-10 rounded-full {{ $avatarBg }} flex items-center justify-center font-bold text-white text-[13px] shrink-0">
-                                    {{ mb_strtoupper(mb_substr($review->rater?->name ?? 'U', 0, 2)) }}
+                <div class="md:hidden grid gap-3 p-4">
+                    @foreach ($recentJobs as $job)
+                        @php
+                            $req = $job->maintenanceRequest;
+                            $closedOn = $req?->closed_at ?? $req?->resolved_at ?? $req?->completed_date;
+                            $jobScore = $jobScores[$job->maintenance_request_id] ?? null;
+                        @endphp
+                        <div class="rounded-md border border-slate-200 bg-white p-4">
+                            <div class="flex items-start justify-between gap-3 mb-2">
+                                <span class="text-[13px] font-semibold text-[#0F2D5C]">#{{ $req?->request_no ?? $job->maintenance_request_id }}</span>
+                                @if ($jobScore)
+                                    <span class="shrink-0 inline-flex items-center gap-[6px]">
+                                        <x-rating.stars :score="$jobScore" size="xs" />
+                                        <span class="text-[12px] font-semibold {{ $scoreTone((int) $jobScore) }}">{{ number_format($jobScore, 1) }}</span>
+                                    </span>
+                                @else
+                                    <span class="shrink-0 text-[12px] text-slate-400">ยังไม่ได้ประเมิน</span>
+                                @endif
+                            </div>
+                            <div class="text-[14px] font-semibold text-slate-900 break-words line-clamp-2">{{ $req?->title ?? '-' }}</div>
+                            <div class="mt-2 grid gap-1 text-[12px] text-slate-500">
+                                <div>ผู้แจ้ง: <span class="font-medium text-slate-700">{{ $req?->reporter?->name ?? 'ไม่ระบุชื่อ' }}</span></div>
+                                <div>ปิดงานเมื่อ: <span class="font-medium text-slate-700">{{ $closedOn ? \App\Support\ThaiDate::short($closedOn) : '-' }}</span></div>
+                            </div>
+                            <div class="mt-3 flex justify-end">
+                                <x-ui.button :href="route('maintenance.requests.show', $job->maintenance_request_id)" size="sm"
+                                    icon="visibility">ดูรายละเอียด</x-ui.button>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </section>
+
+        {{-- ===== ความคิดเห็นล่าสุด ===== --}}
+        <section>
+            <div class="mb-[12px] flex items-center justify-between gap-3">
+                <h2 class="{{ $cardTitle }}">ความคิดเห็นล่าสุด</h2>
+                <span class="text-[12px] text-slate-400">6 รายการล่าสุด</span>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-[12px]">
+                @forelse ($reviews as $review)
+                    <div class="{{ $card }} p-[16px]">
+                        <div class="mb-3 flex items-start justify-between gap-3">
+                            <div class="flex min-w-0 items-center gap-3">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[13px] font-bold text-white">
+                                    {{ $initials($review->rater?->name) }}
                                 </div>
-                                <div>
-                                    <div class="font-semibold text-slate-900 text-[14px] leading-tight">
-                                        {{ $review->rater?->name ?? 'ไม่ระบุชื่อ' }}</div>
-                                    <div class="text-[11px] text-slate-400 mt-0.5">
-                                        {{ $review->rater?->role_label ?? 'User' }}</div>
+                                <div class="min-w-0">
+                                    <div class="truncate text-[14px] font-semibold leading-tight text-slate-900">{{ $review->rater?->name ?? 'ไม่ระบุชื่อ' }}</div>
+                                    <div class="mt-0.5 text-[11px] text-slate-400">{{ $review->rater?->role_label ?? 'ผู้ใช้' }}</div>
                                 </div>
                             </div>
-                            {{-- Stars right of name area --}}
-                            <div class="flex items-center gap-0.5 shrink-0 mt-0.5">
-                                @for ($i = 1; $i <= 5; $i++)
-                                    <svg class="w-4 h-4 {{ $i <= $review->score ? 'text-emerald-500' : 'text-slate-200' }}"
-                                        fill="currentColor" viewBox="0 0 20 20">
-                                        <path
-                                            d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                    </svg>
-                                @endfor
+                            <div class="shrink-0 text-right">
+                                <x-rating.stars :score="$review->score" />
+                                <div class="mt-0.5 text-[11px] font-semibold {{ $scoreTone((int) $review->score) }}">{{ \App\Support\RatingLevel::scoreLabel((int) $review->score) }}</div>
                             </div>
                         </div>
 
-                        {{-- Comment --}}
-                        <p class="text-[13px] text-slate-600 leading-relaxed italic mb-4">
-                            @if ($review->comment)
-                                {{ $review->comment }}
-                            @else
-                                <span class="text-slate-400 not-italic">ไม่มีข้อความความคิดเห็น</span>
-                            @endif
-                        </p>
+                        @if ($review->comment)
+                            <p class="break-words text-[13px] italic leading-relaxed text-slate-600">“{{ $review->comment }}”</p>
+                        @else
+                            <p class="text-[13px] text-slate-400">ไม่มีข้อความความคิดเห็น</p>
+                        @endif
 
-                        {{-- Footer: badge + date --}}
-                        <div class="flex items-center justify-between">
-                            @if ($review->score >= 4)
-                                <span
-                                    class="text-emerald-600 text-[11px] font-semibold uppercase tracking-wider">เสร็จสมบูรณ์</span>
-                            @elseif($review->score <= 2)
-                                <span
-                                    class="text-rose-600 text-[11px] font-semibold uppercase tracking-wider">เร่งด่วน/วิกฤต</span>
+                        <div class="mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-3 text-[11px] text-slate-400">
+                            @if ($review->request)
+                                <a href="{{ route('maintenance.requests.show', $review->request) }}"
+                                    class="min-w-0 truncate font-medium text-[#0F2D5C] hover:underline">#{{ $review->request->request_no }} · {{ $review->request->title }}</a>
                             @else
-                                <span
-                                    class="text-slate-500 text-[11px] font-semibold uppercase tracking-wider">ตรวจสอบแล้ว</span>
+                                <span></span>
                             @endif
-                            <span class="text-[11px] text-slate-400">{{ $review->created_at->format('d M Y') }}</span>
+                            <span class="shrink-0">{{ \App\Support\ThaiDate::short($review->created_at) }}</span>
                         </div>
                     </div>
                 @empty
-                    <div
-                        class="lg:col-span-2 py-16 text-center bg-slate-50 rounded-md border-2 border-dashed border-slate-200">
-                        <svg class="mx-auto h-10 w-10 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                        </svg>
-                        <p class="text-[13px] font-medium text-slate-500">ยังไม่มีรีวิว</p>
+                    <div class="lg:col-span-2 rounded-md border border-dashed border-slate-200 bg-slate-50 py-12 text-center">
+                        <span class="material-symbols-outlined text-slate-300 text-[40px]" aria-hidden="true">chat_bubble</span>
+                        <p class="mt-1 text-[13px] font-medium text-slate-500">ยังไม่มีความคิดเห็น</p>
                     </div>
                 @endforelse
             </div>
-        </div>
+        </section>
 
     </div>
 @endsection
