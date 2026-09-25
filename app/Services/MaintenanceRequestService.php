@@ -48,7 +48,7 @@ class MaintenanceRequestService
         }
 
         $req = DB::transaction(function () use ($data, $user, $departmentId, $actorId, $files, $captions) {
-            $newReq = MR::create([
+            $newReq = $this->createNumbered([
                 'title'          => $data['title'],
                 'description'    => $data['description'] ?? null,
                 'status'         => MR::STATUS_PENDING,
@@ -90,6 +90,23 @@ class MaintenanceRequestService
         }
 
         return $req;
+    }
+
+    /**
+     * Create the request; when two requests made at the same moment were given the same number (it is worked out from the highest
+     * number in the table when the row is created, and the column is unique) the second one asks again instead of failing.
+     */
+    private function createNumbered(array $attributes): MR
+    {
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                return MR::create($attributes);
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                if ($attempt >= 3 || ! str_contains($e->getMessage(), 'request_no')) {
+                    throw $e;
+                }
+            }
+        }
     }
 
     /**
@@ -156,7 +173,10 @@ class MaintenanceRequestService
 
             $req->fill($data);
 
-            if ($isTeam && $targetStatus === MR::STATUS_ACCEPTED && empty($req->technician_id) && $actorId) {
+            // Whoever accepts is the person in charge — if they are a worker. An admin or supervisor accepting on someone's behalf
+            // is running the process, not doing the repair (the same rule as MaintenanceTransitionService::joinTeam).
+            if ($isTeam && $targetStatus === MR::STATUS_ACCEPTED && empty($req->technician_id) && $actorId
+                && in_array($user->role, User::workerRoles(), true)) {
                 $req->technician_id = $actorId;
                 $incomingTechId     = $actorId;
             }
@@ -188,11 +208,15 @@ class MaintenanceRequestService
                 $this->attachmentService->attachFiles($req, $files, $captions, $actorId);
             }
 
-            // Operation log handling
-            $opKeys = ['operation_date', 'operation_method', 'property_code', 'remark', 'require_precheck', 'issue_software', 'issue_hardware'];
-            $hasOp  = !empty(array_intersect_key($data, array_flip($opKeys))) || $req->operationLog()->exists();
+            // Operation report. The edit form always sends its text fields (an empty one as null) and leaves an unticked box out, so
+            // "one of the text fields is here" means the form was submitted: the whole report is written from it. Anything else (an
+            // API call that only changes the title) must leave the report alone — it used to be rewritten from nothing, wiping what
+            // the technician had filed and putting the caller's name on it.
+            $textKeys = ['operation_date', 'operation_method', 'property_code', 'remark'];
+            $flagKeys = ['require_precheck', 'issue_software', 'issue_hardware'];
+            $flagsSent = array_intersect_key($data, array_flip($flagKeys));
 
-            if ($hasOp) {
+            if (! empty(array_intersect_key($data, array_flip($textKeys)))) {
                 $opDate = !empty($data['operation_date']) ? Carbon::parse($data['operation_date'])->toDateString() : null;
                 $req->operationLog()->updateOrCreate(
                     ['maintenance_request_id' => $req->id],
@@ -206,6 +230,12 @@ class MaintenanceRequestService
                         'issue_hardware'   => (bool) ($data['issue_hardware'] ?? false),
                         'user_id'          => $actorId,
                     ]
+                );
+            } elseif (! empty($flagsSent)) {
+                // only the flags were sent: change those, keep the rest of the report
+                $req->operationLog()->updateOrCreate(
+                    ['maintenance_request_id' => $req->id],
+                    array_map(fn ($flag) => (bool) $flag, $flagsSent) + ['user_id' => $actorId]
                 );
             }
         });
