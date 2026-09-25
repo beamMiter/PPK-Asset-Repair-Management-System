@@ -32,7 +32,8 @@ final class PasswordRecovery
     public static function reset(array $credentials): string
     {
         return Password::reset($credentials, function (User $user, string $password) {
-            $user->forceFill(['password' => $password])->save();   // the `hashed` cast hashes it
+            // the `hashed` cast hashes it; a password chosen through the e-mail link is the person's own, whatever it was before
+            $user->forceFill(['password' => $password, 'must_change_password' => false])->save();
 
             ActiveLogins::endAll($user);
 

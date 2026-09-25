@@ -84,6 +84,8 @@ class AuthController extends Controller
                 'email'      => $user->email,
                 'role'       => $user->role ?? null,
                 'abilities'  => $abilities,
+                // true: every other call answers 403 `password_change_required` until the person changes it on the profile page
+                'must_change_password' => (bool) $user->must_change_password,
             ],
         ], Response::HTTP_CREATED);
     }

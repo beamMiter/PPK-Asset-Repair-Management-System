@@ -33,6 +33,13 @@
         </div>
 
         <div class="px-4 md:px-6 lg:px-8 py-10 max-w-4xl mx-auto w-full">
+            @if ($user->must_change_password)
+                <div class="mb-8 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-[13px] text-amber-800 flex items-start gap-2" role="alert">
+                    <span class="material-symbols-outlined text-[18px] mt-px">lock_reset</span>
+                    <span>ผู้ดูแลระบบเป็นผู้ตั้งรหัสผ่านให้คุณ กรุณาตั้งรหัสผ่านใหม่ในส่วน "เปลี่ยนรหัสผ่าน" ด้านล่างก่อนใช้งานระบบต่อ</span>
+                </div>
+            @endif
+
             @if (session('status'))
                 <div
                     class="mb-8 rounded-lg bg-emerald-50 border border-emerald-100 px-4 py-3 text-[13px] text-emerald-700 flex items-center gap-2">

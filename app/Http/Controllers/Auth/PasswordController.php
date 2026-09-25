@@ -15,18 +15,23 @@ class PasswordController extends Controller
     {
         $validated = $request->validateWithBag('updatePassword', [
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', Password::defaults(), 'confirmed'],
+            'password' => ['required', Password::defaults(), 'confirmed', 'different:current_password'],
         ]);
 
         $user = $request->user();
-        $user->update([
+        $wasForced = (bool) $user->must_change_password;
+        $user->forceFill([
             'password' => Hash::make($validated['password']),
-        ]);
+            'must_change_password' => false,
+        ])->save();
 
         // A password is changed because another person may have it: their sessions, "remember me" cookies and API tokens end
         // here too (this device stays signed in).
         ActiveLogins::endAll($user, $request->session()->getId());
 
-        return back()->with('status', 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
+        // asked to change it before anything else: now there is something else to do
+        return $wasForced
+            ? redirect()->route('dashboard')->with('toast', \App\Support\Toast::success('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว เริ่มใช้งานระบบได้เลย', 3200))
+            : back()->with('status', 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
     }
 }

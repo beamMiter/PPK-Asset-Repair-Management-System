@@ -211,6 +211,7 @@ class UserController extends Controller
             $user->citizen_id  = $data['citizen_id'];
             $user->email       = $data['email'] ?? null;
             $user->password    = Hash::make($data['password']);
+            $user->must_change_password = true;   // an admin chose it: the person replaces it before using the system
             $user->role        = $data['role'];
             $user->department  = $data['department'] ?? null;
 
@@ -356,6 +357,8 @@ class UserController extends Controller
 
             if (!empty($data['password'])) {
                 $user->password = Hash::make($data['password']);
+                // somebody else's password, chosen by an admin: they replace it (an admin changing their own is not asked to)
+                $user->must_change_password = $user->id !== Auth::id();
             }
 
             $user->save();
