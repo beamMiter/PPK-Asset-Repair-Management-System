@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * A password an admin chose for somebody is known to the admin, and usually written on a slip of paper: the person must replace it
- * before they use the system. The flag is set when an admin creates an account or sets somebody else's password, and cleared when the
+ * before they use the system. The flag is set when an admin sets somebody else's password, and cleared when the
  * person changes it (the profile page) or resets it by e-mail. Existing accounts are not touched (false).
  */
 return new class extends Migration {

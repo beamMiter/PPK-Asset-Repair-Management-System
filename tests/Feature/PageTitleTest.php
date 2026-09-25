@@ -53,7 +53,6 @@ class PageTitleTest extends TestCase
             'assets' => ['assets.index', 'Assets'],
             'new asset' => ['assets.create', 'New Asset'],
             'users' => ['admin.users.index', 'Users'],
-            'new user' => ['admin.users.create', 'New User'],
             'request types' => ['settings.maintenance-types.index', 'Request Types'],
             'new request type' => ['settings.maintenance-types.create', 'New Request Type'],
             'notifications' => ['settings.notifications.index', 'Notifications'],

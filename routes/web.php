@@ -138,8 +138,6 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin')->name('admin.')->middleware('can:manage-users')->group(function () {
         Route::prefix('users')->name('users.')->group(function () {
             Route::get('/', [AdminUserController::class, 'index'])->name('index');
-            Route::get('/create', [AdminUserController::class, 'create'])->name('create');
-            Route::post('/', [AdminUserController::class, 'store'])->name('store');
             Route::get('/{user}/edit', [AdminUserController::class, 'edit'])->name('edit');
             Route::put('/{user}', [AdminUserController::class, 'update'])->name('update');
             Route::patch('/{user}/suspend', [AdminUserController::class, 'suspend'])->name('suspend');

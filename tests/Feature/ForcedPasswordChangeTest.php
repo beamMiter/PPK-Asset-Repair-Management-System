@@ -15,8 +15,8 @@ use Tests\TestCase;
 /**
  * A password an admin chose for somebody is known to the admin and usually written on a slip of paper. The person must replace it before
  * they use the system: every page sends them to the profile page, every API call answers 403 `password_change_required`; the way out
- * (the profile page, the password form, signing out) stays open. Set when an admin creates an account or sets somebody else's password;
- * cleared when the person changes it, or resets it through the e-mail link.
+ * (the profile page, the password form, signing out) stays open. Set when an admin sets somebody else's password on the edit-user form
+ * (an admin no longer creates accounts: people sign themselves up); cleared when the person changes it, or resets it through the e-mail link.
  */
 class ForcedPasswordChangeTest extends TestCase
 {
@@ -34,17 +34,19 @@ class ForcedPasswordChangeTest extends TestCase
         $this->admin = User::factory()->create(['role' => 'admin']);
     }
 
-    /** An account made through the admin's form, and the person's first sign-in. */
+    /** A member (who signed up, or was made one) whose password the admin then sets on the edit-user form; the person is signed out. */
     private function createdByAdmin(array $extra = []): User
     {
-        $this->actingAs($this->admin)->post(route('admin.users.store'), $extra + [
-            'name' => 'พนักงานใหม่', 'citizen_id' => '1999999999999', 'email' => 'new@example.test', 'role' => 'member',
+        $person = User::factory()->create(['role' => 'member', 'name' => 'พนักงานใหม่', 'citizen_id' => $extra['citizen_id'] ?? '1999999999999', 'email' => 'new@example.test']);
+
+        $this->actingAs($this->admin)->put(route('admin.users.update', $person), [
+            'name' => $person->name, 'citizen_id' => $person->citizen_id, 'email' => $person->email, 'role' => 'member',
             'password' => self::ADMIN_CHOSEN, 'password_confirmation' => self::ADMIN_CHOSEN,
         ]);
         auth()->logout();
         $this->flushSession();
 
-        return User::where('citizen_id', $extra['citizen_id'] ?? '1999999999999')->firstOrFail();
+        return $person->fresh();
     }
 
     public function test_the_column_exists_and_nobody_is_forced_by_default(): void
@@ -60,7 +62,7 @@ class ForcedPasswordChangeTest extends TestCase
         $this->assertSame(0, User::where('must_change_password', true)->count());
     }
 
-    public function test_an_account_the_admin_creates_must_change_its_password(): void
+    public function test_a_password_the_admin_sets_for_somebody_must_be_changed_by_them(): void
     {
         $person = $this->createdByAdmin();
 

@@ -7,7 +7,6 @@
     $roles = $roles ?? UserModel::availableRoles();
     $roleLabels = $roleLabels ?? [];
     $departments = $departments ?? collect();
-    $isEdit = $user->exists;
 
     // ดึง Role ปัจจุบัน (ถ้ามี) หรือ Default
     $currentRole = old('role', $user->role ?? null);
@@ -147,12 +146,10 @@
             {{-- รหัสผ่าน --}}
             <div class="space-y-1.5">
                 <label for="password" class="block text-sm font-medium text-slate-700">
-                    รหัสผ่าน @if (!$isEdit)
-                        <span class="text-xs font-normal text-slate-500">(ขั้นต่ำ 8 ตัว)</span>
-                    @endif
+                    รหัสผ่านใหม่ <span class="text-xs font-normal text-slate-500">(ขั้นต่ำ 8 ตัว — เว้นว่างไว้หากไม่ต้องการเปลี่ยน)</span>
                 </label>
-                <input id="password" name="password" type="password" autocomplete="new-password"
-                    @if (!$isEdit) required @endif class="ui-input">
+                <input id="password" name="password" type="password" autocomplete="new-password" class="ui-input">
+                <p class="text-xs text-slate-500">รหัสผ่านที่ตั้งให้ผู้อื่น เจ้าของบัญชีจะต้องเปลี่ยนเองเมื่อเข้าใช้ครั้งถัดไป</p>
             </div>
 
             {{-- ยืนยันรหัสผ่าน --}}
@@ -161,8 +158,7 @@
                     ยืนยันรหัสผ่าน
                 </label>
                 <input id="password_confirmation" name="password_confirmation" type="password"
-                    autocomplete="new-password" @if (!$isEdit) required @endif
-                    class="ui-input">
+                    autocomplete="new-password" class="ui-input">
             </div>
         </div>
     </div>

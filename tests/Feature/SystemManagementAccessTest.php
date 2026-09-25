@@ -42,8 +42,6 @@ class SystemManagementAccessTest extends TestCase
             'notifications upload' => ['settings.notifications.upload_sound', 'post'],
             'notifications destroy' => ['settings.notifications.destroy_sound', 'delete'],
             'users index' => ['admin.users.index', 'get'],
-            'users create form' => ['admin.users.create', 'get'],
-            'users store' => ['admin.users.store', 'post'],
         ];
     }
 
@@ -86,7 +84,7 @@ class SystemManagementAccessTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
 
-        foreach (['settings.maintenance-types.index', 'settings.maintenance-types.create', 'settings.notifications.index', 'admin.users.index', 'admin.users.create'] as $name) {
+        foreach (['settings.maintenance-types.index', 'settings.maintenance-types.create', 'settings.notifications.index', 'admin.users.index'] as $name) {
             $this->actingAs($admin)->get(route($name))->assertOk();
         }
     }
@@ -114,5 +112,20 @@ class SystemManagementAccessTest extends TestCase
         $this->assertTrue($supervisor->can('maintenance-type-manage'));
         $this->actingAs($supervisor)->get(route('maintenance.sla.index'))->assertOk();
         $this->actingAs($supervisor)->get(route('maintenance.requests.rating.technicians'))->assertOk();
+    }
+
+    /** Accounts are made by people signing themselves up (and an admin then sets the role); there is no "create a user" page or endpoint. */
+    public function test_an_admin_does_not_create_users_through_the_admin_pages(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('admin.users.create'));
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('admin.users.store'));
+        $this->assertContains($this->actingAs($admin)->get('/admin/users/create')->getStatusCode(), [404, 405], 'nothing answers there');
+        $this->actingAs($admin)->post('/admin/users', ['name' => 'x', 'citizen_id' => '1234500000000', 'password' => 'Abcdefg123', 'password_confirmation' => 'Abcdefg123', 'role' => 'member'])->assertStatus(405);
+        $this->assertSame(0, User::where('citizen_id', '1234500000000')->count());
+
+        $list = $this->actingAs($admin)->get(route('admin.users.index'))->assertOk()->getContent();
+        $this->assertStringNotContainsString('สร้างผู้ใช้ใหม่', $list, 'no button that leads nowhere');
     }
 }

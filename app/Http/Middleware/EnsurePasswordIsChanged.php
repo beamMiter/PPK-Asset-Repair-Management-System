@@ -7,7 +7,7 @@ use Closure;
 use Illuminate\Http\Request;
 
 /**
- * A person whose password an admin chose (a new account, or a password an admin reset for them) may do nothing but change it: every page
+ * A person whose password an admin chose for them (the edit-user form) may do nothing but change it: every page
  * sends them to the profile page, every API call answers 403 `password_change_required`. What stays open is the way out of this state —
  * the profile page, the password form itself, and signing out.
  */

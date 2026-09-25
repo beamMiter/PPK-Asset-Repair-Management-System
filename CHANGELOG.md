@@ -604,6 +604,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- **Creating a user on the admin pages.** Accounts are made by people signing themselves up, and an admin then sets the role, department and
+  status on the edit-user page — so the "สร้างผู้ใช้ใหม่" button, `GET /admin/users/create`, `POST /admin/users`, the create view and
+  the create branches of the shared form are gone (`admin.users.create` / `admin.users.store` no longer exist; the list, edit, suspend
+  and reactivate stay). An admin no longer types a password for somebody who has not signed up, which is where the shared first password
+  came from. The edit form still lets an admin set a password (the person must change it, see Security). Tests that used the create
+  page use the edit page; `SystemManagementAccessTest` pins that the routes are gone.
 - **The "สร้างทะเบียนแจ้งซ่อม" button in the Main Dashboard hero.** Every role lands on this dashboard after login
   (`RouteServiceProvider::HOME`, no role branching in `DashboardController::index`), and the button went to the same
   place ("+ สร้างใบแจ้งซ่อม") the request list page already offers, one click from the sidebar. A KPI overview page —
@@ -683,14 +689,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   members included). The first is now behind `maintenance-type-manage` like the board, the second is not drawn for a member, and the
   third gives a member the staff they deal with, not other members (`?role=member` finds none); management sees everything as before, and the
   totals that are not about people (`stats/summary`, `status-counts`, `by-department`) stay open. `StaffPerformanceIsManagementOnlyTest`.
-- **A password an admin chose for somebody must be changed before they use the system.** An account an admin creates, or a password an admin
-  sets for somebody else, is known to the admin and usually written on a slip of paper — and the seeded / documented defaults are
-  the same for everybody. `users.must_change_password` (new column, default false, existing accounts untouched) is set then: every page sends
-  the person to the profile page with the reason, every API call answers 403 `password_change_required` (the API sign-in returns
+- **A password an admin chose for somebody must be changed before they use the system.** A password an admin sets for somebody else on the
+  edit-user form is known to the admin and usually written on a slip of paper — and the seeded / documented defaults are the same for
+  everybody. `users.must_change_password` (new column, default false, existing accounts untouched) is set then: every page sends the person
+  to the profile page with the reason, every API call answers 403 `password_change_required` (the API sign-in returns
   `must_change_password: true` so a client knows); the profile page, the password form and signing out stay open. It is cleared when they change
   the password (the new one must differ from the old) or reset it through the e-mail link. An admin changing their own password, a self sign-up
-  and the seeded demo accounts are not forced. **Deploy: run `php artisan migrate`** (without it the change-password form, which clears
-  the flag, fails). `ForcedPasswordChangeTest`.
+  and the seeded demo accounts are not forced; the edit form says so under the password field. **Deploy: run `php artisan migrate`** (without
+  it the change-password form, which clears the flag, fails). `ForcedPasswordChangeTest`.
 
 - **Choosing a file with a hostile name ran a script in the page.** The upload previews (new request, request attachments,
   asset form) put the file's name into `innerHTML` as it was, and `<img src=x onerror=…>.jpg` is a legal file name on macOS

@@ -53,7 +53,6 @@
                             <span x-text="showFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรอง'"></span>
                         </button>
 
-                        <x-ui.button :href="route('admin.users.create')" variant="primary" icon="add" onclick="showLoader()">สร้างผู้ใช้ใหม่</x-ui.button>
                     </div>
                 </div>
 

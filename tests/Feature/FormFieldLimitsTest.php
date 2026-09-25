@@ -148,8 +148,9 @@ class FormFieldLimitsTest extends TestCase
 
     public function test_the_people_and_settings_forms_say_it_too(): void
     {
-        $users = $this->actingAs($this->admin)->get(route('admin.users.create'))->assertOk()->getContent();
-        $this->assertPageMatchesServer($users, 'name', $this->serverLimit('post', 'admin.users.store', [], 'name'), 'user form');
+        $person = User::factory()->create(['role' => 'member']);
+        $users = $this->actingAs($this->admin)->get(route('admin.users.edit', $person))->assertOk()->getContent();
+        $this->assertPageMatchesServer($users, 'name', $this->serverLimit('put', 'admin.users.update', ['user' => $person->id], 'name'), 'user form');
         $this->assertContains(255, $this->pageLimits($users, 'email'), 'user form: e-mail');
 
         $profile = $this->actingAs($this->admin)->get(route('profile.edit'))->assertOk()->getContent();

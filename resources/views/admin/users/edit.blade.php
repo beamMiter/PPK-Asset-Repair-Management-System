@@ -73,7 +73,7 @@
             @csrf
             @method('PUT')
 
-            {{-- Include Form: เรียกใช้ Input fields ชุดเดียวกับ Create --}}
+            {{-- Include Form: the input fields of a user --}}
             @include('admin.users._form', [
                 'user' => $user,
                 'roles' => $roles,
