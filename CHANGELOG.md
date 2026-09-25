@@ -29,6 +29,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Only the person who reported a job can rate it.** The rate button, the policy and the API already said so, but the web door
+  (`rating/{job}/store`) let admins and supervisors in "to help rate", and their stars were counted in a technician's average
+  beside the reporter's — a rating is the reporter's word on the service they received. Everyone else now gets a 403. Ratings already made
+  by somebody else stay in the data; the reporter's lists ignore them (`RatingIsPerRaterTest`). `RatingIsReporterOnlyTest`.
+
 - **An edit that did not send the operation report wiped it.** `PUT /maintenance/requests/{id}` or `PUT /api/repair-requests/{id}` with only
   a title rewrote the technician's report from nothing — method, remark, property code and flags became empty, under the caller's name.
   The edit form always sends its text fields (and leaves an unticked box out), so "one of them is here" still writes the whole report;
@@ -670,6 +675,22 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   predicates and one-line scopes were kept on purpose.
 
 ### Security
+
+- **Who carries how much, and how long each person takes, is for management, not for a plain member.** The technician rating board
+  was closed to plain members for this reason (R6), and three doors to the same information were left open: `GET
+  /api/stats/maintenance/technicians` (names, jobs open / closed, average hours), the dashboard's "Technician Workload" (names and open
+  jobs per person, linking to their job board) and `GET /api/meta/users` (a directory of every user with role and department, other
+  members included). The first is now behind `maintenance-type-manage` like the board, the second is not drawn for a member, and the
+  third gives a member the staff they deal with, not other members (`?role=member` finds none); management sees everything as before, and the
+  totals that are not about people (`stats/summary`, `status-counts`, `by-department`) stay open. `StaffPerformanceIsManagementOnlyTest`.
+- **A password an admin chose for somebody must be changed before they use the system.** An account an admin creates, or a password an admin
+  sets for somebody else, is known to the admin and usually written on a slip of paper — and the seeded / documented defaults are
+  the same for everybody. `users.must_change_password` (new column, default false, existing accounts untouched) is set then: every page sends
+  the person to the profile page with the reason, every API call answers 403 `password_change_required` (the API sign-in returns
+  `must_change_password: true` so a client knows); the profile page, the password form and signing out stay open. It is cleared when they change
+  the password (the new one must differ from the old) or reset it through the e-mail link. An admin changing their own password, a self sign-up
+  and the seeded demo accounts are not forced. **Deploy: run `php artisan migrate`** (without it the change-password form, which clears
+  the flag, fails). `ForcedPasswordChangeTest`.
 
 - **Choosing a file with a hostile name ran a script in the page.** The upload previews (new request, request attachments,
   asset form) put the file's name into `innerHTML` as it was, and `<img src=x onerror=…>.jpg` is a legal file name on macOS
