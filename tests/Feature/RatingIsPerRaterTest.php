@@ -43,6 +43,9 @@ class RatingIsPerRaterTest extends TestCase
     {
         return MaintenanceRequest::factory()->create($extra + [
             'status' => $status, 'reporter_id' => $this->member->id, 'technician_id' => null, 'request_date' => now()->subDays(2),
+            // the factory dates every stage at random (some in the future): a job starts with none, its steps write their own
+            'acknowledged_at' => null, 'accepted_at' => null, 'started_at' => null, 'on_hold_at' => null, 'resolved_at' => null,
+            'closed_at' => null, 'completed_date' => null, 'paused_duration_minutes' => 0,
             'asset_id' => Asset::factory()->create(['his_asset_id' => null])->id,
         ]);
     }
