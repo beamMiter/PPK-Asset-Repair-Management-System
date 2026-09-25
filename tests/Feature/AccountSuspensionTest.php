@@ -206,6 +206,10 @@ class AccountSuspensionTest extends TestCase
         $edit = $this->actingAs($admin)->get(route('admin.users.edit', $gone))->assertOk()->getContent();
         $this->assertStringContainsString('ถูกระงับ (ตั้งแต่', $edit);
         $this->assertStringContainsString(route('admin.users.reactivate', $gone), $edit);
-        $this->assertStringContainsString('ไม่สามารถระงับบัญชีของตัวเองได้', $this->actingAs($admin)->get(route('admin.users.edit', $admin))->getContent());
+
+        // Your own page carries no button and no note about it: a request that gets through anyway is answered by the toast (above).
+        $own = $this->actingAs($admin)->get(route('admin.users.edit', $admin))->assertOk()->getContent();
+        $this->assertStringNotContainsString(route('admin.users.suspend', $admin), $own);
+        $this->assertStringNotContainsString('ไม่สามารถระงับบัญชีของตัวเองได้', $own);
     }
 }
