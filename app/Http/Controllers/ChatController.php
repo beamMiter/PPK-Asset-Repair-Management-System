@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\ChatThreadDeleted;
-use App\Events\ChatThreadLockChanged;
 use App\Models\ChatThread;
 use App\Support\SafeBroadcast;
 use App\Traits\HandlesChatReads;
@@ -99,8 +97,7 @@ class ChatController extends Controller
             $query->where('id', '>', $afterId);
         }
 
-        return response()->json($query->take(100)->get())
-            ->header('X-Thread-Locked', $thread->is_locked ? '1' : '0');
+        return response()->json($query->take(100)->get());
     }
 
     public function storeMessage(Request $r, ChatThread $thread)
@@ -168,42 +165,34 @@ class ChatController extends Controller
 
     // ========= Lock / Unlock =========
 
-    public function lock(Request $request, ChatThread $thread)
-    {
-        return $this->setLocked($request, $thread, true);
-    }
-
-    public function unlock(Request $request, ChatThread $thread)
-    {
-        return $this->setLocked($request, $thread, false);
-    }
-
-    /**
-     * The page asks with fetch (JSON) so nobody reloads: it gets the new state back, and everyone else who has the thread open
-     * hears it through ChatThreadLockChanged. A plain form post still works, with the flashed toast.
-     */
-    protected function setLocked(Request $request, ChatThread $thread, bool $locked)
+    public function lock(ChatThread $thread)
     {
         $this->authorizeLocking($thread);
 
-        $thread->is_locked = $locked;
+        $thread->is_locked = true;
         $thread->save();
 
-        SafeBroadcast::send(new ChatThreadLockChanged((int) $thread->id, $locked));
-
-        $toast = [
+        session(['toast' => [
             'type' => 'success',
-            'message' => $locked
-                ? 'ล็อกกระทู้เรียบร้อยแล้ว ผู้ใช้อื่นจะไม่สามารถส่งข้อความได้'
-                : 'ปลดล็อกกระทู้เรียบร้อยแล้ว เปิดรับการสนทนาตามปกติ',
-            'title' => $locked ? 'ล็อกกระทู้' : 'ปลดล็อกกระทู้',
-        ];
+            'message' => 'ล็อกกระทู้เรียบร้อยแล้ว ผู้ใช้อื่นจะไม่สามารถส่งข้อความได้',
+            'title' => 'ล็อกกระทู้'
+        ]]);
 
-        if ($request->expectsJson()) {
-            return response()->json(['is_locked' => $locked, 'message' => $toast['message'], 'title' => $toast['title']]);
-        }
+        return back();
+    }
 
-        session(['toast' => $toast]);
+    public function unlock(ChatThread $thread)
+    {
+        $this->authorizeLocking($thread);
+
+        $thread->is_locked = false;
+        $thread->save();
+
+        session(['toast' => [
+            'type' => 'success',
+            'message' => 'ปลดล็อกกระทู้เรียบร้อยแล้ว เปิดรับการสนทนาตามปกติ',
+            'title' => 'ปลดล็อกกระทู้'
+        ]]);
 
         return back();
     }
@@ -218,8 +207,6 @@ class ChatController extends Controller
         }
 
         $thread->delete();
-
-        SafeBroadcast::send(new ChatThreadDeleted((int) $thread->id));
 
         session(['toast' => [
             'type' => 'success',

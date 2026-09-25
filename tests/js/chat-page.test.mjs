@@ -25,9 +25,9 @@ const msg = (over = {}) => ({ id: 11, user_id: 9, body: 'สวัสดี', us
 // what chat/index.blade.php renders with a thread open
 function threadPage(body, world, { thread = 7, last = 10, lastUser = 9 } = {}) {
   const el = world.el; const r = {};
-  r.pane = el('div', { id: 'chat-pane' }); r.pane.alpine = { chatStatus: 'connecting', locked: false, deleting: false };
+  r.pane = el('div', { id: 'chat-pane' }); r.pane.alpine = { chatStatus: 'connecting' };
   r.box = el('div', { id: 'chatBox' });
-  Object.assign(r.box.dataset, { threadId: String(thread), myId: '5', lastId: String(last), lastUserId: String(lastUser), chatUrl: `/chat/threads/${thread}/messages`, listUrl: '/chat' });
+  Object.assign(r.box.dataset, { threadId: String(thread), myId: '5', lastId: String(last), lastUserId: String(lastUser), chatUrl: `/chat/threads/${thread}/messages` });
   r.box.scrollHeight = 1000; r.box.clientHeight = 500; r.box.scrollTop = 0;
   r.empty = el('div', { id: 'emptyStateMsg' });
   r.input = el('textarea', { id: 'msgInput' }); r.input.value = ''; r.input.scrollHeight = 100;
@@ -52,25 +52,19 @@ function boot({ page = threadPage, answers = [[]], echo = true, innerWidth = 128
     const a = queue.length > 1 ? queue.shift() : queue[0];
     if (a instanceof Error) throw a;
     if (a === false) return { ok: false, json: async () => ({}) };
-    if (a && a.__resp) {                                      // an answer with a status and headers
-      const status = a.status ?? 200;
-      return { ok: status < 400, status, headers: { get: (k) => a.headers?.[k] ?? null }, json: async () => a.body ?? [] };
-    }
     return { ok: true, json: async () => a };
   };
   world.win.innerWidth = innerWidth;
   world.win.console = { warn() {}, error() {}, log() {} };
   const conn = { state: 'connecting', bound: [], bind(_e, f) { conn.bound.push(f); }, unbind(_e, f) { conn.bound = conn.bound.filter((x) => x !== f); } };
-  const handlers = {}; const events = {}; const joined = []; const left = []; const toasts = []; const visited = [];
-  world.win.showToast = (o) => toasts.push(o);
-  world.win.Turbo = { visit: (url) => visited.push(url) };
+  const handlers = {}; const joined = []; const left = [];
   if (echo) {
     world.win.Echo = { connector: { pusher: { connection: conn } },
-      channel(name) { joined.push(name); return { listen(evt, cb) { (events[name] ??= {})[evt] = cb; if (evt === '.message.sent') handlers[name] = cb; return this; } }; },
-      leave(name) { left.push(name); delete handlers[name]; delete events[name]; } };
+      channel(name) { joined.push(name); return { listen(_evt, cb) { handlers[name] = cb; return this; } }; },
+      leave(name) { left.push(name); delete handlers[name]; } };
+    world.win.Alpine = { $data: (e) => e.alpine };
   }
-  world.win.Alpine = { $data: (e) => e.alpine };            // the page's Alpine is there whether or not the websocket is
-  Object.assign(world, { fetches, conn, handlers, events, joined, left, queue, toasts, visited });
+  Object.assign(world, { fetches, conn, handlers, joined, left, queue });
   world.ref = page(world.body, world);
   world.chat = Chat.installChatPage(world.win);
   world.go = (build = page, opts) => {                       // a Turbo visit: the old page is torn down, the body replaced
@@ -81,8 +75,6 @@ function boot({ page = threadPage, answers = [[]], echo = true, innerWidth = 128
   world.intervals = () => world.timers.filter((t) => t.every).length;
   world.rows = () => (world.ref.box.querySelector('.space-y-6')?.children ?? []);
   world.emit = (m) => world.handlers[`chat.${world.ref.box.dataset.threadId}`]({ message: m });
-  world.hear = (evt, payload = {}) => world.events[`chat.${world.ref.box.dataset.threadId}`][evt](payload);   // a thread event: '.thread.lock', '.thread.deleted'
-  world.resp = (body, { status = 200, headers = {} } = {}) => ({ __resp: true, body, status, headers });
   return world;
 }
 
@@ -319,92 +311,4 @@ test('without Echo (or before Alpine has started) the page still polls', async (
   const noAlpine = boot({ answers: [[]] });
   noAlpine.win.Alpine = undefined;
   assert.doesNotThrow(() => noAlpine.conn.bound[0]({ current: 'connected' }));
-});
-
-// ── the thread's own state: locked, unlocked, deleted — with no refresh ────────────────────────────────────────────
-test('another person locks the thread: the page follows at once, and says so once', () => {
-  const world = boot();
-  world.hear('.thread.lock', { thread_id: 7, is_locked: true });
-  assert.equal(world.ref.pane.alpine.locked, true);
-  assert.equal(world.toasts.length, 1);
-  assert.match(world.toasts[0].message, /ถูกล็อกแล้ว/);
-  world.hear('.thread.lock', { thread_id: 7, is_locked: true });
-  assert.equal(world.toasts.length, 1, 'the same state again says nothing');
-});
-
-test('and unlocks it: the composer comes back', () => {
-  const world = boot();
-  world.ref.pane.alpine.locked = true;
-  world.hear('.thread.lock', { is_locked: false });
-  assert.equal(world.ref.pane.alpine.locked, false);
-  assert.match(world.toasts[0].message, /ส่งข้อความได้อีกครั้ง/);
-});
-
-test('the person who pressed lock has been shown already (Alpine flipped before the request): the broadcast adds no second toast', () => {
-  const world = boot();
-  world.ref.pane.alpine.locked = true;                      // submitLock() did this first
-  world.hear('.thread.lock', { thread_id: 7, is_locked: true });
-  assert.deepEqual(world.toasts, []);
-});
-
-test('a payload with no state is ignored', () => {
-  const world = boot();
-  world.hear('.thread.lock', {}); world.hear('.thread.lock', { is_locked: 'yes' });
-  assert.equal(world.ref.pane.alpine.locked, false);
-  assert.deepEqual(world.toasts, []);
-});
-
-test('with no websocket at all, the poll still learns of the lock from its header', async () => {
-  const world = boot({ echo: false, answers: [[]] });
-  world.queue.splice(0, world.queue.length, world.resp([], { headers: { 'X-Thread-Locked': '1' } }));
-  world.advance(5000); await settle();
-  assert.equal(world.ref.pane.alpine.locked, true);
-  assert.match(world.toasts[0].message, /ถูกล็อกแล้ว/);
-});
-
-test('the poll header flips the state both ways', async () => {
-  const world = boot({ answers: [[]] });
-  world.queue.splice(0, world.queue.length, world.resp([], { headers: { 'X-Thread-Locked': '1' } }));
-  world.advance(5000); await settle();
-  assert.equal(world.ref.pane.alpine.locked, true);
-  world.queue.splice(0, world.queue.length, world.resp([], { headers: { 'X-Thread-Locked': '0' } }));
-  world.advance(5000); await settle();
-  assert.equal(world.ref.pane.alpine.locked, false);
-});
-
-test('a poll answer with no header changes nothing', async () => {
-  const world = boot({ answers: [[]] });
-  world.ref.pane.alpine.locked = true;
-  world.advance(5000); await settle();
-  assert.equal(world.ref.pane.alpine.locked, true);
-});
-
-test('the thread is deleted: the page says so, stops polling and goes back to the list', () => {
-  const world = boot();
-  world.hear('.thread.deleted');
-  assert.match(world.toasts[0].message, /ถูกลบแล้ว/);
-  assert.equal(world.intervals(), 0, 'nothing keeps polling a thread that is gone');
-  assert.deepEqual(world.visited, [], 'not before the toast has been read');
-  world.advance(1500);
-  assert.deepEqual(world.visited, ['/chat']);
-});
-
-test('the same, learnt from a poll that answers 404', async () => {
-  const world = boot({ answers: [[]] });
-  world.queue.splice(0, world.queue.length, world.resp([], { status: 404 }));
-  world.advance(5000); await settle();
-  assert.equal(world.toasts.length, 1);
-  world.advance(1500);
-  assert.deepEqual(world.visited, ['/chat']);
-  world.advance(60_000); await settle();
-  assert.equal(world.toasts.length, 1, 'told once, however often it is heard');
-});
-
-test('the admin who deleted it is not told: the page is already on its way to the list', () => {
-  const world = boot();
-  world.ref.pane.alpine.deleting = true;
-  world.hear('.thread.deleted');
-  assert.deepEqual(world.toasts, []);
-  world.advance(5000);
-  assert.deepEqual(world.visited, []);
 });

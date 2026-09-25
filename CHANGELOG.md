@@ -433,13 +433,6 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- **Locking a chat thread, unlocking it or deleting it reaches everyone who has it open, with no refresh.** Before, the lock only
-  showed after a reload (until then the composer was still there and a message came back "locked"), and the person who pressed the
-  button watched the whole page reload. Now the lock button answers in JSON and the page flips at once; the server broadcasts
-  `thread.lock` / `thread.deleted` on the thread's channel and the composer, the "ล็อกแล้ว" badges, the lock button and its dialog
-  follow (a toast says what happened, once). Browsers with no websocket learn of it from the 5-second poll, which now carries an
-  `X-Thread-Locked` header (the body is still a bare array) and answers 404 for a deleted thread; whoever had a deleted thread open
-  is told and taken back to the list.
 - **The chat speaks Thai.** It said "You", "Locked", "Unknown user", "Send a message", "Emoji", "My Topics", "Go All topics", the
   emoji groups "Smileys / Hands & Hearts / Tasks & Objects" and, on a locked thread, "Thread locked" among Thai. They read คุณ,
   ล็อกแล้ว, ไม่ทราบผู้ใช้งาน, พิมพ์ข้อความ..., อีโมจิ, กระทู้ของฉัน, ไปที่กระทู้ทั้งหมด, หน้ายิ้ม / มือและหัวใจ / งานและสิ่งของ and
