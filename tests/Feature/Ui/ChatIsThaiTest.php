@@ -11,15 +11,15 @@ use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 /**
- * The chat said "You", "Locked", "Send a message", "Emoji", "My Topics", "Go All topics", "Monday 3:45pm" among Thai. Its words are Thai now
- * (a technical term may stay English, such as "Live Chat"); a message's time is the Thai weekday and a 24-hour clock, on the page and in
- * the message that arrives live alike.
+ * The chat said "You", "Send a message", "My Topics", "Go All topics", "Monday 3:45pm" among Thai. Its words are Thai now; a message's
+ * time is the Thai weekday and a 24-hour clock, on the page and in the message that arrives live alike. A technical term stays English
+ * on purpose (the owner's call): "Locked" on the badges, "Emoji" on the picker button, "Live Chat", "refresh".
  */
 class ChatIsThaiTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ENGLISH = ['>You<', '>Locked<', 'Unknown user', 'placeholder="Send a message"', 'title="Emoji"', 'My Topics', 'All topics', 'Smileys', 'Hands &amp; Hearts', 'Tasks &amp; Objects', 'Send a message to start'];
+    private const ENGLISH = ['>You<', 'Unknown user', 'placeholder="Send a message"', 'My Topics', 'All topics', 'Smileys', 'Hands &amp; Hearts', 'Tasks &amp; Objects', 'Send a message to start'];
 
     protected function setUp(): void
     {
@@ -49,7 +49,7 @@ class ChatIsThaiTest extends TestCase
 
         $html = $this->actingAs($me)->get(route('chat.index', ['thread_id' => $thread->id]))->assertOk()->getContent();
 
-        foreach (['>คุณ<', 'placeholder="พิมพ์ข้อความ..."', 'title="อีโมจิ"', "'หน้ายิ้ม'", "'มือและหัวใจ'", "'งานและสิ่งของ'"] as $thai) {
+        foreach (['>คุณ<', 'placeholder="พิมพ์ข้อความ..."', 'title="Emoji"', "'หน้ายิ้ม'", "'มือและหัวใจ'", "'งานและสิ่งของ'"] as $thai) {
             $this->assertStringContainsString($thai, $html, $thai);
         }
         $this->assertStringContainsString('วันเสาร์ 15:45', $html, 'the weekday and the 24-hour clock, in Thai');
@@ -59,14 +59,16 @@ class ChatIsThaiTest extends TestCase
         }
     }
 
-    public function test_a_locked_thread_and_the_list_say_locked_in_thai(): void
+    /** "Lock" is a technical term the team uses as it is: the badges keep saying Locked (the sentences around them are Thai). */
+    public function test_the_locked_badges_keep_the_technical_term(): void
     {
         [$me, $thread] = $this->threadWithTalk(true);
 
         $html = $this->actingAs($me)->get(route('chat.index', ['thread_id' => $thread->id]))->assertOk()->getContent();
 
-        $this->assertGreaterThanOrEqual(2, substr_count($html, 'ล็อกแล้ว'), 'the badge in the list and the one over the thread');
-        $this->assertStringNotContainsString('>Locked<', $html);
+        $this->assertGreaterThanOrEqual(2, substr_count($html, '>Locked<'), 'the badge in the list and the one over the thread');
+        $this->assertStringNotContainsString('>ล็อกแล้ว<', $html);
+        $this->assertStringContainsString('กระทู้นี้ถูกล็อก ไม่สามารถส่งข้อความใหม่ได้', $html, 'the notice is a sentence: Thai');
     }
 
     public function test_an_empty_thread_and_no_thread_chosen_read_in_thai(): void

@@ -141,7 +141,7 @@
                                     <div class="flex flex-wrap gap-1.5 items-center">
                                         @if ($th->is_locked)
                                             <span
-                                                class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-600 border border-amber-200">ล็อกแล้ว</span>
+                                                class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-600 border border-amber-200 uppercase tracking-wide">Locked</span>
                                         @endif
                                         <h3
                                             class="truncate text-[14px] font-medium text-slate-800 {{ $isActive ? 'text-[#0F2D5C] font-semibold' : 'group-hover:text-[#0F2D5C]' }}">
@@ -222,7 +222,7 @@
                                     </h1>
                                     @if ($thread->is_locked)
                                         <span
-                                            class="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-800 shrink-0">ล็อกแล้ว</span>
+                                            class="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-800 uppercase shrink-0">Locked</span>
                                     @endif
                                 </div>
                                 <div
@@ -368,7 +368,7 @@
                                             <div class="relative" @click.away="showEmojiPicker = false">
                                                 <button type="button" @click="showEmojiPicker = !showEmojiPicker"
                                                     class="rounded-full p-2 text-gray-400 hover:bg-gray-50 hover:text-gray-500 transition-colors {{ $thread->is_locked ? 'opacity-50 pointer-events-none' : '' }}"
-                                                    title="อีโมจิ" aria-label="อีโมจิ">
+                                                    title="Emoji">
                                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                                                         stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round"
