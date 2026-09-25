@@ -86,7 +86,7 @@
                     @endif
                 </div>
                 <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <x-rating.level :average="$avgScore" :count="$totalReviews" pill />
+                    <x-rating.level :average="$avgScore" :count="$totalReviews" class="text-[12px]" />
                     @if ($totalReviews > 0)
                         <span class="text-[11px] text-slate-400">{{ number_format($avgScore / 5 * 100, 1) }}% ของคะแนนเต็ม</span>
                     @endif

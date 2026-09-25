@@ -403,6 +403,16 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **"ประเมินความพึงพอใจ" copes with a long list, and a status is coloured text, not a boxed label.** The waiting jobs and the
+  history were two lists one under the other, ten to a page, each with its own pager: with a hundred jobs neither could be read
+  or paged, and the second was a long scroll away. They are now two **tabs** (รอประเมิน / ประเมินแล้ว, each with its count,
+  which is not narrowed by the search), **one list at a time, 20 to a page** (the asset list's size), with a **search**
+  (number, title, place or technician's name — `%` and `_` typed into it are text, not wildcards) and one filter per list
+  (the jobs about to run out; the score given). A result narrowed to nothing says so and offers to clear it, the pager keeps
+  the search and the filter, "หน้า 2 จาก 5" says where you are, garbage in the query string is ignored, and the number of
+  queries does not grow with the number of rows. The level label ("ปานกลาง" …), the days left and the counts lost their ring
+  and tinted background: every other list writes a status as plain coloured text (the request list, the asset list), so a boxed
+  one was the odd one out — and with no box there is no corner radius to decide about.
 - **"ความคิดเห็นล่าสุด" on a person's rating page lists only ratings that have a comment, each worn by the system's own
   avatar, and the demo data now has the people to write them.** The section listed the latest six ratings, most of them
   without a word ("ไม่มีข้อความความคิดเห็น" on card after card), and drew each rater as a hand-made coloured circle with
@@ -422,11 +432,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   header, full width, a table on a desktop and cards on a phone, the shared buttons and one star component — and carry what
   a reader needs to act on:
   - **ประเมินความพึงพอใจ:** every job shows who did it, where, when it closed and **how many days are left to rate it**
-    (green, amber inside a week, red inside three days, "วันสุดท้าย" on the last one); the list starts with the job that runs
-    out first (it was newest first), a banner counts the jobs with a week or less left over the whole list, the statistics
-    are visible on a phone too (they were hidden), the history is ordered by when it was rated and shows the stars, their
-    name and the date, and paging a list keeps you on it (`#pending` / `#history`). The window is counted in one place
-    (`ratingDaysLeft`), so the list's "N days left" and the guard's "too late" cannot disagree.
+    (coloured text: green, amber inside a week, red inside three days, "วันสุดท้าย" on the last one); the waiting list starts
+    with the job that runs out first (it was newest first), a banner counts the jobs with a week or less left over the whole
+    list and links to just those, the statistics are visible on a phone too (they were hidden), and the history is ordered by
+    when it was rated and shows the stars, their name and the date. The window is counted in one place (`ratingDaysLeft`),
+    so the list's "N days left" and the guard's "too late" cannot disagree. How it copes with a long list is the next entry.
   - **A person's summary:** four figures instead of three — average with its level, ratings received (and what share of
     their finished jobs were rated), finished jobs with the **average repair time**, and how many ratings were 1–2 stars —
     beside the score distribution and a **six-month trend**; a notice when there are fewer than five ratings ("ยังไม่ควรใช้

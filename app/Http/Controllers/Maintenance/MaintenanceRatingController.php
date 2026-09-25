@@ -18,17 +18,26 @@ class MaintenanceRatingController extends Controller
 {
     use HandlesMaintenanceRating;
 
-    /** A job with this many days or fewer left to rate is "about to run out" — the list's amber / red badges and its banner. */
+    /** A job with this many days or fewer left to rate is "about to run out" — the list's amber / red labels and its banner. */
     public const EXPIRING_DAYS = 7;
+
+    /** Rows per page on "ประเมินความพึงพอใจ" — the same as the asset list. */
+    private const EVALUATE_PER_PAGE = 20;
+
+    /** The reporter's closed jobs. */
+    private function reporterClosedQuery(User $user)
+    {
+        return MaintenanceRequest::query()
+            ->where('reporter_id', $user->id)
+            ->where('status', MaintenanceRequest::STATUS_CLOSED);
+    }
 
     /** The reporter's closed jobs that can still be rated: the same set withinRatingWindow() accepts. */
     private function pendingRatingQuery(User $user)
     {
         $limitDate = now()->subDays($this->ratingDeadlineDays);
 
-        return MaintenanceRequest::query()
-            ->where('reporter_id', $user->id)
-            ->where('status', MaintenanceRequest::STATUS_CLOSED)
+        return $this->reporterClosedQuery($user)
             ->whereDoesntHave('rating')
             // Match withinRatingWindow() exactly: the *first* of closed_at / resolved_at / completed_date, in the past, within
             // the deadline. An OR across the three columns used to surface rows the rating guard then rejected with
@@ -36,44 +45,84 @@ class MaintenanceRatingController extends Controller
             ->whereRaw('COALESCE(closed_at, resolved_at, completed_date) BETWEEN ? AND ?', [$limitDate, now()]);
     }
 
-    public function evaluateList()
+    /** Narrow a list to what the search box holds: the job's number, title or place, or its technician's name. */
+    private function searchedFor($query, string $term)
+    {
+        if ($term === '') {
+            return $query;
+        }
+
+        // `%` and `_` typed into the box are text, not wildcards
+        $like = '%' . addcslashes($term, '\\%_') . '%';
+
+        return $query->where(function ($where) use ($like) {
+            $where->where('request_no', 'like', $like)
+                ->orWhere('title', 'like', $like)
+                ->orWhere('location_text', 'like', $like)
+                ->orWhereHas('technician', fn ($tech) => $tech->where('name', 'like', $like));
+        });
+    }
+
+    /** A query-string value as text: a stray `?q[]=x` is "nothing", not an error. */
+    private function textParam(Request $request, string $key, int $max = 100): string
+    {
+        $value = $request->query($key);
+
+        return is_string($value) ? mb_substr(trim($value), 0, $max) : '';
+    }
+
+    public function evaluateList(Request $request)
     {
         /** @var User $user */
         $user = Auth::user();
 
-        // งานที่ยังไม่ให้คะแนน (Paginated: 10 per page) — the one that runs out of time first comes first
-        $pendingRequests = $this->pendingRatingQuery($user)
-            ->with(['technician:id,name'])
-            ->orderByRaw('COALESCE(closed_at, resolved_at, completed_date) asc')
-            ->orderBy('id')
-            ->paginate(10, ['*'], 'pending_page')
-            ->fragment('pending')
-            ->withQueryString();
+        // One list at a time (a tab), so it stays usable however many jobs there are: search, one filter, 20 to a page.
+        $tab = $this->textParam($request, 'tab') === 'rated' ? 'rated' : 'pending';
+        $term = $this->textParam($request, 'q');
+        $score = in_array($this->textParam($request, 'score'), ['1', '2', '3', '4', '5'], true) ? (int) $request->query('score') : null;
+        $soon = $this->textParam($request, 'urgency') === 'soon';
 
-        $pendingRequests->getCollection()->each(
-            fn (MaintenanceRequest $r) => $r->setAttribute('rating_days_left', $this->ratingDaysLeft($r))
-        );
+        if ($tab === 'pending') {
+            $query = $this->pendingRatingQuery($user)->with(['technician:id,name']);
 
-        // งานที่ให้คะแนนแล้ว (Paginated: 10 per page) — newest rating first
-        $ratedRequests = MaintenanceRequest::query()
-            ->where('reporter_id', $user->id)
-            ->where('status', MaintenanceRequest::STATUS_CLOSED)
-            ->with(['technician:id,name', 'rating'])
-            ->whereHas('rating')
-            ->orderByDesc(
-                MaintenanceRating::select('created_at')
-                    ->whereColumn('maintenance_request_id', 'maintenance_requests.id')
-                    ->latest()
-                    ->limit(1)
-            )
-            ->paginate(10, ['*'], 'history_page')
-            ->fragment('history')
-            ->withQueryString();
+            if ($soon) {
+                $query->whereRaw(
+                    'COALESCE(closed_at, resolved_at, completed_date) <= ?',
+                    [now()->subDays($this->ratingDeadlineDays - self::EXPIRING_DAYS)]
+                );
+            }
 
-        $totalRatedCount = $ratedRequests->total();
-        $pendingCount    = $pendingRequests->total();
+            // the one that runs out of time first comes first
+            $requests = $this->searchedFor($query, $term)
+                ->orderByRaw('COALESCE(closed_at, resolved_at, completed_date) asc')
+                ->orderBy('id')
+                ->paginate(self::EVALUATE_PER_PAGE)
+                ->withQueryString();
 
-        // Jobs that are about to run out of time, over the whole list (not just this page).
+            $requests->getCollection()->each(
+                fn (MaintenanceRequest $r) => $r->setAttribute('rating_days_left', $this->ratingDaysLeft($r))
+            );
+        } else {
+            $query = $this->reporterClosedQuery($user)->with(['technician:id,name', 'rating'])
+                ->whereHas('rating', fn ($rating) => $score ? $rating->where('score', $score) : $rating);
+
+            // newest rating first
+            $requests = $this->searchedFor($query, $term)
+                ->orderByDesc(
+                    MaintenanceRating::select('created_at')
+                        ->whereColumn('maintenance_request_id', 'maintenance_requests.id')
+                        ->latest()
+                        ->limit(1)
+                )
+                ->paginate(self::EVALUATE_PER_PAGE)
+                ->withQueryString();
+        }
+
+        // The header and the tabs count everything, whatever the search or the filter has narrowed the list to.
+        $pendingCount = $this->pendingRatingQuery($user)->count();
+        $totalRatedCount = $this->reporterClosedQuery($user)->whereHas('rating')->count();
+
+        // Jobs that are about to run out of time, over the whole list.
         $expiringCount = $this->pendingRatingQuery($user)
             ->whereRaw(
                 'COALESCE(closed_at, resolved_at, completed_date) <= ?',
@@ -93,8 +142,10 @@ class MaintenanceRatingController extends Controller
         Log::info("User ID {$user->id} viewed their evaluation list."); // บันทึก Log การเข้าดูรายการ
 
         return view('maintenance.rating.evaluate', [
-            'pendingRequests' => $pendingRequests,
-            'ratedRequests'   => $ratedRequests,
+            'tab'             => $tab,
+            'requests'        => $requests,
+            'filters'         => ['q' => $term, 'score' => $score, 'urgency' => $soon ? 'soon' : null],
+            'filtered'        => $term !== '' || ($tab === 'rated' && $score !== null) || ($tab === 'pending' && $soon),
             'avgScore'        => $avgScore,
             'totalRatedCount' => $totalRatedCount,
             'pendingCount'    => $pendingCount,

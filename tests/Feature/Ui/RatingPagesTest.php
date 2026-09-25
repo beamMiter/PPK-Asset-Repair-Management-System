@@ -57,9 +57,9 @@ class RatingPagesTest extends TestCase
         return $rating;
     }
 
-    private function evaluate()
+    private function evaluate(array $query = [])
     {
-        return $this->actingAs($this->member)->get(route('maintenance.requests.rating.evaluate'))->assertOk();
+        return $this->actingAs($this->member)->get(route('maintenance.requests.rating.evaluate', $query))->assertOk();
     }
 
     // ---- ประเมินความพึงพอใจ ----------------------------------------------------------------------------------------
@@ -72,8 +72,8 @@ class RatingPagesTest extends TestCase
 
         $page = $this->evaluate();
 
-        $this->assertSame([$tight->id, $middle->id, $plenty->id], $page->viewData('pendingRequests')->pluck('id')->all());
-        $this->assertSame([2, 15, 25], $page->viewData('pendingRequests')->pluck('rating_days_left')->all());
+        $this->assertSame([$tight->id, $middle->id, $plenty->id], $page->viewData('requests')->pluck('id')->all());
+        $this->assertSame([2, 15, 25], $page->viewData('requests')->pluck('rating_days_left')->all());
         $page->assertSee('เหลือ 2 วัน')->assertSee('เหลือ 15 วัน')->assertSee('เหลือ 25 วัน');
     }
 
@@ -87,7 +87,7 @@ class RatingPagesTest extends TestCase
 
         $page = $this->evaluate();
 
-        $ids = $page->viewData('pendingRequests')->pluck('id')->all();
+        $ids = $page->viewData('requests')->pluck('id')->all();
         $this->assertContains($last->id, $ids);
         $this->assertNotContains($gone->id, $ids);
         $page->assertSee('วันสุดท้าย');
@@ -121,14 +121,14 @@ class RatingPagesTest extends TestCase
 
     public function test_the_banner_counts_jobs_beyond_the_first_page(): void
     {
-        foreach (range(1, 12) as $i) {
+        foreach (range(1, 25) as $i) {
             $this->closedDaysAgo(26);
         }
 
         $page = $this->evaluate();
 
-        $this->assertSame(12, $page->viewData('expiringCount'));
-        $this->assertCount(10, $page->viewData('pendingRequests')->items());
+        $this->assertSame(25, $page->viewData('expiringCount'));
+        $this->assertCount(20, $page->viewData('requests')->items());
     }
 
     public function test_each_pending_job_shows_who_did_it_where_and_when_it_closed(): void
@@ -149,7 +149,7 @@ class RatingPagesTest extends TestCase
         $this->rate($closedLongAgo, 5, 'ล่าสุด', now()->subHour());      // closed earlier but rated last
         $this->rate($closedRecently, 3, 'เก่ากว่า', now()->subDays(5));
 
-        $this->assertSame([$closedLongAgo->id, $closedRecently->id], $this->evaluate()->viewData('ratedRequests')->pluck('id')->all());
+        $this->assertSame([$closedLongAgo->id, $closedRecently->id], $this->evaluate(['tab' => 'rated'])->viewData('requests')->pluck('id')->all());
     }
 
     public function test_the_history_shows_the_stars_the_words_and_the_date_of_the_rating(): void
@@ -157,7 +157,7 @@ class RatingPagesTest extends TestCase
         $req = $this->closedDaysAgo(10);
         $this->rate($req, 4, 'ช่างมาเร็ว', now()->subDays(3));
 
-        $this->evaluate()
+        $this->evaluate(['tab' => 'rated'])
             ->assertSee('ช่างมาเร็ว')
             ->assertSee('4.0 · พอใจ')
             ->assertSee(\App\Support\ThaiDate::short(now()->subDays(3)))
@@ -181,22 +181,202 @@ class RatingPagesTest extends TestCase
         $this->rate($this->closedDaysAgo(9), 5);
         $this->closedDaysAgo(3);
 
-        $html = $this->evaluate()->getContent();
+        foreach (['pending', 'rated'] as $tab) {
+            $html = $this->evaluate(['tab' => $tab])->getContent();
 
-        $this->assertSame(2, substr_count($html, 'hidden md:block overflow-x-auto'), 'a desktop table for each list');
-        $this->assertSame(2, substr_count($html, 'md:hidden grid gap-3'), 'a card list for each list on a phone');
-        $this->assertStringNotContainsString('rounded-sm', $html, 'the old square-cornered cards are gone');
+            $this->assertSame(1, substr_count($html, 'hidden md:block overflow-x-auto'), "$tab: a desktop table");
+            $this->assertSame(1, substr_count($html, 'md:hidden grid gap-3'), "$tab: a card list on a phone");
+            $this->assertStringNotContainsString('rounded-sm', $html, 'the old square-cornered cards are gone');
+        }
     }
 
-    public function test_the_page_links_to_each_list_and_paginates_it_in_place(): void
+    public function test_a_state_is_coloured_text_not_a_boxed_label(): void
     {
-        foreach (range(1, 11) as $i) {
-            $this->closedDaysAgo(3);
+        $this->closedDaysAgo(3);
+        $this->closedDaysAgo(28);
+        $this->rate($this->closedDaysAgo(9), 5);
+
+        foreach (['pending', 'rated'] as $tab) {
+            $html = $this->evaluate(['tab' => $tab])->getContent();
+
+            // the request list and the asset list write a status as plain coloured text; a ring / tinted chip here was the odd one out
+            $this->assertDoesNotMatchRegularExpression('/\bring-1\b/', $html, "$tab: a ringed chip");
+        }
+    }
+
+    // ---- one list at a time, made for a long list --------------------------------------------------------------------
+
+    public function test_the_two_lists_are_tabs_and_each_counts_everything_whatever_the_other_shows(): void
+    {
+        foreach (range(1, 3) as $i) {
+            $this->closedDaysAgo($i);
+        }
+        $this->rate($this->closedDaysAgo(9), 4);
+        $this->rate($this->closedDaysAgo(10), 5);
+
+        foreach ([[], ['tab' => 'rated'], ['tab' => 'pending', 'q' => 'nothing matches this']] as $query) {
+            $page = $this->evaluate($query);
+
+            $this->assertSame(3, $page->viewData('pendingCount'), json_encode($query));
+            $this->assertSame(2, $page->viewData('totalRatedCount'), json_encode($query));
         }
 
         $html = $this->evaluate()->getContent();
+        $this->assertStringContainsString(route('maintenance.requests.rating.evaluate', ['tab' => 'rated']), str_replace('&amp;', '&', $html));
+        $this->assertMatchesRegularExpression('/aria-current="page"[^>]*>\s*รอประเมิน\s*<span[^>]*>3</u', $html);
+    }
 
-        $this->assertStringContainsString('pending_page=2#pending', str_replace('&amp;', '&', $html));
+    public function test_only_the_list_on_show_is_on_the_page(): void
+    {
+        $pending = $this->closedDaysAgo(3, ['title' => 'งานที่ยังไม่ประเมิน']);
+        $rated = $this->closedDaysAgo(9, ['title' => 'งานที่ประเมินแล้ว']);
+        $this->rate($rated, 5);
+
+        $this->evaluate()->assertSee('งานที่ยังไม่ประเมิน')->assertDontSee('งานที่ประเมินแล้ว');
+        $this->evaluate(['tab' => 'rated'])->assertSee('งานที่ประเมินแล้ว')->assertDontSee('งานที่ยังไม่ประเมิน');
+        $this->evaluate(['tab' => 'nonsense'])->assertSee('งานที่ยังไม่ประเมิน');   // an unknown tab is the waiting list
+    }
+
+    public function test_twenty_to_a_page_and_the_page_says_where_you_are(): void
+    {
+        foreach (range(1, 45) as $i) {
+            $this->closedDaysAgo(3);
+        }
+
+        $first = $this->evaluate();
+        $this->assertCount(20, $first->viewData('requests')->items());
+        $first->assertSee('หน้า 1 จาก 3');
+
+        $this->assertCount(5, $this->evaluate(['page' => 3])->viewData('requests')->items());
+    }
+
+    public function test_the_search_finds_a_job_by_number_title_place_or_technician(): void
+    {
+        $byTitle = $this->closedDaysAgo(3, ['title' => 'เครื่องพิมพ์ชั้นสาม']);
+        $byPlace = $this->closedDaysAgo(4, ['title' => 'อย่างอื่น', 'location_text' => 'ห้องผ่าตัด 2']);
+        $other = User::factory()->create(['role' => 'it_support', 'name' => 'ช่างวิเชียร']);
+        $byTech = $this->closedDaysAgo(5, ['title' => 'งานสาม', 'technician_id' => $other->id]);
+        $unrelated = $this->closedDaysAgo(6, ['title' => 'ไม่เกี่ยวเลย', 'location_text' => 'ที่อื่น']);
+
+        $ids = fn (string $q) => $this->evaluate(['q' => $q])->viewData('requests')->pluck('id')->all();
+
+        $this->assertSame([$byTitle->id], $ids('เครื่องพิมพ์'));
+        $this->assertSame([$byPlace->id], $ids('ห้องผ่าตัด'));
+        $this->assertSame([$byTech->id], $ids('วิเชียร'));
+        $this->assertSame([$unrelated->id], $ids($unrelated->request_no));
+    }
+
+    public function test_the_search_never_shows_somebody_elses_job(): void
+    {
+        $stranger = User::factory()->create(['role' => 'member']);
+        $theirs = MaintenanceRequest::factory()->create([
+            'reporter_id' => $stranger->id, 'status' => MaintenanceRequest::STATUS_CLOSED, 'closed_at' => now()->subDay(), 'title' => 'ชื่อเดียวกัน',
+        ]);
+        $mine = $this->closedDaysAgo(2, ['title' => 'ชื่อเดียวกัน']);
+
+        $this->assertSame([$mine->id], $this->evaluate(['q' => 'ชื่อเดียวกัน'])->viewData('requests')->pluck('id')->all());
+    }
+
+    public function test_a_percent_or_underscore_in_the_search_is_text_not_a_wildcard(): void
+    {
+        $exact = $this->closedDaysAgo(3, ['title' => 'ลด 50% ค่าซ่อม']);
+        $this->closedDaysAgo(4, ['title' => 'ลด 500 บาท']);
+        $under = $this->closedDaysAgo(5, ['title' => 'PC_OPD_01']);
+        $this->closedDaysAgo(6, ['title' => 'PCxOPDx01']);
+
+        $ids = fn (string $q) => $this->evaluate(['q' => $q])->viewData('requests')->pluck('id')->all();
+
+        $this->assertSame([$exact->id], $ids('50%'));
+        $this->assertSame([$under->id], $ids('PC_OPD'));
+        $this->assertSame([], $ids('%%%'), 'three percent signs are not "everything"');
+    }
+
+    public function test_the_waiting_list_can_be_narrowed_to_the_jobs_about_to_run_out(): void
+    {
+        $this->closedDaysAgo(3);
+        $soon = $this->closedDaysAgo(25);
+        $soonest = $this->closedDaysAgo(28);
+
+        $page = $this->evaluate(['urgency' => 'soon']);
+
+        $this->assertSame([$soonest->id, $soon->id], $page->viewData('requests')->pluck('id')->all());
+        $page->assertSee('พบ');
+    }
+
+    public function test_the_history_can_be_narrowed_to_one_score(): void
+    {
+        $five = $this->closedDaysAgo(9);
+        $two = $this->closedDaysAgo(10);
+        $this->rate($five, 5, 'ดีเยี่ยม');
+        $this->rate($two, 2, 'ช้ามาก');
+
+        $ids = fn (array $q) => $this->evaluate(['tab' => 'rated'] + $q)->viewData('requests')->pluck('id')->all();
+
+        $this->assertSame([$two->id], $ids(['score' => 2]));
+        $this->assertSame([$five->id], $ids(['score' => 5]));
+        $this->assertEqualsCanonicalizing([$five->id, $two->id], $ids([]));
+        $this->assertEqualsCanonicalizing([$five->id, $two->id], $ids(['score' => 9]), 'a score that is not 1–5 is no filter');
+    }
+
+    public function test_an_empty_result_says_nothing_matched_and_how_to_clear_it(): void
+    {
+        $this->closedDaysAgo(3);
+
+        $this->evaluate(['q' => 'ไม่มีชื่อแบบนี้'])
+            ->assertSee('ไม่พบรายการที่ตรงกับคำค้นหาหรือตัวกรอง')
+            ->assertSee('ล้างค่าทั้งหมด')
+            ->assertDontSee('ไม่มีงานค้างประเมิน');   // that one is for a list that is empty, not one that was narrowed to nothing
+    }
+
+    public function test_the_search_and_the_filter_are_kept_when_paging(): void
+    {
+        foreach (range(1, 25) as $i) {
+            $this->closedDaysAgo(3, ['title' => "เครื่องพิมพ์ {$i}"]);
+        }
+
+        $html = str_replace('&amp;', '&', $this->evaluate(['q' => 'เครื่องพิมพ์', 'urgency' => ''])->getContent());
+
+        $this->assertMatchesRegularExpression('/href="[^"]*(?=[^"]*page=2)(?=[^"]*q=)[^"]*"/u', urldecode($html));
+    }
+
+    public function test_the_number_of_queries_does_not_grow_with_the_number_of_jobs(): void
+    {
+        $queries = function (string $tab): int {
+            \Illuminate\Support\Facades\DB::flushQueryLog();
+            \Illuminate\Support\Facades\DB::enableQueryLog();
+            $this->evaluate(['tab' => $tab]);
+            $n = count(\Illuminate\Support\Facades\DB::getQueryLog());
+            \Illuminate\Support\Facades\DB::disableQueryLog();
+
+            return $n;
+        };
+
+        foreach (range(1, 3) as $i) {
+            $this->closedDaysAgo($i);
+            $this->rate($this->closedDaysAgo(10 + $i), 4, 'ดี');
+        }
+        [$fewPending, $fewRated] = [$queries('pending'), $queries('rated')];
+
+        foreach (range(1, 17) as $i) {
+            $this->closedDaysAgo(2 + $i % 20, ['technician_id' => User::factory()->create(['role' => 'it_support'])->id]);
+            $this->rate($this->closedDaysAgo(8, ['technician_id' => User::factory()->create(['role' => 'it_support'])->id]), 5, 'ดี');
+        }
+
+        $this->assertSame($fewPending, $queries('pending'), 'waiting list: an extra query per row');
+        $this->assertSame($fewRated, $queries('rated'), 'history: an extra query per row');
+    }
+
+    public function test_nonsense_in_the_query_string_is_nothing_not_an_error(): void
+    {
+        $this->closedDaysAgo(3);
+
+        foreach ([
+            ['tab' => ['x'], 'q' => ['y'], 'score' => 'abc', 'urgency' => ['z'], 'page' => 'abc'],
+            ['tab' => 'rated', 'score' => '-1', 'q' => str_repeat('ก', 5000), 'page' => '999999'],
+            ['q' => "x'\"%_\\", 'urgency' => 'soon; drop table'],
+        ] as $query) {
+            $this->actingAs($this->member)->get(route('maintenance.requests.rating.evaluate') . '?' . http_build_query($query))->assertOk();
+        }
     }
 
     // ---- สรุปรายบุคคล ---------------------------------------------------------------------------------------------

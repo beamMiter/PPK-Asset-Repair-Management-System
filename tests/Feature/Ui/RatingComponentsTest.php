@@ -96,8 +96,10 @@ class RatingComponentsTest extends TestCase
             $this->assertStringContainsString(">{$label}<", $html);
             $this->assertStringContainsString($class, $html, $label);
 
-            $pill = $this->blade('<x-rating.level :average="$avg" :count="$count" pill />', ['avg' => $avg, 'count' => $count])->__toString();
-            $this->assertStringContainsString('rounded-full', $pill);
+            // a status is coloured text, not a boxed label (the request list and the asset list write it that way)
+            $this->assertStringNotContainsString('ring-1', $html);
+            $this->assertStringNotContainsString('rounded', $html);
+            $this->assertStringNotContainsString('bg-', $html);
         }
     }
 }
