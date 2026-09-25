@@ -434,7 +434,7 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - **The chat speaks Thai.** It said "You", "Locked", "Unknown user", "Send a message", "Emoji", "My Topics", "Go All topics", the
-  emoji groups "Smileys / Hands & Hearts / Tasks & Objects" and, when a job was locked, "Thread locked" among Thai. They read คุณ,
+  emoji groups "Smileys / Hands & Hearts / Tasks & Objects" and, on a locked thread, "Thread locked" among Thai. They read คุณ,
   ล็อกแล้ว, ไม่ทราบผู้ใช้งาน, พิมพ์ข้อความ..., อีโมจิ, กระทู้ของฉัน, ไปที่กระทู้ทั้งหมด, หน้ายิ้ม / มือและหัวใจ / งานและสิ่งของ and
   กระทู้นี้ถูกล็อก... now. A message's time was English too ("Saturday 3:45pm", and the browser's own format in the drawer); it is the
   Thai weekday and a 24-hour clock ("วันเสาร์ 15:45") on the page and in a message that arrives live, and the drawer's list shows
