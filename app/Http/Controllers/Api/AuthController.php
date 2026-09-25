@@ -4,9 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\LoginAttempt;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -35,40 +34,39 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'citizen_id'  => ['required','digits:13'],
-            'password'    => ['required','string','min:6'],
+            'password'    => ['required','string'],
             'device_name' => ['nullable','string','max:120'],
         ]);
 
-        // ใช้ citizen_id + ip เป็น key ในการ limit
-        $key = sprintf('login:%s|%s', $data['citizen_id'], $request->ip());
+        // the same checks as the browser form (App\Services\LoginAttempt)
+        $attempt = LoginAttempt::for($data['citizen_id'], (string) $request->ip());
 
-        if (RateLimiter::tooManyAttempts($key, 5)) {
-            $seconds = RateLimiter::availableIn($key);
+        if (($seconds = $attempt->waitSeconds()) > 0) {
             return response()->json([
-                'message' => 'พยายามเข้าสู่ระบบมากเกินไป กรุณาลองใหม่ใน '.$seconds.' วินาที',
+                'message' => LoginAttempt::lockedMessage($seconds),
                 'code'    => 'too_many_attempts',
-            ], Response::HTTP_TOO_MANY_REQUESTS);
+            ], Response::HTTP_TOO_MANY_REQUESTS, ['Retry-After' => $seconds]);
         }
 
-        $user = User::where('citizen_id', $data['citizen_id'])->first();
+        $user = $attempt->userWithPassword($data['password']);
 
-        if (! $user || ! Hash::check($data['password'], (string) $user->password)) {
-            RateLimiter::hit($key, 60);
+        if (! $user) {
+            $attempt->fail();
             return response()->json([
-                'message' => 'เลขบัตรประชาชนหรือรหัสผ่านไม่ถูกต้อง',
+                'message' => LoginAttempt::WRONG,
                 'code'    => 'invalid_credentials',
             ], Response::HTTP_UNAUTHORIZED);
         }
 
         if ($user->isSuspended()) {
-            RateLimiter::hit($key, 60);
+            $attempt->fail();
             return response()->json([
                 'message' => \App\Http\Middleware\EnsureAccountIsActive::MESSAGE,
                 'code'    => 'account_suspended',
             ], Response::HTTP_FORBIDDEN);
         }
 
-        RateLimiter::clear($key);
+        $attempt->succeed();
 
         $device    = $data['device_name'] ?? ('api-'.Str::random(6));
         $abilities = $this->abilitiesFor($user);

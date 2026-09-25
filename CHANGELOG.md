@@ -557,6 +557,20 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **One password could be tried against every account from one machine, and the sign-in form and the API had drifted into
+  two different checks.** Sign-in stopped a guesser only per account and address (5 wrong tries), so one likely password
+  tried once against each citizen id never tripped it; the public forms (`/login`, `/register`, `/forgot-password`,
+  `/reset-password`) had no request ceiling at all, and a refused browser saw the bare "429" page. Both sign-ins now go
+  through one class, `App\Services\LoginAttempt`, with a second counter: 30 wrong tries in 5 minutes from one address, over
+  any accounts, lock that address for the rest of the window — only wrong tries count, so a ward signing in behind one
+  address at the start of a shift does not lock itself out, and a right password never clears it. Each form also has a
+  per-address ceiling (login 60/min, register 5/min and 30/hour, password recovery 5/min), and a browser that hits one goes
+  back to the form with what it typed and a toast that says how long to wait ("ส่งคำขอถี่เกินไป กรุณารอ N วินาที"). The
+  API login stopped answering faster for a citizen id nobody has (one hash check either way, so the time no longer says which
+  ids exist), stopped refusing a short password with a 422 before looking at the account (`min:6`; the form never did), and
+  now sends `Retry-After` with its 429. A password stored with older hash settings is re-hashed when it is used, as
+  `Auth::attempt` did. `LoginAttemptTest` (mutation-checked: each of the counters, the dummy hash and "a success does not
+  clear the address counter" fails a test when removed).
 - **The sign-in page could be put in an invisible frame on another site.** No response carried a framing rule, so a page
   on any other site could load `/login` in a transparent frame and have staff type their password "into" it. Every response
   (web, API, error pages) now carries `X-Frame-Options: SAMEORIGIN` and CSP `frame-ancestors 'self'`, `base-uri 'self'` (an

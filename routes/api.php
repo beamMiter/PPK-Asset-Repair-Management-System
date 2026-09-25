@@ -51,8 +51,9 @@ Route::get('/health', [HealthController::class, 'index'])->name('health');
 Route::prefix('auth')->name('auth.')->group(function () {
     // POST /api/auth/login   body: citizen_id (13 หลัก), password, device_name? (ชื่อที่จะตั้งให้ token)
     //   201 {token, token_type:"Bearer", user{id,name,citizen_id,email,role,abilities}}
-    //   401 invalid_credentials · 403 account_suspended · 429 too_many_attempts
-    //   กันเดา 2 ชั้น: route นี้ 10 ครั้ง/นาที และผิด 5 ครั้งต่อ (citizen_id + IP) จะถูกล็อกชั่วคราว 60 วินาที
+    //   401 invalid_credentials · 403 account_suspended · 429 too_many_attempts (มี Retry-After) หรือ RATE_LIMITED
+    //   กันเดา 3 ชั้น (เกณฑ์เดียวกับหน้าเว็บ — App\Services\LoginAttempt): route นี้ 10 ครั้ง/นาที ·
+    //   ผิด 5 ครั้งต่อ (citizen_id + IP) ล็อก 60 วินาที · ผิด 30 ครั้งต่อ IP (ทุกบัญชีรวมกัน) ใน 5 นาทีก็ล็อก (กันลองรหัสเดียวกับหลายบัญชี)
     Route::post('/login', [AuthController::class, 'login'])
         ->middleware('throttle:10,1')
         ->name('login');

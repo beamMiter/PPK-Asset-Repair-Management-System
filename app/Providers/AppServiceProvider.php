@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
@@ -30,6 +33,16 @@ class AppServiceProvider extends ServiceProvider
                 ? rtrim(config('app.frontend_url'), '/')."/password-reset/$token?email=".urlencode($email)
                 : rtrim((string) config('app.url'), '/').route('password.reset', ['token' => $token, 'email' => $email], false);
         });
+
+        // Ceilings per address on the browser's public forms, for a flood of requests. They are generous on purpose — a whole ward
+        // signs in behind one address at the start of a shift — and the guessing of passwords has its own, tighter counters
+        // (App\Services\LoginAttempt: wrong tries only).
+        RateLimiter::for('login', fn (Request $request) => Limit::perMinute(60)->by((string) $request->ip()));
+        RateLimiter::for('register', fn (Request $request) => [
+            Limit::perMinute(5)->by((string) $request->ip()),
+            Limit::perHour(30)->by((string) $request->ip()),
+        ]);
+        RateLimiter::for('password-recovery', fn (Request $request) => Limit::perMinute(5)->by((string) $request->ip()));
 
         if (app()->isLocal()) {
             Response::macro('prettyJson', function ($value, int $status = 200, array $headers = []) {

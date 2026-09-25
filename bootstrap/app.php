@@ -164,6 +164,20 @@ return Application::configure(basePath: dirname(__DIR__))
 
             /*
             |-----------------------------
+            | WEB: too many requests (429)
+            |-----------------------------
+            */
+            // The browser got the bare "429 | Too Many Requests" page; it goes back to the form with the wait in a toast.
+            if (!$request->expectsJson() && !$request->is('api/*') && $e instanceof ThrottleRequestsException) {
+                $seconds = max(1, (int) ($e->getHeaders()['Retry-After'] ?? 60));
+
+                return redirect()->back()
+                    ->withInput($request->except(['password', 'password_confirmation', '_token']))
+                    ->with('toast', \App\Support\Toast::warning("ส่งคำขอถี่เกินไป กรุณารอ {$seconds} วินาทีแล้วลองใหม่", 4500));
+            }
+
+            /*
+            |-----------------------------
             | WEB: default handling
             |-----------------------------
             */
