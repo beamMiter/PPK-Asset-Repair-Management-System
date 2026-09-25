@@ -35,9 +35,9 @@
         chatStatus: 'connecting', // 'connecting', 'online', 'offline'
         showEmojiPicker: false,
         curatedEmojis: {
-            'หน้ายิ้ม': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😋', '😛', '😜', '🧐', '😎', '🥳', '😡', '😭', '😱', '🤔', '🤫'],
-            'มือและหัวใจ': ['👍', '👎', '👌', '✌️', '🤞', '🤟', '👏', '🙌', '🙏', '🤝', '💪', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '✨', '🔥', '💯'],
-            'งานและสิ่งของ': ['✅', '❌', '⚠️', '💡', '📝', '📌', '📎', '📂', '📅', '⏰', '💻', '📱', '🔋', '⚙️', '🛠', '🔧', '🔨', '📦', '📧', '🔔', '🚀', '🏁', '🔒', '🔓']
+            'Smileys': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😋', '😛', '😜', '🧐', '😎', '🥳', '😡', '😭', '😱', '🤔', '🤫'],
+            'Hands & Hearts': ['👍', '👎', '👌', '✌️', '🤞', '🤟', '👏', '🙌', '🙏', '🤝', '💪', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '✨', '🔥', '💯'],
+            'Tasks & Objects': ['✅', '❌', '⚠️', '💡', '📝', '📌', '📎', '📂', '📅', '⏰', '💻', '📱', '🔋', '⚙️', '🛠', '🔧', '🔨', '📦', '📧', '🔔', '🚀', '🏁', '🔒', '🔓']
         },
         insertEmoji(emoji) {
             const el = document.getElementById('msgInput');
@@ -393,7 +393,7 @@
                                                         <template x-for="(list, category) in curatedEmojis"
                                                             :key="category">
                                                             <div class="mb-4 last:mb-0">
-                                                                <h4 class="text-[11px] font-bold text-slate-400 mb-2 px-1"
+                                                                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1"
                                                                     x-text="category"></h4>
                                                                 <div class="grid grid-cols-7 sm:grid-cols-8 gap-1">
                                                                     <template x-for="emoji in list" :key="emoji">

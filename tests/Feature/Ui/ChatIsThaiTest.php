@@ -13,13 +13,13 @@ use Tests\TestCase;
 /**
  * The chat said "You", "Send a message", "My Topics", "Go All topics", "Monday 3:45pm" among Thai. Its words are Thai now; a message's
  * time is the Thai weekday and a 24-hour clock, on the page and in the message that arrives live alike. A technical term stays English
- * on purpose (the owner's call): "Locked" on the badges, "Emoji" on the picker button, "Live Chat", "refresh".
+ * on purpose (the owner's call): "Locked" on the badges, "Emoji" and its groups (Smileys, Hands & Hearts, Tasks & Objects), "Live Chat", "refresh".
  */
 class ChatIsThaiTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ENGLISH = ['>You<', 'Unknown user', 'placeholder="Send a message"', 'My Topics', 'All topics', 'Smileys', 'Hands &amp; Hearts', 'Tasks &amp; Objects', 'Send a message to start'];
+    private const ENGLISH = ['>You<', 'Unknown user', 'placeholder="Send a message"', 'My Topics', 'All topics', 'Send a message to start'];
 
     protected function setUp(): void
     {
@@ -49,7 +49,7 @@ class ChatIsThaiTest extends TestCase
 
         $html = $this->actingAs($me)->get(route('chat.index', ['thread_id' => $thread->id]))->assertOk()->getContent();
 
-        foreach (['>คุณ<', 'placeholder="พิมพ์ข้อความ..."', 'title="Emoji"', "'หน้ายิ้ม'", "'มือและหัวใจ'", "'งานและสิ่งของ'"] as $thai) {
+        foreach (['>คุณ<', 'placeholder="พิมพ์ข้อความ..."', 'title="Emoji"', "'Smileys'", "'Hands & Hearts'", "'Tasks & Objects'"] as $thai) {
             $this->assertStringContainsString($thai, $html, $thai);
         }
         $this->assertStringContainsString('วันเสาร์ 15:45', $html, 'the weekday and the 24-hour clock, in Thai');
