@@ -8,6 +8,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A change-password form on the profile page.** `PUT /password` and its controller (which also ends the other sessions, API tokens and
+  "remember me" cookies) were there and tested, but nothing on any page led to them: nobody could change the password they were first
+  given, and a member with no e-mail could never rotate it. The form (current, new, confirm) sits under the profile form, states the rule
+  (8+ characters with a letter and a digit) and prints its errors under the fields. `ChangeOwnPasswordFormTest`.
+- **Suspending an account says how many open jobs are still in that person's hands.** A suspended technician keeps their jobs and nothing
+  else looks at them; the toast now warns with the count (open statuses only, not jobs they left) so they are handed over.
+  `SuspendWarnsOfOpenJobsTest`.
 - **Choose which late jobs go in the printed SLA report, and a fuller report.** Printing every late job cannot always fit
   one page, so the print button now opens a dialog listing *every* late job (the panel on the page shows only the
   20 most overdue) with a tick box each, a search, select all / clear and a count. Ticking fewer prints only those, and
@@ -21,6 +28,24 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ThaiFormattingTest`.
 
 ### Fixed
+
+- **An edit that did not send the operation report wiped it.** `PUT /maintenance/requests/{id}` or `PUT /api/repair-requests/{id}` with only
+  a title rewrote the technician's report from nothing — method, remark, property code and flags became empty, under the caller's name.
+  The edit form always sends its text fields (and leaves an unticked box out), so "one of them is here" still writes the whole report;
+  a call that sends only flags changes only the flags; one that sends none of them leaves the report alone. Found walking a request
+  end to end. `OperationReportKeptOnPartialEditTest`.
+- **An admin who pressed "ดำเนินการ" on a job with no team became its technician.** The person who started a job was made its technician
+  and lead whoever they were, so the reporter's rating was credited to an admin — a person the technician board never lists, so the
+  score vanished from every figure about the staff. Accepting or starting is the process, not the repair (`joinTeam` already kept
+  admins out of the team for that reason): the lead is now whoever presses start if they are a worker, otherwise the first worker of the
+  team, on resume too; and a job with no worker on it **cannot be started** — "ต้องมอบหมายเจ้าหน้าที่ซ่อมบำรุงให้ใบงานนี้ก่อนเริ่มดำเนินการ". The
+  same rule applies to accepting through the edit form. `StartNeedsAWorkerTest`.
+- **One person's rating used up another's.** The reporter's waiting list, history and rate button counted a rating by *anyone*, while the
+  rating guard and the unique key (request + rater) count per person: an admin's rating took the job off the reporter's list, showed the
+  admin's stars in the reporter's history, and left the reporter free to rate it by URL. Each person's own rating now decides what is
+  theirs. `RatingIsPerRaterTest`.
+- **Two requests made at the same moment could be given the same number.** The number is worked out from the highest in the table when the
+  row is created and the column is unique, so the second request failed; it now asks again (three tries). `RequestNumberCollisionTest`.
 
 - **The team board and a person's own rating page disagreed about what a score is called, and a person nobody had rated was
   "ควรปรับปรุง".** The same 4.2 was "ดี" on the board and "ดีมาก" on the person's page (each page kept its own wording), and an
