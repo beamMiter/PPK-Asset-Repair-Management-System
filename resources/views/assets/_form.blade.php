@@ -677,10 +677,11 @@
                             'p-2.5 rounded-lg border border-slate-200 bg-white flex justify-between items-center ';
                         item.innerHTML =
                             `<div class="flex items-center gap-2 min-w-0 transition-all">
-                            <span class="truncate text-[12px] font-medium text-slate-700">${f.name}</span>
+                            <span data-file-name class="truncate text-[12px] font-medium text-slate-700"></span>
                             <span class="text-[10px] text-slate-400">${(f.size/1024).toFixed(1)}KB</span>
                         </div>
                         <button type="button" class="text-rose-600 hover:text-rose-700 text-[11px] font-semibold">ลบ</button>`;
+                        item.querySelector('[data-file-name]').textContent = f.name;   // a file name is text, never markup
                         item.querySelector('button').onclick = () => {
                             filesBag.splice(idx, 1);
                             sync();

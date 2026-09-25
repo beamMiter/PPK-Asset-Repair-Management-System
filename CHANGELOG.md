@@ -569,6 +569,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Choosing a file with a hostile name ran a script in the page.** The upload previews (new request, request attachments,
+  asset form) put the file's name into `innerHTML` as it was, and `<img src=x onerror=…>.jpg` is a legal file name on macOS
+  and Linux. It needed the person to pick such a file from their own disk, so the risk was small, but the name now goes in
+  as text (`textContent`). `FileNamesAreTextTest` scans the views and scripts so a preview built the old way fails a test.
+
 - **An API token worked for ever.** `sanctum.expiration` was `null`, so a token that leaked (a lost phone, a script left on a
   shared machine) kept its access until somebody thought to revoke it. Tokens now expire 30 days after they were issued
   (`SANCTUM_TOKEN_EXPIRATION_MINUTES`, `0` = never) and the client signs in again; expired rows are pruned daily
