@@ -116,6 +116,29 @@ function mount(win) {
         win.setTimeout(() => row.classList.remove('translate-y-2', 'opacity-0'), 10);
     }
 
+    // ── the thread's own state: locked, unlocked, deleted — heard live, or read from the poll's answer ──
+    // The page's Alpine state (`locked`) drives the composer, the badges and the lock button, so a change is one assignment.
+    function stop() { undo.splice(0).forEach((fn) => fn()); }
+    const alpineOf = () => { try { return chatPane && win.Alpine.$data(chatPane); } catch { return null; } };
+
+    const setLocked = (locked) => {
+        const alpine = alpineOf();
+        if (!alpine || alpine.locked === locked) return;   // whoever did it was shown at once (Alpine flipped before the request)
+        alpine.locked = locked;
+        win.showToast?.({ type: 'info', message: locked ? 'กระทู้นี้ถูกล็อกแล้ว ไม่สามารถส่งข้อความใหม่ได้' : 'กระทู้นี้เปิดให้ส่งข้อความได้อีกครั้งแล้ว' });
+    };
+
+    let gone = false;
+    const threadDeleted = () => {
+        const alpine = alpineOf();
+        if (gone || (alpine && alpine.deleting)) return;   // the admin who deleted it is already on the way to the list
+        gone = true;
+        stop();
+        win.showToast?.({ type: 'warning', message: 'กระทู้นี้ถูกลบแล้ว ระบบกำลังพากลับไปที่รายการกระทู้' });
+        const url = box.dataset.listUrl;
+        if (url) win.setTimeout(() => (win.Turbo ? win.Turbo.visit(url) : win.location.assign(url)), 1200);
+    };
+
     // the thread's message counter in the list on the left
     const bumpCounter = (by) => {
         const badge = doc.getElementById('thread-count-' + threadId);
@@ -167,7 +190,9 @@ function mount(win) {
                 bumpCounter(1);
                 if (autoScroll) box.scrollTop = box.scrollHeight;
             }
-        });
+        }).listen('.thread.lock', (e) => {
+            if (e && typeof e.is_locked === 'boolean') setLocked(e.is_locked);
+        }).listen('.thread.deleted', () => threadDeleted());
         undo.push(() => win.Echo.leave(channel));
     }
 
@@ -175,7 +200,10 @@ function mount(win) {
     async function poll() {
         try {
             const r = await win.fetch(`${chatUrl}?after_id=${lastId}`);
+            if (r.status === 404) { threadDeleted(); return; }     // a deleted thread is gone from the route
             if (!r.ok) return;
+            const held = r.headers?.get?.('X-Thread-Locked');       // the polling fallback learns of a lock here
+            if (held === '1' || held === '0') setLocked(held === '1');
             const data = await r.json();
             const msgs = data.data ?? data;
             if (Array.isArray(msgs) && msgs.length) {
@@ -247,7 +275,7 @@ function mount(win) {
         });
     }
 
-    return { box, poll, dispose: () => undo.splice(0).forEach((fn) => fn()) };
+    return { box, poll, dispose: stop };
 }
 
 const INSTALLED = Symbol.for('ppk.chatPage.installed');
