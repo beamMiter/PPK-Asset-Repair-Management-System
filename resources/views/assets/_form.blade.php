@@ -509,7 +509,7 @@
                         @else
                             <div
                                 class="mt-2 min-h-[140px] rounded-xl border border-dashed border-slate-300 bg-slate-50/50 flex flex-col items-center justify-center p-6 text-center">
-                                <span class="text-[13px] text-slate-400 font-medium italic">ยังไม่มีไฟล์แนบ</span>
+                                <x-ui.empty-state icon="attach_file">ยังไม่มีไฟล์แนบ</x-ui.empty-state>
                             </div>
                         @endif
                     @endif

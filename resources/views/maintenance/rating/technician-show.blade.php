@@ -186,7 +186,9 @@
             </div>
 
             @if ($recentJobs->isEmpty())
-                <div class="py-10 text-center text-[13px] text-slate-400">ยังไม่มีงานที่เสร็จสิ้น</div>
+                <div class="py-10">
+                    <x-ui.empty-state icon="assignment_turned_in">ยังไม่มีงานที่เสร็จสิ้น</x-ui.empty-state>
+                </div>
             @else
                 <div class="hidden md:block overflow-x-auto">
                     <table class="min-w-full text-[13px]">
@@ -308,9 +310,8 @@
                         </div>
                     </div>
                 @empty
-                    <div class="lg:col-span-2 rounded-md border border-dashed border-slate-200 bg-slate-50 py-12 text-center">
-                        <span class="material-symbols-outlined text-slate-300 text-[40px]" aria-hidden="true">chat_bubble</span>
-                        <p class="mt-1 text-[13px] font-medium text-slate-500">ยังไม่มีความคิดเห็น</p>
+                    <div class="lg:col-span-2 rounded-md border border-dashed border-slate-200 bg-slate-50 py-12">
+                        <x-ui.empty-state icon="chat_bubble">ยังไม่มีความคิดเห็น</x-ui.empty-state>
                     </div>
                 @endforelse
             </div>

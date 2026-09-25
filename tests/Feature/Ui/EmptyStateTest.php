@@ -80,9 +80,16 @@ class EmptyStateTest extends TestCase
             'evaluate' => ['maintenance/rating/evaluate.blade.php', 3],
             'technician scores' => ['maintenance/rating/technicians-dashboard.blade.php', 1],
             'my jobs' => ['repair/my-jobs.blade.php', 1],
-            'chat threads' => ['chat/index.blade.php', 1],
+            'chat (threads, no thread chosen, no messages)' => ['chat/index.blade.php', 3],
+            'asset form' => ['assets/_form.blade.php', 1],
+            'asset page (files, repair history)' => ['assets/show.blade.php', 2],
+            'job page files' => ['maintenance/requests/partials/_attachments.blade.php', 1],
+            'job page timeline' => ['maintenance/requests/partials/_timeline.blade.php', 1],
+            'job page team' => ['maintenance/requests/partials/_assigned_team.blade.php', 1],
+            'technician page (jobs, comments)' => ['maintenance/rating/technician-show.blade.php', 2],
+            'SLA (print dialog x2, two panels)' => ['maintenance/sla/index.blade.php', 4],
             'assign dialog' => ['maintenance/requests/partials/_modal_assign.blade.php', 1],
-            'edit page assign dialog' => ['maintenance/requests/edit.blade.php', 1],
+            'edit page (team, assign dialog)' => ['maintenance/requests/edit.blade.php', 2],
         ];
     }
 
@@ -104,7 +111,9 @@ class EmptyStateTest extends TestCase
             if ($name === 'components/ui/empty-state.blade.php') {
                 continue;
             }
-            if (preg_match('/<svg class="(w-10 h-10|h-10 w-10) text-slate-(200|300)"/', $file->getContents())) {
+            $source = $file->getContents();
+            if (preg_match('/<svg class="(w-10 h-10|h-10 w-10) text-slate-(200|300)"/', $source)
+                || preg_match('/material-symbols-outlined[^"]*(text-slate-(200|300)[^"]*text-\[(40|48)px\]|text-\[(40|48)px\][^"]*text-slate-(200|300))/', $source)) {
                 $offenders[] = $name;
             }
         }
@@ -118,6 +127,19 @@ class EmptyStateTest extends TestCase
         foreach (File::allFiles(resource_path('views')) as $file) {
             $this->assertStringNotContainsString('V5a2 2 0 01-2-2h5.586', $file->getContents(), $file->getRelativePathname());
         }
+    }
+
+    /** The chat drawer is built in JS, not Blade: its "no threads" block is the same one, so it has to say the same sizes. */
+    public function test_the_chat_drawer_builds_the_same_block(): void
+    {
+        $js = file_get_contents(base_path('resources/js/layout/chat-fab.js'));
+        preg_match('/const EMPTY_HTML = `(.*?)`;/s', $js, $m);
+
+        $this->assertNotEmpty($m, 'EMPTY_HTML');
+        $this->assertStringContainsString(self::ICON, $m[1]);
+        $this->assertStringContainsString('text-[40px]', $m[1]);
+        $this->assertStringContainsString('text-slate-300', $m[1]);
+        $this->assertStringContainsString('<p class="' . self::TEXT . '">', $m[1]);
     }
 
     // ---- the evaluate page, rendered ---------------------------------------------------------------------------

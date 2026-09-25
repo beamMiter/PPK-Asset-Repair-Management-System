@@ -286,18 +286,8 @@
                     class="flex-1 overflow-y-auto w-full px-4 pt-3 pb-4 md:px-6 md:pt-5 md:pb-6 bg-slate-50 min-h-0 relative">
                     @if ($messages->isEmpty())
                         {{-- Empty State --}}
-                        <div class="flex flex-col h-full items-center justify-center text-center opacity-70"
-                            id="emptyStateMsg">
-                            <div
-                                class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white border border-gray-200 ">
-                                <svg viewBox="0 0 24 24" class="h-8 w-8 text-gray-400" fill="none"
-                                    stroke="currentColor" stroke-width="1.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                </svg>
-                            </div>
-                            <p class="text-[15px] font-semibold text-gray-900">เริ่มการสนทนา</p>
-                            <p class="mt-1 text-[13px] text-gray-500">Send a message to start.</p>
+                        <div class="flex h-full items-center justify-center" id="emptyStateMsg">
+                            <x-ui.empty-state icon="forum" hint="Send a message to start.">เริ่มการสนทนา</x-ui.empty-state>
                         </div>
                     @else
                         {{-- Message List (Untitled UI Design) --}}
@@ -444,13 +434,8 @@
                     @endif
                 </div>
             @else
-                <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-50">
-                    <div
-                        class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 border border-slate-200">
-                        <span class="material-symbols-outlined text-4xl text-slate-300">forum</span>
-                    </div>
-                    <p class="font-medium text-lg text-slate-600 mb-1">ยินดีต้อนรับสู่กระดานสนทนา</p>
-                    <p class="text-sm">คลิกเลือกหัวข้อทางด้านซ้ายเพื่อเปิดอ่าน หรือสร้างกระทู้ใหม่</p>
+                <div class="absolute inset-0 flex items-center justify-center bg-slate-50">
+                    <x-ui.empty-state icon="forum" hint="คลิกเลือกหัวข้อทางด้านซ้ายเพื่อเปิดอ่าน หรือสร้างกระทู้ใหม่">ยินดีต้อนรับสู่กระดานสนทนา</x-ui.empty-state>
                 </div>
             @endif
         </div>

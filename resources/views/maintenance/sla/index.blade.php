@@ -99,9 +99,9 @@
                                         </div>
 
                                         <template x-if="rows.length === 0">
-                                            <p class="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-center text-[13px] text-slate-500">
-                                                ไม่มีงานที่เกินเวลาในขณะนี้ รายงานจะไม่มีตารางรายการ
-                                            </p>
+                                            <div class="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-4">
+                                                <x-ui.empty-state icon="verified_user">ไม่มีงานที่เกินเวลาในขณะนี้ รายงานจะไม่มีตารางรายการ</x-ui.empty-state>
+                                            </div>
                                         </template>
 
                                         <template x-if="rows.length > 0">
@@ -126,7 +126,7 @@
                                                             <span class="shrink-0 text-[12px] font-bold text-rose-600" x-text="r.late"></span>
                                                         </label>
                                                     </template>
-                                                    <p x-show="shown.length === 0" class="px-3 py-4 text-center text-[13px] text-slate-500">ไม่พบรายการที่ค้นหา</p>
+                                                    <x-ui.empty-state x-show="shown.length === 0" icon="search_off" class="px-3 py-4">ไม่พบรายการที่ค้นหา</x-ui.empty-state>
                                                 </div>
                                                 <p class="mt-2 text-[11px] text-slate-500" x-show="selected.length < rows.length">
                                                     รายงานจะระบุว่าแสดงเฉพาะบางรายการ (เช่น "แสดง <span x-text="selected.length"></span> จากทั้งหมด <span x-text="rows.length"></span> รายการ")
@@ -554,12 +554,8 @@
                                         </div>
                                     </a>
                                 @empty
-                                    <div
-                                        class="p-8 text-center flex flex-col items-center justify-center gap-2 opacity-60 m-auto">
-                                        <span
-                                            class="material-symbols-outlined text-4xl text-[#006c46] ms-icon">verified_user</span>
-                                        <p class="text-[#444650] font-medium text-[13px]">ไม่มีงานที่เกินเวลาในขณะนี้
-                                        </p>
+                                    <div class="p-8 m-auto">
+                                        <x-ui.empty-state icon="verified_user">ไม่มีงานที่เกินเวลาในขณะนี้</x-ui.empty-state>
                                     </div>
                                 @endforelse
                             </div>
@@ -624,12 +620,8 @@
                                         </div>
                                     </a>
                                 @empty
-                                    <div
-                                        class="p-8 text-center flex flex-col items-center justify-center gap-2 opacity-60 m-auto">
-                                        <span
-                                            class="material-symbols-outlined text-4xl text-[#006c46] ms-icon">check_circle</span>
-                                        <p class="text-[#444650] font-medium text-[13px]">
-                                            ไม่มีงานที่ใกล้ครบกำหนดในขณะนี้</p>
+                                    <div class="p-8 m-auto">
+                                        <x-ui.empty-state icon="check_circle">ไม่มีงานที่ใกล้ครบกำหนดในขณะนี้</x-ui.empty-state>
                                     </div>
                                 @endforelse
                             </div>

@@ -15,12 +15,12 @@ const BASELINE_KEY = 'chatFab.serverUnread'; // the last unread total the server
 const SOUND_KEY = 'myjobs.notify.sound.enabled';
 
 const LOADING_HTML = '<div class="px-3 py-4 text-sm text-zinc-500">กำลังโหลดกระทู้ที่คุณมีส่วนร่วม...</div>';
+// The same block as <x-ui.empty-state>: a 40px icon, 13px words, a 12px hint (the widget is built here, not in Blade).
 const EMPTY_HTML = `
-      <div class="px-3 py-5 text-center text-sm text-zinc-500">
-        ยังไม่มีกระทู้ที่คุณมีส่วนร่วม<br>
-        <span class="text-[12px] text-zinc-400">
-          เริ่มต้นสร้างกระทู้หรือคอมเมนต์ในห้องแชต แล้วรายการจะมาปรากฏที่นี่
-        </span>
+      <div class="flex flex-col items-center gap-2 px-3 py-8 text-center text-slate-600">
+        <span class="material-symbols-outlined inline-flex h-10 w-10 items-center justify-center text-[40px] leading-none text-slate-300" aria-hidden="true">forum</span>
+        <p class="text-[13px]">ยังไม่มีกระทู้ที่คุณมีส่วนร่วม</p>
+        <p class="-mt-1 text-[12px] text-slate-500">เริ่มต้นสร้างกระทู้หรือคอมเมนต์ในห้องแชต แล้วรายการจะมาปรากฏที่นี่</p>
       </div>`;
 const failedHtml = (status) => `
             <div class="px-3 py-5 text-center text-sm text-rose-500">

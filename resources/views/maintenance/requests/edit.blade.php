@@ -172,7 +172,8 @@
                         <div
                             class="rounded-lg border {{ $line }} bg-white max-h-72 overflow-y-auto divide-y divide-slate-200">
                             @if ($workers->isEmpty())
-                                <div class="px-4 py-3 text-[13px] text-slate-500">ยังไม่ได้มอบหมายงานให้ทีมเจ้าหน้าที่
+                                <div class="px-4 py-6">
+                                    <x-ui.empty-state icon="group_off">ยังไม่ได้มอบหมายงานให้ทีมเจ้าหน้าที่</x-ui.empty-state>
                                 </div>
                             @else
                                 @foreach ($workers as $worker)

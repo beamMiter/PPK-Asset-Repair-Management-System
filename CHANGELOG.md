@@ -433,12 +433,16 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- **"Nothing found" is one component, the same size on every list.** The evaluate page said it with a 48px icon and a 14px bold
+- **"Nothing found" is one component, the same size on every page.** The evaluate page said it with a 48px icon and a 14px bold
   heading, the technician scores with a bare sentence, the job list with a 48px icon and 14px words, the chat with a 12px sentence
-  and a paler icon; the request and type lists had copied the document icon with a slip in its outline. They all use
-  `<x-ui.empty-state>` now - a 40px icon and 13px words - and only the icon and the sentence differ from page to page (requests,
-  assets, users, types, evaluate, technician scores, my jobs, chat threads, and the assign dialogs). The asset page's "no repair
-  history" note had the same broken outline and is corrected.
+  and a paler icon, the job timeline with a 48px icon, the SLA panels with a green 36px one; the request and type lists had copied
+  the document icon with a slip in its outline. They all use `<x-ui.empty-state>` now - a 40px icon and 13px words, an optional
+  12px hint and an optional link - and only the icon and the sentence differ from page to page: the lists (requests, assets, users,
+  types, evaluate, technician scores, my jobs, chat threads), the detail sections (attachments, timeline, team, repair history,
+  the technician's jobs and comments), the SLA panels and print dialog, the chat's "no thread chosen" and "no messages" panes, the
+  assign dialogs, and the chat drawer (built in JS with the same sizes). A note about a single cell or field ("ยังไม่ได้ประเมิน",
+  "ยังไม่ได้มอบหมาย") is a value, not an empty state, and stays as it is; so does the amber "repairing, but no request" warning on the
+  asset page, which is a call to act. The asset page's "no repair history" note had the same broken outline and is corrected.
 - **One separator between facts on a line: a hyphen, not a dot.** Pages ran two facts together with a middle dot (·) or a bullet (•),
   and not the same one everywhere ("ประเมินได้ภายใน 30 วันหลังปิดงาน · …", "4.0 · พอใจ", the page subtitles of the request and asset
   lists, the reporter's position and phone in the request list, "บันทึกล่าสุดโดย … ·", the work order's role, the notes of the printed
