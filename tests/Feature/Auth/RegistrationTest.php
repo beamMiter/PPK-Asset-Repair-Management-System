@@ -16,8 +16,8 @@ class RegistrationTest extends TestCase
             'name' => 'Test User',
             'citizen_id' => '1234567890123',
             'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'Password123',
+            'password_confirmation' => 'Password123',
         ]);
 
         $response->assertRedirect(route('dashboard'));
@@ -33,8 +33,8 @@ class RegistrationTest extends TestCase
         $this->postJson('/register', [
             'name' => 'Api User',
             'citizen_id' => '3210987654321',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'Password123',
+            'password_confirmation' => 'Password123',
         ])->assertNoContent();
 
         $this->assertAuthenticated();
@@ -45,8 +45,8 @@ class RegistrationTest extends TestCase
         $response = $this->from('/register')->post('/register', [
             'name' => 'Test User',
             'citizen_id' => '123',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'Password123',
+            'password_confirmation' => 'Password123',
         ]);
 
         $response->assertRedirect('/register');

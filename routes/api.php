@@ -60,13 +60,14 @@ Route::prefix('auth')->name('auth.')->group(function () {
 
     // Password reset (API) — ผู้ใช้ที่ไม่มีอีเมลในระบบใช้ไม่ได้
     // POST /api/auth/password/email   body: email → ส่งลิงก์รีเซ็ตทางอีเมล (5 ครั้ง/นาที)
-    //   200 · 400 reset_link_failed
+    //   200 เสมอ ไม่ว่าอีเมลนั้นจะมีบัญชีหรือไม่ (ตอบต่างกันจะบอกว่าใครมีบัญชี) · ลิงก์ส่งหลังตอบกลับ
     Route::post('/password/email', [PasswordResetController::class, 'sendResetLinkEmail'])
         ->middleware('throttle:5,1')
         ->name('password.email');
 
     // POST /api/auth/password/reset   body: token, email, password + password_confirmation (≥ 8 ตัว มีตัวอักษรและตัวเลข)
-    //   200 · 400 password_reset_failed (token ผิดหรือหมดอายุ)
+    //   200 · 400 password_reset_failed (token ผิด หมดอายุ หรือไม่มีบัญชี — ข้อความเดียวกัน) · สำเร็จแล้ว token API,
+    //   session ที่เปิดอยู่ และ remember-me ของบัญชีนั้นถูกยกเลิกทั้งหมด
     Route::post('/password/reset', [PasswordResetController::class, 'reset'])
         ->middleware('throttle:5,1')
         ->name('password.reset');

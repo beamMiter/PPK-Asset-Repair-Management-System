@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +21,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+
+        // The rule for a password a person chooses (sign-up, reset, changing their own): the browser pages asked for 8 characters
+        // of anything and the API for 8 with a letter and a digit. Now one rule for both. (A password an admin sets for someone
+        // else is checked by the admin form itself.)
+        Password::defaults(fn () => Password::min(8)->letters()->numbers());
 
         // The e-mailed link opens this app's own reset page; a separate SPA can still take over by setting
         // APP_FRONTEND_URL (config `app.frontend_url`).

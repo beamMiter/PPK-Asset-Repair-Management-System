@@ -388,6 +388,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **One password rule for a password a person chooses for themselves.** Sign-up, the reset page and changing your own
+  password accepted 8 characters of anything, while the API's reset asked for 8 with a letter and a digit. All of them now
+  ask for at least 8 characters with both a letter (Thai letters count) and a digit, the sign-up and reset forms say so
+  under the field, and a refused password says why in Thai. It is one line in `AppServiceProvider` (`Password::defaults`)
+  if the rule should be looser. A password an admin sets for someone else on the user form is still checked by that form
+  (8 characters), and passwords already in use are not touched: sign-in never checks the rule.
 - **Every popup card has a smaller corner radius.** Assign team (the job page's own copy and the edit page's), the
   history log, the four confirm dialogs, the "closed" dialog, the shared confirm dialog, the profile photo cropper and
   the chat widget's drawer were `rounded-2xl` (16px), and the "closed" dialog was `rounded-3xl` (24px, rounder than the
@@ -557,6 +563,18 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **"Forgot my password" told anyone which e-mail addresses have an account, and a reset left the old way in open.** The
+  browser page said "ไม่พบบัญชีที่ใช้อีเมลนี้" for an address without an account (the API answered 400 instead of 200), a
+  second request within a minute said "wait" only for an address that has one, and setting a new password answered
+  differently for an unknown address than for a wrong token — three ways to list the staff's addresses. All of them now
+  answer the same: "หากอีเมลนี้มีบัญชีอยู่ในระบบ จะได้รับลิงก์…(บัญชีที่ไม่มีอีเมลให้ติดต่อผู้ดูแลระบบ)", the mail is sent
+  after the answer has gone (so the time it takes says nothing either), and a mail server that is down is reported to us
+  instead of shown to whoever asked. Setting a new password — and changing your own — now ends every other way into the
+  account: API tokens, "remember me" cookies and, with database sessions, every other browser session (the device you
+  change it on stays signed in). A password is reset because someone else may have it; before, their session simply
+  carried on. The browser pages and the API shared no code for this and differed in wording and rules; both now go through
+  `App\Services\PasswordRecovery` and `ActiveLogins`, and the API speaks Thai like the pages. `PasswordRecoverySecurityTest`
+  (mutation-checked: the revoke on reset, the revoke on change and "mail after the answer" each fail a test when removed).
 - **One password could be tried against every account from one machine, and the sign-in form and the API had drifted into
   two different checks.** Sign-in stopped a guesser only per account and address (5 wrong tries), so one likely password
   tried once against each citizen id never tripped it; the public forms (`/login`, `/register`, `/forgot-password`,

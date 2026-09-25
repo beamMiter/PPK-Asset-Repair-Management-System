@@ -82,13 +82,17 @@ class WebPasswordResetTest extends TestCase
         $this->assertSame($before, $user->fresh()->password);
     }
 
-    public function test_an_unknown_email_explains_that_an_admin_can_reset_accounts_without_one(): void
+    public function test_an_unknown_email_gets_the_same_answer_as_a_known_one_and_it_points_to_the_admin_for_accounts_without_one(): void
     {
+        Notification::fake();
+
         $res = $this->from('/forgot-password')->post('/forgot-password', ['email' => 'nobody@example.test']);
 
         $res->assertRedirect('/forgot-password');
-        $res->assertSessionHasErrors('email');
-        $this->assertStringContainsString('ผู้ดูแลระบบ', session('errors')->first('email'));
+        $res->assertSessionHasNoErrors();
+        $res->assertSessionHas('status');
+        $this->assertStringContainsString('ผู้ดูแลระบบ', session('status'));
+        Notification::assertNothingSent();
     }
 
     public function test_json_clients_still_get_json(): void
@@ -96,7 +100,10 @@ class WebPasswordResetTest extends TestCase
         Notification::fake();
         $user = User::factory()->create();
 
-        $this->postJson('/forgot-password', ['email' => $user->email])->assertOk()->assertJsonStructure(['status']);
-        $this->postJson('/forgot-password', ['email' => 'nobody@example.test'])->assertStatus(422);
+        $known = $this->postJson('/forgot-password', ['email' => $user->email])->assertOk()->assertJsonStructure(['status']);
+        $unknown = $this->postJson('/forgot-password', ['email' => 'nobody@example.test'])->assertOk();
+
+        $this->assertSame($known->json(), $unknown->json());
+        $this->postJson('/forgot-password', ['email' => 'not-an-address'])->assertStatus(422);   // a malformed address says nothing about accounts
     }
 }

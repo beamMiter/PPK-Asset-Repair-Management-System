@@ -5,20 +5,30 @@ namespace App\Support;
 use Illuminate\Support\Facades\Password;
 
 /**
- * Thai wording for the password-broker statuses, independent of `APP_LOCALE` (the rest of the UI is Thai-only, and
- * the framework's own strings are English unless a `lang/<locale>/passwords.php` exists for the active locale).
+ * Thai wording for password recovery, independent of `APP_LOCALE` (the rest of the UI is Thai-only, and the framework's own
+ * strings are English unless a `lang/<locale>/passwords.php` exists for the active locale).
+ *
+ * What is NOT here on purpose: "no account uses this e-mail". Said to whoever asks, it lists every address that has one.
  */
 final class PasswordResetMessage
 {
-    public static function for(string $status): string
+    /** The answer to "send me a link", the same whether or not the address has an account. */
+    public static function linkRequested(): string
+    {
+        return 'หากอีเมลนี้มีบัญชีอยู่ในระบบ จะได้รับลิงก์ตั้งรหัสผ่านใหม่ทางอีเมลภายในไม่กี่นาที (บัญชีที่ไม่มีอีเมลให้ติดต่อผู้ดูแลระบบ)';
+    }
+
+    public static function resetDone(): string
+    {
+        return 'ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว';
+    }
+
+    /** Why a reset was refused. A wrong token and an unknown address read the same: told apart, they list the addresses. */
+    public static function resetRefused(string $status): string
     {
         return match ($status) {
-            Password::RESET_LINK_SENT => 'ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่อีเมลแล้ว',
-            Password::PASSWORD_RESET => 'ตั้งรหัสผ่านใหม่เรียบร้อยแล้ว',
             Password::RESET_THROTTLED => 'กรุณารอสักครู่ก่อนลองอีกครั้ง',
-            Password::INVALID_TOKEN => 'ลิงก์ตั้งรหัสผ่านไม่ถูกต้องหรือหมดอายุแล้ว',
-            Password::INVALID_USER => 'ไม่พบบัญชีที่ใช้อีเมลนี้ — หากบัญชีของคุณไม่มีอีเมล ให้ติดต่อผู้ดูแลระบบเพื่อตั้งรหัสผ่านใหม่',
-            default => __($status),
+            default => 'ลิงก์ตั้งรหัสผ่านไม่ถูกต้องหรือหมดอายุแล้ว',
         };
     }
 }
