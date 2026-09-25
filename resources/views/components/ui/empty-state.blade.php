@@ -7,6 +7,11 @@
   <x-ui.empty-state icon="search_off" hint="เพิ่มเติม">ไม่พบรายการ</x-ui.empty-state>
   <x-ui.empty-state icon="search_off">ไม่พบรายการ <x-slot:action><a href="…">ล้างค่าทั้งหมด</a></x-slot:action></x-ui.empty-state>
 
+  What is NOT an empty state, and keeps its own look: a note in a single cell or field ("ยังไม่ได้ประเมิน", "ยังไม่ระบุ",
+  "ยังไม่ได้มอบหมาย") - it is a value, so it takes the size of the values beside it (12px slate-400 in a table cell) - and a warning
+  that asks for an action (the asset page's "repairing, but no request"). A dashed box around the block (a file drop area) is the
+  container's, and matches the panels next to it.
+
   icon    a Material Symbols name; without one, the document icon the list pages have always had
   hint    a second, smaller line under the words
   action  a link or button under them (say "clear the filters")
