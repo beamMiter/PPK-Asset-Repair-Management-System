@@ -339,6 +339,22 @@ class RatingPagesTest extends TestCase
         $this->assertMatchesRegularExpression('/href="[^"]*(?=[^"]*page=2)(?=[^"]*q=)[^"]*"/u', urldecode($html));
     }
 
+    public function test_the_magnifier_does_not_sit_on_the_text_of_the_search_box(): void
+    {
+        $html = $this->evaluate()->getContent();
+
+        preg_match('/<input id="q"[^>]*>/', $html, $tag);
+        $this->assertNotEmpty($tag, 'the search box');
+        preg_match('/class="([^"]*)"/', $tag[0], $class);
+        $classes = preg_split('/\s+/', $class[1]);
+
+        // the icon is 36px wide at the left edge: the text starts after it (pl-10) …
+        $this->assertContains('pl-10', $classes);
+        // … and no `px-N` in the same list: Bootstrap makes px-3 / px-4 / px-5 !important, so it would win over pl-10 and the
+        // text would start under the icon (the users page writes `pl-10 pr-3` for the same reason)
+        $this->assertSame([], array_values(array_filter($classes, fn ($c) => preg_match('/^px-[0-5]$/', $c))));
+    }
+
     public function test_the_number_of_queries_does_not_grow_with_the_number_of_jobs(): void
     {
         $queries = function (string $tab): int {

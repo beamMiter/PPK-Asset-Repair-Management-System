@@ -30,7 +30,10 @@
 
     $scoreTone = fn (int $score) => $score >= 4 ? 'text-emerald-700' : ($score === 3 ? 'text-amber-600' : 'text-rose-600');
 
-    $input = 'w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 '
+    // No horizontal padding in here: the search box needs `pl-10` (room for its icon) and Bootstrap, loaded next to Tailwind, makes
+    // `px-3` !important — a shared `px-3` here beat `pl-10` and put the magnifier on top of the text. The box says `pl-10 pr-3`
+    // (as the users page does), the selects `px-3`.
+    $input = 'w-full rounded-md border border-slate-200 bg-white py-2 text-[13px] text-slate-800 placeholder:text-slate-400 '
         . 'focus:outline-none focus:ring-2 focus:ring-emerald-600/30 focus:border-emerald-600/30';
 @endphp
 
@@ -104,7 +107,7 @@
                 <div class="relative">
                     <input id="q" name="q" value="{{ $filters['q'] }}" maxlength="100"
                         placeholder="เช่น เลขที่ใบงาน, เรื่อง, สถานที่, ชื่อเจ้าหน้าที่"
-                        class="{{ $input }} pl-10">
+                        class="{{ $input }} pl-10 pr-3">
                     <span class="pointer-events-none absolute inset-y-0 left-0 flex w-9 items-center justify-center text-slate-400">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
@@ -117,13 +120,13 @@
             <div class="md:col-span-4 min-w-0">
                 @if ($tab === 'pending')
                     <label for="urgency" class="mb-1 block text-[12px] text-slate-600">เวลาที่เหลือ</label>
-                    <select id="urgency" name="urgency" class="{{ $input }}">
+                    <select id="urgency" name="urgency" class="{{ $input }} px-3">
                         <option value="">ทุกงานที่รอประเมิน</option>
                         <option value="soon" @selected($filters['urgency'] === 'soon')>ใกล้หมดเวลา (เหลือไม่เกิน {{ $expiringDays }} วัน)</option>
                     </select>
                 @else
                     <label for="score" class="mb-1 block text-[12px] text-slate-600">คะแนนที่ให้</label>
-                    <select id="score" name="score" class="{{ $input }}">
+                    <select id="score" name="score" class="{{ $input }} px-3">
                         <option value="">ทุกคะแนน</option>
                         @foreach ([5, 4, 3, 2, 1] as $s)
                             <option value="{{ $s }}" @selected($filters['score'] === $s)>{{ $s }} ดาว · {{ \App\Support\RatingLevel::scoreLabel($s) }}</option>
