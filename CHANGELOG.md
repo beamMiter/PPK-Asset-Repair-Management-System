@@ -22,6 +22,15 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The team board and a person's own rating page disagreed about what a score is called, and a person nobody had rated was
+  "ควรปรับปรุง".** The same 4.2 was "ดี" on the board and "ดีมาก" on the person's page (each page kept its own wording), and an
+  average of no ratings at all was 0.00, which the board read as "needs improvement" and the person's page as a percentage. The
+  wording is now one class (`App\Support\RatingLevel`: ≥ 4.5 ดีมาก · ≥ 4.0 ดี · ≥ 3.0 ปานกลาง · below that ควรปรับปรุง), a person
+  with no ratings is "ยังไม่มีการประเมิน" with no score, and a single rater's 1–5 stars have their own names (ไม่พอใจ … พอใจมาก)
+  in place of "เร่งด่วน/วิกฤต" on a 1–2 star review. On the person's page the "วันที่เสร็จสิ้น" column showed the day the
+  assignment row was created, the job column showed the request's database id instead of its number, the month was English
+  ("Sep 26"), and "ดูประวัติทั้งหมด" was a link to `#`; all four are fixed or gone. `RatingComponentsTest`, `RatingPagesTest`.
+
 - **`POST /api/auth/logout` answered 500 to a call made with the browser's own session.** It called `delete()` on
   `currentAccessToken()`, which is a `TransientToken` (no such method) when the request is signed in by a session cookie
   rather than a bearer token — reachable from the same site, or from Swagger while signed in. A bearer token still ends that
@@ -394,6 +403,26 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The three rating pages follow the same pattern as the other list pages, and say more.** "ประเมินความพึงพอใจ", the team
+  board and a person's summary each had a layout of their own (square-cornered cards and a sticky side column, an English
+  heading with an image icon, a narrow centred page with hand-drawn icons). They now use the list pages' frame — the same
+  header, full width, a table on a desktop and cards on a phone, the shared buttons and one star component — and carry what
+  a reader needs to act on:
+  - **ประเมินความพึงพอใจ:** every job shows who did it, where, when it closed and **how many days are left to rate it**
+    (green, amber inside a week, red inside three days, "วันสุดท้าย" on the last one); the list starts with the job that runs
+    out first (it was newest first), a banner counts the jobs with a week or less left over the whole list, the statistics
+    are visible on a phone too (they were hidden), the history is ordered by when it was rated and shows the stars, their
+    name and the date, and paging a list keeps you on it (`#pending` / `#history`). The window is counted in one place
+    (`ratingDaysLeft`), so the list's "N days left" and the guard's "too late" cannot disagree.
+  - **A person's summary:** four figures instead of three — average with its level, ratings received (and what share of
+    their finished jobs were rated), finished jobs with the **average repair time**, and how many ratings were 1–2 stars —
+    beside the score distribution and a **six-month trend**; a notice when there are fewer than five ratings ("ยังไม่ควรใช้
+    ตัดสินผลงาน"), which replaces the old generated "ประสิทธิภาพเชิงกลยุทธ์" paragraph that called one 5-star review
+    "consistently above standard"; the recent jobs show the request number, close date and **what each was rated**; each
+    comment links to its job.
+  - **The team board:** Thai headings, a Material Symbols icon like the other pages, and the shared level / stars / button.
+  Dates on these pages are Thai with the Buddhist year (`ThaiDate::short`, `monthYear`). The rating dialog itself is not
+  touched. Not checked in a browser.
 - **One password rule for a password a person chooses for themselves.** Sign-up, the reset page and changing your own
   password accepted 8 characters of anything, while the API's reset asked for 8 with a letter and a digit. All of them now
   ask for at least 8 characters with both a letter (Thai letters count) and a digit, the sign-up and reset forms say so
