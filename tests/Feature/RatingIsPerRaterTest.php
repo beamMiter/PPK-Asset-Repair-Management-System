@@ -66,10 +66,16 @@ class RatingIsPerRaterTest extends TestCase
         return $req;
     }
 
+    /** A rating by somebody who is not the reporter, as the data of before the rule can hold. */
+    private function oldRatingBy(User $rater, MaintenanceRequest $req, int $score, ?string $comment = null): void
+    {
+        MaintenanceRating::create(['maintenance_request_id' => $req->id, 'rater_id' => $rater->id, 'technician_id' => $this->tech->id, 'score' => $score, 'comment' => $comment]);
+    }
+
     public function test_an_admins_rating_does_not_take_the_job_off_the_reporters_waiting_list(): void
     {
         $req = $this->closedJobWithTeam();
-        $this->actingAs($this->admin)->post(route('maintenance.requests.rating.store', $req), ['score' => 4]);
+        $this->oldRatingBy($this->admin, $req, 4);
         $this->assertSame(1, MaintenanceRating::where('maintenance_request_id', $req->id)->count());
 
         $page = $this->actingAs($this->member)->get(route('maintenance.requests.rating.evaluate'))->assertOk();
@@ -82,7 +88,7 @@ class RatingIsPerRaterTest extends TestCase
     public function test_the_history_shows_the_reporters_own_rating_not_the_admins(): void
     {
         $req = $this->closedJobWithTeam();
-        $this->actingAs($this->admin)->post(route('maintenance.requests.rating.store', $req), ['score' => 1, 'comment' => 'ความเห็นของแอดมิน']);
+        $this->oldRatingBy($this->admin, $req, 1, 'ความเห็นของแอดมิน');
         $this->actingAs($this->member)->post(route('maintenance.requests.rating.store', $req), ['score' => 5, 'comment' => 'ความเห็นของผู้แจ้ง']);
 
         $page = $this->actingAs($this->member)->get(route('maintenance.requests.rating.evaluate', ['tab' => 'rated']))->assertOk();
@@ -96,7 +102,7 @@ class RatingIsPerRaterTest extends TestCase
     public function test_the_rate_button_is_the_reporters_until_they_have_rated_themselves(): void
     {
         $req = $this->closedJobWithTeam();
-        $this->actingAs($this->admin)->post(route('maintenance.requests.rating.store', $req), ['score' => 4]);
+        $this->oldRatingBy($this->admin, $req, 4);
 
         $this->assertTrue($this->member->can('rate', $req->fresh()), 'the admin\'s rating did not use up the reporter\'s');
 

@@ -21,6 +21,8 @@ class RatingDialogTest extends TestCase
 
     private User $admin;
 
+    private User $reporter;
+
     private MaintenanceRequest $job;
 
     protected function setUp(): void
@@ -29,9 +31,10 @@ class RatingDialogTest extends TestCase
 
         $this->admin = User::factory()->create(['role' => 'admin']);
         $tech = User::factory()->create(['role' => 'it_support']);
+        $this->reporter = User::factory()->create(['role' => 'member']);
         $this->job = MaintenanceRequest::factory()->create([
             'status' => MaintenanceRequest::STATUS_CLOSED, 'closed_at' => now()->subDay(),
-            'reporter_id' => User::factory()->create(['role' => 'member'])->id, 'technician_id' => $tech->id,
+            'reporter_id' => $this->reporter->id, 'technician_id' => $tech->id,
         ]);
         MaintenanceAssignment::create(['maintenance_request_id' => $this->job->id, 'user_id' => $tech->id, 'status' => 'done', 'is_lead' => true]);
     }
@@ -98,7 +101,7 @@ class RatingDialogTest extends TestCase
     public function test_the_comment_box_carries_the_limit_the_server_enforces_and_a_counter(): void
     {
         // the limit is not written down here: it is read from the server's own refusal, as FormFieldLimitsTest does
-        $this->actingAs($this->admin)->from('/x')->post(route('maintenance.requests.rating.store', $this->job), ['score' => 5, 'comment' => str_repeat('ก', 20000)]);
+        $this->actingAs($this->reporter)->from('/x')->post(route('maintenance.requests.rating.store', $this->job), ['score' => 5, 'comment' => str_repeat('ก', 20000)]);
         $message = session('errors')?->first('comment') ?? '';
         $this->assertMatchesRegularExpression('/(\d+) ตัวอักษร/u', $message, "the server did not name a limit: “{$message}”");
         preg_match('/(\d+) ตัวอักษร/u', $message, $limit);
@@ -129,10 +132,10 @@ class RatingDialogTest extends TestCase
 
     public function test_the_dialog_opens_again_after_a_refused_rating_with_what_was_typed(): void
     {
-        $this->actingAs($this->admin)->from(route('maintenance.requests.show', $this->job))
+        $this->actingAs($this->reporter)->from(route('maintenance.requests.show', $this->job))
             ->post(route('maintenance.requests.rating.store', $this->job), ['score' => 1, 'comment' => '']);   // 1 star needs a reason
 
-        $html = $this->actingAs($this->admin)->get(route('maintenance.requests.show', $this->job))->getContent();
+        $html = $this->actingAs($this->reporter)->get(route('maintenance.requests.show', $this->job))->getContent();
 
         $this->assertStringContainsString('ratingOpen: true', $html, 'the dialog is open, not silently closed');
         $this->assertStringContainsString('score: 1,', $html, 'the star that was picked is still picked');

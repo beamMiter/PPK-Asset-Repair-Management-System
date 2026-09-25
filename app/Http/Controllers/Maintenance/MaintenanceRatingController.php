@@ -307,14 +307,11 @@ class MaintenanceRatingController extends Controller
     // ตรวจสอบสิทธิ์
     protected function guardRatingAccess(MaintenanceRequest $maintenanceRequest, User $user): ?RedirectResponse
     {
-        // 1. อนุญาตให้ Admin หรือ Supervisor เข้าถึงได้เสมอ (เพื่อการตรวจสอบหรือช่วยประเมิน)
-        $isAdminTeam = $user->isAdmin() || $user->isSupervisor();
-
-        if (!$isAdminTeam) {
-            // 2. ถ้าไม่ใช่ Admin ต้องเป็นผู้แจ้งเท่านั้น
-            if (!$maintenanceRequest->reporter_id || (int) $maintenanceRequest->reporter_id !== (int) $user->id) {
-                abort(403, 'คุณไม่มีสิทธิ์ให้คะแนนงานนี้ คุณต้องเป็นผู้แจ้งซ่อมจึงจะสามารถประเมินได้');
-            }
+        // 1. เฉพาะ "ผู้แจ้งซ่อม" ของใบงานนี้เท่านั้นที่ประเมินได้ — ทุกบทบาท รวมถึง Admin / Supervisor. The rate button, the policy and the
+        //    API already said so; this door let admins and supervisors in too, and their stars were counted in a technician's average
+        //    beside the reporter's (a rating is the reporter's word on the service they received).
+        if (! $maintenanceRequest->reporter_id || (int) $maintenanceRequest->reporter_id !== (int) $user->id) {
+            abort(403, 'คุณไม่มีสิทธิ์ให้คะแนนงานนี้ คุณต้องเป็นผู้แจ้งซ่อมจึงจะสามารถประเมินได้');
         }
 
         // 3. ตรวจสอบสถานะ (ต้องเป็น Resolved หรือ Closed เท่านั้น)
