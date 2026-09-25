@@ -16,6 +16,18 @@ final class ThaiDate
         return $date->copy()->locale('th')->translatedFormat('j F') . ' ' . ($date->year + 543);
     }
 
+    /** 24 ก.ย. 2569 — for a table cell, where the long month name is too wide */
+    public static function short(CarbonInterface $date): string
+    {
+        return $date->copy()->locale('th')->translatedFormat('j M') . ' ' . ($date->year + 543);
+    }
+
+    /** ก.ย. 2569 */
+    public static function monthYear(CarbonInterface $date): string
+    {
+        return $date->copy()->locale('th')->translatedFormat('M') . ' ' . ($date->year + 543);
+    }
+
     /** 24/09/2569 10:00 */
     public static function numericWithTime(CarbonInterface $date): string
     {
