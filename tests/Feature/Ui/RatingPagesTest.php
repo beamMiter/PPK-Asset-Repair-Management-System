@@ -316,6 +316,56 @@ class RatingPagesTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/', strip_tags($html), 'English month names');
     }
 
+    public function test_the_comments_are_the_ratings_that_have_one_newest_first_six_at_most(): void
+    {
+        $withComment = [];
+        foreach (range(1, 8) as $i) {   // 8 commented ratings, one a day apart
+            $withComment[$i] = $this->rate($this->finishedJob(20 + $i), 4, "ความเห็นที่ {$i}", now()->subDays(20 - $i), User::factory()->create());
+        }
+        $this->rate($this->finishedJob(3), 5, null, now()->subHour(), User::factory()->create());   // the newest rating, but no words
+        $this->rate($this->finishedJob(3), 5, '', now()->subMinutes(30), User::factory()->create());
+
+        $page = $this->summary();
+        $comments = $page->viewData('comments');
+
+        $this->assertCount(6, $comments);
+        $this->assertSame(collect(range(8, 3))->map(fn ($i) => $withComment[$i]->id)->all(), $comments->pluck('id')->all(), 'newest comment first');
+        $page->assertSee('ความเห็นที่ 8')->assertDontSee('ความเห็นที่ 2')
+            ->assertDontSee('ไม่มีข้อความความคิดเห็น');   // a card with no words told the reader nothing: it is not listed at all
+    }
+
+    public function test_a_person_with_ratings_but_no_comments_says_so(): void
+    {
+        $this->rate($this->finishedJob(3), 5);
+
+        $this->summary()->assertSee('ยังไม่มีความคิดเห็น');
+    }
+
+    public function test_each_comment_wears_the_avatar_the_system_uses_for_that_person(): void
+    {
+        $plain = User::factory()->create(['name' => 'สมหญิง ใจดี']);   // no photo: the initials avatar
+        $this->rate($this->finishedJob(3), 5, 'ดีมาก', null, $plain);
+
+        $page = $this->summary()->assertSee('สมหญิง ใจดี');
+        $html = $page->getContent();
+
+        $this->assertStringStartsWith('data:image/svg+xml', $plain->avatar_thumb_url);
+        $this->assertStringContainsString('src="' . e($plain->avatar_thumb_url) . '"', $html, 'the same default avatar as the user list and the chat');
+        $this->assertStringNotContainsString('bg-emerald-600 text-[13px] font-bold text-white', $html, 'the hand-made initials circle is gone');
+    }
+
+    public function test_a_rater_with_a_photo_shows_the_photo(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        \Illuminate\Support\Facades\Storage::disk('public')->put('avatars/9-128.webp', 'x');
+        $withPhoto = User::factory()->create(['profile_photo_thumb' => 'avatars/9-128.webp']);
+        $this->rate($this->finishedJob(3), 4, 'บริการดี', null, $withPhoto);
+
+        $html = $this->summary()->getContent();
+
+        $this->assertStringContainsString('src="' . e(\Illuminate\Support\Facades\Storage::url('avatars/9-128.webp')) . '"', $html);
+    }
+
     public function test_the_summary_uses_the_same_frame_as_the_other_pages(): void
     {
         $html = $this->summary()->getContent();

@@ -355,9 +355,13 @@ class MaintenanceRatingController extends Controller
             ];
         });
 
-        // ความคิดเห็นล่าสุด (จำกัดเพียง 6 รายการ)
-        $reviews = $user->technicianRatings()
-            ->with(['rater:id,name,role', 'request:id,request_no,title'])
+        // ความคิดเห็นล่าสุด — only ratings that HAVE a comment (a card that says "no comment" tells the reader nothing), newest
+        // first, six of them. The person is drawn with their own avatar (photo, or the system's initials default), so those columns
+        // are loaded with the name.
+        $comments = $user->technicianRatings()
+            ->whereNotNull('comment')
+            ->where('comment', '!=', '')
+            ->with(['rater:id,name,role,profile_photo_path,profile_photo_thumb', 'request:id,request_no,title'])
             ->latest()
             ->take(6)
             ->get();
@@ -382,6 +386,9 @@ class MaintenanceRatingController extends Controller
             ->pluck('score', 'maintenance_request_id');
 
         if (request()->wantsJson()) {
+            // (unchanged) the latest six ratings, with or without a comment
+            $reviews = $user->technicianRatings()->with('rater:id,name,role')->latest()->take(6)->get();
+
             return response()->json([
                 'id'          => $user->id,
                 'name'        => $user->name,
@@ -404,7 +411,7 @@ class MaintenanceRatingController extends Controller
             'lowCount' => $lowCount,
             'trend' => $trend,
             'repairTime' => $this->averageRepairTime($user),
-            'reviews' => $reviews,
+            'comments' => $comments,
             'recentJobs' => $recentJobs,
             'jobScores' => $jobScores,
         ]);

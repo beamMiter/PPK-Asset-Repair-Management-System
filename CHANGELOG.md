@@ -403,6 +403,19 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **"ความคิดเห็นล่าสุด" on a person's rating page lists only ratings that have a comment, each worn by the system's own
+  avatar, and the demo data now has the people to write them.** The section listed the latest six ratings, most of them
+  without a word ("ไม่มีข้อความความคิดเห็น" on card after card), and drew each rater as a hand-made coloured circle with
+  two letters; it now lists the latest six *comments* (a person with none says "ยังไม่มีความคิดเห็น") and shows the rater's
+  photo, or the initials avatar every other page uses when there is none (`avatar_thumb_url`). The JSON of the same page is
+  unchanged. The seeded data had 6 members and 10 comments in 31 ratings, and two technicians with no comment at all, so
+  the section could not look like the real thing: `UserSeeder` now has **5 more members** (radiology, administration,
+  personnel, and a second one in OPD and IPD — 20 people in all) and `DemoDataSeeder` **16 more closed jobs they
+  reported**, spread over the last six months, each rated with a Thai comment of a different kind (praise, "fixed, but…",
+  and two low scores with the reason a 1–2 star rating needs). Now 88 requests, 48 ratings, 27 with a comment; every
+  technician has at least three, and the six-month trend has ratings in every month. `SeederIntegrityTest` pins all of that
+  (the relationships of the new jobs are checked like every other), `RatingPagesTest` the section. Re-seed
+  (`php artisan migrate:fresh --seed`) to see it.
 - **The three rating pages follow the same pattern as the other list pages, and say more.** "ประเมินความพึงพอใจ", the team
   board and a person's summary each had a layout of their own (square-cornered cards and a sticky side column, an English
   heading with an image icon, a narrow centred page with hand-drawn icons). They now use the list pages' frame — the same

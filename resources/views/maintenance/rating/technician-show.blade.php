@@ -27,7 +27,6 @@
 
     $scoreTone = fn (int $score) => $score >= 4 ? 'text-emerald-700' : ($score === 3 ? 'text-amber-600' : 'text-rose-600');
     $barTone = fn (int $stars) => $stars >= 4 ? 'bg-emerald-500' : ($stars === 3 ? 'bg-amber-400' : 'bg-rose-400');
-    $initials = fn (?string $name) => mb_strtoupper(mb_substr(trim((string) $name) ?: 'U', 0, 2));
 
     $tile = 'rounded-md border border-slate-200 bg-white p-[16px]';
     $tileLabel = 'text-[11px] font-semibold uppercase tracking-wider text-slate-400';
@@ -271,20 +270,23 @@
         <section>
             <div class="mb-[12px] flex items-center justify-between gap-3">
                 <h2 class="{{ $cardTitle }}">ความคิดเห็นล่าสุด</h2>
-                <span class="text-[12px] text-slate-400">6 รายการล่าสุด</span>
+                <span class="text-[12px] text-slate-400">เฉพาะการประเมินที่มีความคิดเห็น · ล่าสุด 6 รายการ</span>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-[12px]">
-                @forelse ($reviews as $review)
+                @forelse ($comments as $review)
+                    @php $rater = $review->rater; @endphp
                     <div class="{{ $card }} p-[16px]">
                         <div class="mb-3 flex items-start justify-between gap-3">
                             <div class="flex min-w-0 items-center gap-3">
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[13px] font-bold text-white">
-                                    {{ $initials($review->rater?->name) }}
+                                {{-- the person's photo, or the initials avatar the whole system uses when there is none --}}
+                                <div class="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                                    <img src="{{ $rater?->avatar_thumb_url ?? \App\Support\InitialsAvatar::url('User', 128) }}"
+                                        alt="{{ $rater?->name }}" class="h-full w-full object-cover" loading="lazy">
                                 </div>
                                 <div class="min-w-0">
-                                    <div class="truncate text-[14px] font-semibold leading-tight text-slate-900">{{ $review->rater?->name ?? 'ไม่ระบุชื่อ' }}</div>
-                                    <div class="mt-0.5 text-[11px] text-slate-400">{{ $review->rater?->role_label ?? 'ผู้ใช้' }}</div>
+                                    <div class="truncate text-[14px] font-semibold leading-tight text-slate-900">{{ $rater?->name ?? 'ไม่ระบุชื่อ' }}</div>
+                                    <div class="mt-0.5 text-[11px] text-slate-400">{{ $rater?->role_label ?? 'ผู้ใช้' }}</div>
                                 </div>
                             </div>
                             <div class="shrink-0 text-right">
@@ -293,11 +295,7 @@
                             </div>
                         </div>
 
-                        @if ($review->comment)
-                            <p class="break-words text-[13px] italic leading-relaxed text-slate-600">“{{ $review->comment }}”</p>
-                        @else
-                            <p class="text-[13px] text-slate-400">ไม่มีข้อความความคิดเห็น</p>
-                        @endif
+                        <p class="break-words text-[13px] italic leading-relaxed text-slate-600">“{{ $review->comment }}”</p>
 
                         <div class="mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-3 text-[11px] text-slate-400">
                             @if ($review->request)
