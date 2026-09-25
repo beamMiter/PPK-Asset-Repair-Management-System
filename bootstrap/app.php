@@ -37,6 +37,9 @@ return Application::configure(basePath: dirname(__DIR__))
     */
     ->withMiddleware(function (Middleware $middleware) {
 
+        // First of all: nothing below may build a link from a Host header this app is not known by.
+        $middleware->prepend(\App\Http\Middleware\TrustProductionHosts::class);
+
         /*
         |-----------------------------
         | WEB Middleware Group

@@ -78,6 +78,10 @@ return [
     // Optional separate front end (SPA). Empty = the Blade app serves the password-reset page itself.
     'frontend_url' => env('APP_FRONTEND_URL'),
 
+    // Host names, besides APP_URL's own, this app may be reached by in production (comma separated: "ppk.example.go.th,10.0.0.5").
+    // Any other Host header is refused with a 400 — see App\Http\Middleware\TrustProductionHosts.
+    'trusted_hosts' => array_values(array_filter(array_map('trim', explode(',', (string) env('APP_TRUSTED_HOSTS', ''))))),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

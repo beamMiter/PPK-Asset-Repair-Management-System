@@ -557,6 +557,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **A password-reset e-mail could carry a link to somebody else's site.** The link was built by `route()`, which takes its
+  address from the request's `Host` header, so a request that said `Host: evil.test` and named a victim's e-mail address got
+  the victim a genuine message from this system whose button led to `evil.test/reset-password/<token>` — the token then
+  reset the password on the real site. The link now starts with `APP_URL` whatever the request said, and in production a
+  `Host` this app is not known by is refused with a 400 (`TrustProductionHosts`; known = the host of `APP_URL` plus
+  `APP_TRUSTED_HOSTS`, comma separated, for an IP address or a second name). Left off in `local`, under test, and while
+  `APP_URL` is still `localhost` — that is a setting nobody has filled in, and refusing every real host because of it would
+  lock everyone out. Covered by `HostHeaderTest`.
 - **`GET /debug/login` signed anyone in as user 410** — no middleware, no password (`Auth::loginUsingId(410)`), in the
   routes since the UI-polish merge. Removed together with `/debug/whoami`; `NoDebugRoutesTest` forbids any "debug"
   route from coming back.

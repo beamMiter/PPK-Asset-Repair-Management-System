@@ -20,12 +20,15 @@ class AppServiceProvider extends ServiceProvider
 
         // The e-mailed link opens this app's own reset page; a separate SPA can still take over by setting
         // APP_FRONTEND_URL (config `app.frontend_url`).
+        // The address is APP_URL, never the host the request came in on: `route()` builds from the Host header, so a request that
+        // named another host ("Host: evil.test") got the victim a genuine e-mail whose link led to evil.test — and handed over the
+        // reset token.
         ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
             $email = $notifiable->getEmailForPasswordReset();
 
             return config('app.frontend_url')
                 ? rtrim(config('app.frontend_url'), '/')."/password-reset/$token?email=".urlencode($email)
-                : route('password.reset', ['token' => $token, 'email' => $email]);
+                : rtrim((string) config('app.url'), '/').route('password.reset', ['token' => $token, 'email' => $email], false);
         });
 
         if (app()->isLocal()) {
