@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\Request;
 use App\Models\User;
 
@@ -64,6 +65,10 @@ class MetaController extends Controller
         $q = User::query()->active()->select('id','name','role','department');
         if ($role) {
             $q->where('role', $role);
+        }
+        // A plain member is offered the staff they deal with, not a directory of every other member's name and department.
+        if (! Gate::allows('maintenance-type-manage')) {
+            $q->whereIn('role', User::teamRoles());
         }
         $rows = $q->orderBy('name')->limit(200)->get()->map(fn(User $u) => [
             'id'         => $u->id,

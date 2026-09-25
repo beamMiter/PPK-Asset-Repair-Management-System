@@ -198,6 +198,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('/categories',  [MetaController::class, 'categories'])->name('categories');
         // ?role=admin|supervisor|it_support|network|programmer|technician|member (ไม่ส่ง = ทุกบทบาท)
         //   สูงสุด 200 คน ไม่รวมบัญชีที่ถูกระงับ → {id, name, role, department}
+        //   ฝ่ายจัดการ (can:maintenance-type-manage) เห็นทุกบทบาท · สมาชิกทั่วไปเห็นเฉพาะเจ้าหน้าที่ (ไม่เห็นสมาชิกคนอื่น)
         Route::get('/users',       [MetaController::class, 'users'])->name('users');
     });
 
@@ -217,7 +218,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         // {data: {<status>: จำนวน}}
         Route::get('/maintenance/status-counts',   [StatsController::class, 'maintenanceStatusCounts'])->name('maintenance.status-counts');
         // ผลงานต่อผู้รับผิดชอบหลัก (สูงสุด 50) → {id, name, total, open, closed, avg_hours}
-        Route::get('/maintenance/technicians',     [StatsController::class, 'technicianSummary'])->name('maintenance.technicians');
+        //   เฉพาะฝ่ายจัดการ (can:maintenance-type-manage) เหมือนกระดานคะแนนเจ้าหน้าที่ — เป็นผลงานรายบุคคล ไม่ใช่ตัวเลขรวม
+        Route::get('/maintenance/technicians',     [StatsController::class, 'technicianSummary'])->name('maintenance.technicians')
+            ->middleware('can:maintenance-type-manage');
         // {id, name, count} เรียงจากมากไปน้อย
         Route::get('/assets/by-department',        [StatsController::class, 'assetsByDepartment'])->name('assets.by-department');
     });

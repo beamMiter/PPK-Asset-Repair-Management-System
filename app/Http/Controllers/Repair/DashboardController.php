@@ -43,7 +43,8 @@ class DashboardController extends Controller
                 : ['type' => 'warning', 'message' => 'ไม่พบรายการตามเงื่อนไขที่ค้นหา', 'position' => 'tc', 'timeout' => 3200, 'size' => 'md']);
         }
 
-        $techWorkload = $this->technicianWorkload();
+        // who is carrying how much is about people, not the service: management sees it, a plain member does not
+        $techWorkload = \Illuminate\Support\Facades\Gate::allows('maintenance-type-manage') ? $this->technicianWorkload() : collect();
 
         return view('repair.dashboard', compact('stats', 'monthlyTrend', 'byAssetType', 'byDept', 'kpi', 'techWorkload'));
     }
