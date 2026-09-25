@@ -557,6 +557,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **The sign-in page could be put in an invisible frame on another site.** No response carried a framing rule, so a page
+  on any other site could load `/login` in a transparent frame and have staff type their password "into" it. Every response
+  (web, API, error pages) now carries `X-Frame-Options: SAMEORIGIN` and CSP `frame-ancestors 'self'`, `base-uri 'self'` (an
+  injected `<base>` cannot redirect every relative link and form), `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: strict-origin-when-cross-origin` (a reset link has its token in the path) and, in production over
+  https only, `Strict-Transport-Security` for 180 days on this host. A header a response already sets is left alone.
+  There is no full Content-Security-Policy yet — the pages take scripts from a CDN and carry inline Alpine, so one that
+  forbids them would break every screen; that is its own piece of work. `SecurityHeadersTest`.
 - **A password-reset e-mail could carry a link to somebody else's site.** The link was built by `route()`, which takes its
   address from the request's `Host` header, so a request that said `Host: evil.test` and named a victim's e-mail address got
   the victim a genuine message from this system whose button led to `evil.test/reset-password/<token>` — the token then
