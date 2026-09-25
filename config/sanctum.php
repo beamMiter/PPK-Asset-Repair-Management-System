@@ -47,7 +47,9 @@ return [
     |
     */
 
-    'expiration' => null,
+    // 30 days, then the client signs in again. It was null — a token, once issued, worked for ever, so one that leaked (a lost phone,
+    // a script left on a shared machine) kept its access until somebody thought to revoke it. 0 = never expires.
+    'expiration' => (int) env('SANCTUM_TOKEN_EXPIRATION_MINUTES', 43200),
 
     /*
     |--------------------------------------------------------------------------

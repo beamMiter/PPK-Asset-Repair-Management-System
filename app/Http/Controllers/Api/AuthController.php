@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\LoginAttempt;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthController extends Controller
@@ -120,8 +122,15 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $token = $request->user()?->currentAccessToken();
-        if ($token) {
-            $token->delete();
+
+        if ($token instanceof PersonalAccessToken) {
+            $token->delete();                       // a call with a bearer token: that token ends
+        } elseif ($request->hasSession()) {
+            // Signed in by the browser's own session (a same-site call): there is no token to delete — it used to be
+            // `->delete()` on a TransientToken, which has no such method, so this answered 500. The session ends instead.
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
         }
 
         return response()->json(['message' => 'ออกจากระบบเรียบร้อยแล้ว']);

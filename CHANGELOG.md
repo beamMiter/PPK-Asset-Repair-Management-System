@@ -22,6 +22,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`POST /api/auth/logout` answered 500 to a call made with the browser's own session.** It called `delete()` on
+  `currentAccessToken()`, which is a `TransientToken` (no such method) when the request is signed in by a session cookie
+  rather than a bearer token — reachable from the same site, or from Swagger while signed in. A bearer token still ends that
+  one token; a session-signed call now ends the session. No screen calls this endpoint and no test did, which is how it
+  stayed unseen. `ApiTokenLifecycleTest`.
+
 - **Text fields let you type past what the server takes, and a file was refused only after it was uploaded.** A text longer
   than the server's `max:` was sent, refused, and on a page that prints no errors the form came back with nothing said — or the
   browser cut a long paste silently, so text you thought you had written was not there. Every text field a form limits now
@@ -563,6 +569,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **An API token worked for ever.** `sanctum.expiration` was `null`, so a token that leaked (a lost phone, a script left on a
+  shared machine) kept its access until somebody thought to revoke it. Tokens now expire 30 days after they were issued
+  (`SANCTUM_TOKEN_EXPIRATION_MINUTES`, `0` = never) and the client signs in again; expired rows are pruned daily
+  (`sanctum:prune-expired`, needs the scheduler running — an expired token is refused whether or not it is pruned).
+  **Tokens issued more than 30 days ago stop working when this is deployed.** `ApiTokenLifecycleTest`.
 - **"Forgot my password" told anyone which e-mail addresses have an account, and a reset left the old way in open.** The
   browser page said "ไม่พบบัญชีที่ใช้อีเมลนี้" for an address without an account (the API answered 400 instead of 200), a
   second request within a minute said "wait" only for an address that has one, and setting a new password answered
