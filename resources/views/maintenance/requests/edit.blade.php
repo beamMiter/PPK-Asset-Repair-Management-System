@@ -338,7 +338,7 @@
         <div id="assignModal"
             class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-3 sm:p-4">
             <div
-                class="relative z-[10000] w-full max-w-4xl overflow-hidden rounded-xl border {{ $line }} bg-white ">
+                class="relative z-[10000] w-full max-w-4xl overflow-hidden rounded-md border {{ $line }} bg-white ">
 
                 {{-- Modal Header --}}
                 <div class="flex items-center justify-between border-b {{ $line }} px-6 py-4">

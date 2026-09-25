@@ -76,7 +76,7 @@
                             x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                             style="display: none;">
 
-                            <div class="bg-white rounded-xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
+                            <div class="bg-white rounded-md w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
                                 @click.away="showSignModal = false" x-data="slaPrintDialog(@js($printRows))">
 
                                 <div

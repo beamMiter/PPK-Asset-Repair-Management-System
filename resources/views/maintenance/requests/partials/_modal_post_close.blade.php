@@ -4,7 +4,7 @@
                 class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
                 <div
                     class="relative z-[10000] w-full max-w-md transform transition-all animate-in fade-in zoom-in duration-300">
-                    <div class="overflow-hidden rounded-xl border border-slate-200 bg-white ">
+                    <div class="overflow-hidden rounded-md border border-slate-200 bg-white ">
                         {{-- Icon Header --}}
                         <div class="bg-slate-50 px-6 py-8 text-center border-b border-slate-100">
                             <div

@@ -492,7 +492,7 @@
                 x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
                 x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak style="display: none;">
 
-                <div class="bg-white rounded-xl w-full max-w-md overflow-hidden border border-slate-200"
+                <div class="bg-white rounded-md w-full max-w-md overflow-hidden border border-slate-200"
                     @click.away="showCreateModal = false">
 
                     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -536,7 +536,7 @@
                     x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak
                     style="display: none;">
 
-                    <div class="bg-white rounded-xl w-full max-w-sm overflow-hidden border border-slate-200"
+                    <div class="bg-white rounded-md w-full max-w-sm overflow-hidden border border-slate-200"
                         @click.away="showLockModal = false">
 
                         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -583,7 +583,7 @@
                         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak
                         style="display: none;">
 
-                        <div class="bg-white rounded-xl w-full max-w-sm overflow-hidden border border-slate-200"
+                        <div class="bg-white rounded-md w-full max-w-sm overflow-hidden border border-slate-200"
                             @click.away="showDeleteModal = false">
 
                             <div

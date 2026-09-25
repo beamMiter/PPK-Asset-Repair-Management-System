@@ -2,7 +2,7 @@
         <div id="historyModal"
             class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
             <div
-                class="relative z-[10000] w-full max-w-2xl rounded-xl border {{ $line }} bg-white overflow-hidden animate-in fade-in zoom-in duration-200">
+                class="relative z-[10000] w-full max-w-2xl rounded-md border {{ $line }} bg-white overflow-hidden animate-in fade-in zoom-in duration-200">
                 {{-- Header: same icon / text sizing as the assign-team dialog --}}
                 <div class="flex items-center justify-between border-b {{ $line }} px-6 py-4">
                     <div class="flex items-start gap-3 min-w-0">

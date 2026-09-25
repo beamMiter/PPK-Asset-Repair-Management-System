@@ -55,7 +55,7 @@ style="display: none;"
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100 scale-100"
         x-transition:leave-end="opacity-0 scale-95"
-        class="w-full max-w-md bg-white rounded-xl overflow-hidden border border-slate-200"
+        class="w-full max-w-md bg-white rounded-md overflow-hidden border border-slate-200"
         @click.away="cancel()"
         @keydown.escape.window="cancel()"
     >

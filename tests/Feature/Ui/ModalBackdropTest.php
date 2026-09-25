@@ -8,7 +8,7 @@ use App\Models\User;
 use Tests\TestCase;
 
 /**
- * Every dialog on a page — assign team, confirm reject/cancel/hold/close, the history log, the shared confirm dialog —
+ * Every dialog on a page — assign team, confirm reject/cancel/hold/close, the history log, the rating dialog, the shared confirm dialog —
  * dims the page behind it the same way: bg-slate-900/40 with a light blur (backdrop-blur-sm). The "closed" dialog that
  * pops up right after approving a job's repair (_modal_post_close, "อนุมัติผลการซ่อมบำรุงเรียบร้อยแล้ว!") used a darker
  * tint and a heavier blur of its own — the one dialog on the page that looked different from the rest.
@@ -32,7 +32,7 @@ class ModalBackdropTest extends TestCase
 
         $this->assertMatchesRegularExpression('/id="postCloseModal"/', $html);
 
-        // its own opening tag, not the whole page (the rating dialog on the same page has its own bg-slate-900/60)
+        // its own opening tag, not the whole page (which holds several dialogs)
         preg_match('/<div id="postCloseModal"[^>]*>/', $html, $tag);
         $this->assertNotEmpty($tag, 'the dialog is on the page');
         $this->assertStringContainsString(self::BACKDROP, $tag[0], 'the same tint and blur as every other dialog');
@@ -50,7 +50,8 @@ class ModalBackdropTest extends TestCase
 
         $html = $this->actingAs($admin)->get(route('maintenance.requests.show', $req))->assertOk()->getContent();
 
-        // one per dialog wrapper (_modal_assign, _modal_history, and one per _modal_status_actions dialog on this page)
-        $this->assertGreaterThanOrEqual(3, substr_count($html, self::BACKDROP), 'the assign, history and status dialogs all use it');
+        // one per dialog wrapper (_modal_assign, _modal_history, _modal_rating, and one per _modal_status_actions dialog on this page)
+        $this->assertGreaterThanOrEqual(4, substr_count($html, self::BACKDROP), 'the assign, history, rating and status dialogs all use it');
+        $this->assertStringNotContainsString('bg-slate-900/60', $html, 'no dialog on the page has a darker tint of its own');
     }
 }

@@ -2,7 +2,7 @@
         @if ($canReject)
             <div id="rejectModal"
                 class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-                <div class="relative z-[10000] w-full max-w-xl rounded-xl border {{ $line }} bg-white ">
+                <div class="relative z-[10000] w-full max-w-xl rounded-md border {{ $line }} bg-white ">
                     <div class="flex items-center justify-between border-b {{ $line }} px-4 py-3">
                         <div class="text-sm font-semibold text-rose-600">ไม่รับเรื่อง</div>
                         <x-ui.button id="closeRejectModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
@@ -31,7 +31,7 @@
         @if ($canCancel)
             <div id="cancelModal"
                 class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-                <div class="relative z-[10000] w-full max-w-xl rounded-xl border {{ $line }} bg-white ">
+                <div class="relative z-[10000] w-full max-w-xl rounded-md border {{ $line }} bg-white ">
                     <div class="flex items-center justify-between border-b {{ $line }} px-4 py-3">
                         <div class="text-sm font-semibold text-slate-600">ยกเลิกการซ่อมบำรุง</div>
                         <x-ui.button id="closeCancelModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
@@ -60,7 +60,7 @@
         @if ($canHold)
             <div id="holdModal"
                 class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-                <div class="relative z-[10000] w-full max-w-xl rounded-xl border {{ $line }} bg-white ">
+                <div class="relative z-[10000] w-full max-w-xl rounded-md border {{ $line }} bg-white ">
                     <div class="flex items-center justify-between border-b {{ $line }} px-4 py-3">
                         <div class="text-sm font-semibold text-slate-900">พักชั่วคราว</div>
                         <x-ui.button id="closeHoldModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
@@ -89,7 +89,7 @@
         @if ($canResolve)
             <div id="resolveModal"
                 class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-                <div class="relative z-[10000] w-full max-w-xl rounded-xl border {{ $line }} bg-white ">
+                <div class="relative z-[10000] w-full max-w-xl rounded-md border {{ $line }} bg-white ">
                     <div class="flex items-center justify-between border-b {{ $line }} px-4 py-3">
                         <div class="text-sm font-semibold text-slate-900">ซ่อมบำรุงเสร็จสิ้น</div>
                         <x-ui.button id="closeResolveModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />

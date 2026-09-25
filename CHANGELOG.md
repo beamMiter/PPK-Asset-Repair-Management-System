@@ -403,6 +403,20 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The rating dialog is built like the other dialogs, and every popup card has one corner: `rounded-md`.** The dialog on the job
+  page ("ประเมินความพึงพอใจ") was the odd one out: a darker backdrop (60% against 40%), a 2px square card with no border, `p-8`
+  padding, an 18px bold title, upper-case letter-spaced labels, its own text box inside a grey frame — and no length limit on
+  the comment (the server refuses over 1,000 characters, so a long one was sent, refused and only then said so; missed when
+  `maxlength` was added everywhere else). It now uses the frame of reject / cancel / hold / close: the same dimming, a bordered
+  card, a header with a close button (Escape and a click outside close it too), a body of `px-4 py-4 space-y-4`, the same
+  footer and the same text box, with `maxlength="1000"` and the character counter. What stays its own: the five big stars, which
+  now say what they mean as they are picked ("พอใจมาก" — the words of `RatingLevel`), and a 1–2 star rating shows the reason
+  box as required and stops an empty submit in the browser (the server already refused it). The popup cards had drifted to five
+  different radii over time (2px, 12px …); they are now all `rounded-md` (6px, the radius of the buttons and fields inside) —
+  assign team (both copies), the history log, the four confirm dialogs, the "closed" dialog, the rating dialog, the shared
+  confirm dialog, the SLA print dialog, the three chat dialogs, the photo cropper and the chat drawer — so a dialog stays a
+  little square. `DialogRadiusTest` pins each card and scans every view that holds an overlay, so a popup added later with a
+  corner of its own fails a test; `RatingDialogTest` pins the rating dialog. Not checked in a browser.
 - **"ประเมินความพึงพอใจ" copes with a long list, and a status is coloured text, not a boxed label.** The waiting jobs and the
   history were two lists one under the other, ten to a page, each with its own pager: with a hundred jobs neither could be read
   or paged, and the second was a long scroll away. They are now two **tabs** (รอประเมิน / ประเมินแล้ว, each with its count,
