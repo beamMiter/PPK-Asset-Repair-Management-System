@@ -5,8 +5,8 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 
 /**
- * `php artisan migrate:fresh --seed` gives a working demo: reference data, 15 people (see UserSeeder for the logins), 35
- * assets, ~70 repair requests in every status, and the Livechat board.
+ * `php artisan migrate:fresh --seed` gives a working demo: reference data, 20 people (see UserSeeder for the logins), 35
+ * assets, ~85 repair requests in every status, and the Livechat board.
  *
  * Production only ever gets the reference data — never demo accounts with well-known passwords. The demo seeders create
  * rows rather than look for existing ones: run them on an empty database (`migrate:fresh --seed`).

@@ -39,6 +39,13 @@ class UserSeeder extends Seeder
         // no e-mail: cannot use "forgot password" (an admin sets the password), signs in with the citizen id only
         'er'     => ['cid' => '1000000000014', 'name' => 'วิทยา กล้าหาญ',          'email' => null,                     'role' => User::ROLE_MEMBER,      'dept' => 'ER'],
         'fin'    => ['cid' => '1000000000015', 'name' => 'ศิริพร มั่นคง',          'email' => 'member5@example.com',    'role' => User::ROLE_MEMBER,      'dept' => 'FIN'],
+        // more of the hospital's own staff, so the people who rate the technicians (and write the comments on a technician's rating
+        // page) are not the same six: radiology, administration and personnel had nobody, and OPD / IPD had one member each
+        'rad'    => ['cid' => '1000000000016', 'name' => 'กมลชนก พรหมมา',          'email' => 'member6@example.com',    'role' => User::ROLE_MEMBER,      'dept' => 'RAD'],
+        'adm'    => ['cid' => '1000000000017', 'name' => 'ธีรพงษ์ อินทรวงศ์',       'email' => 'member7@example.com',    'role' => User::ROLE_MEMBER,      'dept' => 'ADM'],
+        'hr'     => ['cid' => '1000000000018', 'name' => 'สุพัตรา ศรีวงศ์',         'email' => 'member8@example.com',    'role' => User::ROLE_MEMBER,      'dept' => 'HR'],
+        'opd2'   => ['cid' => '1000000000019', 'name' => 'ณัฐพล เกษมสุข',          'email' => 'member9@example.com',    'role' => User::ROLE_MEMBER,      'dept' => 'OPD'],
+        'ipd2'   => ['cid' => '1000000000020', 'name' => 'จิราภรณ์ ทองสุข',         'email' => 'member10@example.com',   'role' => User::ROLE_MEMBER,      'dept' => 'IPD'],
     ];
 
     public function run(): void

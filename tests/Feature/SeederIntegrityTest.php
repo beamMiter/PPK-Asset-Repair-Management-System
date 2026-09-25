@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\ChatThread;
 use App\Models\Department;
 use App\Models\MaintenanceAssignment;
+use App\Models\MaintenanceRating;
 use App\Models\MaintenanceRequest;
 use App\Models\MaintenanceRequestType;
 use App\Models\Role;
@@ -292,6 +293,15 @@ class SeederIntegrityTest extends TestCase
             'rating window passed without a rating' => $requests->contains(fn ($r) => $r->status === 'closed' && ! $r->rating && $r->closed_at->lt($now->copy()->subDays(30))),
             'every star rating 1..5' => $requests->pluck('rating.score')->filter()->unique()->sort()->values()->all() === [1, 2, 3, 4, 5],
             'a rating without a comment' => $requests->contains(fn ($r) => $r->rating && blank($r->rating->comment)),
+            // a technician's rating page lists their latest COMMENTS with who wrote them, and draws a six-month trend
+            'every technician has 3+ comments to show' => collect(['it1', 'it2', 'net', 'dev', 'tech1', 'tech2', 'gone'])->every(
+                fn ($key) => MaintenanceRating::where('technician_id', UserSeeder::find($key)->id)->whereNotNull('comment')->where('comment', '!=', '')->count() >= 3
+            ),
+            'the comments come from 10+ different members' => MaintenanceRating::whereNotNull('comment')->where('comment', '!=', '')
+                ->whereIn('rater_id', User::where('role', 'member')->pluck('id'))->distinct()->count('rater_id') >= 10,
+            'ratings in each of the last six months' => collect(range(0, 5))->every(fn ($ago) => MaintenanceRating::whereBetween('created_at', [
+                $now->copy()->subMonths($ago)->startOfMonth(), $now->copy()->subMonths($ago)->endOfMonth(),
+            ])->exists()),
             'last year (5+)' => $requests->filter(fn ($r) => $r->request_date->year === $now->year - 1)->count() >= 5,
             'a request on a disposed asset' => $requests->contains(fn ($r) => $r->asset_id && Asset::find($r->asset_id)->status === Asset::STATUS_DISPOSED),
             'no asset' => $requests->contains(fn ($r) => $r->asset_id === null),
