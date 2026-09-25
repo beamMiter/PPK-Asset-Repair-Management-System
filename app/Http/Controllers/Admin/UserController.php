@@ -394,7 +394,15 @@ class UserController extends Controller
 
         Log::info('[Admin\UserController::suspend] account suspended', ['user_id' => $user->id, 'actor_id' => Auth::id()]);
 
-        return back()->with('toast', Toast::success("ระงับบัญชี {$user->name} แล้ว", 2800));
+        // A suspended person keeps the jobs they were on, and nothing else looks at them: say how many, so they are handed over.
+        $open = \App\Models\MaintenanceAssignment::where('user_id', $user->id)
+            ->where('status', '!=', \App\Models\MaintenanceAssignment::STATUS_CANCELLED)
+            ->whereHas('maintenanceRequest', fn ($request) => $request->whereIn('status', \App\Models\MaintenanceRequest::OPEN_STATUSES))
+            ->count();
+
+        return back()->with('toast', $open > 0
+            ? Toast::warning("ระงับบัญชี {$user->name} แล้ว แต่ยังมีงานค้าง {$open} งานที่มอบหมายให้คนนี้ กรุณามอบหมายเจ้าหน้าที่ใหม่", 6000)
+            : Toast::success("ระงับบัญชี {$user->name} แล้ว", 2800));
     }
 
     public function reactivate(User $user)
