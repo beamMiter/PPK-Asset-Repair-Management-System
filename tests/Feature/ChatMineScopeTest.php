@@ -104,10 +104,10 @@ class ChatMineScopeTest extends TestCase
         $this->assertSame(['all' => 4, 'mine' => 2], $all->viewData('counts'));
         $html = $all->getContent();
         $this->assertMatchesRegularExpression('/aria-current="page"[^>]*>\s*ทั้งหมด\s*<span[^>]*>4</', $html);
-        $this->assertMatchesRegularExpression('/ที่ฉันมีส่วนร่วม\s*<span[^>]*>2</', $html);
+        $this->assertMatchesRegularExpression('/กระทู้ที่มีส่วนร่วม\s*<span[^>]*>2</', $html);
 
         $mine = $this->actingAs($this->me)->get(route('chat.index', ['scope' => 'mine']))->assertOk()->getContent();
-        $this->assertMatchesRegularExpression('/aria-current="page"[^>]*>\s*ที่ฉันมีส่วนร่วม\s*<span/', $mine);
+        $this->assertMatchesRegularExpression('/aria-current="page"[^>]*>\s*กระทู้ที่มีส่วนร่วม\s*<span/', $mine);
         $this->assertSame(['all' => 4, 'mine' => 2], $this->actingAs($this->me)->get(route('chat.index', ['scope' => 'mine', 'q' => 'ตอบ']))->viewData('counts'), 'the counts are not narrowed by a search');
     }
 

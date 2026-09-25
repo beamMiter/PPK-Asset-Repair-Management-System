@@ -26,8 +26,8 @@ class ChatThread extends Model
     }
 
     /**
-     * Threads a person took part in: they started it, or they have written in it. The chat page's "ที่ฉันมีส่วนร่วม" list and the
-     * floating widget's "กระทู้ของฉัน" both mean this.
+     * Threads a person took part in: they started it, or they have written in it. The chat page's "กระทู้ที่มีส่วนร่วม" tab and the
+     * floating widget's list of the same name both mean this.
      */
     public function scopeInvolving(Builder $query, int $userId): Builder
     {

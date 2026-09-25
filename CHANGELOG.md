@@ -8,9 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **The chat page can show only the threads I took part in.** The floating widget's "กระทู้ของฉัน" was the only place that knew which
+- **The chat page can show only the threads I took part in.** The floating widget's "กระทู้ที่มีส่วนร่วม" was the only place that knew which
   threads a person had started or written in (and it shows the latest 15). The thread list on the chat page has two tabs now, "ทั้งหมด"
-  and "ที่ฉันมีส่วนร่วม", each with its count; the second is every thread I started or wrote in - opening a thread to read it does not
+  and "กระทู้ที่มีส่วนร่วม", each with its count; the second is every thread I started or wrote in - opening a thread to read it does not
   make it mine. Search, paging and the links to a thread stay inside the tab that is open, and an empty list says "คุณยังไม่ได้ตั้งหรือตอบกระทู้ใดเลย".
   `GET /api/threads?scope=mine` does the same for the mobile app (`openapi.yaml`). One definition, `ChatThread::involving()`, serves the
   page, the API and the widget. `ChatMineScopeTest`.
@@ -440,7 +440,7 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - **The chat speaks Thai.** It said "You", "Unknown user", "Send a message", "My Topics", "Go All topics" and, on a locked thread,
-  "Thread locked" among Thai. They read คุณ, ไม่ทราบผู้ใช้งาน, พิมพ์ข้อความ..., กระทู้ของฉัน, ไปที่กระทู้ทั้งหมด and
+  "Thread locked" among Thai. They read คุณ, ไม่ทราบผู้ใช้งาน, พิมพ์ข้อความ..., กระทู้ที่มีส่วนร่วม, ไปที่กระทู้ทั้งหมด and
   กระทู้นี้ถูกล็อก... now. A message's time was English too ("Saturday 3:45pm", and the browser's own format in the drawer); it is the
   Thai weekday and a 24-hour clock ("วันเสาร์ 15:45") on the page and in a message that arrives live, and the drawer's list shows
   "26 ก.ย. 2569 15:45". Technical terms stay English on purpose: "Locked" on the badges, "Emoji" and its groups (Smileys, Hands & Hearts,

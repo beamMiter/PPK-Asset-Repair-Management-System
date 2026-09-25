@@ -9,7 +9,7 @@
         $defaultThreadId = $activeThreadId;
         // which list is open: every thread, or only those I started or wrote in ("mine") - carried by every link that stays in the chat
         $scopeQuery = ($scope ?? 'all') === 'mine' ? ['scope' => 'mine'] : [];
-        $tabs = ['all' => ['ทั้งหมด', $counts['all'] ?? 0], 'mine' => ['ที่ฉันมีส่วนร่วม', $counts['mine'] ?? 0]];
+        $tabs = ['all' => ['ทั้งหมด', $counts['all'] ?? 0], 'mine' => ['กระทู้ที่มีส่วนร่วม', $counts['mine'] ?? 0]];
     @endphp
 
     {{-- Main Container: Unified Pane --}}
@@ -121,7 +121,7 @@
                 </div>
             </div>
 
-            {{-- Every thread, or only the ones I have a part in (the widget's "กระทู้ของฉัน" is the same set, capped at the latest few) --}}
+            {{-- Every thread, or only the ones I have a part in (the widget's "กระทู้ที่มีส่วนร่วม" is the same set, capped at the latest few) --}}
             <nav class="px-[16px] flex gap-[24px] border-b border-slate-200 bg-white flex-shrink-0" aria-label="กรองรายการกระทู้">
                 @foreach ($tabs as $key => [$name, $count])
                     @php $on = ($scope ?? 'all') === $key; @endphp

@@ -6,7 +6,7 @@
         {{-- FAB ปุ่มกลมลอย --}}
         <button id="chatFab"
             class="relative grid h-14 w-14 place-items-center rounded-full bg-[#0E2B51] text-white ring-4 ring-[#0E2B51]/10 hover:brightness-110 focus:outline-none focus:ring-4 focus:ring-[#0E2B51]/30 transition-transform active:scale-95"
-            aria-label="เปิดรายการกระทู้ของฉัน" title="กระทู้ของฉัน">
+            aria-label="เปิดรายการกระทู้ที่มีส่วนร่วม" title="กระทู้ที่มีส่วนร่วม">
             <div class="animate-bounce-slow">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M4 5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H9.83l-3.9 3.9A1 1 0 0 1 4 20.9V5z" />
@@ -37,8 +37,8 @@
                     <img src="{{ auth()->user()->avatar_thumb_url }}"
                         class="h-8 w-8 rounded-full object-cover border border-zinc-200" alt="รูปโปรไฟล์">
                     <div class="mr-auto min-w-0">
-                        <div class="truncate font-medium">กระทู้ของฉัน</div>
-                        <div class="text-xs text-zinc-500">จากกระทู้ที่คุณมีส่วนร่วม</div>
+                        <div class="truncate font-medium">กระทู้ที่มีส่วนร่วม</div>
+                        <div class="text-xs text-zinc-500">ที่คุณตั้งหรือเคยตอบ</div>
                     </div>
                     <button id="chatClose" class="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100" aria-label="ปิด">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
