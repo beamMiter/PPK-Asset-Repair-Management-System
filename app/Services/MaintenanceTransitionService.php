@@ -91,10 +91,12 @@ class MaintenanceTransitionService
                 $locked->technician_id = (int) $data['technician_id'];
             }
 
-            // ปรับเปลี่ยนให้: ใครก็ตามที่กด "เริ่มงาน (In Progress) คนแรก" 
-            // จะถูกผูกชื่อเป็นเจ้าหน้าที่หลักชั่วคราว (Auto-assign) หากงานนั้นยังว่างอยู่
-            if ($locked->status === MR::STATUS_IN_PROGRESS && empty($locked->technician_id) && $actorId) {
-                $locked->technician_id = (int) $actorId;
+            // A job with nobody in charge gets its lead when work starts: whoever presses start, if they are a worker; if it is
+            // an admin or supervisor (who run the process, not the repair — joinTeam keeps them out of the team for the same
+            // reason) the first worker of the team. It used to be whoever pressed the button: an admin became the technician, and
+            // the reporter's rating was credited to a person the technician board never lists.
+            if ($locked->status === MR::STATUS_IN_PROGRESS && empty($locked->technician_id)) {
+                $locked->technician_id = $this->leadForStart($locked, $actorId);
             }
 
             $now = now();
@@ -245,6 +247,30 @@ class MaintenanceTransitionService
                 $as->save();
             }
         }
+    }
+
+    /**
+     * Who is in charge of a job that is starting with nobody in charge.
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException 409 when there is no worker to put in charge
+     */
+    protected function leadForStart(MR $req, ?int $actorId): int
+    {
+        if ($actorId && in_array(User::query()->whereKey($actorId)->value('role'), User::workerRoles(), true)) {
+            return $actorId;
+        }
+
+        $lead = MaintenanceAssignment::where('maintenance_request_id', $req->id)
+            ->where('status', '!=', MaintenanceAssignment::STATUS_CANCELLED)
+            ->whereHas('user', fn ($user) => $user->whereIn('role', User::workerRoles())->whereNull('suspended_at'))
+            ->orderByDesc('is_lead')->orderBy('assigned_at')->orderBy('id')
+            ->value('user_id');
+
+        if (! $lead) {
+            abort(409, 'ต้องมอบหมายเจ้าหน้าที่ซ่อมบำรุงให้ใบงานนี้ก่อนเริ่มดำเนินการ');
+        }
+
+        return (int) $lead;
     }
 
     /** resolved / closed → the team's part is done; cancelled / rejected → their rows are cancelled. Anything else: untouched. */

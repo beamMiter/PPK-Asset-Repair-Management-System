@@ -103,8 +103,10 @@ class RequestStatusPathTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $due = now()->addDay()->startOfSecond();
+        // a job that is on hold has somebody in charge of it (one with nobody cannot be resumed: see StartNeedsAWorkerTest)
+        $tech = User::factory()->create(['role' => 'it_support']);
         $req = $this->job('on_hold', User::factory()->create(['role' => 'member']), [
-            'started_at' => now()->subDay(), 'on_hold_at' => now()->subHours(3), 'sla_due_date' => $due,
+            'started_at' => now()->subDay(), 'on_hold_at' => now()->subHours(3), 'sla_due_date' => $due, 'technician_id' => $tech->id,
         ]);
 
         $this->putAs($admin, $req, ['status' => 'in_progress'])->assertOk();
