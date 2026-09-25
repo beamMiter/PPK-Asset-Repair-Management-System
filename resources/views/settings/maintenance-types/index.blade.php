@@ -38,7 +38,7 @@
                             aria-hidden="true">build_circle</span>
                         <div>
                             <h1 class="text-[17px] font-semibold text-slate-900">ตั้งค่า - ประเภทงานซ่อม</h1>
-                            <p class="text-[13px] text-slate-600">จัดการประเภทงานซ่อม • เพิ่ม/แก้ไข/ปิดใช้งาน</p>
+                            <p class="text-[13px] text-slate-600">จัดการประเภทงานซ่อม - เพิ่ม/แก้ไข/ปิดใช้งาน</p>
                         </div>
                     </div>
 

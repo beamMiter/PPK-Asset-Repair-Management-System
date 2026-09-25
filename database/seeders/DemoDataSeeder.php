@@ -321,7 +321,7 @@ class DemoDataSeeder extends Seeder
         foreach ($steps as $st) {
             $note = trim("[{$labels[$st['from']]} -> {$labels[$st['to']]}] ".($st['note'] ?? self::DEFAULT_NOTES[$st['to']]));
             if ($st['to'] === 'accepted') {
-                $note .= ' • เจ้าหน้าที่: '.$lead->name;
+                $note .= ' - เจ้าหน้าที่: '.$lead->name;
             }
             $this->logs[] = $this->logRow($request->id, $st['by']->id, 'transition', $note, $st['from'], $st['to'], $st['at']);
 

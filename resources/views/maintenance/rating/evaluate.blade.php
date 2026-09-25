@@ -129,7 +129,7 @@
                     <select id="score" name="score" class="{{ $input }} px-3">
                         <option value="">ทุกคะแนน</option>
                         @foreach ([5, 4, 3, 2, 1] as $s)
-                            <option value="{{ $s }}" @selected($filters['score'] === $s)>{{ $s }} ดาว · {{ \App\Support\RatingLevel::scoreLabel($s) }}</option>
+                            <option value="{{ $s }}" @selected($filters['score'] === $s)>{{ $s }} ดาว - {{ \App\Support\RatingLevel::scoreLabel($s) }}</option>
                         @endforeach
                     </select>
                 @endif
@@ -163,11 +163,11 @@
             <span>
                 {{ $filtered ? 'พบ' : 'ทั้งหมด' }} <span class="font-semibold text-slate-800">{{ number_format($requests->total()) }}</span> รายการ
                 @if ($requests->hasPages())
-                    · หน้า {{ $requests->currentPage() }} จาก {{ $requests->lastPage() }}
+                    - หน้า {{ $requests->currentPage() }} จาก {{ $requests->lastPage() }}
                 @endif
             </span>
             @if ($tab === 'pending')
-                <span>ประเมินได้ภายใน {{ $deadlineDays }} วันหลังปิดงาน · งานที่ใกล้หมดเวลาอยู่บนสุด</span>
+                <span>ประเมินได้ภายใน {{ $deadlineDays }} วันหลังปิดงาน - งานที่ใกล้หมดเวลาอยู่บนสุด</span>
             @endif
         </div>
 
@@ -312,7 +312,7 @@
                                 <td class="p-3 align-middle text-center">
                                     <div class="flex flex-col items-center gap-[4px]">
                                         <x-rating.stars :score="$score" size="xs" />
-                                        <span class="text-[12px] font-semibold {{ $scoreTone($score) }}">{{ number_format($score, 1) }} · {{ \App\Support\RatingLevel::scoreLabel($score) }}</span>
+                                        <span class="text-[12px] font-semibold {{ $scoreTone($score) }}">{{ number_format($score, 1) }} - {{ \App\Support\RatingLevel::scoreLabel($score) }}</span>
                                     </div>
                                 </td>
                                 <td class="p-3 align-middle text-slate-700 whitespace-nowrap hidden lg:table-cell">

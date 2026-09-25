@@ -173,7 +173,7 @@ class MaintenanceTransitionService
             $finalNote = trim("[{$fromLabel} -> {$toLabel}] " . $defaultNote);
 
             if ($techChanged && $locked->technician) {
-                $finalNote = trim($finalNote . ' • เจ้าหน้าที่: ' . $locked->technician->name);
+                $finalNote = trim($finalNote . ' - เจ้าหน้าที่: ' . $locked->technician->name);
             }
 
             MaintenanceLog::create([

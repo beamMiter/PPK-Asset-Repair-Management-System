@@ -93,7 +93,7 @@ class SlaPerformanceController extends Controller
     }
 
     /**
-     * "รายงานสรุป SLA · ข้อมูล ณ …" on the left and "หน้า 1 / 2" on the right of every page. The page count is only known once the
+     * "รายงานสรุป SLA - ข้อมูล ณ …" on the left and "หน้า 1 / 2" on the right of every page. The page count is only known once the
      * document is laid out, so it is rendered first and the footer drawn onto each page after (dompdf's page_text, not a script).
      */
     private function addPageFooter(\Barryvdh\DomPDF\PDF $pdf, Carbon $reportDate): void
@@ -109,7 +109,7 @@ class SlaPerformanceController extends Controller
         $margin = 36.85;   // the 13 mm side margin of the report's @page
         $y = $canvas->get_height() - 22;
 
-        $canvas->page_text($margin, $y, ThaiPdfText::compose('รายงานสรุป SLA · ข้อมูล ณ ' . ThaiDate::longWithTime($reportDate)), $font, $size, $grey);
+        $canvas->page_text($margin, $y, ThaiPdfText::compose('รายงานสรุป SLA - ข้อมูล ณ ' . ThaiDate::longWithTime($reportDate)), $font, $size, $grey);
 
         $pageLabel = ThaiPdfText::compose('หน้า {PAGE_NUM} / {PAGE_COUNT}');
         $labelWidth = $metrics->getTextWidth('หน้า 99 / 99', $font, $size);

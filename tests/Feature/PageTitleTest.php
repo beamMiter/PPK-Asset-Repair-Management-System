@@ -11,14 +11,14 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Browser-tab titles follow one pattern: "<English page name> • PPK Asset Repair". The suffix lives in
+ * Browser-tab titles follow one pattern: "<English page name> - PPK Asset Repair". The suffix lives in
  * config('app.title_suffix'); each view only sets @section('title', 'Assets').
  */
 class PageTitleTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const SUFFIX = ' • PPK Asset Repair';
+    private const SUFFIX = ' - PPK Asset Repair';
 
     private function admin(): User
     {
@@ -139,7 +139,7 @@ class PageTitleTest extends TestCase
         foreach (['app', 'auth', 'guest'] as $layout) {
             $src = file_get_contents(resource_path("views/layouts/$layout.blade.php"));
             $this->assertStringContainsString("config('app.title_suffix')", $src, $layout);
-            $this->assertStringNotContainsString('PPK Hospital System •', $src, "$layout still hard-codes a brand in <title>");
+            $this->assertStringNotContainsString('PPK Hospital System -', $src, "$layout still hard-codes a brand in <title>");
         }
     }
 

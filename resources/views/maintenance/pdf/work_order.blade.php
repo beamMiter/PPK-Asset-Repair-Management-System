@@ -332,7 +332,7 @@
                                         <span class="small">
                                             {{ $w->role_label }}
                                             @if($assign?->role)
-                                                {{ $w->role_label ? ' · ' : '' }}{{ $assign->role }}
+                                                {{ $w->role_label ? ' - ' : '' }}{{ $assign->role }}
                                             @endif
                                         </span>
                                     @endif

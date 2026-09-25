@@ -403,6 +403,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **One separator between facts on a line: a hyphen, not a dot.** Pages ran two facts together with a middle dot (·) or a bullet (•),
+  and not the same one everywhere ("ประเมินได้ภายใน 30 วันหลังปิดงาน · …", "4.0 · พอใจ", the page subtitles of the request and asset
+  lists, the reporter's position and phone in the request list, "บันทึกล่าสุดโดย … ·", the work order's role, the notes of the printed
+  SLA report and its footer, the browser-tab titles). They all read " - " now, as does the note the system writes into a request's
+  history when a technician accepts ("… - เจ้าหน้าที่: ชื่อ"; notes already written keep the bullet they were saved with).
+  `NoDotSeparatorsTest` fails if either character comes back anywhere under `resources/`. Not checked in a browser.
 - **The bar in the job page's header row is drawn only when there is a status button, and between the buttons that need it.**
   On "ทะเบียนแจ้งซ่อม" a thin vertical bar stood first in the row of action buttons on every job, whether or not there was a status
   button (รับทราบ, ดำเนินการ, เสร็จสิ้น, ประเมินความพึงพอใจ …) to press — with none it was a stray bar at the edge of the row — and

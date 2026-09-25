@@ -48,7 +48,7 @@
                             aria-hidden="true">handyman</span>
                         <div class="flex flex-col min-w-0 gap-1">
                             <h1 class="text-[17px] font-semibold text-slate-900">รายการใบงานซ่อมบำรุง</h1>
-                            <p class="text-[13px] text-slate-600">รายการแจ้งซ่อมบำรุงรักษา • ค้นหา กรอง และตรวจทานรายการ</p>
+                            <p class="text-[13px] text-slate-600">รายการแจ้งซ่อมบำรุงรักษา - ค้นหา กรอง และตรวจทานรายการ</p>
                         </div>
                     </div>
 
@@ -158,7 +158,7 @@
                 <div class="text-[13px] font-semibold text-slate-800">
                     ทะเบียนรายการแจ้งซ่อมบำรุง
                     @if ($assetId)
-                        <span class="ml-2 text-[12px] font-medium text-slate-500">• (กรองตามครุภัณฑ์
+                        <span class="ml-2 text-[12px] font-medium text-slate-500">- (กรองตามครุภัณฑ์
                             #{{ $assetId }})</span>
                     @endif
                 </div>
@@ -256,7 +256,7 @@
                                 <div class="text-[13px] font-semibold text-slate-900">
                                     {{ $reporterName ?? '—' }}
                                     @if ($row->reporter_position)
-                                        <span class="text-[11px] text-slate-500">• {{ $row->reporter_position }}</span>
+                                        <span class="text-[11px] text-slate-500">- {{ $row->reporter_position }}</span>
                                     @endif
                                 </div>
                                 @if ($reporterEmail || $reporterPhone)
@@ -265,7 +265,7 @@
                                             <span>{{ $reporterEmail }}</span>
                                         @endif
                                         @if ($reporterPhone)
-                                            <span>• {{ $reporterPhone }}</span>
+                                            <span>- {{ $reporterPhone }}</span>
                                         @endif
                                     </div>
                                 @endif

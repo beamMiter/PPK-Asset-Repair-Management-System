@@ -3,7 +3,7 @@
 <html lang="th">
 <head>
     <meta charset="utf-8">
-    <title>Asset Sheet {{ $asset->asset_code }} • {{ config('app.title_suffix') }}</title>
+    <title>Asset Sheet {{ $asset->asset_code }} - {{ config('app.title_suffix') }}</title>
 
     <style>
         /* Sarabun comes from the family registered in public/images/fonts/installed-fonts.json (config/dompdf.php):

@@ -46,7 +46,7 @@
                     <div class="min-w-0">
                         <h1 class="text-[17px] font-semibold text-slate-900 leading-tight truncate">{{ $tech->name }}</h1>
                         <p class="text-[13px] text-slate-600">
-                            สรุปผลการประเมินความพึงพอใจ · {{ $tech->role_label }}@if ($tech->department_name) · {{ $tech->department_name }}@endif
+                            สรุปผลการประเมินความพึงพอใจ - {{ $tech->role_label }}@if ($tech->department_name) - {{ $tech->department_name }}@endif
                         </p>
                     </div>
                 </div>
@@ -167,7 +167,7 @@
                             @if ($row['avg'] !== null)
                                 <span class="w-28 shrink-0 text-right text-[12px] text-slate-600">
                                     <span class="font-semibold">{{ number_format($row['avg'], 2) }}</span>
-                                    <span class="text-slate-400">· {{ $row['count'] }} ครั้ง</span>
+                                    <span class="text-slate-400">- {{ $row['count'] }} ครั้ง</span>
                                 </span>
                             @else
                                 <span class="w-28 shrink-0 text-right text-[12px] text-slate-300">ไม่มีการประเมิน</span>
@@ -270,7 +270,7 @@
         <section>
             <div class="mb-[12px] flex items-center justify-between gap-3">
                 <h2 class="{{ $cardTitle }}">ความคิดเห็นล่าสุด</h2>
-                <span class="text-[12px] text-slate-400">เฉพาะการประเมินที่มีความคิดเห็น · ล่าสุด 6 รายการ</span>
+                <span class="text-[12px] text-slate-400">เฉพาะการประเมินที่มีความคิดเห็น - ล่าสุด 6 รายการ</span>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-[12px]">
@@ -300,7 +300,7 @@
                         <div class="mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-3 text-[11px] text-slate-400">
                             @if ($review->request)
                                 <a href="{{ route('maintenance.requests.show', $review->request) }}"
-                                    class="min-w-0 truncate font-medium text-[#0F2D5C] hover:underline">#{{ $review->request->request_no }} · {{ $review->request->title }}</a>
+                                    class="min-w-0 truncate font-medium text-[#0F2D5C] hover:underline">#{{ $review->request->request_no }} - {{ $review->request->title }}</a>
                             @else
                                 <span></span>
                             @endif

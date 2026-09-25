@@ -98,7 +98,7 @@
 
         @if ($opLog)
             <p class="mt-3 text-xs text-slate-500">
-                บันทึกล่าสุดโดย {{ $opLog->user?->name ?? '-' }} ·
+                บันทึกล่าสุดโดย {{ $opLog->user?->name ?? '-' }} -
                 {{ $opLog->updated_at?->format('Y-m-d H:i') ?? '-' }}
             </p>
         @endif

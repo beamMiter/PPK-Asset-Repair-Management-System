@@ -159,7 +159,7 @@ class RatingPagesTest extends TestCase
 
         $this->evaluate(['tab' => 'rated'])
             ->assertSee('ช่างมาเร็ว')
-            ->assertSee('4.0 · พอใจ')
+            ->assertSee('4.0 - พอใจ')
             ->assertSee(\App\Support\ThaiDate::short(now()->subDays(3)))
             ->assertSee('aria-label="4.0 จาก 5 ดาว"', false);
     }

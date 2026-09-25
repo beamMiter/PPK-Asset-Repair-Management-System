@@ -88,7 +88,7 @@
                             aria-hidden="true">inventory_2</span>
                         <div class="flex flex-col min-w-0 gap-1">
                             <h1 class="text-[17px] font-semibold text-slate-900">Assets</h1>
-                            <p class="text-[13px] text-slate-600">ทะเบียนทรัพย์สิน / ครุภัณฑ์ • ค้นหา กรอง และจัดการรายการ</p>
+                            <p class="text-[13px] text-slate-600">ทะเบียนทรัพย์สิน / ครุภัณฑ์ - ค้นหา กรอง และจัดการรายการ</p>
                         </div>
                     </div>
 

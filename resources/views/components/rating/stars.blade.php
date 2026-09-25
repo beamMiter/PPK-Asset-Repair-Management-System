@@ -2,7 +2,7 @@
   Five stars, filled up to the (rounded) score. The star path was copied into four pages; this is the one copy.
 
   <x-rating.stars :score="4.2" />                 size sm (16px), the default
-  <x-rating.stars :score="$r->score" size="xs" />  xs 12px · sm 16px · md 20px · lg 24px
+  <x-rating.stars :score="$r->score" size="xs" />  xs 12px, sm 16px, md 20px, lg 24px
 
   Amber, the colour of the "rate" button and of the rating dialog. Extra classes (mt-1, shrink-0) are passed through.
 --}}
