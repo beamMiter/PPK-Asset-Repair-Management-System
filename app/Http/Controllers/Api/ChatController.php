@@ -28,6 +28,7 @@ class ChatController extends Controller
             ->when($q !== '', function ($qq) use ($q) {
                 $qq->where('title', 'like', "%{$q}%");
             })
+            ->when($r->query('scope') === 'mine' && $userId, fn ($qq) => $qq->involving((int) $userId))   // only threads I started or wrote in
             ->orderByDesc('created_at')
             ->paginate(15); // เอา named argument ออกให้ compatible
 
@@ -242,12 +243,7 @@ class ChatController extends Controller
 
         // เอาเฉพาะกระทู้ที่ "เราเกี่ยวข้อง" (เป็นคนตั้ง หรือเคยคอมเมนต์)
         $threads = ChatThread::query()
-            ->where(function ($q) use ($user) {
-                $q->where('author_id', $user->id)
-                  ->orWhereHas('messages', function ($mm) use ($user) {
-                      $mm->where('user_id', $user->id);
-                  });
-            })
+            ->involving((int) $user->id)
             ->with(['latestMessage.user'])
             ->withCount('messages')
             ->latest('updated_at')

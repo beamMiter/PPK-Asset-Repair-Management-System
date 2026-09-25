@@ -8,6 +8,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The chat page can show only the threads I took part in.** The floating widget's "กระทู้ของฉัน" was the only place that knew which
+  threads a person had started or written in (and it shows the latest 15). The thread list on the chat page has two tabs now, "ทั้งหมด"
+  and "ที่ฉันมีส่วนร่วม", each with its count; the second is every thread I started or wrote in - opening a thread to read it does not
+  make it mine. Search, paging and the links to a thread stay inside the tab that is open, and an empty list says "คุณยังไม่ได้ตั้งหรือตอบกระทู้ใดเลย".
+  `GET /api/threads?scope=mine` does the same for the mobile app (`openapi.yaml`). One definition, `ChatThread::involving()`, serves the
+  page, the API and the widget. `ChatMineScopeTest`.
 - **A change-password form on the profile page.** `PUT /password` and its controller (which also ends the other sessions, API tokens and
   "remember me" cookies) were there and tested, but nothing on any page led to them: nobody could change the password they were first
   given, and a member with no e-mail could never rotate it. The form (current, new, confirm) sits under the profile form, states the rule

@@ -511,6 +511,10 @@ paths:
         - in: query
           name: q
           schema: { type: string }
+        - in: query
+          name: scope
+          description: "`mine` lists only the threads the caller started or wrote in; anything else lists every thread"
+          schema: { type: string, enum: [all, mine], default: all }
       responses:
         '200':
           description: OK

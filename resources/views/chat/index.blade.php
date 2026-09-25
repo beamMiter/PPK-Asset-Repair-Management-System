@@ -7,6 +7,9 @@
         $activeThreadId = request('thread_id');
         // We only highlight if the thread_id is explicitly in the request to prevent "permanent" first item color
         $defaultThreadId = $activeThreadId;
+        // which list is open: every thread, or only those I started or wrote in ("mine") - carried by every link that stays in the chat
+        $scopeQuery = ($scope ?? 'all') === 'mine' ? ['scope' => 'mine'] : [];
+        $tabs = ['all' => ['ทั้งหมด', $counts['all'] ?? 0], 'mine' => ['ที่ฉันมีส่วนร่วม', $counts['mine'] ?? 0]];
     @endphp
 
     {{-- Main Container: Unified Pane --}}
@@ -86,6 +89,9 @@
 
                 <div class="mt-4">
                     <form method="GET" action="{{ route('chat.index') }}" class="flex items-center gap-2">
+                        @if ($scopeQuery)
+                            <input type="hidden" name="scope" value="mine">
+                        @endif
                         <div class="flex-1">
                             <div class="relative">
                                 <input name="q" value="{{ $q }}"
@@ -115,6 +121,19 @@
                 </div>
             </div>
 
+            {{-- Every thread, or only the ones I have a part in (the widget's "กระทู้ของฉัน" is the same set, capped at the latest few) --}}
+            <nav class="px-[16px] flex gap-[24px] border-b border-slate-200 bg-white flex-shrink-0" aria-label="กรองรายการกระทู้">
+                @foreach ($tabs as $key => [$name, $count])
+                    @php $on = ($scope ?? 'all') === $key; @endphp
+                    <a href="{{ route('chat.index', $key === 'mine' ? ['scope' => 'mine'] : []) }}"
+                        @if ($on) aria-current="page" @endif
+                        class="-mb-px border-b-2 pt-[10px] pb-[10px] text-[13px] font-semibold whitespace-nowrap transition-colors {{ $on ? 'border-[#0F2D5C] text-[#0F2D5C]' : 'border-transparent text-slate-500 hover:text-slate-800' }}">
+                        {{ $name }}
+                        <span class="ml-1 font-medium {{ $on ? 'text-[#0F2D5C]/70' : 'text-slate-400' }}">{{ number_format($count) }}</span>
+                    </a>
+                @endforeach
+            </nav>
+
             <div class="px-4 py-2 border-b border-slate-100 bg-slate-50 flex items-center justify-between flex-shrink-0">
                 <span class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">รายการอัปเดต</span>
                 <span class="text-[11px] font-semibold text-slate-400">
@@ -133,7 +152,7 @@
                         @if ($isActive)
                             <div class="absolute inset-y-0 left-0 w-1 bg-[#0F2D5C] z-20"></div>
                         @endif
-                        <a href="{{ route('chat.index', ['thread_id' => $th->id, 'page' => $threads->currentPage()]) }}"
+                        <a href="{{ route('chat.index', ['thread_id' => $th->id, 'page' => $threads->currentPage()] + $scopeQuery) }}"
                             class="block px-4 py-3.5 chat-thread-link">
 
                             <div class="flex flex-col gap-1.5">
@@ -166,7 +185,7 @@
                     </div>
                 @empty
                     <div class="py-16 bg-white">
-                        <x-ui.empty-state icon="forum">ไม่พบข้อมูลกระทู้</x-ui.empty-state>
+                        <x-ui.empty-state icon="forum">{{ $scopeQuery && blank($q) ? 'คุณยังไม่ได้ตั้งหรือตอบกระทู้ใดเลย' : 'ไม่พบข้อมูลกระทู้' }}</x-ui.empty-state>
                     </div>
                 @endforelse
 
@@ -254,7 +273,7 @@
                                 @click="if(typeof window.forceChatPoll === 'function') window.forceChatPoll()"
                                 class="hidden sm:inline-flex" title="รีเฟรช" aria-label="รีเฟรช" />
 
-                            <a href="{{ route('chat.index') }}"
+                            <a href="{{ route('chat.index', $scopeQuery) }}"
                                 class="lg:hidden inline-flex items-center justify-center h-9 gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 sm:px-4 text-[13px] font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
                                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                     stroke-width="2">

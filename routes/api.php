@@ -157,7 +157,7 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
 
     // Chat (กระทู้) — ทุกคนที่ login เห็นทุกกระทู้ ไม่มีสิทธิ์รายกระทู้
     // Threads
-    //   GET  /api/threads   ?q= (ค้นจากหัวข้อ) 15 กระทู้/หน้า → {data, meta}; แต่ละรายการมี latest_message และ unread_count ของผู้เรียก
+    //   GET  /api/threads   ?q= (ค้นจากหัวข้อ) ?scope=mine (เฉพาะกระทู้ที่ตั้งเองหรือเคยตอบ) 15 กระทู้/หน้า → {data, meta}; แต่ละรายการมี latest_message และ unread_count ของผู้เรียก
     //   POST /api/threads   body: title* (≤ 180) → 201
     //   GET  /api/threads/{thread}   กระทู้ + latest_messages (10 ข้อความล่าสุด เรียงเก่า→ใหม่)
     Route::get('/threads',          [ChatController::class, 'index'])->name('threads.index');

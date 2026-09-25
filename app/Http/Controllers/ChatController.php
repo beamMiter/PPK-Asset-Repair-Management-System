@@ -15,11 +15,14 @@ class ChatController extends Controller
     public function index(Request $r)
     {
         $q = (string) $r->string('q');
+        $scope = $r->query('scope') === 'mine' ? 'mine' : 'all';   // 'mine': only the threads I started or wrote in
+        $meId = (int) Auth::id();
 
         $threads = ChatThread::query()
             ->with('author:id,name')
             ->withCount('messages')
             ->with(['latestMessage' => fn($qq) => $qq->with('user:id,name')])
+            ->when($scope === 'mine', fn($qq) => $qq->involving($meId))
             ->when($q, fn($qq) => $qq->where('title', 'like', "%{$q}%"))
             ->orderByDesc('created_at')
             ->paginate(15)
@@ -56,7 +59,10 @@ class ChatController extends Controller
         $me = Auth::user();
         $canManageLock = $me && $me->role !== 'member';
 
-        return view('chat.index', compact('threads', 'activeThread', 'messages', 'totalMessages', 'lastAt', 'me', 'canManageLock'));
+        // what each list holds, for the two tabs (not narrowed by the search)
+        $counts = ['all' => ChatThread::count(), 'mine' => ChatThread::involving($meId)->count()];
+
+        return view('chat.index', compact('threads', 'activeThread', 'messages', 'totalMessages', 'lastAt', 'me', 'canManageLock', 'scope', 'counts'));
     }
 
     public function storeThread(Request $r)
@@ -132,10 +138,7 @@ class ChatController extends Controller
         $u = $request->user();
 
         $threads = ChatThread::query()
-            ->where(function ($q) use ($u) {
-                $q->where('author_id', $u->id)
-                  ->orWhereHas('messages', fn ($mm) => $mm->where('user_id', $u->id)); // เคยคอมเมนต์
-            })
+            ->involving((int) $u->id)   // ตั้งเอง หรือเคยคอมเมนต์
             ->with(['messages' => function ($q) {
                 $q->with('user:id,name')->latest('id')->limit(1);
             }])
