@@ -50,9 +50,15 @@
                 </div>
 
                 {{-- Action buttons: workflow left, nav right --}}
+                @php
+                    // Is there a status button to press? The divider below exists to set those buttons apart from the tools after
+                    // them (แก้ไข, พิมพ์ PDF, กลับ); with none there is nothing to set apart, and it stood at the edge of the row
+                    // as a stray bar.
+                    $hasWorkflow = $canAcknowledge || $canAccept || $canStart || $canHold || $canResume || $canResolve || $canClose
+                        || $canReject || $canCancel
+                        || ($req->status === \App\Models\MaintenanceRequest::STATUS_CLOSED && \Gate::allows('rate', $req));
+                @endphp
                 <div class="flex flex-wrap items-center gap-2 shrink-0">
-                    <div class="w-px h-6 bg-slate-200 mx-1 hidden sm:block"></div>
-
                     {{-- Workflow buttons --}}
                     @if ($canAcknowledge)
                         <form method="POST" action="{{ route('maintenance.requests.acknowledge', $req->id) }}">
@@ -109,6 +115,11 @@
 
                     @if ($canCancel)
                         <x-ui.button id="openCancelModalBtn" variant="neutral" icon="cancel">ยกเลิกการซ่อมบำรุง</x-ui.button>
+                    @endif
+
+                    {{-- between the status buttons and the tools — only when there are status buttons --}}
+                    @if ($hasWorkflow)
+                        <div class="w-px h-6 bg-slate-200 mx-1 hidden sm:block"></div>
                     @endif
 
                     {{-- Tools + navigation, same order as the asset page: actions first, กลับ last.

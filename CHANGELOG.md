@@ -403,6 +403,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The bar in the job page's header row is drawn only when there is a status button, and between the buttons that need it.**
+  On "ทะเบียนแจ้งซ่อม" a thin vertical bar stood first in the row of action buttons on every job, whether or not there was a status
+  button (รับทราบ, ดำเนินการ, เสร็จสิ้น, ประเมินความพึงพอใจ …) to press — with none it was a stray bar at the edge of the row — and
+  since it stood *before* the status buttons it separated nothing. It now sits between the status buttons and the tools after them
+  (แก้ไข, พิมพ์ PDF, กลับ) and is left out when there is no status button. `JobHeaderDividerTest`. Not checked in a browser.
 - **The rating dialog is built like the other dialogs, and every popup card has one corner: `rounded-md`.** The dialog on the job
   page ("ประเมินความพึงพอใจ") was the odd one out: a darker backdrop (60% against 40%), a 2px square card with no border, `p-8`
   padding, an 18px bold title, upper-case letter-spaced labels, its own text box inside a grey frame — and no length limit on
