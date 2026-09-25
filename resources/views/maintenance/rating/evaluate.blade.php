@@ -183,19 +183,19 @@
         @endif
 
         @if ($requests->isEmpty())
-            <div class="flex flex-col items-center justify-center py-16 text-center px-4">
+            <div class="px-4 py-16">
                 @if ($filtered)
-                    <span class="material-symbols-outlined text-slate-300 text-[48px] mb-3" aria-hidden="true">search_off</span>
-                    <h3 class="text-[14px] font-semibold text-slate-800">ไม่พบรายการที่ตรงกับคำค้นหาหรือตัวกรอง</h3>
-                    <a href="{{ route('maintenance.requests.rating.evaluate', ['tab' => $tab]) }}"
-                        class="mt-2 text-[12px] font-semibold text-[#0F2D5C] hover:underline">ล้างค่าทั้งหมด</a>
+                    <x-ui.empty-state icon="search_off">
+                        ไม่พบรายการที่ตรงกับคำค้นหาหรือตัวกรอง
+                        <x-slot:action>
+                            <a href="{{ route('maintenance.requests.rating.evaluate', ['tab' => $tab]) }}"
+                                class="text-[12px] font-semibold text-[#0F2D5C] hover:underline">ล้างค่าทั้งหมด</a>
+                        </x-slot:action>
+                    </x-ui.empty-state>
                 @elseif ($tab === 'pending')
-                    <span class="material-symbols-outlined text-slate-300 text-[48px] mb-3" aria-hidden="true">task_alt</span>
-                    <h3 class="text-[14px] font-semibold text-slate-800">ไม่มีงานค้างประเมิน</h3>
-                    <p class="text-[12px] text-slate-500 mt-1">คุณได้ประเมินงานซ่อมเสร็จสิ้นทั้งหมดแล้ว</p>
+                    <x-ui.empty-state icon="task_alt" hint="คุณได้ประเมินงานซ่อมเสร็จสิ้นทั้งหมดแล้ว">ไม่มีงานค้างประเมิน</x-ui.empty-state>
                 @else
-                    <span class="material-symbols-outlined text-slate-300 text-[48px] mb-3" aria-hidden="true">history</span>
-                    <p class="text-[13px] text-slate-500">ยังไม่มีประวัติการให้คะแนน</p>
+                    <x-ui.empty-state icon="history">ยังไม่มีประวัติการให้คะแนน</x-ui.empty-state>
                 @endif
             </div>
         @elseif ($tab === 'pending')

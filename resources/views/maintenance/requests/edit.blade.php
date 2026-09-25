@@ -434,8 +434,8 @@
 
                             <div class="flex-1 min-h-0 overflow-y-auto" id="assignListScroll">
                                 @if ($roleGroupsSorted->isEmpty())
-                                    <div class="px-5 py-10 text-center text-[14px] text-slate-500">
-                                        ไม่พบข้อมูลเจ้าหน้าที่ในระบบ
+                                    <div class="px-5 py-10">
+                                        <x-ui.empty-state icon="group_off">ไม่พบข้อมูลเจ้าหน้าที่ในระบบ</x-ui.empty-state>
                                     </div>
                                 @else
                                     @foreach ($roleGroupsSorted as $roleCode => $groupUsers)

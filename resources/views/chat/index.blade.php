@@ -165,13 +165,8 @@
                         </a>
                     </div>
                 @empty
-                    <div class="py-16 text-center text-slate-400 text-[12px] bg-white">
-                        <svg viewBox="0 0 24 24" class="mx-auto h-10 w-10 text-slate-200 mb-2" fill="none"
-                            stroke="currentColor">
-                            <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V5a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v10Z" stroke-width="1.5"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        ไม่พบข้อมูลกระทู้
+                    <div class="py-16 bg-white">
+                        <x-ui.empty-state icon="forum">ไม่พบข้อมูลกระทู้</x-ui.empty-state>
                     </div>
                 @endforelse
 

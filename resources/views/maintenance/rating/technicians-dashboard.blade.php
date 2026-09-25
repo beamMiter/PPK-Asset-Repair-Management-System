@@ -250,8 +250,8 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="py-16 text-center text-slate-500">
-                                    ไม่พบข้อมูลคะแนนการประเมินในระบบ
+                                <td colspan="9" class="py-16">
+                                    <x-ui.empty-state icon="star">ไม่พบข้อมูลคะแนนการประเมินในระบบ</x-ui.empty-state>
                                 </td>
                             </tr>
                         @endforelse
