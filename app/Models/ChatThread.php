@@ -71,6 +71,17 @@ class ChatThread extends Model
         });
     }
 
+    /** The threads a person has hidden from their "กระทู้ที่มีส่วนร่วม" (the "ซ่อนไว้" list). */
+    public function scopeHiddenBy(Builder $query, int $userId): Builder
+    {
+        return $query->whereExists(function ($hidden) use ($userId) {
+            $hidden->select(DB::raw(1))->from('chat_thread_reads')
+                ->whereColumn('chat_thread_reads.chat_thread_id', 'chat_threads.id')
+                ->where('chat_thread_reads.user_id', $userId)
+                ->whereNotNull('chat_thread_reads.hidden_at');
+        });
+    }
+
     /**
      * What the floating widget lists: their list, minus a locked thread they have read to the end. Nobody can add to a locked thread,
      * so there is nothing in it to catch up on; it stays in the page's tab, and it is back in the widget when it is unlocked.

@@ -31,6 +31,7 @@ class ChatController extends Controller
                 $qq->where('title', 'like', Like::contains($q));
             })
             ->when($r->query('scope') === 'mine' && $userId, fn ($qq) => $qq->inMyList((int) $userId))   // only threads I started or wrote in
+            ->when($r->query('scope') === 'hidden' && $userId, fn ($qq) => $qq->hiddenBy((int) $userId))   // the ones I hid from that
             ->orderByDesc('created_at')
             ->paginate(15); // เอา named argument ออกให้ compatible
 

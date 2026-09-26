@@ -8,6 +8,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The chat page's thread list shows "ใหม่ N" and has a "ซ่อนไว้" list.** Only the floating widget knew which threads had messages a
+  person had not read; the page's list now says "ใหม่ 3" beside a thread they took part in with three unread (99+ at most; the open thread
+  is read, a hidden one does not count, and a thread they have no part in shows nothing however many messages it has) - counted for a
+  whole page of the list in one query. And the threads a person hid from "กระทู้ที่มีส่วนร่วม" were only findable by scanning "ทั้งหมด": a
+  third tab, "ซ่อนไว้" (there only while something is hidden), lists them, and a thread opened from it carries the button that shows it
+  again. `GET /api/threads?scope=hidden` for the app. `ChatListUnreadAndHiddenTabTest`.
 - **The app can change its own password: `PUT /api/auth/password`.** A person an admin gave a password to gets 403 `password_change_required`
   from every API call, and nothing on the API could clear it (the e-mail reset is no use to somebody with no e-mail), so they had to
   find the website. The endpoint takes `current_password`, `password`, `password_confirmation` (the profile page's rules), clears the

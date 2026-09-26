@@ -101,14 +101,14 @@ class ChatMineScopeTest extends TestCase
     public function test_the_tabs_show_how_many_each_list_holds_and_which_is_open(): void
     {
         $all = $this->actingAs($this->me)->get(route('chat.index'))->assertOk();
-        $this->assertSame(['all' => 4, 'mine' => 2], $all->viewData('counts'));
+        $this->assertSame(['all' => 4, 'mine' => 2, 'hidden' => 0], $all->viewData('counts'));
         $html = $all->getContent();
         $this->assertMatchesRegularExpression('/aria-current="page"[^>]*>\s*ทั้งหมด\s*<span[^>]*>4</', $html);
         $this->assertMatchesRegularExpression('/กระทู้ที่มีส่วนร่วม\s*<span[^>]*>2</', $html);
 
         $mine = $this->actingAs($this->me)->get(route('chat.index', ['scope' => 'mine']))->assertOk()->getContent();
         $this->assertMatchesRegularExpression('/aria-current="page"[^>]*>\s*กระทู้ที่มีส่วนร่วม\s*<span/', $mine);
-        $this->assertSame(['all' => 4, 'mine' => 2], $this->actingAs($this->me)->get(route('chat.index', ['scope' => 'mine', 'q' => 'ตอบ']))->viewData('counts'), 'the counts are not narrowed by a search');
+        $this->assertSame(['all' => 4, 'mine' => 2, 'hidden' => 0], $this->actingAs($this->me)->get(route('chat.index', ['scope' => 'mine', 'q' => 'ตอบ']))->viewData('counts'), 'the counts are not narrowed by a search');
     }
 
     public function test_opening_a_thread_from_my_list_stays_in_my_list(): void

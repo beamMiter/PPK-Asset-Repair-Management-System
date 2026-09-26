@@ -18,7 +18,7 @@ class ChatController extends Controller
     public function index(Request $r)
     {
         $q = (string) $r->string('q');
-        $scope = $r->query('scope') === 'mine' ? 'mine' : 'all';   // 'mine': only the threads I started or wrote in
+        $scope = in_array($r->query('scope'), ['mine', 'hidden'], true) ? $r->query('scope') : 'all';   // 'mine': the threads I started or wrote in; 'hidden': the ones I hid from that
         $meId = (int) Auth::id();
 
         $threads = ChatThread::query()
@@ -26,6 +26,7 @@ class ChatController extends Controller
             ->withCount('messages')
             ->with(['latestMessage' => fn($qq) => $qq->with('user:id,name')])
             ->when($scope === 'mine', fn($qq) => $qq->inMyList($meId))
+            ->when($scope === 'hidden', fn($qq) => $qq->hiddenBy($meId))
             ->when($q, fn($qq) => $qq->where('title', 'like', Like::contains($q)))
             ->orderByDesc('created_at')
             ->paginate(15)
@@ -67,10 +68,15 @@ class ChatController extends Controller
         $canDelete = $activeThread && $activeThread->canBeDeletedBy($me);
         $canHide = $activeThread && ! $hiddenByMe && ChatThread::involving($meId)->whereKey($activeThread->id)->exists();
 
-        // what each list holds, for the two tabs (not narrowed by the search)
-        $counts = ['all' => ChatThread::count(), 'mine' => ChatThread::inMyList($meId)->count()];
+        // what each list holds, for the tabs (not narrowed by the search)
+        $counts = ['all' => ChatThread::count(), 'mine' => ChatThread::inMyList($meId)->count(), 'hidden' => ChatThread::hiddenBy($meId)->count()];
 
-        return view('chat.index', compact('threads', 'activeThread', 'messages', 'totalMessages', 'lastAt', 'me', 'canManageLock', 'scope', 'counts', 'hiddenByMe', 'canHide', 'canDelete'));
+        // "ใหม่ N" beside a thread of mine that has messages I have not read (the open thread was read above; a hidden one does not count)
+        $listed = $threads->getCollection()->pluck('id')->all();
+        $mineOnThisPage = ChatThread::inMyList($meId)->whereIn('chat_threads.id', $listed)->pluck('chat_threads.id')->all();
+        $unread = array_intersect_key($this->unreadCountsFor($meId, $mineOnThisPage), array_flip($mineOnThisPage));
+
+        return view('chat.index', compact('threads', 'activeThread', 'messages', 'totalMessages', 'lastAt', 'me', 'canManageLock', 'scope', 'counts', 'unread', 'hiddenByMe', 'canHide', 'canDelete'));
     }
 
     public function storeThread(Request $r)

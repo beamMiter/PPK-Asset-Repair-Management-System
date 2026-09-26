@@ -8,8 +8,13 @@
         // We only highlight if the thread_id is explicitly in the request to prevent "permanent" first item color
         $defaultThreadId = $activeThreadId;
         // which list is open: every thread, or only those I started or wrote in ("mine") - carried by every link that stays in the chat
-        $scopeQuery = ($scope ?? 'all') === 'mine' ? ['scope' => 'mine'] : [];
+        $scope = $scope ?? 'all';
+        $scopeQuery = $scope !== 'all' ? ['scope' => $scope] : [];
         $tabs = ['all' => ['ทั้งหมด', $counts['all'] ?? 0], 'mine' => ['กระทู้ที่มีส่วนร่วม', $counts['mine'] ?? 0]];
+        // "ซ่อนไว้": only when there is something hidden (or the list is open, so its way back is there)
+        if (($counts['hidden'] ?? 0) > 0 || $scope === 'hidden') {
+            $tabs['hidden'] = ['ซ่อนไว้', $counts['hidden'] ?? 0];
+        }
     @endphp
 
     {{-- Main Container: Unified Pane --}}
@@ -115,7 +120,7 @@
                 <div class="mt-4">
                     <form method="GET" action="{{ route('chat.index') }}" class="flex items-center gap-2">
                         @if ($scopeQuery)
-                            <input type="hidden" name="scope" value="mine">
+                            <input type="hidden" name="scope" value="{{ $scope }}">
                         @endif
                         <div class="flex-1">
                             <div class="relative">
@@ -149,8 +154,8 @@
             {{-- Every thread, or only the ones I have a part in (the widget's "กระทู้ที่มีส่วนร่วม" is the same set, capped at the latest few) --}}
             <nav class="px-[16px] flex gap-[24px] border-b border-slate-200 bg-white flex-shrink-0" aria-label="กรองรายการกระทู้">
                 @foreach ($tabs as $key => [$name, $count])
-                    @php $on = ($scope ?? 'all') === $key; @endphp
-                    <a href="{{ route('chat.index', $key === 'mine' ? ['scope' => 'mine'] : []) }}"
+                    @php $on = $scope === $key; @endphp
+                    <a href="{{ route('chat.index', $key === 'all' ? [] : ['scope' => $key]) }}"
                         @if ($on) aria-current="page" @endif
                         class="-mb-px border-b-2 pt-[10px] pb-[10px] text-[13px] font-semibold whitespace-nowrap transition-colors {{ $on ? 'border-[#0F2D5C] text-[#0F2D5C]' : 'border-transparent text-slate-500 hover:text-slate-800' }}">
                         {{ $name }}
@@ -207,13 +212,16 @@
                                         class="font-medium text-slate-600 truncate max-w-[120px]">{{ $th->author->name ?? 'ไม่ทราบผู้ใช้งาน' }}</span>
                                     <span class="w-1 h-1 rounded-full bg-slate-300"></span>
                                     <span>{{ $th->updated_at->diffForHumans() }}</span>
+                                    @if (($unread[$th->id] ?? 0) > 0 && ! $isActive)
+                                        <span class="ml-auto shrink-0 text-[11px] font-semibold text-blue-600">ใหม่ {{ $unread[$th->id] > 99 ? '99+' : $unread[$th->id] }}</span>
+                                    @endif
                                 </div>
                             </div>
                         </a>
                     </div>
                 @empty
                     <div class="py-16 bg-white">
-                        <x-ui.empty-state icon="forum">{{ $scopeQuery && blank($q) ? 'คุณยังไม่ได้ตั้งหรือตอบกระทู้ใดเลย' : 'ไม่พบข้อมูลกระทู้' }}</x-ui.empty-state>
+                        <x-ui.empty-state icon="forum">{{ blank($q) && $scope === 'mine' ? 'คุณยังไม่ได้ตั้งหรือตอบกระทู้ใดเลย' : (blank($q) && $scope === 'hidden' ? 'ไม่มีกระทู้ที่ซ่อนไว้' : 'ไม่พบข้อมูลกระทู้') }}</x-ui.empty-state>
                     </div>
                 @endforelse
 

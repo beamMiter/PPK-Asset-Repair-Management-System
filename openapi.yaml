@@ -543,8 +543,8 @@ paths:
           schema: { type: string }
         - in: query
           name: scope
-          description: "`mine` lists only the threads the caller started or wrote in; anything else lists every thread"
-          schema: { type: string, enum: [all, mine], default: all }
+          description: "`mine` lists only the threads the caller started or wrote in (minus the ones they hid); `hidden` lists the ones they hid from that; anything else lists every thread"
+          schema: { type: string, enum: [all, mine, hidden], default: all }
       responses:
         '200':
           description: OK

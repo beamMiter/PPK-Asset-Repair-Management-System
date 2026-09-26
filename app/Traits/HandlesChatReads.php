@@ -96,6 +96,33 @@ trait HandlesChatReads
             ->count();
     }
 
+    /**
+     * [chat_thread_id => unread messages] for several threads at once (only those with any): what is newer than the person's read
+     * pointer, the same meaning as unreadCount() above, in one query for a whole page of the list.
+     *
+     * @param  array<int,int>  $threadIds
+     * @return array<int,int>
+     */
+    protected function unreadCountsFor(int $userId, array $threadIds): array
+    {
+        if (empty($threadIds)) {
+            return [];
+        }
+
+        return DB::table('chat_messages as m')
+            ->leftJoin('chat_thread_reads as r', function ($join) use ($userId) {
+                $join->on('r.chat_thread_id', '=', 'm.chat_thread_id')->where('r.user_id', '=', $userId);
+            })
+            ->whereIn('m.chat_thread_id', $threadIds)
+            ->whereNull('m.deleted_at')
+            ->whereRaw('m.id > COALESCE(r.last_read_message_id, 0)')
+            ->groupBy('m.chat_thread_id')
+            ->selectRaw('m.chat_thread_id, COUNT(*) AS unread')
+            ->pluck('unread', 'm.chat_thread_id')
+            ->map(fn ($n) => (int) $n)
+            ->all();
+    }
+
     /** [chat_thread_id => last_read_message_id] for the given user + threads. */
     protected function readPointers(int $userId, array $threadIds): array
     {
