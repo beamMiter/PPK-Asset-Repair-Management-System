@@ -17,4 +17,8 @@ return [
     'threads_per_day' => (int) env('CHAT_THREADS_PER_DAY', 5),
     'thread_burst_max' => (int) env('CHAT_THREAD_BURST_MAX', 3),
     'thread_burst_seconds' => (int) env('CHAT_THREAD_BURST_SECONDS', 60),
+
+    // A deleted thread or message is only hidden (so it can be brought back with `php artisan chat:restore`); after this many days the nightly
+    // `chat:purge-deleted` erases it for good. 0 turns the purge off. (Backups hold what they held.)
+    'purge_deleted_after_days' => (int) env('CHAT_PURGE_DELETED_AFTER_DAYS', 30),
 ];

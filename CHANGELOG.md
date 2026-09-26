@@ -8,6 +8,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **What people delete from the chat is erased for good after 30 days.** Deleting a thread or a message only hid it (so it could be brought
+  back), and nothing ever cleared it: a deleted conversation stayed in the database for ever, personal data kept for no reason (PDPA). The nightly
+  `php artisan chat:purge-deleted` (03:10 Thai time; the scheduler must run, as for `sanctum:prune-expired`) erases a thread that has been deleted
+  for 30 days with its messages and read marks, and single messages deleted from live threads; the days are `CHAT_PURGE_DELETED_AFTER_DAYS` (0 =
+  off) or `--days=`, `--dry-run` only says what it would erase. What is erased is written to the moderation record (title, count - never the
+  words). Until then `php artisan chat:restore {id}` brings a deleted thread back. Backups still hold what they held. Threads nobody has written in
+  for months are NOT purged: that policy (lock first, erase much later) is still to be decided. `ChatPurgeTest`.
 - **The chat can be scrolled back to its beginning.** The page drew the latest 50 messages and offered no way to the ones before, so a longer
   thread lost its start. Scrolling to the top (or the "โหลดข้อความก่อนหน้า" button, for a keyboard) loads the 30 before the first one drawn,
   oldest first, and keeps the reader where they were; the cursor is the message id, not a page number (a message that arrives meanwhile

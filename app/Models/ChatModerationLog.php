@@ -14,6 +14,7 @@ class ChatModerationLog extends Model
     public const DELETE_THREAD = 'delete_thread';
     public const DELETE_MESSAGE = 'delete_message';
     public const PURGE_THREAD = 'purge_thread';
+    public const RESTORE_THREAD = 'restore_thread';
 
     public $timestamps = false;
 
