@@ -280,7 +280,7 @@
                                 </form>
                             @endif
 
-                            @if (Auth::user()->role === 'admin')
+                            @if ($canDelete ?? false)
                                 <x-ui.button variant="ghost-danger" size="icon-lg" icon="delete"
                                     @click="showDeleteModal = true" title="ลบกระทู้" aria-label="ลบกระทู้" />
                             @endif
@@ -489,7 +489,7 @@
                 @csrf
             </form>
 
-            @if (Auth::user()->role === 'admin')
+            @if ($canDelete ?? false)
                 {{-- Form for deleting the thread --}}
                 <form id="hidden-delete-thread" method="POST" action="{{ route('chat.destroy', $activeThread) }}"
                     class="hidden">
@@ -588,7 +588,7 @@
                 </div>
             </template>
 
-            @if (Auth::user()->role === 'admin')
+            @if ($canDelete ?? false)
                 {{-- Delete Thread Modal --}}
                 <template x-teleport="body">
                     <div x-show="showDeleteModal"

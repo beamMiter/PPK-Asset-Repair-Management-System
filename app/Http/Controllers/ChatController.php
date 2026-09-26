@@ -61,12 +61,13 @@ class ChatController extends Controller
 
         // the open thread and me: can I hide it from my list (I took part, and have not), or bring it back (I hid it)?
         $hiddenByMe = $activeThread ? $this->hasHiddenThread($meId, (int) $activeThread->id) : false;
+        $canDelete = $activeThread && $activeThread->canBeDeletedBy($me);
         $canHide = $activeThread && ! $hiddenByMe && ChatThread::involving($meId)->whereKey($activeThread->id)->exists();
 
         // what each list holds, for the two tabs (not narrowed by the search)
         $counts = ['all' => ChatThread::count(), 'mine' => ChatThread::inMyList($meId)->count()];
 
-        return view('chat.index', compact('threads', 'activeThread', 'messages', 'totalMessages', 'lastAt', 'me', 'canManageLock', 'scope', 'counts', 'hiddenByMe', 'canHide'));
+        return view('chat.index', compact('threads', 'activeThread', 'messages', 'totalMessages', 'lastAt', 'me', 'canManageLock', 'scope', 'counts', 'hiddenByMe', 'canHide', 'canDelete'));
     }
 
     public function storeThread(Request $r)
@@ -207,11 +208,9 @@ class ChatController extends Controller
 
     public function destroy(ChatThread $thread)
     {
-        $user = Auth::user();
-
-        if (! $user || $user->role !== 'admin') {
+        if (! $thread->canBeDeletedBy(Auth::user())) {
             // AccessDeniedHttpException, not abort(403): bootstrap/app.php turns that one into a toast on the page the user was on
-            throw new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException('เฉพาะผู้ดูแลระบบเท่านั้นที่ลบกระทู้ได้');
+            throw new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException('เฉพาะเจ้าของกระทู้และผู้ดูแลระบบเท่านั้นที่ลบกระทู้ได้');
         }
 
         $thread->delete();

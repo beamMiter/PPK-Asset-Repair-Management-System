@@ -39,6 +39,15 @@ class ChatThread extends Model
     }
 
     /**
+     * Deleting a thread (it is hidden from everyone) belongs to whoever started it, and to an admin. Everybody else who took part
+     * hides it from their own list instead (see scopeInMyList).
+     */
+    public function canBeDeletedBy(?User $user): bool
+    {
+        return $user !== null && ($user->role === 'admin' || (int) $user->id === (int) $this->author_id);
+    }
+
+    /**
      * "กระทู้ที่มีส่วนร่วม" as a person sees it: the threads they took part in, minus the ones they hid (chat_thread_reads.hidden_at).
      * The chat page's tab, its count and the API's `scope=mine` are this.
      */

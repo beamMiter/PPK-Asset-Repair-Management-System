@@ -155,7 +155,7 @@ class ValidationMessagesThaiTest extends TestCase
         $this->assertSame('เข้าสู่ระบบสำเร็จ', session('toast.message'));
     }
 
-    public function test_only_an_admin_deletes_a_thread_and_a_refusal_is_a_thai_toast_not_a_403_page(): void
+    public function test_a_refusal_to_delete_a_thread_is_a_thai_toast_not_a_403_page(): void
     {
         $author = User::factory()->create(['role' => 'admin']);
         $thread = ChatThread::create(['title' => 'x', 'author_id' => $author->id, 'is_locked' => false]);
@@ -163,7 +163,7 @@ class ValidationMessagesThaiTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'member']))->from('/x')->delete(route('chat.destroy', $thread))
             ->assertRedirect('/x');
 
-        $this->assertSame('เฉพาะผู้ดูแลระบบเท่านั้นที่ลบกระทู้ได้', session('toast.message'));
+        $this->assertSame('เฉพาะเจ้าของกระทู้และผู้ดูแลระบบเท่านั้นที่ลบกระทู้ได้', session('toast.message'));
         $this->assertSame('error', session('toast.type'));
         $this->assertDatabaseHas('chat_threads', ['id' => $thread->id]);
     }

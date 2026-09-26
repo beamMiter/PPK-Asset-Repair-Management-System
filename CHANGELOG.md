@@ -447,6 +447,10 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Deleting a chat thread is for whoever started it and for an admin; everybody else who took part hides it.** Only an admin could delete a
+  thread; now the person who started it can too (any role), since it is theirs - the delete button and its dialog show for them and for
+  admins, and the refusal reads "เฉพาะเจ้าของกระทู้และผู้ดูแลระบบเท่านั้นที่ลบกระทู้ได้". Someone who only wrote in it has "ซ่อนจากกระทู้ที่มีส่วนร่วม"
+  (above) and no delete. The rule is `ChatThread::canBeDeletedBy()`. `ChatDeleteThreadTest`.
 - **The chat speaks Thai.** It said "You", "Unknown user", "Send a message", "My Topics", "Go All topics" and, on a locked thread,
   "Thread locked" among Thai. They read คุณ, ไม่ทราบผู้ใช้งาน, พิมพ์ข้อความ..., กระทู้ที่มีส่วนร่วม, ไปที่กระทู้ทั้งหมด and
   กระทู้นี้ถูกล็อก... now. A message's time was English too ("Saturday 3:45pm", and the browser's own format in the drawer); it is the
