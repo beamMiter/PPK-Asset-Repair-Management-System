@@ -251,6 +251,64 @@ function mount(win) {
     undo.push(() => win.clearInterval(timer));
 
     // ── composer ──
+    // A message is sent with fetch: the page does not reload, the box empties, and the message is drawn from the server's answer
+    // (the broadcast and the poll that follow carry the same id, so it is never drawn twice). A refusal or a failure keeps what was typed.
+    const form = msgInput ? msgInput.closest('form') : null;
+    let sending = false;
+    const sendButton = form ? form.querySelector('button[type=submit]') : null;
+
+    async function sendMessage() {
+        const text = msgInput.value;
+        if (!form || !text.trim() || sending) return;
+        sending = true;
+        if (sendButton) { sendButton.disabled = true; sendButton.classList.add('opacity-60'); }
+
+        try {
+            const res = await win.fetch(form.getAttribute('action'), {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': doc.querySelector('meta[name=csrf-token]')?.getAttribute('content') ?? '',
+                },
+                body: JSON.stringify({ body: text }),
+            });
+
+            if (res.status === 403) {                     // locked while they were typing
+                setLocked(true);
+                win.showToast?.({ type: 'warning', message: 'กระทู้นี้ถูกล็อกแล้ว ไม่สามารถส่งข้อความใหม่ได้' });
+            } else if (res.status === 404) {              // deleted while they were typing
+                threadDeleted();
+            } else if (!res.ok) {
+                win.showToast?.({ type: 'error', message: 'ส่งข้อความไม่สำเร็จ ข้อความของคุณยังอยู่ในช่อง กรุณาลองใหม่อีกครั้ง' });
+            } else {
+                const m = await res.json();
+                msgInput.value = '';
+                msgInput.style.height = '48px';
+                if (m && m.id > lastId) {                 // the broadcast may have drawn it already
+                    appendMessage(m);
+                    lastId = Math.max(lastId, m.id);
+                    box.dataset.lastId = lastId;
+                    bumpCounter(1);
+                }
+                autoScroll = true;
+                box.scrollTop = box.scrollHeight;
+                if (btnScrollBottom) btnScrollBottom.classList.add('hidden');
+                msgInput.focus?.();
+            }
+        } catch {
+            win.showToast?.({ type: 'error', message: 'ส่งข้อความไม่สำเร็จ ข้อความของคุณยังอยู่ในช่อง กรุณาลองใหม่อีกครั้ง' });
+        } finally {
+            sending = false;
+            if (sendButton) { sendButton.disabled = false; sendButton.classList.remove('opacity-60'); }
+        }
+    }
+
+    if (form) {
+        form.addEventListener('submit', (e) => { e.preventDefault(); sendMessage(); });   // the send button
+    }
+
     if (msgInput) {
         msgInput.addEventListener('input', () => {
             msgInput.style.height = '48px';
@@ -261,8 +319,7 @@ function mount(win) {
         msgInput.addEventListener('keydown', (e) => {
             if (win.innerWidth >= 768 && !e.shiftKey && e.key === 'Enter') {
                 e.preventDefault();
-                const form = msgInput.closest('form');
-                if (form && msgInput.value.trim()) form.submit();
+                sendMessage();
             }
         });
     }

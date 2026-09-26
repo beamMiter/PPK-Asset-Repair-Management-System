@@ -145,7 +145,8 @@ class ChatController extends Controller
 
         SafeBroadcast::send(new \App\Events\ChatMessageSent($message));
 
-        return back();
+        // the page sends with fetch and draws the message from this; a plain form post still goes back to the page
+        return $r->expectsJson() ? response()->json($message, 201) : back();
     }
 
     public function myUpdates(Request $request)

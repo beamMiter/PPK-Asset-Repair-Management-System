@@ -31,7 +31,8 @@ function threadPage(body, world, { thread = 7, last = 10, lastUser = 9 } = {}) {
   r.box.scrollHeight = 1000; r.box.clientHeight = 500; r.box.scrollTop = 0;
   r.empty = el('div', { id: 'emptyStateMsg' });
   r.input = el('textarea', { id: 'msgInput' }); r.input.value = ''; r.input.scrollHeight = 100;
-  r.form = el('form').append(r.input); r.form.submitted = 0; r.form.submit = () => { r.form.submitted++; };
+  r.sendBtn = el('button', { type: 'submit' });
+  r.form = el('form', { action: `/chat/threads/${thread}/messages` }).append(r.input, r.sendBtn); r.form.submitted = 0; r.form.submit = () => { r.form.submitted++; };
   r.scrollBtn = el('button', { id: 'btnScrollBottom', class: 'hidden' });
   r.icon = el('span', { class: 'material-symbols-outlined' });
   r.refresh = el('button', { id: 'btnHeaderRefresh' }).append(r.icon); r.refresh.disabled = false;
@@ -47,8 +48,9 @@ const listPage = (body, world) => { body.append(world.el('div', { id: 'chat-pane
 function boot({ page = threadPage, answers = [[]], echo = true, innerWidth = 1280, ready = true } = {}) {
   const world = createWorld();
   const fetches = []; const queue = [...answers];
-  world.win.fetch = async (url) => {
-    fetches.push(url);
+  const requests = [];
+  world.win.fetch = async (url, init) => {
+    fetches.push(url); requests.push({ url, init });
     const a = queue.length > 1 ? queue.shift() : queue[0];
     if (a instanceof Error) throw a;
     if (a === false) return { ok: false, json: async () => ({}) };
@@ -70,7 +72,7 @@ function boot({ page = threadPage, answers = [[]], echo = true, innerWidth = 128
       leave(name) { left.push(name); delete handlers[name]; delete events[name]; } };
   }
   world.win.Alpine = { $data: (e) => e.alpine };            // the page's Alpine is there whether or not the websocket is
-  Object.assign(world, { fetches, conn, handlers, events, joined, left, queue, toasts, visited });
+  Object.assign(world, { fetches, requests, conn, handlers, events, joined, left, queue, toasts, visited });
   world.ref = page(world.body, world);
   world.chat = Chat.installChatPage(world.win);
   world.go = (build = page, opts) => {                       // a Turbo visit: the old page is torn down, the body replaced
@@ -256,22 +258,135 @@ test('an avatar URL is set as a URL, not parsed into markup', () => {
 });
 
 // ── the composer and the refresh button ────────────────────────────────────────────────────────────────────────────
-test('Enter sends on a desktop; Shift+Enter, an empty box and a phone do not', () => {
-  const world = boot();
+const sent = (world) => world.requests.filter((r) => r.init && r.init.method === 'POST');
+const mine = (over = {}) => ({ id: 12, user_id: 5, body: 'ข้อความ', user: { id: 5, name: 'ฉัน' }, ...over });
+
+test('Enter sends on a desktop; Shift+Enter, an empty box and a phone do not', async () => {
+  const world = boot({ answers: [[]] });
   const { input, form } = world.ref;
+  world.queue.splice(0, world.queue.length, world.resp(mine(), { status: 201 }));
   input.value = 'ข้อความ';
   const enter = input.dispatch('keydown', { key: 'Enter', shiftKey: false });
+  await settle();
   assert.equal(enter.defaultPrevented, true);
-  assert.equal(form.submitted, 1);
+  assert.equal(sent(world).length, 1);
+  assert.equal(form.submitted, 0, 'the page is not reloaded by a native submit');
 
-  input.dispatch('keydown', { key: 'Enter', shiftKey: true }); assert.equal(form.submitted, 1);
-  input.value = '   '; input.dispatch('keydown', { key: 'Enter', shiftKey: false }); assert.equal(form.submitted, 1);
-  input.dispatch('keydown', { key: 'a' }); assert.equal(form.submitted, 1);
+  input.value = 'อีกข้อความ';
+  input.dispatch('keydown', { key: 'Enter', shiftKey: true }); await settle(); assert.equal(sent(world).length, 1);
+  input.value = '   '; input.dispatch('keydown', { key: 'Enter', shiftKey: false }); await settle(); assert.equal(sent(world).length, 1);
+  input.dispatch('keydown', { key: 'a' }); await settle(); assert.equal(sent(world).length, 1);
 
   const phone = boot({ innerWidth: 400 });
   phone.ref.input.value = 'x';
   assert.equal(phone.ref.input.dispatch('keydown', { key: 'Enter', shiftKey: false }).defaultPrevented, false);
-  assert.equal(phone.ref.form.submitted, 0);
+  await settle();
+  assert.equal(sent(phone).length, 0);
+});
+
+// ── sending without a reload ───────────────────────────────────────────────────────────────────────────────────────
+/** a thread page whose next answers the test sets (the server's reply to the message), with the CSRF meta tag the layout carries */
+function sendable() {
+  const world = boot({ answers: [[]] });
+  world.body.append(world.el('meta', { name: 'csrf-token', content: 'tok-9' }));
+  return world;
+}
+const type = (world, text) => { world.ref.input.value = text; return world.ref.input; };
+
+test('a message is posted as JSON to the form\'s address with the CSRF token, and drawn from the answer', async () => {
+  const world = sendable();
+  world.queue.splice(0, world.queue.length, world.resp(mine({ id: 12, body: 'สวัสดีครับ' }), { status: 201 }));
+  type(world, 'สวัสดีครับ').dispatch('keydown', { key: 'Enter', shiftKey: false });
+  await settle();
+
+  const [req] = sent(world);
+  assert.equal(req.url, '/chat/threads/7/messages');
+  assert.equal(req.init.headers.Accept, 'application/json');
+  assert.equal(req.init.headers['X-CSRF-TOKEN'], 'tok-9');
+  assert.deepEqual(JSON.parse(req.init.body), { body: 'สวัสดีครับ' });
+
+  assert.equal(world.ref.input.value, '', 'the box empties');
+  assert.equal(world.rows().length, 1);
+  assert.ok(world.rows()[0].textContent.includes('สวัสดีครับ'));
+  assert.equal(world.ref.box.dataset.lastId, '12', 'the poll asks after it');
+  assert.equal(world.ref.counter.textContent, '5', 'the thread counter went up');
+  assert.equal(world.ref.box.scrollTop, 1000, 'scrolled to the new message');
+});
+
+test('the send button does the same, and its own submit is not left to reload the page', async () => {
+  const world = sendable();
+  world.queue.splice(0, world.queue.length, world.resp(mine(), { status: 201 }));
+  type(world, 'x');
+  const ev = world.ref.form.dispatch('submit');
+  await settle();
+  assert.equal(ev.defaultPrevented, true);
+  assert.equal(sent(world).length, 1);
+  assert.equal(world.ref.form.submitted, 0);
+});
+
+test('pressing Enter twice at once sends once; the send button is off while it goes', async () => {
+  const world = sendable();
+  world.queue.splice(0, world.queue.length, world.resp(mine(), { status: 201 }));
+  type(world, 'x');
+  world.ref.input.dispatch('keydown', { key: 'Enter', shiftKey: false });
+  assert.equal(world.ref.sendBtn.disabled, true);
+  world.ref.input.dispatch('keydown', { key: 'Enter', shiftKey: false });
+  await settle();
+  assert.equal(sent(world).length, 1);
+  assert.equal(world.ref.sendBtn.disabled, false, 'and back on afterwards');
+});
+
+test('an empty or blank box sends nothing', async () => {
+  const world = sendable();
+  type(world, '   ').dispatch('keydown', { key: 'Enter', shiftKey: false });
+  world.ref.form.dispatch('submit');
+  await settle();
+  assert.equal(sent(world).length, 0);
+});
+
+test('the broadcast may draw the message before the answer arrives: it is drawn once', async () => {
+  const world = sendable();
+  world.queue.splice(0, world.queue.length, world.resp(mine({ id: 12 }), { status: 201 }));
+  type(world, 'ข้อความ').dispatch('keydown', { key: 'Enter', shiftKey: false });
+  world.emit(msg({ id: 12, user_id: 5, body: 'ข้อความ' }));       // the websocket was quicker
+  await settle();
+  assert.equal(world.rows().length, 1);
+  assert.equal(world.ref.counter.textContent, '5', 'counted once');
+});
+
+test('the thread was locked while they typed: their words stay, the composer closes, a toast says why', async () => {
+  const world = sendable();
+  world.queue.splice(0, world.queue.length, world.resp({}, { status: 403 }));
+  type(world, 'ยังพิมพ์ไม่เสร็จ').dispatch('keydown', { key: 'Enter', shiftKey: false });
+  await settle();
+  assert.equal(world.ref.input.value, 'ยังพิมพ์ไม่เสร็จ');
+  assert.equal(world.ref.pane.alpine.locked, true);
+  assert.match(world.toasts.at(-1).message, /ถูกล็อกแล้ว/);
+  assert.equal(world.rows().length, 0);
+});
+
+test('the thread was deleted while they typed: told, and taken back to the list', async () => {
+  const world = sendable();
+  world.queue.splice(0, world.queue.length, world.resp({}, { status: 404 }));
+  type(world, 'x').dispatch('keydown', { key: 'Enter', shiftKey: false });
+  await settle();
+  assert.match(world.toasts.at(-1).message, /ถูกลบแล้ว/);
+  world.advance(1500);
+  assert.deepEqual(world.visited, ['/chat']);
+});
+
+test('a server error or a dropped connection keeps what was typed, says so, and lets them try again', async () => {
+  for (const failure of [500, new Error('offline')]) {
+    const world = sendable();
+    world.queue.splice(0, world.queue.length, typeof failure === 'number' ? world.resp({}, { status: failure }) : failure);
+    type(world, 'อย่าให้หาย').dispatch('keydown', { key: 'Enter', shiftKey: false });
+    await settle();
+    assert.equal(world.ref.input.value, 'อย่าให้หาย');
+    assert.match(world.toasts.at(-1).message, /ส่งข้อความไม่สำเร็จ/);
+    assert.equal(world.toasts.at(-1).type, 'error');
+    assert.equal(world.ref.sendBtn.disabled, false);
+    assert.equal(world.rows().length, 0);
+  }
 });
 
 test('the composer grows with its text up to 140 px', () => {

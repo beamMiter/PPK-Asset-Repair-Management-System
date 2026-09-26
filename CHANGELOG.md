@@ -466,6 +466,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Sending a chat message no longer reloads the page.** The composer submitted a form, so every message reloaded the whole page (losing the
+  scroll position and the focus) even though the message also arrives live. It now posts with fetch: the box empties, the message is drawn
+  from the server's answer (`201` with the message and who wrote it) and never twice (the broadcast and the poll carry the same id); a
+  locked or deleted thread, a failure or a dropped connection says so and keeps what was typed. Enter and the send button do the same, a
+  double press sends once, and a plain form post (no JavaScript) still works. `ChatSendJsonTest`, `tests/js/chat-page.test.mjs`.
 - **Locking a chat thread, unlocking it or deleting it reaches everyone who has it open, with no refresh.** Before, the lock only
   showed after a reload (until then the composer was still there and a message came back "locked"), and the person who pressed the
   button watched the whole page reload. Now the lock button answers in JSON and the page flips at once; the server broadcasts
