@@ -171,7 +171,7 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     Route::get('/threads/{thread}/messages',  [ChatController::class, 'messages'])->name('messages.index');
     Route::post('/threads/{thread}/messages', [ChatController::class, 'storeMessage'])->name('messages.store');
 
-    // Thread lock / unlock — ทุกบทบาทยกเว้น member (เช็คใน HandlesChatReads::assertCanManageThread)
+    // Thread lock / unlock — เจ้าของกระทู้ (ทุกบทบาท) และทุกบทบาทยกเว้น member (เช็คใน ChatThread::canBeLockedBy)
     Route::post('/threads/{thread}/lock',   [ChatController::class, 'lock'])->name('threads.lock');
     Route::post('/threads/{thread}/unlock', [ChatController::class, 'unlock'])->name('threads.unlock');
 

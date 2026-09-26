@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Models\ChatMessage;
+use App\Models\ChatThread;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -13,11 +14,10 @@ use Illuminate\Support\Facades\DB;
  */
 trait HandlesChatReads
 {
-    /** Locking / moderation is open to any signed-in non-member. */
-    protected function assertCanManageThread(): void
+    /** Locking / unlocking: the thread's owner and any signed-in non-member (ChatThread::canBeLockedBy). */
+    protected function assertCanLock(ChatThread $thread): void
     {
-        $user = Auth::user();
-        abort_if(! $user || $user->role === 'member', 403, 'Forbidden');
+        abort_unless($thread->canBeLockedBy(Auth::user()), 403, 'Forbidden');
     }
 
     /**

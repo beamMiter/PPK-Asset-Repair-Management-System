@@ -39,6 +39,15 @@ class ChatThread extends Model
     }
 
     /**
+     * Locking and unlocking a thread: whoever started it (whatever their role - a plain member included), and any signed-in staff member
+     * (everybody but a plain member, admins among them). Somebody who only took part in a thread started by another cannot.
+     */
+    public function canBeLockedBy(?User $user): bool
+    {
+        return $user !== null && ($user->role !== 'member' || (int) $user->id === (int) $this->author_id);
+    }
+
+    /**
      * Deleting a thread (it is hidden from everyone) belongs to whoever started it, and to an admin. Everybody else who took part
      * hides it from their own list instead (see scopeInMyList).
      */

@@ -253,7 +253,7 @@ class ChatController extends Controller
 
     protected function authorizeLocking(ChatThread $thread)
     {
-        $this->assertCanManageThread();
+        $this->assertCanLock($thread);
     }
 
     public function myUpdates(Request $r)
