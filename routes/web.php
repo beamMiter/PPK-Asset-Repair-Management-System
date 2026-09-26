@@ -27,6 +27,15 @@ use App\Http\Controllers\ManualController;
 // login
 Route::redirect('/', '/login');
 
+// POST /broadcasting/auth - the browser (session) and the app (bearer token) prove who they are before they may listen on a private
+// channel (routes/channels.php). The chat's channels are private: they were public, so anyone holding the (public) Pusher key could read
+// every thread live without signing in. Like Laravel's own route it takes no CSRF token (the Pusher client posts it): the session cookie
+// or the bearer token is the proof; `active` / `password.changed` run after `auth:sanctum`, so they see a bearer user too.
+Route::match(['get', 'post'], '/broadcasting/auth', [\App\Http\Controllers\BroadcastAuthController::class, 'authenticate'])
+    ->middleware(['auth:sanctum', 'active', 'password.changed'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class])
+    ->name('broadcasting.auth');
+
 // Auth-only
 Route::middleware(['auth'])->group(function () {
 

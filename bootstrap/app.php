@@ -30,11 +30,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
 
-    // POST /broadcasting/auth - the browser (session) and the app (bearer token) prove who they are before they may listen on a
-    // private channel (routes/channels.php). The chat's channels are private: they were public, so anyone holding the (public) Pusher key
-    // could read every thread live without signing in.
-    ->withBroadcasting(__DIR__ . '/../routes/channels.php', ['middleware' => ['web', 'auth:sanctum', 'active', 'password.changed']])
-
     /*
     |--------------------------------------------------------------------------
     | Middleware (Laravel 11)

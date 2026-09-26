@@ -767,7 +767,7 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   are now announced on `private-chat.{id}`; the browser (session) and the app (bearer token) first ask `POST /broadcasting/auth`, and only a
   signed-in account that is not suspended and not waiting to change its password is given a signature, and only for a thread that exists
   (OWASP WebSocket Security: authenticate and authorise a subscription). Nothing to configure: the Pusher secret the server already uses
-  signs it. An app that listens on the chat must switch to a private channel and authorise through `/broadcasting/auth`. The request-created
+  signs it; the channel rules are registered when somebody asks to listen, not while the app boots (an unset key cannot take the whole app down), and the test suite never uses the developer's real Pusher app (`BROADCAST_CONNECTION=null` in `phpunit.xml`). An app that listens on the chat must switch to a private channel and authorise through `/broadcasting/auth`. The request-created
   channel (`maintenance-requests`, id / number / title / status) is still public. `ChatChannelAuthTest`.
 - **A Content-Security-Policy that cannot break a page, and a report-only preview of the strict one.** The enforced policy is now
   `frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'`: an injected `<form action="https://evil…">` cannot

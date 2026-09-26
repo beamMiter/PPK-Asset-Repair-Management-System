@@ -24,6 +24,9 @@
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
+        <!-- Never the developer's real push service: whatever BROADCAST_CONNECTION the .env holds, a test that posts a chat message would
+             announce it to the real Pusher app with the real keys. A test that needs Pusher configures it itself (a dead port, or dummy keys). -->
+        <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
         <!-- A separate MySQL database on the same server, not the dev one: RefreshDatabase runs migrate:fresh against
              whatever DB_DATABASE resolves to, and the dev DB (the one the app itself, and anyone logged in, uses) was
