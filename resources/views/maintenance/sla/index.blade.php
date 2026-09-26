@@ -82,10 +82,7 @@
                                 <div
                                     class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
                                     <h3 class="text-lg font-semibold text-slate-900">พิมพ์รายงานสรุป SLA</h3>
-                                    <button @click="showSignModal = false"
-                                        class="text-slate-400 hover:text-slate-600 transition-colors">
-                                        <span class="material-symbols-outlined">close</span>
-                                    </button>
+                                    <x-ui.button @click="showSignModal = false" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                                 </div>
 
                                 <div class="p-6 overflow-y-auto space-y-6">

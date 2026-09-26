@@ -215,9 +215,7 @@
             <div class="relative w-full max-w-xl rounded-md bg-white overflow-hidden">
                 <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                     <h3 class="text-lg font-bold text-slate-900">ตัดรูปโปรไฟล์</h3>
-                    <button type="button" id="cropper-close" class="text-slate-400 hover:text-slate-600">
-                        <span class="material-symbols-outlined">close</span>
-                    </button>
+                    <x-ui.button id="cropper-close" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                 </div>
                 <div class="p-6">
                     <div class="aspect-square w-full bg-slate-50 rounded-xl overflow-hidden border border-slate-100">

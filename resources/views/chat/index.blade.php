@@ -518,10 +518,7 @@
 
                     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                         <h3 class="text-lg font-semibold text-slate-900 font-manrope">สร้างกระทู้ใหม่</h3>
-                        <button @click="showCreateModal = false"
-                            class="text-slate-400 hover:text-slate-600 transition-colors">
-                            <span class="material-symbols-outlined">close</span>
-                        </button>
+                        <x-ui.button @click="showCreateModal = false" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                     </div>
 
                     <div class="p-6">
@@ -566,10 +563,7 @@
 
                         <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                             <h3 class="text-[15px] font-semibold text-amber-700 font-manrope">ยืนยันการดำเนินการ</h3>
-                            <button @click="showLockModal = false"
-                                class="text-slate-400 hover:text-slate-600 transition-colors">
-                                <span class="material-symbols-outlined text-[20px]">close</span>
-                            </button>
+                            <x-ui.button @click="showLockModal = false" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                         </div>
 
                         <div class="p-5 text-center">
@@ -613,10 +607,7 @@
                             <div
                                 class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                                 <h3 class="text-[15px] font-semibold text-red-600 font-manrope">ยืนยันการลบกระทู้</h3>
-                                <button @click="showDeleteModal = false"
-                                    class="text-slate-400 hover:text-slate-600 transition-colors">
-                                    <span class="material-symbols-outlined text-[20px]">close</span>
-                                </button>
+                                <x-ui.button @click="showDeleteModal = false" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                             </div>
 
                             <div class="p-5 text-center">

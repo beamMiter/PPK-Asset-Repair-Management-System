@@ -535,6 +535,10 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   websocket is healthy the open thread asks the server for new messages every 15 seconds (it was 5, then 60 in a first draft - too long for a
   conversation); it asks every 5 seconds whenever push is not certain: the connection is down or still connecting, or - new - the connection
   is up but this thread's private channel was not subscribed (its authorisation was refused), which would otherwise have left nothing
+- **The last five hand-written close buttons are the standard one.** The chat's create / lock / delete dialogs, the profile picture cropper and the SLA
+  print dialog closed with a bare grey icon; they use `<x-ui.button variant="ghost" size="icon" icon="close" aria-label="ปิด">` like every other
+  dialog, so a change to it reaches them too. `DialogCloseButtonsTest`.
+
   arriving. When push comes back it asks at once for what it missed. `tests/js/chat-page.test.mjs`.
 - **The chat polls as a safety net while the websocket is healthy, and screen readers hear new messages.** The open thread asked the server
   for new messages every 5 seconds even while the websocket was delivering them; while the socket is connected it now asks once a minute
