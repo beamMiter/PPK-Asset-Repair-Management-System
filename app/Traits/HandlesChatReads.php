@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
  */
 trait HandlesChatReads
 {
-    /** Locking / unlocking: the thread's owner and any signed-in non-member (ChatThread::canBeLockedBy). */
+    /** Locking / unlocking: any signed-in non-member (ChatThread::canBeLockedBy). */
     protected function assertCanLock(ChatThread $thread): void
     {
         abort_unless($thread->canBeLockedBy(Auth::user()), 403, 'Forbidden');

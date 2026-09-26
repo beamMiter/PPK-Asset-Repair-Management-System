@@ -39,12 +39,13 @@ class ChatThread extends Model
     }
 
     /**
-     * Locking and unlocking a thread: whoever started it (whatever their role - a plain member included), and any signed-in staff member
-     * (everybody but a plain member, admins among them). Somebody who only took part in a thread started by another cannot.
+     * Locking and unlocking a thread is moderation, so it is for staff: admins, supervisors, IT support and technicians - anybody but a
+     * plain member, the thread's own author included (an author may delete their thread, or hide it, but not overrule a moderator by
+     * unlocking one that staff locked).
      */
     public function canBeLockedBy(?User $user): bool
     {
-        return $user !== null && ($user->role !== 'member' || (int) $user->id === (int) $this->author_id);
+        return $user !== null && $user->role !== 'member';
     }
 
     /**

@@ -121,7 +121,7 @@ class ChatDeleteThreadTest extends TestCase
         $this->assertStringNotContainsString('title="ลบกระทู้"', $html);
     }
 
-    public function test_an_owner_who_is_a_plain_member_gets_both_the_delete_and_the_lock_button(): void
+    public function test_an_owner_who_is_a_plain_member_gets_the_delete_button_and_no_lock_button(): void
     {
         $author = User::factory()->create(['role' => 'member']);
         $thread = $this->thread($author);
@@ -129,6 +129,6 @@ class ChatDeleteThreadTest extends TestCase
         $html = $this->header($author, $thread);
 
         $this->assertStringContainsString('title="ลบกระทู้"', $html);
-        $this->assertStringContainsString('title="ล็อกกระทู้"', $html, 'the owner locks too (ChatLockPermissionTest)');
+        $this->assertStringNotContainsString('title="ล็อกกระทู้"', $html, 'locking is moderation: staff only (ChatLockPermissionTest)');
     }
 }

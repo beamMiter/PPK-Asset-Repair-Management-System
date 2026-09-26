@@ -9,11 +9,13 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Who may lock (and unlock) a chat thread: whoever started it - a plain member too, since it is theirs - and any signed-in staff member,
- * admins among them. Somebody who only took part in a thread another person started may not.
+ * Locking and unlocking a chat thread is moderation: admins, supervisors, IT support and technicians may, whoever started the thread;
+ * a plain member may not - not another person's thread and not their own (they may delete it, or hide it: ChatDeleteThreadTest,
+ * ChatHideThreadTest). A member could otherwise unlock a thread that staff had locked.
  */
 class ChatLockPermissionTest extends TestCase
 {
@@ -38,79 +40,61 @@ class ChatLockPermissionTest extends TestCase
         return (bool) $thread->fresh()->is_locked;
     }
 
-    public function test_the_person_who_started_a_thread_can_lock_and_unlock_it_whatever_their_role(): void
+    /** @return array<string,array{0:string}> */
+    public static function staffRoles(): array
     {
-        foreach (['member', 'it_support', 'technician', 'supervisor', 'admin'] as $role) {
-            $owner = User::factory()->create(['role' => $role]);
-            $thread = $this->thread($owner);
-
-            $this->actingAs($owner)->post(route('chat.lock', $thread))->assertRedirect()->assertSessionHas('toast.type', 'success');
-            $this->assertTrue($this->locked($thread), "$role locks");
-
-            $this->actingAs($owner)->post(route('chat.unlock', $thread))->assertRedirect()->assertSessionHas('toast.type', 'success');
-            $this->assertFalse($this->locked($thread), "$role unlocks");
-        }
+        return ['admin' => ['admin'], 'supervisor' => ['supervisor'], 'it_support' => ['it_support'], 'technician' => ['technician']];
     }
 
-    public function test_an_admin_can_lock_and_unlock_somebody_elses_thread(): void
+    #[DataProvider('staffRoles')]
+    public function test_staff_lock_and_unlock_any_thread_including_a_members(string $role): void
     {
         $thread = $this->thread(User::factory()->create(['role' => 'member']));
-        $admin = User::factory()->create(['role' => 'admin']);
+        $staff = User::factory()->create(['role' => $role]);
 
-        $this->actingAs($admin)->post(route('chat.lock', $thread))->assertRedirect();
+        $this->actingAs($staff)->post(route('chat.lock', $thread))->assertRedirect()->assertSessionHas('toast.type', 'success');
         $this->assertTrue($this->locked($thread));
 
-        $this->actingAs($admin)->post(route('chat.unlock', $thread))->assertRedirect();
+        $this->actingAs($staff)->post(route('chat.unlock', $thread))->assertRedirect()->assertSessionHas('toast.type', 'success');
         $this->assertFalse($this->locked($thread));
     }
 
-    public function test_staff_who_did_not_start_it_still_can_as_before(): void
+    public function test_a_plain_member_cannot_lock_or_unlock_not_even_the_thread_they_started(): void
     {
-        $thread = $this->thread(User::factory()->create(['role' => 'member']));
-
-        $this->actingAs(User::factory()->create(['role' => 'it_support']))->post(route('chat.lock', $thread))->assertRedirect();
-
-        $this->assertTrue($this->locked($thread));
-    }
-
-    public function test_a_member_who_only_took_part_cannot_lock_or_unlock_it(): void
-    {
-        $owner = User::factory()->create(['role' => 'it_support']);
         $member = User::factory()->create(['role' => 'member']);
-        $open = $this->thread($owner);
-        ChatMessage::create(['chat_thread_id' => $open->id, 'user_id' => $member->id, 'body' => 'ตอบ']);
-        $shut = $this->thread($owner, true);
+        $mine = $this->thread($member);
+        $staffs = $this->thread(User::factory()->create(['role' => 'it_support']), true);   // locked by staff, say
 
-        $this->actingAs($member)->post(route('chat.lock', $open))->assertForbidden();
-        $this->actingAs($member)->post(route('chat.unlock', $shut))->assertForbidden();
+        $this->actingAs($member)->post(route('chat.lock', $mine))->assertForbidden();
+        $this->actingAs($member)->post(route('chat.unlock', $staffs))->assertForbidden();
 
-        $this->assertFalse($this->locked($open));
-        $this->assertTrue($this->locked($shut));
+        $this->assertFalse($this->locked($mine));
+        $this->assertTrue($this->locked($staffs), 'a member cannot overrule a moderator');
     }
 
     public function test_the_api_follows_the_same_rule(): void
     {
-        $owner = User::factory()->create(['role' => 'member']);
-        $thread = $this->thread($owner);
+        $member = User::factory()->create(['role' => 'member']);
+        $thread = $this->thread($member);
 
-        Sanctum::actingAs($owner);
-        $this->postJson("/api/threads/{$thread->id}/lock")->assertOk()->assertJsonPath('is_locked', true);
-        $this->postJson("/api/threads/{$thread->id}/unlock")->assertOk()->assertJsonPath('is_locked', false);
-
-        Sanctum::actingAs(User::factory()->create(['role' => 'member']));
+        Sanctum::actingAs($member);
         $this->postJson("/api/threads/{$thread->id}/lock")->assertForbidden();
         $this->assertFalse($this->locked($thread));
+
+        Sanctum::actingAs(User::factory()->create(['role' => 'technician']));
+        $this->postJson("/api/threads/{$thread->id}/lock")->assertOk()->assertJsonPath('is_locked', true);
+        $this->postJson("/api/threads/{$thread->id}/unlock")->assertOk()->assertJsonPath('is_locked', false);
     }
 
     public function test_the_rule_is_one_method(): void
     {
-        $owner = User::factory()->create(['role' => 'member']);
-        $thread = $this->thread($owner);
+        $thread = $this->thread(User::factory()->create(['role' => 'member']));
 
-        $this->assertTrue($thread->canBeLockedBy($owner));
-        $this->assertTrue($thread->canBeLockedBy(User::factory()->create(['role' => 'admin'])));
-        $this->assertTrue($thread->canBeLockedBy(User::factory()->create(['role' => 'technician'])));
+        foreach (['admin', 'supervisor', 'it_support', 'technician'] as $role) {
+            $this->assertTrue($thread->canBeLockedBy(User::factory()->create(['role' => $role])), $role);
+        }
         $this->assertFalse($thread->canBeLockedBy(User::factory()->create(['role' => 'member'])));
+        $this->assertFalse($thread->canBeLockedBy($thread->author), 'the author is a member');
         $this->assertFalse($thread->canBeLockedBy(null));
     }
 
@@ -121,39 +105,29 @@ class ChatLockPermissionTest extends TestCase
         return $this->actingAs($viewer)->get(route('chat.index', ['thread_id' => $thread->id]))->assertOk()->getContent();
     }
 
-    public function test_the_lock_button_is_shown_to_the_owner_and_to_staff_but_not_to_a_member_who_only_took_part(): void
+    public function test_the_lock_button_is_for_staff_only_and_a_member_owner_gets_delete_instead(): void
     {
         $owner = User::factory()->create(['role' => 'member']);
         $thread = $this->thread($owner);
-        $member = User::factory()->create(['role' => 'member']);
-        ChatMessage::create(['chat_thread_id' => $thread->id, 'user_id' => $member->id, 'body' => 'ตอบ']);
 
-        foreach ([$owner, User::factory()->create(['role' => 'admin']), User::factory()->create(['role' => 'it_support'])] as $who) {
-            $this->assertStringContainsString('title="ล็อกกระทู้"', $this->html($who, $thread), $who->role);
+        foreach (['admin', 'supervisor', 'it_support', 'technician'] as $role) {
+            $this->assertStringContainsString('title="ล็อกกระทู้"', $this->html(User::factory()->create(['role' => $role]), $thread), $role);
         }
-        $this->assertStringNotContainsString('title="ล็อกกระทู้"', $this->html($member, $thread));
-        $this->assertStringNotContainsString('title="ปลดล็อกกระทู้"', $this->html($member, $thread));
+
+        $mine = $this->html($owner, $thread);
+        $this->assertStringNotContainsString('title="ล็อกกระทู้"', $mine);
+        $this->assertStringNotContainsString('title="ปลดล็อกกระทู้"', $mine);
+        $this->assertStringContainsString('title="ลบกระทู้"', $mine, 'the owner can still delete it');
     }
 
-    public function test_the_owner_of_a_locked_thread_is_offered_to_unlock_it(): void
-    {
-        $owner = User::factory()->create(['role' => 'member']);
-        $thread = $this->thread($owner, true);
-
-        $html = $this->html($owner, $thread);
-
-        $this->assertStringContainsString('title="ปลดล็อกกระทู้"', $html);
-        $this->assertStringContainsString('action="' . route('chat.unlock', $thread) . '"', $html);
-    }
-
-    public function test_a_locked_thread_still_refuses_messages_from_its_owner_until_it_is_reopened(): void
+    public function test_a_locked_thread_refuses_messages_from_its_member_owner_until_staff_reopen_it(): void
     {
         $owner = User::factory()->create(['role' => 'member']);
         $thread = $this->thread($owner, true);
 
         $this->actingAs($owner)->postJson(route('chat.messages.store', $thread), ['body' => 'x'])->assertForbidden();
 
-        $this->actingAs($owner)->post(route('chat.unlock', $thread));
+        $this->actingAs(User::factory()->create(['role' => 'admin']))->post(route('chat.unlock', $thread));
         $this->actingAs($owner)->post(route('chat.messages.store', $thread), ['body' => 'เปิดแล้ว'])->assertRedirect();
         $this->assertSame(2, $thread->messages()->count());
     }

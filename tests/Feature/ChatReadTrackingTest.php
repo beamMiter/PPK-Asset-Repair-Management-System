@@ -108,11 +108,10 @@ class ChatReadTrackingTest extends TestCase
         Event::assertDispatched(ChatMessageSent::class);
     }
 
-    public function test_a_member_who_did_not_start_the_thread_cannot_lock_it_on_either_path(): void
+    public function test_member_cannot_lock_a_thread_on_either_path(): void
     {
         $member = User::factory()->create(['role' => 'member']);
-        $owner  = User::factory()->create(['role' => 'it_support']);
-        $thread = ChatThread::create(['title' => 'T', 'author_id' => $owner->id, 'is_locked' => false]);
+        $thread = ChatThread::create(['title' => 'T', 'author_id' => $member->id, 'is_locked' => false]);
 
         $this->actingAs($member)
             ->post(route('chat.lock', $thread))
