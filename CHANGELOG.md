@@ -759,6 +759,15 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **A Content-Security-Policy that cannot break a page, and a report-only preview of the strict one.** The enforced policy is now
+  `frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'`: an injected `<form action="https://evil…">` cannot
+  carry what somebody types (a password) to another host, and no plug-in content loads. Checked against every view and script: the app has
+  no `<base>`, `<object>`, `<embed>`, `<iframe>`, no form that posts to another site, no navigation to another origin. What a full policy
+  would add (`script-src` / `style-src`) is not enforced - the pages take scripts from three CDNs, carry inline Alpine (~60 inline
+  handlers, 19 inline scripts) and come from the Vite dev server in development - but outside production the strict policy is sent as
+  `Content-Security-Policy-Report-Only` (nothing is blocked; the browser console lists what a strict policy would refuse: the work list
+  for moving the pages to nonces). Production sends no report-only header. `SecurityHeadersTest` also fails if a view starts using an
+  external host the preview does not name.
 - **Who carries how much, and how long each person takes, is for management, not for a plain member.** The technician rating board
   was closed to plain members for this reason (R6), and three doors to the same information were left open: `GET
   /api/stats/maintenance/technicians` (names, jobs open / closed, average hours), the dashboard's "Technician Workload" (names and open

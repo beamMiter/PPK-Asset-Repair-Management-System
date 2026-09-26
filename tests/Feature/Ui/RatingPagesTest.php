@@ -529,10 +529,14 @@ class RatingPagesTest extends TestCase
 
         $this->assertStringNotContainsString('href="#"', $html, 'the old "ดูประวัติทั้งหมด" link led nowhere');
         $this->assertStringNotContainsString('เร่งด่วน/วิกฤต', $html, 'a 1–2 star review is not an emergency');
-        // A month name next to a day or a year: a date. (Not the bare word: the factory's people are called "Jan Batz", "May ..." at random,
-        // and this test failed on those about one run in fifty.)
-        $month = '(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?';
-        $this->assertDoesNotMatchRegularExpression("/\b\d{1,4}\s+{$month}\b|\b{$month}\s+\d{1,4}\b/", strip_tags($html), 'English dates');
+        // No English date for the dates on the page. Looked for as the very strings PHP / Carbon would print for THESE two dates: a
+        // pattern over the whole page ("a month next to a number") also matched the factory's random names, streets and phone numbers,
+        // and this test failed on those about one run in eight.
+        foreach ([$req->closed_at, \App\Models\MaintenanceRating::firstOrFail()->created_at] as $date) {
+            foreach (['j M Y', 'd M Y', 'M j, Y', 'j F Y', 'F j, Y', 'M Y', 'F Y'] as $format) {
+                $this->assertStringNotContainsString($date->format($format), strip_tags($html), "English date ($format)");
+            }
+        }
     }
 
     public function test_the_comments_are_the_ratings_that_have_one_newest_first_six_at_most(): void
