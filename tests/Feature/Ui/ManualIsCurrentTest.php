@@ -118,6 +118,7 @@ class ManualIsCurrentTest extends TestCase
         $html = $this->manual();
 
         $this->assertStringContainsString('วันละ 7 กระทู้', $html);
+        $this->assertStringContainsString('ในกล่องใต้ชื่อกระดานสนทนา', $html, 'where the board says how many are left');
         $this->assertStringContainsString('ไม่มีการตอบครบ 45 วัน', $html);
         $this->assertStringContainsString('ถูกล็อกครบ 60 วัน', $html);
         $this->assertStringContainsString('อีก 20 วัน', $html);

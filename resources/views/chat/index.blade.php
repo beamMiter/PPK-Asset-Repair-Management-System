@@ -125,12 +125,25 @@
                         </svg>
                         สร้างกระทู้
                     </button>
-                    @unless ($quota['unlimited'])
-                        <p id="threadQuotaNote" class="mt-1 text-[11px] {{ $noneLeft ? 'font-semibold text-amber-700' : 'text-slate-500' }}">
-                            {{ $noneLeft ? 'วันนี้ตั้งกระทู้ครบแล้ว (' . $quota['limit'] . ' ครั้ง)' : 'ตั้งกระทู้ได้อีก ' . $quota['remaining'] . ' จาก ' . $quota['limit'] . ' ครั้งวันนี้' }}
-                        </p>
-                    @endunless
                     </div>
+                </div>
+
+                {{-- How many threads may be started today: for everybody, not a small note under the button (an admin saw nothing at all) --}}
+                @php
+                    $quotaLow = ! $quota['unlimited'] && $quota['remaining'] <= 1;
+                    $quotaTone = $quotaLow ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-slate-50 text-slate-600';
+                @endphp
+                <div id="threadQuotaNote" role="status" class="mt-3 flex items-start gap-2 rounded-md border px-3 py-2 text-[12px] leading-relaxed {{ $quotaTone }}">
+                    <span class="material-symbols-outlined mt-px shrink-0 text-[16px]" aria-hidden="true">{{ $noneLeft ? 'block' : ($quotaLow ? 'warning' : 'info') }}</span>
+                    <span @class(['font-semibold' => $noneLeft])>
+                        @if ($quota['unlimited'])
+                            ผู้ดูแลระบบตั้งกระทู้ได้ไม่จำกัดจำนวน - บุคลากรทั่วไปตั้งได้วันละ {{ $quota['limit'] }} กระทู้ (นับใหม่ตั้งแต่ 00:00 น. ตามเวลาไทย)
+                        @elseif ($noneLeft)
+                            วันนี้ตั้งกระทู้ครบแล้ว ({{ $quota['limit'] }} ครั้ง) - ตั้งกระทู้ใหม่ได้ตั้งแต่ 00:00 น. ของพรุ่งนี้
+                        @else
+                            วันนี้ตั้งกระทู้ได้อีก {{ $quota['remaining'] }} จาก {{ $quota['limit'] }} ครั้ง - นับใหม่ทุกวันตั้งแต่ 00:00 น. ตามเวลาไทย
+                        @endif
+                    </span>
                 </div>
 
                 <div class="mt-4">

@@ -535,6 +535,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The board says how many threads may be started today, for everybody.** The count was a small grey line under the "สร้างกระทู้" button (and in the
+  create dialog), and an admin saw nothing at all. It is now a notice box under the board's title: "วันนี้ตั้งกระทู้ได้อีก N จาก M ครั้ง - นับใหม่ทุกวันตั้งแต่
+  00:00 น. ตามเวลาไทย", amber when one is left, "ครบแล้ว" with the button off when none is, and for an admin "ตั้งกระทู้ได้ไม่จำกัดจำนวน" with what everyone else
+  has. The number is `CHAT_THREADS_PER_DAY`. `ChatFloodAndQuotaTest`.
+
 - **The user manual describes the system as it is.** Read against the code, `help/manual` had drifted: it sent people to a menu that does not exist
   ("งานแจ้งซ่อมของฉัน"), promised a QR code that nothing produces, said an asset turns "In Repair" only when a technician accepts (it happens when
   the request is sent, and ends at "ซ่อมบำรุงเสร็จสิ้น", not only at the approval), called the chat private rooms tied to a job (it is a board
