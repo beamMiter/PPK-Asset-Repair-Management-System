@@ -275,7 +275,10 @@ function mount(win) {
                 body: JSON.stringify({ body: text }),
             });
 
-            if (res.status === 403) {                     // locked while they were typing
+            if (res.status === 429) {                     // sending too fast: the wait is in Retry-After, the words stay
+                const wait = Math.max(1, parseInt(res.headers?.get?.('Retry-After')) || 10);
+                win.showToast?.({ type: 'warning', message: `ส่งข้อความถี่เกินไป กรุณารอ ${wait} วินาทีแล้วลองใหม่ ข้อความของคุณยังอยู่ในช่อง` });
+            } else if (res.status === 403) {                     // locked while they were typing
                 setLocked(true);
                 win.showToast?.({ type: 'warning', message: 'กระทู้นี้ถูกล็อกแล้ว ไม่สามารถส่งข้อความใหม่ได้' });
             } else if (res.status === 404) {              // deleted while they were typing

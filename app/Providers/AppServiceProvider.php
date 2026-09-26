@@ -50,6 +50,21 @@ class AppServiceProvider extends ServiceProvider
         ]);
         RateLimiter::for('password-recovery', fn (Request $request) => Limit::perMinute(5)->by((string) $request->ip()));
 
+        // The chat: what a person may send is limited against a FLOOD (config/chat.php) - keyed by the person, the address for a guest.
+        RateLimiter::for('chat-message', function (Request $request) {
+            $who = (string) ($request->user()?->getAuthIdentifier() ?? $request->ip());
+
+            return [
+                (new Limit('burst:' . $who, (int) config('chat.message_burst_max'), (int) config('chat.message_burst_seconds'))),
+                (new Limit('sustained:' . $who, (int) config('chat.message_sustained_max'), (int) config('chat.message_sustained_seconds'))),
+            ];
+        });
+        RateLimiter::for('chat-thread', function (Request $request) {
+            $who = (string) ($request->user()?->getAuthIdentifier() ?? $request->ip());
+
+            return new Limit('thread:' . $who, (int) config('chat.thread_burst_max'), (int) config('chat.thread_burst_seconds'));
+        });
+
         if (app()->isLocal()) {
             Response::macro('prettyJson', function ($value, int $status = 200, array $headers = []) {
                 return response()->json(

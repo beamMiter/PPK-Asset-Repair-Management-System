@@ -8,6 +8,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The chat is limited against a flood, and a person may start 5 threads a day.** Nothing limited posting or creating threads. What a person
+  SENDS is now stopped when it is a flood, not for what it says: 8 messages in 10 seconds, or 60 in 5 minutes (a person writing normally is
+  never near either); the answer is a 429 with `Retry-After`, the page says "รอ N วินาที" and keeps what was typed. New threads: 5 a day for
+  each person, the day being the THAI calendar day (00:00 น., worked out from Asia/Bangkok whatever the server's clock says), a deleted
+  thread still counting, admins unlimited, plus a short limit that stops a double click making the same thread twice. The page says how
+  many are left ("ตั้งกระทู้ได้อีก 4 จาก 5 ครั้งวันนี้", in the dialog too, with when it starts again), the button goes off with the reason
+  when none is left, and the API answers 429 `chat_thread_daily_limit` with the quota (`meta.thread_quota` in the list). Every number is in
+  `config/chat.php` (env `CHAT_*`). `ChatFloodAndQuotaTest`.
 - **The chat page's thread list shows "ใหม่ N" and has a "ซ่อนไว้" list.** Only the floating widget knew which threads had messages a
   person had not read; the page's list now says "ใหม่ 3" beside a thread they took part in with three unread (99+ at most; the open thread
   is read, a hidden one does not count, and a thread they have no part in shows nothing however many messages it has) - counted for a
@@ -56,6 +64,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A throttled API answer said nothing about how long to wait.** The API's error renderer built its JSON answer without the headers the
+  exception carries, so a 429 lost its `Retry-After` (and a 405 its `Allow`). They are kept.
 - **A suspended person whose browser was still signed in got a 500 on any fetch.** The chat widget's poll, the channel authorisation and
   every other JSON call made from a page carry the SESSION, not a token; `EnsureAccountIsActive` called `->delete()` on the session's
   `TransientToken`, which has no such method. It answers 403 `account_suspended` and ends the session now. `AccountSuspensionTest`.

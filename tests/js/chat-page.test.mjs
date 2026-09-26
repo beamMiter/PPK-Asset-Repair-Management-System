@@ -523,3 +523,24 @@ test('the admin who deleted it is not told: the page is already on its way to th
   world.advance(5000);
   assert.deepEqual(world.visited, []);
 });
+
+test('sending too fast: a warning with the wait from Retry-After, and what was typed stays', async () => {
+  const world = sendable();
+  world.queue.splice(0, world.queue.length, world.resp({}, { status: 429, headers: { 'Retry-After': '7' } }));
+  type(world, 'พิมพ์ไว้แล้ว').dispatch('keydown', { key: 'Enter', shiftKey: false });
+  await settle();
+  assert.equal(world.toasts.at(-1).type, 'warning');
+  assert.match(world.toasts.at(-1).message, /รอ 7 วินาที/);
+  assert.equal(world.ref.input.value, 'พิมพ์ไว้แล้ว');
+  assert.equal(world.rows().length, 0);
+  assert.equal(world.ref.sendBtn.disabled, false);
+});
+
+test('a 429 with no Retry-After still says to wait (10 s), not nothing', async () => {
+  const world = sendable();
+  world.queue.splice(0, world.queue.length, world.resp({}, { status: 429 }));
+  type(world, 'x').dispatch('keydown', { key: 'Enter', shiftKey: false });
+  await settle();
+  assert.match(world.toasts.at(-1).message, /รอ 10 วินาที/);
+});
+

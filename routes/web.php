@@ -122,10 +122,10 @@ Route::middleware(['auth'])->group(function () {
 
     // Chat
     Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
-    Route::post('/chat/threads', [ChatController::class, 'storeThread'])->name('chat.store');
+    Route::post('/chat/threads', [ChatController::class, 'storeThread'])->middleware('throttle:chat-thread')->name('chat.store');
     Route::get('/chat/threads/{thread}', [ChatController::class, 'show'])->name('chat.show');
     Route::get('/chat/threads/{thread}/messages', [ChatController::class, 'messages'])->name('chat.messages');
-    Route::post('/chat/threads/{thread}/messages', [ChatController::class, 'storeMessage'])->name('chat.messages.store');
+    Route::post('/chat/threads/{thread}/messages', [ChatController::class, 'storeMessage'])->middleware('throttle:chat-message')->name('chat.messages.store');
     Route::get('/chat/my-updates', [ChatController::class, 'myUpdates'])->name('chat.my_updates');
     Route::post('/chat/threads/{thread}/lock', [ChatController::class, 'lock'])->name('chat.lock');
     Route::post('/chat/threads/{thread}/unlock', [ChatController::class, 'unlock'])->name('chat.unlock');

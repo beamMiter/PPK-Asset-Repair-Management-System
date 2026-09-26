@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\ChatThreadDeleted;
 use App\Events\ChatThreadLockChanged;
 use App\Models\ChatThread;
+use App\Support\ChatQuota;
 use App\Support\SafeBroadcast;
 use App\Traits\HandlesChatReads;
 use Illuminate\Http\Request;
@@ -71,12 +72,14 @@ class ChatController extends Controller
         // what each list holds, for the tabs (not narrowed by the search)
         $counts = ['all' => ChatThread::count(), 'mine' => ChatThread::inMyList($meId)->count(), 'hidden' => ChatThread::hiddenBy($meId)->count()];
 
+        $threadQuota = ChatQuota::for($me);
+
         // "ใหม่ N" beside a thread of mine that has messages I have not read (the open thread was read above; a hidden one does not count)
         $listed = $threads->getCollection()->pluck('id')->all();
         $mineOnThisPage = ChatThread::inMyList($meId)->whereIn('chat_threads.id', $listed)->pluck('chat_threads.id')->all();
         $unread = array_intersect_key($this->unreadCountsFor($meId, $mineOnThisPage), array_flip($mineOnThisPage));
 
-        return view('chat.index', compact('threads', 'activeThread', 'messages', 'totalMessages', 'lastAt', 'me', 'canManageLock', 'scope', 'counts', 'unread', 'hiddenByMe', 'canHide', 'canDelete'));
+        return view('chat.index', compact('threads', 'activeThread', 'messages', 'totalMessages', 'lastAt', 'me', 'canManageLock', 'scope', 'counts', 'unread', 'hiddenByMe', 'canHide', 'canDelete', 'threadQuota'));
     }
 
     public function storeThread(Request $r)
@@ -84,6 +87,11 @@ class ChatController extends Controller
         $data = $r->validate([
             'title' => 'required|string|max:180',
         ]);
+
+        // so many new threads a day for each person (config/chat.php): asked BEFORE it is made, and told how many are left
+        if (! ChatQuota::canStart($r->user())) {
+            return back()->withInput()->with('toast', \App\Support\Toast::warning(ChatQuota::refusal(), 5000));
+        }
 
         $thread = ChatThread::create([
             'title'     => $data['title'],

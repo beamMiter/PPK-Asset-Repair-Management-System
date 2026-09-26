@@ -107,14 +107,25 @@
                         </div>
                     </div>
 
-                    <button type="button" @click="showCreateModal = true"
+                    @php
+                        $quota = $threadQuota ?? ['unlimited' => true, 'remaining' => null, 'limit' => 0];
+                        $noneLeft = ! $quota['unlimited'] && $quota['remaining'] === 0;
+                    @endphp
+                    <div class="flex flex-col items-end">
+                    <button type="button" @click="showCreateModal = true" @disabled($noneLeft)
                         class="inline-flex items-center gap-2 rounded-md bg-[#0F2D5C] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#0F2D5C]/90 transition-all focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/40 active:scale-95"
-                        title="สร้างกระทู้ใหม่">
+                        title="{{ $noneLeft ? \App\Support\ChatQuota::refusal() : 'สร้างกระทู้ใหม่' }}">
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
                         สร้างกระทู้
                     </button>
+                    @unless ($quota['unlimited'])
+                        <p id="threadQuotaNote" class="mt-1 text-[11px] {{ $noneLeft ? 'font-semibold text-amber-700' : 'text-slate-500' }}">
+                            {{ $noneLeft ? 'วันนี้ตั้งกระทู้ครบแล้ว (' . $quota['limit'] . ' ครั้ง)' : 'ตั้งกระทู้ได้อีก ' . $quota['remaining'] . ' จาก ' . $quota['limit'] . ' ครั้งวันนี้' }}
+                        </p>
+                    @endunless
+                    </div>
                 </div>
 
                 <div class="mt-4">
@@ -556,6 +567,10 @@
                                 class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35 transition-all" maxlength="180">
                             <p class="mt-2 text-[11px] text-slate-500 italic">*
                                 หัวข้อนี้จะปรากฏให้ผู้ใช้อื่นเห็นในรายการกระทู้</p>
+                            @unless (($threadQuota ?? ['unlimited' => true])['unlimited'])
+                                <p class="mt-1 text-[11px] text-slate-500">* วันนี้ตั้งกระทู้ได้อีก {{ $threadQuota['remaining'] }} จาก {{ $threadQuota['limit'] }} ครั้ง
+                                    (นับใหม่ตั้งแต่ 00:00 น. ตามเวลาไทย)</p>
+                            @endunless
                         </div>
                     </div>
 

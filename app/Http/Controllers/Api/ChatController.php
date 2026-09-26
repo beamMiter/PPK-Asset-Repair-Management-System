@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ChatThread;
 use App\Events\ChatThreadLockChanged;
+use App\Support\ChatQuota;
 use App\Support\SafeBroadcast;
 use App\Models\ChatMessage;
 use App\Traits\HandlesChatReads;
@@ -69,6 +70,7 @@ class ChatController extends Controller
                 ];
             }),
             'meta' => [
+                'thread_quota' => $r->user() ? ChatQuota::for($r->user()) : null,   // how many threads I may still start today
                 'current_page' => $threads->currentPage(),
                 'per_page'     => $threads->perPage(),
                 'total'        => $threads->total(),
@@ -84,6 +86,14 @@ class ChatController extends Controller
         $data = $r->validate([
             'title' => ['required', 'string', 'max:180'],
         ]);
+
+        if (! ChatQuota::canStart($r->user())) {
+            return response()->json([
+                'message' => ChatQuota::refusal(),
+                'code' => 'chat_thread_daily_limit',
+                'quota' => ChatQuota::for($r->user()),
+            ], 429, ['Retry-After' => (string) ChatQuota::secondsUntilReset()]);
+        }
 
         $thread = ChatThread::create([
             'title'     => $data['title'],

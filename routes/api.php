@@ -161,7 +161,7 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     //   POST /api/threads   body: title* (≤ 180) → 201
     //   GET  /api/threads/{thread}   กระทู้ + latest_messages (10 ข้อความล่าสุด เรียงเก่า→ใหม่)
     Route::get('/threads',          [ChatController::class, 'index'])->name('threads.index');
-    Route::post('/threads',         [ChatController::class, 'store'])->name('threads.store');
+    Route::post('/threads',         [ChatController::class, 'store'])->middleware('throttle:chat-thread')->name('threads.store');
     Route::get('/threads/{thread}', [ChatController::class, 'show'])->name('threads.show');
 
     // Thread messages
@@ -169,7 +169,7 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     //                       ถ้าไม่ส่ง after_id จะได้ข้อความเก่าสุดก่อน ไม่เกิน limit
     //   POST .../messages   body: body* (≤ 3,000) → 201 และ broadcast แบบ real-time · กระทู้ที่ล็อกอยู่ = 403
     Route::get('/threads/{thread}/messages',  [ChatController::class, 'messages'])->name('messages.index');
-    Route::post('/threads/{thread}/messages', [ChatController::class, 'storeMessage'])->name('messages.store');
+    Route::post('/threads/{thread}/messages', [ChatController::class, 'storeMessage'])->middleware('throttle:chat-message')->name('messages.store');
 
     // Thread lock / unlock — admin และทีม IT / ช่าง (User::workerRoles) เท่านั้น ไม่รวม supervisor และ member (เช็คใน ChatThread::canBeLockedBy)
     Route::post('/threads/{thread}/lock',   [ChatController::class, 'lock'])->name('threads.lock');

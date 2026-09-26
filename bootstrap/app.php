@@ -251,9 +251,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 $payload['errors'] = $errors;
             }
 
+            // The headers the exception carries are part of its answer: `Retry-After` (and X-RateLimit-*) of a 429, `Allow` of a 405. They were
+            // dropped, so a client told to slow down was not told for how long.
             return response()
                 ->json($payload, $status)
-                ->withHeaders([
+                ->withHeaders(($e instanceof HttpExceptionInterface ? $e->getHeaders() : []) + [
                     'X-Correlation-ID' => $cid,
                 ]);
         });
