@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ChatThread;
+use App\Events\ChatThreadLockChanged;
 use App\Support\SafeBroadcast;
 use App\Models\ChatMessage;
 use App\Traits\HandlesChatReads;
@@ -208,6 +209,8 @@ class ChatController extends Controller
         $thread->is_locked = true;
         $thread->save();
 
+        SafeBroadcast::send(new ChatThreadLockChanged((int) $thread->id, true));
+
         return response()->json([
             'id'         => $thread->id,
             'title'      => $thread->title,
@@ -222,6 +225,8 @@ class ChatController extends Controller
 
         $thread->is_locked = false;
         $thread->save();
+
+        SafeBroadcast::send(new ChatThreadLockChanged((int) $thread->id, false));
 
         return response()->json([
             'id'         => $thread->id,

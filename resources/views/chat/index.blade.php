@@ -27,11 +27,36 @@
             window.Loader?.show();
             document.getElementById('hidden-create-thread').submit();
         },
-        submitLock() {
-            window.Loader?.show();
-            document.getElementById('hidden-lock-thread').submit();
+        locked: @js((bool) ($activeThread->is_locked ?? false)),
+        lockUrl: @js(isset($activeThread) ? route('chat.lock', $activeThread) : ''),
+        unlockUrl: @js(isset($activeThread) ? route('chat.unlock', $activeThread) : ''),
+        // Lock or unlock without leaving the page. The state flips at once; the broadcast that follows says the same thing
+        // (so nobody, this person included, is told twice), and a failure puts it back.
+        async submitLock() {
+            this.showLockModal = false;
+            const wasLocked = this.locked;
+            this.locked = !wasLocked;
+            try {
+                const r = await fetch(wasLocked ? this.unlockUrl : this.lockUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+                    },
+                });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                const j = await r.json();
+                this.locked = !!j.is_locked;
+                window.showToast?.({ type: 'success', message: j.message, title: j.title });
+            } catch (e) {
+                this.locked = wasLocked;
+                window.showToast?.({ type: 'error', message: 'ไม่สามารถเปลี่ยนสถานะการล็อกกระทู้ได้ กรุณาลองใหม่อีกครั้ง' });
+            }
         },
+        deleting: false,
         submitDelete() {
+            this.deleting = true; // this page is on its way to the list, so the broadcast that the thread was deleted has nothing to tell it
             window.Loader?.show();
             document.getElementById('hidden-delete-thread').submit();
         },
@@ -158,7 +183,10 @@
                             <div class="flex flex-col gap-1.5">
                                 <div class="flex items-center justify-between gap-2">
                                     <div class="flex flex-wrap gap-1.5 items-center">
-                                        @if ($th->is_locked)
+                                        @if ($isActive)
+                                            <span x-show="locked" @if (!$th->is_locked) style="display: none;" @endif
+                                                class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-600 border border-amber-200 uppercase tracking-wide">Locked</span>
+                                        @elseif ($th->is_locked)
                                             <span
                                                 class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-600 border border-amber-200 uppercase tracking-wide">Locked</span>
                                         @endif
@@ -239,10 +267,8 @@
                                     <h1 class="text-[15px] sm:text-lg font-bold text-gray-900 leading-tight">
                                         {{ $thread->title }}
                                     </h1>
-                                    @if ($thread->is_locked)
-                                        <span
-                                            class="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-800 uppercase shrink-0">Locked</span>
-                                    @endif
+                                    <span x-show="locked" @if (!$thread->is_locked) style="display: none;" @endif
+                                        class="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-800 uppercase shrink-0">Locked</span>
                                 </div>
                                 <div
                                     class="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-[12px] text-gray-500 mt-0.5">
@@ -258,10 +284,14 @@
 
                             {{-- Header tools: icon only, no button background (the words live in title / aria-label) --}}
                             @if ($canManageLock)
-                                @php $lockLabel = $thread->is_locked ? 'ปลดล็อกกระทู้' : 'ล็อกกระทู้'; @endphp
-                                <x-ui.button variant="ghost-warning" size="icon-lg" :icon="$thread->is_locked ? 'lock_open' : 'lock'"
-                                    @click="showLockModal = true" class="hidden sm:inline-flex" :title="$lockLabel"
-                                    :aria-label="$lockLabel" />
+                                <x-ui.button variant="ghost-warning" size="icon-lg" icon="lock" x-show="!locked"
+                                    :style="$thread->is_locked ? 'display: none;' : null"
+                                    @click="showLockModal = true" class="hidden sm:inline-flex" title="ล็อกกระทู้"
+                                    aria-label="ล็อกกระทู้" />
+                                <x-ui.button variant="ghost-warning" size="icon-lg" icon="lock_open" x-show="locked"
+                                    :style="$thread->is_locked ? null : 'display: none;'"
+                                    @click="showLockModal = true" class="hidden sm:inline-flex" title="ปลดล็อกกระทู้"
+                                    aria-label="ปลดล็อกกระทู้" />
                             @endif
 
                             {{-- Out of my "กระทู้ที่มีส่วนร่วม" (the tab and the widget) and back in; nothing is deleted, for me or for anyone --}}
@@ -317,7 +347,7 @@
                 <div id="chatBox" data-thread-id="{{ $activeThread->id }}" data-my-id="{{ $me->id ?? 0 }}"
                     data-last-id="{{ $messages->last()?->id ?? 0 }}"
                     data-last-user-id="{{ $messages->last()?->user_id ?? 0 }}"
-                    data-chat-url="{{ route('chat.messages', $activeThread) }}"
+                    data-chat-url="{{ route('chat.messages', $activeThread) }}" data-list-url="{{ route('chat.index') }}"
                     class="flex-1 overflow-y-auto w-full px-4 pt-3 pb-4 md:px-6 md:pt-5 md:pb-6 bg-slate-50 min-h-0 relative">
                     @if ($messages->isEmpty())
                         {{-- Empty State --}}
@@ -387,8 +417,7 @@
 
                 {{-- BOTTOM INPUT FORM --}}
                 <div class="shrink-0 w-full bg-white px-4 py-4 sm:px-6 border-t border-gray-100">
-                    @if (!$thread->is_locked)
-                        <div class="mx-auto w-full max-w-screen-lg">
+                    <div class="mx-auto w-full max-w-screen-lg" x-show="!locked" @if ($thread->is_locked) style="display: none;" @endif>
                             <form method="POST" action="{{ route('chat.messages.store', $thread) }}" id="chatForm">
                                 @csrf
                                 <div
@@ -402,7 +431,7 @@
                                         <div class="flex items-center gap-1">
                                             <div class="relative" @click.away="showEmojiPicker = false">
                                                 <button type="button" @click="showEmojiPicker = !showEmojiPicker"
-                                                    class="rounded-full p-2 text-gray-400 hover:bg-gray-50 hover:text-gray-500 transition-colors {{ $thread->is_locked ? 'opacity-50 pointer-events-none' : '' }}"
+                                                    class="rounded-full p-2 text-gray-400 hover:bg-gray-50 hover:text-gray-500 transition-colors"
                                                     title="Emoji">
                                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                                                         stroke="currentColor">
@@ -456,9 +485,8 @@
                                 </div>
                             </form>
                         </div>
-                    @else
                         <div class="w-full py-3 text-center text-gray-500 bg-gray-50 rounded-xl flex items-center justify-center gap-2 border border-gray-100"
-                            id="lockedNotice">
+                            id="lockedNotice" x-show="locked" @if (!$thread->is_locked) style="display: none;" @endif>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 class="w-4 h-4">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -466,7 +494,6 @@
                             </svg>
                             <span class="text-[13px] font-medium">กระทู้นี้ถูกล็อก ไม่สามารถส่งข้อความใหม่ได้</span>
                         </div>
-                    @endif
                 </div>
             @else
                 <div class="absolute inset-0 flex items-center justify-center bg-slate-50">
@@ -482,13 +509,6 @@
         </form>
 
         @if (isset($activeThread))
-            {{-- Form for actually locking/unlocking the thread --}}
-            <form id="hidden-lock-thread" method="POST"
-                action="{{ $activeThread->is_locked ? route('chat.unlock', $activeThread) : route('chat.lock', $activeThread) }}"
-                class="hidden">
-                @csrf
-            </form>
-
             @if ($canDelete ?? false)
                 {{-- Form for deleting the thread --}}
                 <form id="hidden-delete-thread" method="POST" action="{{ route('chat.destroy', $activeThread) }}"
@@ -565,17 +585,16 @@
                         <div class="p-5 text-center">
                             <div
                                 class="w-14 h-14 rounded-full bg-amber-50 text-amber-600 ring-1 ring-amber-200 flex items-center justify-center mx-auto mb-3">
-                                <span
-                                    class="material-symbols-outlined text-3xl">{{ $activeThread->is_locked ? 'lock_open' : 'lock' }}</span>
+                                <span class="material-symbols-outlined text-3xl"
+                                    x-text="locked ? 'lock_open' : 'lock'">{{ $activeThread->is_locked ? 'lock_open' : 'lock' }}</span>
                             </div>
                             <p class="text-[14px] text-slate-700">
-                                คุณต้องการ <strong>{{ $activeThread->is_locked ? 'ปลดล็อก' : 'ล็อก' }}</strong>
+                                คุณต้องการ <strong x-text="locked ? 'ปลดล็อก' : 'ล็อก'">{{ $activeThread->is_locked ? 'ปลดล็อก' : 'ล็อก' }}</strong>
                                 กระทู้นี้ใช่หรือไม่?
                             </p>
-                            @if (!$activeThread->is_locked)
-                                <p class="text-[14px] text-slate-500 mt-2">เมื่อล็อกแล้ว
-                                    ผู้ใช้อื่นจะไม่สามารถส่งข้อความใหม่ได้</p>
-                            @endif
+                            <p class="text-[14px] text-slate-500 mt-2" x-show="!locked"
+                                @if ($activeThread->is_locked) style="display: none;" @endif>เมื่อล็อกแล้ว
+                                ผู้ใช้อื่นจะไม่สามารถส่งข้อความใหม่ได้</p>
                         </div>
 
                         <div class="px-5 py-3 bg-slate-50 flex justify-center gap-2 border-t border-slate-100">
