@@ -825,6 +825,15 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **An SVG or HTML file can no longer be uploaded as an attachment, and one that a browser could run is never shown as a page.** The repair
+  request's "attach later" rule was `mimetypes:image/*`, which took an SVG - and an SVG with a `<script>`, opened directly, runs on the site's own
+  address as whoever opened it; an asset took ANY file (`.html`, `.svg`, `.php`, `.exe`). `config/uploads.php` has two lists judged by what a
+  file IS (its content): pictures and PDF for a repair request (the list the new-request form already used), and for an asset also the
+  documents of equipment (doc / docx / xls / xlsx / ppt / pptx / txt / csv) - no SVG, HTML, XML, scripts, archives. A private attachment
+  is shown inline only if it is a picture, a PDF or plain text; anything else (SVG, HTML, XML, unknown) is a download, and what is shown is
+  sandboxed (`Content-Security-Policy: sandbox`, except a PDF, which Chrome's viewer will not open in a sandbox). **Files already uploaded are
+  not deleted**: an old SVG still shows as a picture in a page, and opened directly it is sandboxed (nginx) or a download (private).
+  `UploadTypesTest`.
 - **nginx no longer serves dotfiles, and an uploaded file is never run as a page.** `/.user.ini` and `/.htaccess` (tracked in `public/`) could be
   read from outside, and files under `/storage/` (what people uploaded, served straight by nginx) carried no protection: an SVG or HTML file
   opened directly ran its script on the site's own address, as whoever opened it. Dotfiles answer 404 (except `/.well-known/`); `/storage/`

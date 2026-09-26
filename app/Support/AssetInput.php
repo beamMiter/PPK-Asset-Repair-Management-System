@@ -48,7 +48,8 @@ final class AssetInput
             'price' => ['nullable', 'numeric', 'min:0'],
             'hero_image' => ['nullable', 'image', 'max:5120'],
             'files' => ['nullable', 'array'],
-            'files.*' => ['file', 'max:10240'],
+            // any file at all used to be taken here (an .html or .svg with script, an .exe): pictures, PDF and the documents of equipment only
+            'files.*' => ['file', 'max:10240', 'mimes:' . implode(',', config('uploads.document_mimes'))],
             'status' => ['nullable', Rule::in([Asset::STATUS_ACTIVE, Asset::STATUS_IN_REPAIR, Asset::STATUS_DISPOSED])],
         ];
     }

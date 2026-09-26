@@ -34,11 +34,11 @@ class MaintenanceAttachmentController extends Controller
         }
 
         $maxKb = config('uploads.max_kb', 10240);
-        $mimetypes = implode(',', config('uploads.mimetypes', ['image/*', 'application/pdf']));
+        $mimes = implode(',', config('uploads.mimes'));   // pictures and PDF - not `image/*`, which lets an SVG (with script) in
         
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'files'      => ['required', 'array', 'max:3'],
-            'files.*'    => ['file', 'max:' . $maxKb, 'mimetypes:' . $mimetypes],
+            'files.*'    => ['file', 'max:' . $maxKb, 'mimes:' . $mimes],
             'is_private' => ['nullable', 'boolean'],
             'captions'   => ['nullable', 'array'],
         ]);

@@ -69,11 +69,18 @@ class AttachmentController extends Controller
             'Cache-Control'           => 'private, max-age=0, must-revalidate',
         ];
 
+        // Something a browser could run as a page (SVG, HTML, XML) is never shown inline: it is a download. And whatever is shown is sandboxed -
+        // no script, no access to this site - except a PDF, which Chrome's viewer will not open inside a sandbox.
+        $showInline = in_array(strtolower(strtok($mime, ';')), (array) config('uploads.inline_mimes'), true);
+        if (strtolower(strtok($mime, ';')) !== 'application/pdf') {
+            $headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
+        }
+
         if ($size) {
             $headers['Content-Length'] = (string) $size;
         }
 
-        $disposition = $download ? 'attachment' : 'inline';
+        $disposition = ($download || ! $showInline) ? 'attachment' : 'inline';
         $headers['Content-Disposition'] = $disposition.'; filename="'.addslashes($filename).'"';
 
         return new StreamedResponse(function () use ($stream) {
