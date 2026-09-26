@@ -7,6 +7,7 @@ use App\Support\SafeBroadcast;
 use App\Traits\HandlesChatReads;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Support\Like;
 
 class ChatController extends Controller
 {
@@ -23,7 +24,7 @@ class ChatController extends Controller
             ->withCount('messages')
             ->with(['latestMessage' => fn($qq) => $qq->with('user:id,name')])
             ->when($scope === 'mine', fn($qq) => $qq->inMyList($meId))
-            ->when($q, fn($qq) => $qq->where('title', 'like', "%{$q}%"))
+            ->when($q, fn($qq) => $qq->where('title', 'like', Like::contains($q)))
             ->orderByDesc('created_at')
             ->paginate(15)
             ->withQueryString();

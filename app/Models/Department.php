@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Support\Like;
 
 class Department extends Model
 {
@@ -63,9 +64,9 @@ class Department extends Model
         if (!$term) return $q;
 
         return $q->where(function ($qq) use ($term) {
-            $qq->where('code', 'like', "%{$term}%")
-               ->orWhere('name_th', 'like', "%{$term}%")
-               ->orWhere('name_en', 'like', "%{$term}%");
+            $qq->where('code', 'like', Like::contains($term))
+               ->orWhere('name_th', 'like', Like::contains($term))
+               ->orWhere('name_en', 'like', Like::contains($term));
         });
     }
 }

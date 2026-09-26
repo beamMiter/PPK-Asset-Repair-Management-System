@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Support\Like;
 
 class MaintenanceRequest extends Model
 {
@@ -403,13 +404,13 @@ class MaintenanceRequest extends Model
 
         return $query->where(function ($q) use ($term) {
             // 1. Basic Fields
-            $q->where('maintenance_requests.request_no', 'like', "%{$term}%")
-              ->orWhere('maintenance_requests.title', 'like', "%{$term}%")
-              ->orWhere('maintenance_requests.description', 'like', "%{$term}%")
-              ->orWhere('maintenance_requests.reporter_name', 'like', "%{$term}%")
-              ->orWhere('maintenance_requests.reporter_phone', 'like', "%{$term}%")
-              ->orWhere('maintenance_requests.reporter_email', 'like', "%{$term}%")
-              ->orWhere('maintenance_requests.location_text', 'like', "%{$term}%");
+            $q->where('maintenance_requests.request_no', 'like', Like::contains($term))
+              ->orWhere('maintenance_requests.title', 'like', Like::contains($term))
+              ->orWhere('maintenance_requests.description', 'like', Like::contains($term))
+              ->orWhere('maintenance_requests.reporter_name', 'like', Like::contains($term))
+              ->orWhere('maintenance_requests.reporter_phone', 'like', Like::contains($term))
+              ->orWhere('maintenance_requests.reporter_email', 'like', Like::contains($term))
+              ->orWhere('maintenance_requests.location_text', 'like', Like::contains($term));
 
             // 2. ID (Numeric)
             if (ctype_digit($term) || (str_starts_with($term, '#') && ctype_digit(substr($term, 1)))) {
@@ -419,28 +420,28 @@ class MaintenanceRequest extends Model
 
             // 3. Asset Relations
             $q->orWhereHas('asset', fn ($qa) =>
-                $qa->where('assets.name', 'like', "%{$term}%")
-                   ->orWhere('assets.asset_code', 'like', "%{$term}%")
-                   ->orWhere('assets.his_asset_id', 'like', "%{$term}%")
-                   ->orWhere('assets.serial_number', 'like', "%{$term}%")
+                $qa->where('assets.name', 'like', Like::contains($term))
+                   ->orWhere('assets.asset_code', 'like', Like::contains($term))
+                   ->orWhere('assets.his_asset_id', 'like', Like::contains($term))
+                   ->orWhere('assets.serial_number', 'like', Like::contains($term))
             );
 
             // 4. Reporter User Relation
             $q->orWhereHas('reporter', fn ($qr) =>
-                $qr->where('users.name', 'like', "%{$term}%")
-                   ->orWhere('users.email', 'like', "%{$term}%")
+                $qr->where('users.name', 'like', Like::contains($term))
+                   ->orWhere('users.email', 'like', Like::contains($term))
             );
 
             // 5. Department Relation
             $q->orWhereHas('department', fn ($qd) =>
-                $qd->where('departments.name_th', 'like', "%{$term}%")
-                   ->orWhere('departments.name_en', 'like', "%{$term}%")
-                   ->orWhere('departments.code', 'like', "%{$term}%")
+                $qd->where('departments.name_th', 'like', Like::contains($term))
+                   ->orWhere('departments.name_en', 'like', Like::contains($term))
+                   ->orWhere('departments.code', 'like', Like::contains($term))
             );
 
             // 6. Technician Relation
             $q->orWhereHas('technician', fn ($qt) =>
-                $qt->where('users.name', 'like', "%{$term}%")
+                $qt->where('users.name', 'like', Like::contains($term))
             );
         });
     }

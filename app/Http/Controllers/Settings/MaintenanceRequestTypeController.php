@@ -7,6 +7,7 @@ use App\Models\MaintenanceRequestType;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Support\Toast;
+use App\Support\Like;
 
 class MaintenanceRequestTypeController extends Controller
 {
@@ -33,8 +34,8 @@ class MaintenanceRequestTypeController extends Controller
         if ($request->filled('search')) {
             $s = trim((string) $request->string('search'));
             $q->where(function ($w) use ($s) {
-                $w->where('name', 'like', "%{$s}%")
-                    ->orWhere('description', 'like', "%{$s}%");
+                $w->where('name', 'like', Like::contains($s))
+                    ->orWhere('description', 'like', Like::contains($s));
             });
         }
 

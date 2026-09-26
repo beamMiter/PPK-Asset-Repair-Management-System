@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Traits\ApiResponseWithToast;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Support\Like;
 
 class MaintenanceJobController extends Controller
 {
@@ -156,8 +157,8 @@ class MaintenanceJobController extends Controller
             })
             ->when($search, function ($q, $search) {
                 $q->where(function ($qq) use ($search) {
-                    $qq->where('request_no', 'like', "%{$search}%")
-                       ->orWhere('title', 'like', "%{$search}%");
+                    $qq->where('request_no', 'like', Like::contains($search))
+                       ->orWhere('title', 'like', Like::contains($search));
                 });
             })
             ->when($status, function ($q, $status) {

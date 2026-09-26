@@ -17,6 +17,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Support\AssetInput;
 use App\Support\Toast;
 use App\Services\HisAssetSyncService;
+use App\Support\Like;
 
 class AssetController extends Controller
 {
@@ -514,7 +515,7 @@ class AssetController extends Controller
                 WHEN assets.serial_number LIKE ? THEN 5
                 ELSE 9
             END
-        ", [$q, $q, "{$q}%", "{$q}%", "%{$q}%", "%{$q}%"]);
+        ", [$q, $q, Like::startsWith($q), Like::startsWith($q), Like::contains($q), Like::contains($q)]);
     }
 
     private function departmentOptions()

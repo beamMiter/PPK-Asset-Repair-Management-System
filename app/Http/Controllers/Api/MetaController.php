@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Support\Like;
 
 class MetaController extends Controller
 {
@@ -17,9 +18,9 @@ class MetaController extends Controller
             ->select('id','code','name_th','name_en')
             ->when($q, function ($qq) use ($q) {
                 $qq->where(function($w) use ($q){
-                    $w->where('code','like',"%{$q}%")
-                      ->orWhere('name_th','like',"%{$q}%")
-                      ->orWhere('name_en','like',"%{$q}%");
+                    $w->where('code','like',Like::contains($q))
+                      ->orWhere('name_th','like',Like::contains($q))
+                      ->orWhere('name_en','like',Like::contains($q));
                 });
             })
             ->orderBy('name_th');
@@ -42,8 +43,8 @@ class MetaController extends Controller
         $builder = DB::table('asset_categories')
             ->select('id','name','slug','color','description')
             ->when($q, function ($qq) use ($q) {
-                $qq->where('name','like',"%{$q}%")
-                   ->orWhere('slug','like',"%{$q}%");
+                $qq->where('name','like',Like::contains($q))
+                   ->orWhere('slug','like',Like::contains($q));
             })
             ->orderBy('name');
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MaintenanceRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Support\Like;
 
 class SearchController extends Controller
 {
@@ -19,7 +20,7 @@ class SearchController extends Controller
             ->select(['id', 'asset_code', 'name'])
             ->when($departmentId, fn($qq) => $qq->where('department_id', $departmentId))
             ->when($q !== '', function ($qq) use ($q) {
-                $like = "%{$q}%";
+                $like = Like::contains($q);
                 $qq->where(function ($w) use ($like) {
                     $w->where('asset_code', 'like', $like)
                       ->orWhere('name', 'like', $like);
@@ -51,7 +52,7 @@ class SearchController extends Controller
             ->select(['maintenance_requests.id', 'maintenance_requests.request_no', 'maintenance_requests.title', 'maintenance_requests.status'])
             ->when($status !== '', fn($qq) => $qq->where('status', $status))
             ->when($q !== '', function ($qq) use ($q) {
-                $like = "%{$q}%";
+                $like = Like::contains($q);
                 $qq->where(function ($w) use ($like) {
                     $w->where('request_no','like',$like)
                       ->orWhere('title','like',$like);

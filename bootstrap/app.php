@@ -42,6 +42,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Every response, web and API, error pages included.
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+        // ?q[]=x is not a search: an array where a word is expected (was a 500 on ten pages) - dropped on GET/HEAD, once, here
+        $middleware->append(\App\Http\Middleware\IgnoreArrayQuery::class);
 
         /*
         |-----------------------------

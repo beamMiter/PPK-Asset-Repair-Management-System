@@ -50,6 +50,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`?q[]=x` in a URL no longer answers 500, and `%` / `_` in a search are text.** An array where a word is expected ("Array to string
+  conversion") was a 500 on the chat, the assets, the requests (`q`, `status`), my jobs and two API lists. `IgnoreArrayQuery` drops
+  array-valued query parameters on GET / HEAD once, for the whole app (nothing takes an array in a query string; the arrays of the
+  forms are POSTed). And a `%` or `_` typed into any search was a LIKE wildcard (a lone `_` matched every row): every search of the
+  app - requests, assets, departments, users, types, chat, the API lists, my jobs - goes through `App\Support\Like` now, as the rating
+  page already did. `ArrayQueryAndLikeTest`.
 - **Only the person who reported a job can rate it.** The rate button, the policy and the API already said so, but the web door
   (`rating/{job}/store`) let admins and supervisors in "to help rate", and their stars were counted in a technician's average
   beside the reporter's — a rating is the reporter's word on the service they received. Everyone else now gets a 403. Ratings already made

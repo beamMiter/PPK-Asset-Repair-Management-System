@@ -9,6 +9,7 @@ use App\Models\ChatMessage;
 use App\Traits\HandlesChatReads;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Support\Like;
 
 class ChatController extends Controller
 {
@@ -26,7 +27,7 @@ class ChatController extends Controller
                 $qq->with('user:id,name');
             }])
             ->when($q !== '', function ($qq) use ($q) {
-                $qq->where('title', 'like', "%{$q}%");
+                $qq->where('title', 'like', Like::contains($q));
             })
             ->when($r->query('scope') === 'mine' && $userId, fn ($qq) => $qq->inMyList((int) $userId))   // only threads I started or wrote in
             ->orderByDesc('created_at')

@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use App\Support\Like;
 
 class MaintenanceRatingController extends Controller
 {
@@ -52,8 +53,7 @@ class MaintenanceRatingController extends Controller
             return $query;
         }
 
-        // `%` and `_` typed into the box are text, not wildcards
-        $like = '%' . addcslashes($term, '\\%_') . '%';
+        $like = Like::contains($term);   // `%` and `_` typed into the box are text, not wildcards
 
         return $query->where(function ($where) use ($like) {
             $where->where('request_no', 'like', $like)

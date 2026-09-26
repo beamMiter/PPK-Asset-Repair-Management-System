@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use App\Support\Toast;
+use App\Support\Like;
 
 class UserController extends Controller
 {
@@ -56,10 +57,10 @@ class UserController extends Controller
         if ($search !== '') {
             $needle = mb_strtolower($search);
             $q->where(function ($qq) use ($needle) {
-                $qq->whereRaw('LOWER(name) LIKE ?', ["%{$needle}%"])
-                   ->orWhereRaw('LOWER(email) LIKE ?', ["%{$needle}%"])
-                   ->orWhereRaw('LOWER(citizen_id) LIKE ?', ["%{$needle}%"])
-                   ->orWhereRaw('LOWER(COALESCE(department, \'\')) LIKE ?', ["%{$needle}%"]);
+                $qq->whereRaw('LOWER(name) LIKE ?', [Like::contains($needle)])
+                   ->orWhereRaw('LOWER(email) LIKE ?', [Like::contains($needle)])
+                   ->orWhereRaw('LOWER(citizen_id) LIKE ?', [Like::contains($needle)])
+                   ->orWhereRaw('LOWER(COALESCE(department, \'\')) LIKE ?', [Like::contains($needle)]);
             });
         }
 
