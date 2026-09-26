@@ -31,6 +31,17 @@
 
 - **Application URL**: [http://localhost:8000](http://localhost:8000)
 
+### Authentication (trial system)
+
+Sign-in here is a **trial setup for local / internal testing**, not the final login. People register themselves on `/register` (13-digit
+citizen ID, name, password) and get a plain member account; an admin then sets their role and department. Nothing checks that the
+citizen ID belongs to the person who typed it, and that is deliberate for now.
+
+The real login will be built on the hospital's own personnel database, once this system is connected to it and the staff records can be
+pulled from there. Until then, treat every account as unverified, and do not put this instance where the public can reach it. The HIS
+asset lookup is in the same state: `HisAssetSyncService::getMockHisData()` is a mock that answers for any number, to be replaced by the
+hospital's API (the field mapping is in `mapHisPayload()`, in one place).
+
 ### หมายเหตุการพัฒนา (Development Notes)
 
 - **Vite Dev Server**: ระบบใช้ Vite สำหรับการโหลด CSS และ Assets ผ่านพอร์ต **4000**

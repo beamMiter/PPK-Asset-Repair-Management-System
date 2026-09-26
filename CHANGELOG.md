@@ -8,6 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **README says what the login is.** Self-registration on `/register` is a trial setup for local / internal testing (nothing verifies the
+  citizen ID); the real login will be built on the hospital's personnel database once it is connected, and the HIS asset lookup stays a
+  mock until the hospital's API is. Also noted on `RegisteredUserController`.
 - **A person can hide a thread from "กระทู้ที่มีส่วนร่วม", and a locked thread they have read leaves the widget.** Whoever once wrote in
   a thread had it in the tab and the floating widget for good, its every new message counting toward their badge, and only an admin
   could delete it (for everybody). The button "ซ่อนจากกระทู้ที่มีส่วนร่วม" (the thread's header, and on each row of the widget) hides it
