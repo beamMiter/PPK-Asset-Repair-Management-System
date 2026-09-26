@@ -42,16 +42,10 @@
                     </div>
                     {{-- Desktop notifications are asked for HERE, when the person chooses (a browser that is asked on its own, on every page,
                          mostly ends up refusing for good). Shown only while the browser has not been asked yet. --}}
-                    <button id="chatNotifyAsk" type="button" class="hidden rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100"
-                        title="เปิดการแจ้งเตือนบนเดสก์ท็อป" aria-label="เปิดการแจ้งเตือนบนเดสก์ท็อป">
-                        <span class="material-symbols-outlined text-[20px] leading-none" aria-hidden="true">notifications</span>
-                    </button>
-                    <button id="chatClose" class="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100" aria-label="ปิด">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M18.3 5.7a1 1 0 0 0-1.4-1.4L12 9.17 7.1 4.3a1 1 0 1 0-1.4 1.4L10.83 12l-5.13 4.9a1 1 0 1 0 1.4 1.4L12 14.83l4.9 5.13a1 1 0 0 0 1.4-1.4L13.17 12l5.13-4.9Z" />
-                        </svg>
-                    </button>
+                    <x-ui.button id="chatNotifyAsk" variant="ghost" size="icon" icon="notifications" class="hidden"
+                        title="เปิดการแจ้งเตือนบนเดสก์ท็อป" aria-label="เปิดการแจ้งเตือนบนเดสก์ท็อป" />
+                    {{-- The close X of every dialog of the app: <x-ui.button variant="ghost" size="icon" icon="close"> --}}
+                    <x-ui.button id="chatClose" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
                 </div>
 
                 {{-- Search --}}
