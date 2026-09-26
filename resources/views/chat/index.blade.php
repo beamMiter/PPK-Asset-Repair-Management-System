@@ -128,21 +128,16 @@
                     </div>
                 </div>
 
-                {{-- How many threads may be started today: for everybody, not a small note under the button (an admin saw nothing at all) --}}
+                {{-- How many threads I may still start today, as "5/5": for everybody (an admin saw nothing at all) --}}
                 @php
                     $quotaLow = ! $quota['unlimited'] && $quota['remaining'] <= 1;
                     $quotaTone = $quotaLow ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-slate-50 text-slate-600';
                 @endphp
-                <div id="threadQuotaNote" role="status" class="mt-3 flex items-start gap-2 rounded-md border px-3 py-2 text-[12px] leading-relaxed {{ $quotaTone }}">
-                    <span class="material-symbols-outlined mt-px shrink-0 text-[16px]" aria-hidden="true">{{ $noneLeft ? 'block' : ($quotaLow ? 'warning' : 'info') }}</span>
-                    <span @class(['font-semibold' => $noneLeft])>
-                        @if ($quota['unlimited'])
-                            ผู้ดูแลระบบตั้งกระทู้ได้ไม่จำกัดจำนวน - บุคลากรทั่วไปตั้งได้วันละ {{ $quota['limit'] }} กระทู้ (นับใหม่ตั้งแต่ 00:00 น. ตามเวลาไทย)
-                        @elseif ($noneLeft)
-                            วันนี้ตั้งกระทู้ครบแล้ว ({{ $quota['limit'] }} ครั้ง) - ตั้งกระทู้ใหม่ได้ตั้งแต่ 00:00 น. ของพรุ่งนี้
-                        @else
-                            วันนี้ตั้งกระทู้ได้อีก {{ $quota['remaining'] }} จาก {{ $quota['limit'] }} ครั้ง - นับใหม่ทุกวันตั้งแต่ 00:00 น. ตามเวลาไทย
-                        @endif
+                <div id="threadQuotaNote" role="status" title="นับใหม่ทุกวันตั้งแต่ 00:00 น. ตามเวลาไทย"
+                    class="mt-[12px] flex items-center justify-between gap-[12px] rounded-md border px-[12px] py-[8px] text-[12.5px] {{ $quotaTone }}">
+                    <span>จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ@if ($noneLeft) <span class="font-semibold">(ตั้งใหม่ได้ตั้งแต่ 00:00 น.)</span>@endif</span>
+                    <span id="threadQuotaCount" class="shrink-0 rounded-full bg-white px-[10px] py-[2px] text-[13px] font-bold tabular-nums ring-1 ring-inset {{ $quotaLow ? 'text-amber-800 ring-amber-200' : 'text-[#0F2D5C] ring-slate-200' }}">
+                        {{ $quota['unlimited'] ? 'ไม่จำกัด' : $quota['remaining'] . '/' . $quota['limit'] }}
                     </span>
                 </div>
 

@@ -236,7 +236,7 @@ class ChatFloodAndQuotaTest extends TestCase
         return $this->actingAs($who)->get(route('chat.index'))->assertOk()->getContent();
     }
 
-    /** The notice on the board itself (not the create dialog): its text, and the class list of its box. */
+    /** The counter on the board itself (not the create dialog): its sentence, the "3/5" in its pill, and the class list of its box. */
     private function quotaNote(User $who): array
     {
         $dom = new \DOMDocument;
@@ -244,29 +244,30 @@ class ChatFloodAndQuotaTest extends TestCase
         $dom->loadHTML('<?xml encoding="utf-8" ?>' . $this->page($who));
         libxml_clear_errors();
         $note = $dom->getElementById('threadQuotaNote');
-        $this->assertNotNull($note, 'the board carries a notice about the threads of the day');
+        $count = $dom->getElementById('threadQuotaCount');
+        $this->assertNotNull($note, 'the board carries a counter of the threads of the day');
+        $this->assertNotNull($count);
 
-        return [preg_replace('/\s+/u', ' ', trim($note->textContent)), $note->getAttribute('class')];
+        return [preg_replace('/\s+/u', ' ', trim($note->textContent)), preg_replace('/\s+/u', '', $count->textContent), $note->getAttribute('class')];
     }
 
-    public function test_the_board_says_how_many_threads_are_left_today(): void
+    public function test_the_board_shows_how_many_of_todays_threads_are_left_as_a_fraction(): void
     {
         config(['chat.thread_burst_max' => 100]);
         $me = User::factory()->create(['role' => 'member']);
 
-        [$text, $class] = $this->quotaNote($me);
-        $this->assertStringContainsString('วันนี้ตั้งกระทู้ได้อีก 5 จาก 5 ครั้ง', $text);
-        $this->assertStringContainsString('นับใหม่ทุกวันตั้งแต่ 00:00 น. ตามเวลาไทย', $text);
+        [$text, $count, $class] = $this->quotaNote($me);
+        $this->assertStringStartsWith('จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ', $text);
+        $this->assertSame('5/5', $count);
         $this->assertStringNotContainsString('amber', $class, 'plenty left: no warning colour');
 
         $this->start($me);
         $this->start($me);
-        [$text] = $this->quotaNote($me);
-        $this->assertStringContainsString('วันนี้ตั้งกระทู้ได้อีก 3 จาก 5 ครั้ง', $text);
-        $this->assertStringContainsString('วันนี้ตั้งกระทู้ได้อีก 3 จาก 5 ครั้ง', $this->page($me), 'and in the dialog, with when it starts again');
+        $this->assertSame('3/5', $this->quotaNote($me)[1]);
+        $this->assertStringContainsString('วันนี้ตั้งกระทู้ได้อีก 3 จาก 5 ครั้ง', $this->page($me), 'the dialog still says it in words, with when it starts again');
     }
 
-    public function test_the_notice_turns_amber_for_the_last_one(): void
+    public function test_the_counter_turns_amber_for_the_last_one(): void
     {
         config(['chat.thread_burst_max' => 100]);
         $me = User::factory()->create(['role' => 'member']);
@@ -274,9 +275,9 @@ class ChatFloodAndQuotaTest extends TestCase
             $this->start($me);
         }
 
-        [$text, $class] = $this->quotaNote($me);
+        [, $count, $class] = $this->quotaNote($me);
 
-        $this->assertStringContainsString('วันนี้ตั้งกระทู้ได้อีก 1 จาก 5 ครั้ง', $text);
+        $this->assertSame('1/5', $count);
         $this->assertStringContainsString('bg-amber-50', $class);
     }
 
@@ -284,12 +285,10 @@ class ChatFloodAndQuotaTest extends TestCase
     {
         config(['chat.threads_per_day' => 3]);
 
-        [$text] = $this->quotaNote(User::factory()->create(['role' => 'member']));
-
-        $this->assertStringContainsString('วันนี้ตั้งกระทู้ได้อีก 3 จาก 3 ครั้ง', $text);
+        $this->assertSame('3/3', $this->quotaNote(User::factory()->create(['role' => 'member']))[1]);
     }
 
-    public function test_when_none_is_left_the_button_is_off_and_the_notice_says_why(): void
+    public function test_when_none_is_left_the_button_is_off_and_the_counter_says_when_it_starts_again(): void
     {
         config(['chat.thread_burst_max' => 100]);
         $me = User::factory()->create(['role' => 'member']);
@@ -297,25 +296,24 @@ class ChatFloodAndQuotaTest extends TestCase
             $this->start($me);
         }
 
-        [$text, $class] = $this->quotaNote($me);
+        [$text, $count, $class] = $this->quotaNote($me);
 
-        $this->assertStringContainsString('วันนี้ตั้งกระทู้ครบแล้ว (5 ครั้ง)', $text);
-        $this->assertStringContainsString('ตั้งกระทู้ใหม่ได้ตั้งแต่ 00:00 น. ของพรุ่งนี้', $text);
+        $this->assertSame('0/5', $count);
+        $this->assertStringContainsString('ตั้งใหม่ได้ตั้งแต่ 00:00 น.', $text);
         $this->assertStringContainsString('bg-amber-50', $class);
         $this->assertMatchesRegularExpression('/<button[^>]*disabled[^>]*title="วันนี้คุณตั้งกระทู้ครบ 5 ครั้งแล้ว/s', $this->page($me));
     }
 
-    public function test_an_admin_is_told_there_is_no_limit_and_what_everyone_else_has(): void
+    public function test_an_admin_sees_the_counter_too_and_it_says_no_limit(): void
     {
-        [$text, $class] = $this->quotaNote(User::factory()->create(['role' => 'admin']));
+        [$text, $count, $class] = $this->quotaNote(User::factory()->create(['role' => 'admin']));
 
-        $this->assertStringContainsString('ผู้ดูแลระบบตั้งกระทู้ได้ไม่จำกัดจำนวน', $text);
-        $this->assertStringContainsString('บุคลากรทั่วไปตั้งได้วันละ 5 กระทู้', $text);
-        $this->assertStringNotContainsString('ได้อีก', $text, 'there is nothing to count down');
+        $this->assertStringStartsWith('จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ', $text);
+        $this->assertSame('ไม่จำกัด', $count);
         $this->assertStringNotContainsString('amber', $class);
     }
 
-    public function test_the_notice_sits_in_the_list_header_above_the_search(): void
+    public function test_the_counter_sits_in_the_list_header_above_the_search(): void
     {
         $html = $this->page(User::factory()->create(['role' => 'member']));
 
