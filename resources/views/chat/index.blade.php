@@ -128,14 +128,14 @@
                     </div>
                 </div>
 
-                {{-- How many threads I may still start today: a quiet line, the fraction in bold and one dot per thread (filled = still mine) --}}
+                {{-- How many threads I may still start today: a quiet line, the fraction in bold (same size as the words) and one dot per thread (filled = still mine) --}}
                 @php
                     $quotaLow = ! $quota['unlimited'] && $quota['remaining'] === 1;
                     $quotaTone = $noneLeft ? 'text-rose-600' : ($quotaLow ? 'text-amber-600' : 'text-[#0F2D5C]');
                     $quotaDot = $noneLeft ? 'bg-rose-500' : ($quotaLow ? 'bg-amber-500' : 'bg-[#0F2D5C]');
                 @endphp
-                <div id="threadQuotaNote" role="status" title="นับใหม่ทุกวันตั้งแต่ 00:00 น. ตามเวลาไทย" class="mt-[14px]">
-                    <div class="flex items-center justify-between gap-[12px] text-[12.5px] text-slate-500">
+                <div id="threadQuotaNote" role="status" title="นับใหม่ทุกวันตั้งแต่ 00:00 น. ตามเวลาไทย" class="mt-[14px] text-[12.5px]">
+                    <div class="flex items-center justify-between gap-[12px] text-slate-500">
                         <span class="flex min-w-0 items-center gap-[6px]">
                             <span class="material-symbols-outlined text-[16px] text-slate-400" aria-hidden="true">edit_note</span>
                             <span>จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ</span>
@@ -148,11 +148,11 @@
                                     @endfor
                                 </span>
                             @endif
-                            <span id="threadQuotaCount" class="text-[15px] font-bold leading-none tabular-nums {{ $quotaTone }}">{{ $quota['unlimited'] ? 'ไม่จำกัด' : $quota['remaining'] . '/' . $quota['limit'] }}</span>
+                            <span id="threadQuotaCount" class="font-bold tabular-nums {{ $quotaTone }}">{{ $quota['unlimited'] ? 'ไม่จำกัด' : $quota['remaining'] . '/' . $quota['limit'] }}</span>
                         </span>
                     </div>
                     @if ($noneLeft)
-                        <p class="mt-[4px] pl-[22px] text-[12px] text-rose-600">ตั้งกระทู้ใหม่ได้ตั้งแต่ 00:00 น. ของพรุ่งนี้</p>
+                        <p class="mt-[4px] pl-[22px] text-rose-600">ตั้งกระทู้ใหม่ได้ตั้งแต่ 00:00 น. ของพรุ่งนี้</p>
                     @endif
                 </div>
 

@@ -276,6 +276,17 @@ class ChatFloodAndQuotaTest extends TestCase
         $this->assertStringContainsString('วันนี้ตั้งกระทู้ได้อีก 3 จาก 5 ครั้ง', $this->page($me), 'the dialog still says it in words, with when it starts again');
     }
 
+    public function test_the_fraction_is_bold_but_the_size_of_the_words_beside_it(): void
+    {
+        $html = $this->page(User::factory()->create(['role' => 'member']));
+        $this->assertSame(1, preg_match('/id="threadQuotaNote"[^>]*class="[^"]*(text-\[[\d.]+px\])/', $html, $box), 'the size is set once, on the counter');
+
+        [, , $class] = $this->quotaNote(User::factory()->create(['role' => 'member']));
+        $this->assertStringContainsString('font-bold', $class);
+        $this->assertDoesNotMatchRegularExpression('/text-\[\d/', str_replace('text-[#', '', $class), 'no size of its own: it takes the words\' size');
+        $this->assertSame('text-[12.5px]', $box[1]);
+    }
+
     public function test_the_counter_turns_amber_for_the_last_one(): void
     {
         config(['chat.thread_burst_max' => 100]);
