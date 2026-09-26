@@ -18,6 +18,10 @@ return [
     'thread_burst_max' => (int) env('CHAT_THREAD_BURST_MAX', 3),
     'thread_burst_seconds' => (int) env('CHAT_THREAD_BURST_SECONDS', 60),
 
+    // What opening a thread draws: the latest this many messages (a light first load); scrolling up loads the batch before them, this many at a time.
+    'initial_messages' => max(1, (int) env('CHAT_INITIAL_MESSAGES', 30)),
+    'older_batch' => max(1, (int) env('CHAT_OLDER_BATCH', 30)),
+
     // A deleted thread or message is only hidden (so it can be brought back with `php artisan chat:restore`); after this many days the nightly
     // `chat:purge-deleted` erases it for good. 0 turns the purge off. (Backups hold what they held.)
     'purge_deleted_after_days' => (int) env('CHAT_PURGE_DELETED_AFTER_DAYS', 30),

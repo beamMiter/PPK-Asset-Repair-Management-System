@@ -17,7 +17,7 @@ import { initialsAvatarUrl } from '../avatar.js';
 import { chatTime } from './time.js';
 
 export const POLL_MS = 5000;               // polling fallback, alongside the realtime channel
-export const SAFETY_POLL_EVERY = 12;       // ...and while the socket is healthy only every 12th tick (60 s): a safety net, not the delivery path
+export const SAFETY_POLL_EVERY = 3;        // ...and while the socket is healthy only every 3rd tick (15 s): a safety net for a message the socket missed, not the delivery path
 export const STATUS_TIMEOUT_MS = 10000;    // still "connecting" after this long → show the polling (offline) state
 
 
@@ -134,8 +134,11 @@ function mount(win) {
     const canModerate = box.dataset.canModerate === '1';   // admins and the IT / repair team: they may delete any message
     let autoScroll = true;
     const undo = []; // everything to take back when the page is left
-    let socketUp = false;   // the realtime channel is connected: the poll is only a safety net then
-    let ticks = 0;
+    let socketUp = false;   // the connection is up AND this thread's channel is subscribed: messages come by push, the poll is only a safety net
+    let connectionUp = false;
+    let channelUp = false;
+    let ticks = 0;          // 5-second ticks since the socket last became healthy (or since the start)
+    let ticked = false;     // the interval has run at least once (so "the socket came back" is not the first poll)
 
     box.scrollTop = box.scrollHeight;
     box.addEventListener('scroll', () => {
@@ -308,10 +311,19 @@ function mount(win) {
                 win.console?.warn('[Chat] Alpine component not fully initialized:', e.message);
             }
         };
-        const updateStatus = (state) => {
+        // healthy = connected AND subscribed to this thread's channel: a connection can be up while the subscription was refused (the private
+        // channel's authorisation failed), and then nothing arrives by push - the poll must stay at 5 s
+        const refreshHealth = () => {
             const wasUp = socketUp;
-            socketUp = state === 'connected';
-            if (socketUp && !wasUp && ticks > 0) poll();   // it was down: ask what it missed at once
+            socketUp = connectionUp && channelUp;
+            if (socketUp && !wasUp) {
+                if (ticked) poll();                          // it was down: ask what it missed at once
+                ticks = 0;                                   // and the safety net counts from now
+            }
+        };
+        const updateStatus = (state) => {
+            connectionUp = state === 'connected';
+            refreshHealth();
             if (state === 'connected') setStatus('online');
             else if (state === 'unavailable' || state === 'failed' || state === 'disconnected') setStatus('offline');
             else setStatus('connecting');
@@ -336,7 +348,10 @@ function mount(win) {
 
         const channel = 'chat.' + threadId;
         win.Echo.leave(channel);
-        win.Echo.private(channel).listen('.message.sent', (e) => {   // a PRIVATE channel: the server checks who is listening
+        const subscription = win.Echo.private(channel);   // a PRIVATE channel: the server checks who is listening
+        subscription.subscribed?.(() => { channelUp = true; refreshHealth(); });
+        subscription.error?.(() => { channelUp = false; refreshHealth(); win.console?.warn('[Chat] the channel was refused; polling instead'); });
+        subscription.listen('.message.sent', (e) => {
             if (e.message && e.message.id > lastId) {
                 appendMessage(e.message);
                 lastId = Math.max(lastId, e.message.id);
@@ -406,6 +421,7 @@ function mount(win) {
     // every 5 s while the socket is down or still connecting; while it is healthy only every 12th tick (60 s) - polling every 5 s beside a
     // working websocket costs the server a request per open thread per 5 s for nothing (what the socket carries is not asked for again)
     const timer = win.setInterval(() => {
+        ticked = true;
         ticks += 1;
         if (socketUp && ticks % SAFETY_POLL_EVERY !== 0) return;
         poll();

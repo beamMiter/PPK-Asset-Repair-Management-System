@@ -510,6 +510,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Opening a chat thread draws the latest 30 messages; the poll is a 15-second safety net that only counts when push really works.** The page
+  drew 50 messages on opening; it draws 30 (`CHAT_INITIAL_MESSAGES`), and scrolling up loads 30 more each time (`CHAT_OLDER_BATCH`). While the
+  websocket is healthy the open thread asks the server for new messages every 15 seconds (it was 5, then 60 in a first draft - too long for a
+  conversation); it asks every 5 seconds whenever push is not certain: the connection is down or still connecting, or - new - the connection
+  is up but this thread's private channel was not subscribed (its authorisation was refused), which would otherwise have left nothing
+  arriving. When push comes back it asks at once for what it missed. `tests/js/chat-page.test.mjs`.
 - **The chat polls as a safety net while the websocket is healthy, and screen readers hear new messages.** The open thread asked the server
   for new messages every 5 seconds even while the websocket was delivering them; while the socket is connected it now asks once a minute
   (every 5 seconds when it is down or still connecting, and at once when it comes back, to fetch what it missed). The message list is a

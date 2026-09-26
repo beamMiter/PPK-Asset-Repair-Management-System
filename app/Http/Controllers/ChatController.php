@@ -50,13 +50,13 @@ class ChatController extends Controller
                     ->withTrashed()                 // a deleted message is drawn as "ข้อความนี้ถูกลบ", not left out
                     ->with('user:id,name')
                     ->orderByDesc('id')
-                    ->take(50)
+                    ->take((int) config('chat.initial_messages'))
                     ->get()
                     ->reverse()
                     ->values();
 
                 $totalMessages = $activeThread->messages()->count();
-                // older ones than the 50 drawn: the page offers to load them (and does, when scrolled to the top)
+                // older ones than those drawn (config chat.initial_messages, 30): the page offers to load them (and does, when scrolled to the top)
                 $hasEarlier = $messages->isNotEmpty()
                     && $activeThread->messages()->withTrashed()->where('id', '<', $messages->first()->id)->exists();
                 $lastAt = $messages->last()?->created_at ?? $activeThread->created_at;
@@ -131,7 +131,7 @@ class ChatController extends Controller
         $beforeId = $r->integer('before_id');
 
         if ($beforeId) {
-            $limit = max(1, min((int) $r->query('limit', 30), 100));
+            $limit = max(1, min((int) $r->query('limit', config('chat.older_batch')), 100));
             $older = $thread->messages()->withTrashed()->with('user:id,name')
                 ->where('id', '<', $beforeId)->orderByDesc('id')->take($limit + 1)->get();
 

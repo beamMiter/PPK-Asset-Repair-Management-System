@@ -48,7 +48,7 @@ function threadPage(body, world, { thread = 7, last = 10, lastUser = 9, canModer
 }
 const listPage = (body, world) => { body.append(world.el('div', { id: 'chat-pane' })); return {}; };
 
-function boot({ page = threadPage, answers = [[]], echo = true, innerWidth = 1280, ready = true, connected = false } = {}) {
+function boot({ page = threadPage, answers = [[]], echo = true, innerWidth = 1280, ready = true, connected = false, subscribed = connected } = {}) {
   const world = createWorld();
   const fetches = []; const queue = [...answers];
   const requests = [];
@@ -64,21 +64,31 @@ function boot({ page = threadPage, answers = [[]], echo = true, innerWidth = 128
     return { ok: true, json: async () => a };
   };
   world.win.innerWidth = innerWidth;
-  world.win.console = { warn() {}, error() {}, log() {} };
+  const warnings = []; world.win.console = { warn: (...a) => warnings.push(a.join(' ')), error() {}, log() {} };
   const conn = { state: connected ? 'connected' : 'connecting', bound: [], bind(_e, f) { conn.bound.push(f); }, unbind(_e, f) { conn.bound = conn.bound.filter((x) => x !== f); } };
-  const handlers = {}; const events = {}; const joined = []; const left = []; const toasts = []; const visited = [];
+  const handlers = {}; const events = {}; const joined = []; const left = []; const toasts = []; const visited = []; const subscription = {};
   world.win.showToast = (o) => toasts.push(o);
   const confirms = []; world.win.confirm = (text) => { confirms.push(text); return world.confirmAnswer !== false; };
   world.win.Turbo = { visit: (url) => visited.push(url) };
   if (echo) {
     world.win.Echo = { connector: { pusher: { connection: conn } },
-      private(name) { joined.push(name); return { listen(evt, cb) { (events[name] ??= {})[evt] = cb; if (evt === '.message.sent') handlers[name] = cb; return this; } }; },
+      private(name) {
+        joined.push(name);
+        return {
+          listen(evt, cb) { (events[name] ??= {})[evt] = cb; if (evt === '.message.sent') handlers[name] = cb; return this; },
+          subscribed(cb) { (subscription.ok ??= []).push(cb); return this; },
+          error(cb) { (subscription.refused ??= []).push(cb); return this; },
+        };
+      },
       leave(name) { left.push(name); delete handlers[name]; delete events[name]; } };
   }
   world.win.Alpine = { $data: (e) => e.alpine };            // the page's Alpine is there whether or not the websocket is
-  Object.assign(world, { confirms, fetches, requests, conn, handlers, events, joined, left, queue, toasts, visited });
+  Object.assign(world, { warnings, subscription, confirms, fetches, requests, conn, handlers, events, joined, left, queue, toasts, visited });
   world.ref = page(world.body, world);
   world.chat = Chat.installChatPage(world.win);
+  world.channelSubscribed = () => (subscription.ok ?? []).forEach((f) => f());
+  world.channelRefused = () => (subscription.refused ?? []).forEach((f) => f({ status: 403 }));
+  if (subscribed) world.channelSubscribed();
   world.go = (build = page, opts) => {                       // a Turbo visit: the old page is torn down, the body replaced
     world.fireDocument('turbo:before-render');
     world.visit((body) => { world.ref = build(body, world, opts); });
@@ -815,14 +825,36 @@ const pollsAfter = async (world, seconds) => {
 };
 const Fab5 = Chat.POLL_MS;
 
-test('a healthy socket: the poll asks only every 60 s; a socket that is down: every 5 s', async () => {
+test('a healthy socket: the poll asks only every 15 s; a socket that is down: every 5 s', async () => {
   const up = boot({ connected: true });
-  assert.equal(await pollsAfter(up, 55), 0, 'nothing in the first 55 s');
-  assert.equal(await pollsAfter(up, 5), 1, 'the 12th tick');
-  assert.equal(await pollsAfter(up, 60), 1, 'then once a minute');
+  assert.equal(await pollsAfter(up, 10), 0, 'nothing in the first 10 s');
+  assert.equal(await pollsAfter(up, 5), 1, 'the 3rd tick');
+  assert.equal(await pollsAfter(up, 30), 2, 'then every 15 s');
 
   const down = boot({ connected: false });
-  assert.equal(await pollsAfter(down, 60), 12);
+  assert.equal(await pollsAfter(down, 30), 6);
+});
+
+test('connected but the channel was refused (its authorisation failed): nothing arrives by push, so the poll stays at 5 s', async () => {
+  const world = boot({ connected: true });
+  world.channelRefused();
+  assert.equal(await pollsAfter(world, 30), 6);
+  assert.ok(world.warnings.some((w) => /channel was refused/.test(w)), 'the refusal is logged for whoever looks at the console');
+});
+
+test('connected but not (yet) subscribed to the channel: still every 5 s', async () => {
+  const world = boot({ connected: true, subscribed: false });
+  assert.equal(await pollsAfter(world, 20), 4);
+});
+
+test('the channel is subscribed after being refused: what it missed is asked for at once, then the slow poll', async () => {
+  const world = boot({ connected: true });
+  world.channelRefused();
+  await pollsAfter(world, 10);
+  const before = world.requests.filter((r) => r.url.includes('after_id')).length;
+  world.channelSubscribed(); await settle();
+  assert.equal(world.requests.filter((r) => r.url.includes('after_id')).length, before + 1);
+  assert.equal(await pollsAfter(world, 10), 0);
 });
 
 test('the socket comes back after being down: what it missed is asked for at once', async () => {
@@ -831,9 +863,10 @@ test('the socket comes back after being down: what it missed is asked for at onc
   const before = world.requests.filter((r) => r.url.includes('after_id')).length;
   world.conn.state = 'connected';
   world.conn.bound.forEach((f) => f({ current: 'connected' }));
+  world.channelSubscribed();
   await settle();
   assert.equal(world.requests.filter((r) => r.url.includes('after_id')).length, before + 1);
-  assert.equal(await pollsAfter(world, 20), 0, 'and then the slow poll');
+  assert.equal(await pollsAfter(world, 10), 0, 'and then the slow poll');
 });
 
 test('a socket that drops goes back to every 5 s', async () => {
@@ -842,4 +875,3 @@ test('a socket that drops goes back to every 5 s', async () => {
   world.conn.bound.forEach((f) => f({ current: 'disconnected' }));
   assert.equal(await pollsAfter(world, 25), 5);
 });
-

@@ -12,7 +12,8 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * The page drew the 50 latest messages and offered no way to the ones before: a longer thread lost its beginning. Now scrolling to the top
+ * The page drew the latest messages and offered no way to the ones before: a longer thread lost its beginning. Now opening a thread draws only
+ * the latest 30 (a light first load), and scrolling to the top
  * (or the button) loads the batch before the first one drawn - keyed by message id, as a messenger does, not by page number, so a message
  * that arrives meanwhile cannot shift what is loaded. A deleted message comes back as a placeholder with no words.
  */
@@ -46,19 +47,38 @@ class ChatOlderMessagesTest extends TestCase
         return $this->actingAs($this->me)->getJson(route('chat.messages', ['thread' => $this->thread] + ['before_id' => $beforeId] + $query));
     }
 
-    public function test_the_page_draws_the_latest_50_and_says_there_are_earlier_ones(): void
+    public function test_opening_a_thread_draws_only_the_latest_30_and_says_there_are_earlier_ones(): void
     {
         $all = $this->messages(120);
 
         $page = $this->actingAs($this->me)->get(route('chat.index', ['thread_id' => $this->thread->id]))->assertOk();
         $html = $page->getContent();
 
-        $this->assertCount(50, $page->viewData('messages'));
-        $this->assertStringContainsString('data-first-id="' . $all[70]->id . '"', $html, 'the cursor is the oldest one drawn');
+        $this->assertCount(30, $page->viewData('messages'), 'a light first load');
+        $this->assertStringContainsString('data-first-id="' . $all[90]->id . '"', $html, 'the cursor is the oldest one drawn');
         $this->assertStringContainsString('data-has-more="1"', $html);
         $this->assertDoesNotMatchRegularExpression('/id="loadEarlierWrap" class="[^"]*\bhidden\b/', $html, 'the button is there');
         $this->assertStringContainsString('ข้อความที่ 120', $html);
-        $this->assertStringNotContainsString('ข้อความที่ 70<', $html);
+        $this->assertStringContainsString('ข้อความที่ 91<', $html, 'the oldest one drawn');
+        $this->assertStringNotContainsString('ข้อความที่ 90<', $html);
+    }
+
+    public function test_how_many_are_drawn_on_opening_is_a_setting(): void
+    {
+        config(['chat.initial_messages' => 5]);
+        $this->messages(12);
+
+        $page = $this->actingAs($this->me)->get(route('chat.index', ['thread_id' => $this->thread->id]))->assertOk();
+
+        $this->assertCount(5, $page->viewData('messages'));
+        $this->assertStringContainsString('data-has-more="1"', $page->getContent());
+    }
+
+    public function test_a_thread_of_exactly_30_has_nothing_earlier(): void
+    {
+        $this->messages(30);
+
+        $this->assertStringContainsString('data-has-more="0"', $this->actingAs($this->me)->get(route('chat.index', ['thread_id' => $this->thread->id]))->getContent());
     }
 
     public function test_a_short_thread_has_nothing_earlier_and_the_button_is_hidden(): void
@@ -75,16 +95,16 @@ class ChatOlderMessagesTest extends TestCase
     {
         $all = $this->messages(120);
 
-        $first = $this->older($all[70]->id)->assertOk()->assertHeader('X-Has-More', '1');
+        $first = $this->older($all[90]->id)->assertOk()->assertHeader('X-Has-More', '1');
         $ids = collect($first->json())->pluck('id')->all();
-        $this->assertSame($all->slice(40, 30)->pluck('id')->values()->all(), $ids, '30 messages, oldest first');
-        $this->assertSame('ข้อความที่ 41', $first->json('0.body'));
+        $this->assertSame($all->slice(60, 30)->pluck('id')->values()->all(), $ids, '30 messages, oldest first');
+        $this->assertSame('ข้อความที่ 61', $first->json('0.body'));
 
         $second = $this->older($ids[0])->assertOk()->assertHeader('X-Has-More', '1');
-        $this->assertSame($all->slice(10, 30)->pluck('id')->values()->all(), collect($second->json())->pluck('id')->all());
+        $this->assertSame($all->slice(30, 30)->pluck('id')->values()->all(), collect($second->json())->pluck('id')->all());
 
         $last = $this->older(collect($second->json())->first()['id'])->assertOk()->assertHeader('X-Has-More', '0');
-        $this->assertSame($all->slice(0, 10)->pluck('id')->values()->all(), collect($last->json())->pluck('id')->all(), 'the beginning');
+        $this->assertSame($all->slice(0, 30)->pluck('id')->values()->all(), collect($last->json())->pluck('id')->all(), 'the beginning, and it says so');
     }
 
     public function test_a_message_that_arrives_meanwhile_cannot_shift_what_is_loaded(): void
