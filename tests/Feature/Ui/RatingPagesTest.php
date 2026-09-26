@@ -77,6 +77,26 @@ class RatingPagesTest extends TestCase
         $page->assertSee('เหลือ 2 วัน')->assertSee('เหลือ 15 วัน')->assertSee('เหลือ 25 วัน');
     }
 
+    /** The last day is a whole day: 30 days and 23 hours after closing it can still be rated and is listed; 31 days and a minute cannot. */
+    public function test_the_last_day_runs_until_the_job_is_31_days_old(): void
+    {
+        $lateInLastDay = $this->closedDaysAgo(0, ['closed_at' => now()->subDays(30)->subHours(23)]);
+        $justOver = $this->closedDaysAgo(0, ['closed_at' => now()->subDays(31)->subMinute()]);
+        foreach ([$lateInLastDay, $justOver] as $req) {
+            MaintenanceAssignment::create(['maintenance_request_id' => $req->id, 'user_id' => $this->tech->id, 'status' => 'done', 'is_lead' => true]);
+        }
+
+        $ids = $this->evaluate()->viewData('requests')->pluck('id')->all();
+
+        $this->assertContains($lateInLastDay->id, $ids);
+        $this->assertNotContains($justOver->id, $ids);
+        $this->actingAs($this->member)->get(route('maintenance.requests.rating.create', $lateInLastDay))->assertRedirect(route('maintenance.requests.show', $lateInLastDay));
+        $this->assertNull(session('toast.message'), 'the guard agrees with the list: still allowed');
+        $this->flushSession();
+        $this->actingAs($this->member)->get(route('maintenance.requests.rating.create', $justOver));
+        $this->assertSame('เลยระยะเวลาที่สามารถให้คะแนนงานนี้ได้แล้ว', session('toast.message'));
+    }
+
     public function test_the_last_day_and_the_day_after_it(): void
     {
         $last = $this->closedDaysAgo(30);
@@ -509,7 +529,10 @@ class RatingPagesTest extends TestCase
 
         $this->assertStringNotContainsString('href="#"', $html, 'the old "ดูประวัติทั้งหมด" link led nowhere');
         $this->assertStringNotContainsString('เร่งด่วน/วิกฤต', $html, 'a 1–2 star review is not an emergency');
-        $this->assertDoesNotMatchRegularExpression('/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/', strip_tags($html), 'English month names');
+        // A month name next to a day or a year: a date. (Not the bare word: the factory's people are called "Jan Batz", "May ..." at random,
+        // and this test failed on those about one run in fifty.)
+        $month = '(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?';
+        $this->assertDoesNotMatchRegularExpression("/\b\d{1,4}\s+{$month}\b|\b{$month}\s+\d{1,4}\b/", strip_tags($html), 'English dates');
     }
 
     public function test_the_comments_are_the_ratings_that_have_one_newest_first_six_at_most(): void

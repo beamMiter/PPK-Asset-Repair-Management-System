@@ -56,6 +56,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A job in the last day of its rating window is listed, and three tests that failed at random no longer do.** The rating guard counts
+  whole days and accepts a job until it is 31 days old, and the page labels that day "วันสุดท้าย", but the list of jobs waiting to be
+  rated stopped at 30 days: a job closed 30 days and a few hours ago could be rated by its link and was missing from the list. Also
+  found while hunting the one full-suite run in ten that failed: `DepartmentFactory` ended its unique code in `rand(10,99)` (two names
+  that begin alike collided 1 time in 90), and a rating-page test called the factory's people "Jan Batz" an English month. The factory
+  counts now (`DepartmentFactoryTest`), the test looks for a month next to a day or a year, and the last day has a test with hours
+  in it (`RatingPagesTest`).
 - **`?q[]=x` in a URL no longer answers 500, and `%` / `_` in a search are text.** An array where a word is expected ("Array to string
   conversion") was a 500 on the chat, the assets, the requests (`q`, `status`), my jobs and two API lists. `IgnoreArrayQuery` drops
   array-valued query parameters on GET / HEAD once, for the whole app (nothing takes an array in a query string; the arrays of the

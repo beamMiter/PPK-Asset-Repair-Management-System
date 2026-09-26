@@ -36,14 +36,18 @@ class MaintenanceRatingController extends Controller
     /** The reporter's closed jobs that can still be rated: the same set withinRatingWindow() accepts. */
     private function pendingRatingQuery(User $user)
     {
-        $limitDate = now()->subDays($this->ratingDeadlineDays);
+        // The rating guard counts WHOLE days since the job closed (`(int) diffInDays`) and lets a job through while that is <= 30, so the
+        // last day runs until the job is 31 days old: the list has to say the same (`> now - 31 days`). It used to stop at 30 days, so a
+        // job in its last day - one the guard still accepted, and the page even labels "วันสุดท้าย" - was missing from the list, and the
+        // test that pins it failed whenever the clock changed second between making the job and asking for the page.
+        $limitDate = now()->subDays($this->ratingDeadlineDays + 1);
 
         return $this->reporterClosedQuery($user)
             ->whereDoesntHave('rating', fn ($rating) => $rating->where('rater_id', $user->id))
             // Match withinRatingWindow() exactly: the *first* of closed_at / resolved_at / completed_date, in the past, within
             // the deadline. An OR across the three columns used to surface rows the rating guard then rejected with
             // "เลยระยะเวลา".
-            ->whereRaw('COALESCE(closed_at, resolved_at, completed_date) BETWEEN ? AND ?', [$limitDate, now()]);
+            ->whereRaw('COALESCE(closed_at, resolved_at, completed_date) > ? AND COALESCE(closed_at, resolved_at, completed_date) <= ?', [$limitDate, now()]);
     }
 
     /** Narrow a list to what the search box holds: the job's number, title or place, or its technician's name. */
