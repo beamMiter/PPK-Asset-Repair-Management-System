@@ -77,7 +77,12 @@ class ChatMessageMenuParityTest extends TestCase
         // the sizes: the dots 24px, an item's icon 20px - in both places
         $this->assertStringContainsString('text-[24px]" aria-hidden="true">more_vert', $blade);
         $this->assertStringContainsString("'material-symbols-outlined text-[24px]', 'more_vert'", $js);
-        $this->assertSame(2, substr_count($blade, 'text-[20px]" aria-hidden="true"'), 'edit and delete');
-        $this->assertStringContainsString("'material-symbols-outlined text-[20px]', icon", $js);
+        $box = 'material-symbols-outlined text-[20px] h-[20px] w-[20px] shrink-0 overflow-hidden';
+        $this->assertSame(2, substr_count($blade, $box . '" aria-hidden="true"'), 'edit and delete, each in a box of its own');
+        $this->assertStringContainsString("'{$box}', icon", $js);
+
+        // the menu is as wide as its content, not a fixed box
+        $this->assertStringContainsString('w-max min-w-[96px]', $blade);
+        $this->assertStringNotContainsString('w-[136px]', $blade . $js);
     }
 }

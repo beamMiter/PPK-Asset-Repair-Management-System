@@ -2,6 +2,7 @@
   The "⋮" beside a message: edit and delete. resources/js/chat/page.js (messageMenu) draws the same thing for a message that arrives while the page is
   open, so a change here is a change there (ChatMessageMenuParityTest compares the class lists).
 
+  The menu is as wide as its longest item, not a fixed box; an item's icon has a box of its own (20px, clipped), so an icon font that has not loaded can never push the label out of view.
   The dots have no circle or box around them: the icon just lights up (darkens) under the pointer, and stays lit while its menu is open.
   Icons: rate_review (a bubble with a pencil) for edit, chat_error (a bubble with a cross) for delete - both say "this message", not just "pencil" / "bin".
 
@@ -13,9 +14,9 @@
 --}}
 @php
     $menuButton = 'chat-msg-menu-btn inline-flex h-8 w-6 shrink-0 items-center justify-center rounded text-slate-400 transition-colors hover:text-slate-700 aria-expanded:text-slate-700 focus:outline-none focus-visible:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300';
-    $menuBox = 'chat-msg-menu hidden absolute z-20 top-full mt-[4px] w-[136px] overflow-hidden rounded-md border border-slate-200 bg-white py-[4px] ' . ($side === 'right' ? 'right-0' : 'left-0');
-    $menuItem = 'flex w-full items-center gap-[8px] px-[12px] py-[8px] text-left text-[13.5px] text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none';
-    $menuItemDanger = 'flex w-full items-center gap-[8px] px-[12px] py-[8px] text-left text-[13.5px] text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:outline-none';
+    $menuBox = 'chat-msg-menu hidden absolute z-20 top-full mt-[4px] w-max min-w-[96px] overflow-hidden rounded-md border border-slate-200 bg-white py-[4px] ' . ($side === 'right' ? 'right-0' : 'left-0');
+    $menuItem = 'flex w-full items-center gap-[8px] px-[12px] py-[7px] text-left text-[13.5px] text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none';
+    $menuItemDanger = 'flex w-full items-center gap-[8px] px-[12px] py-[7px] text-left text-[13.5px] text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:outline-none';
 @endphp
 @if ($canEdit || $canDelete)
     <div class="chat-msg-menu-wrap relative shrink-0">
@@ -25,12 +26,12 @@
         <div class="{{ $menuBox }}" role="menu">
             @if ($canEdit)
                 <button type="button" role="menuitem" class="chat-msg-edit {{ $menuItem }}" data-when="open">
-                    <span class="material-symbols-outlined text-[20px]" aria-hidden="true">rate_review</span><span>แก้ไข</span>
+                    <span class="material-symbols-outlined text-[20px] h-[20px] w-[20px] shrink-0 overflow-hidden" aria-hidden="true">rate_review</span><span>แก้ไข</span>
                 </button>
             @endif
             @if ($canDelete)
                 <button type="button" role="menuitem" class="chat-msg-delete {{ $menuItemDanger }}" data-when="{{ ($canModerate ?? false) ? 'always' : 'open' }}">
-                    <span class="material-symbols-outlined text-[20px]" aria-hidden="true">chat_error</span><span>ลบ</span>
+                    <span class="material-symbols-outlined text-[20px] h-[20px] w-[20px] shrink-0 overflow-hidden" aria-hidden="true">chat_error</span><span>ลบ</span>
                 </button>
             @endif
         </div>
