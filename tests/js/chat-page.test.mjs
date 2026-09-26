@@ -23,11 +23,14 @@ const EXPECTED = ['document:DOMContentLoaded', 'document:turbo:before-render', '
 const msg = (over = {}) => ({ id: 11, user_id: 9, body: 'สวัสดี', user: { id: 9, name: 'สมชาย', avatar_thumb_url: '/img/9.png' }, ...over });
 
 // what chat/index.blade.php renders with a thread open
-function threadPage(body, world, { thread = 7, last = 10, lastUser = 9, canModerate = false } = {}) {
+function threadPage(body, world, { thread = 7, last = 10, lastUser = 9, canModerate = false, hasMore = false, firstId = 0 } = {}) {
   const el = world.el; const r = {};
   r.pane = el('div', { id: 'chat-pane' }); r.pane.alpine = { chatStatus: 'connecting', locked: false, deleting: false };
   r.box = el('div', { id: 'chatBox' });
-  Object.assign(r.box.dataset, { threadId: String(thread), myId: '5', lastId: String(last), lastUserId: String(lastUser), chatUrl: `/chat/threads/${thread}/messages`, listUrl: '/chat', canModerate: canModerate ? '1' : '0' });
+  Object.assign(r.box.dataset, { threadId: String(thread), myId: '5', lastId: String(last), lastUserId: String(lastUser), chatUrl: `/chat/threads/${thread}/messages`, listUrl: '/chat', canModerate: canModerate ? '1' : '0', firstId: String(firstId), hasMore: hasMore ? '1' : '0' });
+  r.list = el('div', { id: 'chatList' });
+  r.earlierBtn = el('button', { id: 'btnLoadEarlier' });
+  r.earlierWrap = el('div', { id: 'loadEarlierWrap', class: hasMore ? '' : 'hidden' }).append(r.earlierBtn);
   r.box.scrollHeight = 1000; r.box.clientHeight = 500; r.box.scrollTop = 0;
   r.empty = el('div', { id: 'emptyStateMsg' });
   r.input = el('textarea', { id: 'msgInput' }); r.input.value = ''; r.input.scrollHeight = 100;
@@ -38,14 +41,14 @@ function threadPage(body, world, { thread = 7, last = 10, lastUser = 9, canModer
   r.refresh = el('button', { id: 'btnHeaderRefresh' }).append(r.icon); r.refresh.disabled = false;
   r.panelLoader = el('div', { id: 'panelLoader', class: 'hidden' });
   r.counter = el('span', { id: `thread-count-${thread}` }); r.counter.textContent = '4';
-  r.box.append(r.empty);
+  r.box.append(r.empty, r.earlierWrap, r.list);
   r.pane.append(r.box, r.form, r.scrollBtn, r.refresh, r.panelLoader, r.counter);
   body.append(r.pane);
   return r;
 }
 const listPage = (body, world) => { body.append(world.el('div', { id: 'chat-pane' })); return {}; };
 
-function boot({ page = threadPage, answers = [[]], echo = true, innerWidth = 1280, ready = true } = {}) {
+function boot({ page = threadPage, answers = [[]], echo = true, innerWidth = 1280, ready = true, connected = false } = {}) {
   const world = createWorld();
   const fetches = []; const queue = [...answers];
   const requests = [];
@@ -62,7 +65,7 @@ function boot({ page = threadPage, answers = [[]], echo = true, innerWidth = 128
   };
   world.win.innerWidth = innerWidth;
   world.win.console = { warn() {}, error() {}, log() {} };
-  const conn = { state: 'connecting', bound: [], bind(_e, f) { conn.bound.push(f); }, unbind(_e, f) { conn.bound = conn.bound.filter((x) => x !== f); } };
+  const conn = { state: connected ? 'connected' : 'connecting', bound: [], bind(_e, f) { conn.bound.push(f); }, unbind(_e, f) { conn.bound = conn.bound.filter((x) => x !== f); } };
   const handlers = {}; const events = {}; const joined = []; const left = []; const toasts = []; const visited = [];
   world.win.showToast = (o) => toasts.push(o);
   const confirms = []; world.win.confirm = (text) => { confirms.push(text); return world.confirmAnswer !== false; };
@@ -304,7 +307,9 @@ test('a message is posted as JSON to the form\'s address with the CSRF token, an
   assert.equal(req.url, '/chat/threads/7/messages');
   assert.equal(req.init.headers.Accept, 'application/json');
   assert.equal(req.init.headers['X-CSRF-TOKEN'], 'tok-9');
-  assert.deepEqual(JSON.parse(req.init.body), { body: 'สวัสดีครับ' });
+  const sentBody = JSON.parse(req.init.body);
+  assert.equal(sentBody.body, 'สวัสดีครับ');
+  assert.match(sentBody.client_id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/, 'an id for this attempt, so a retry can be told from a new message');
 
   assert.equal(world.ref.input.value, '', 'the box empties');
   assert.equal(world.rows().length, 1);
@@ -658,5 +663,183 @@ test('a deleted message that arrives (older load, or a poll) is drawn as the pla
   assert.ok(row.textContent.includes('ข้อความนี้ถูกลบ'));
   assert.equal(row.getAttribute('data-deleted'), '1');
   assert.equal(row.querySelector('.chat-msg-delete'), null);
+});
+
+// ── earlier messages: scrolling to the top loads the batch before the first one drawn ──────────────────────────────
+const older = (ids, over = {}) => ids.map((id) => ({ id, user_id: id % 2 ? 5 : 6, body: `เก่า ${id}`, deleted: false, created_at: '2026-09-20T03:00:00Z', user: { id: id % 2 ? 5 : 6, name: id % 2 ? 'ฉัน' : 'วรรณา' }, ...over }));
+const hasMoreYes = { headers: { 'X-Has-More': '1' } };
+const hasMoreNo = { headers: { 'X-Has-More': '0' } };
+
+/** a thread page with 2 rows drawn and 40 more before them */
+function earlierPage(extra = {}) {
+  const world = boot({ answers: [[]], page: (b, w) => threadPage(b, w, { hasMore: true, firstId: 41, ...extra }) });
+  const r = world.ref;
+  const first = world.el('div', { class: 'chat-msg-row mt-0' }); first.setAttribute('data-message-id', '41');
+  const second = world.el('div', { class: 'chat-msg-row mt-4' }); second.setAttribute('data-message-id', '42');
+  r.list.append(first, second);
+  Object.defineProperty(r.box, 'scrollHeight', { get: () => 1000 + 100 * r.list.children.length, configurable: true });
+  r.first = first;
+  return world;
+}
+const scrollToTop = (world) => { world.ref.box.scrollTop = 10; return world.ref.box.dispatch('scroll'); };
+
+test('reaching the top loads the 30 before the first drawn, oldest first, above what is there', async () => {
+  const world = earlierPage();
+  world.queue.splice(0, world.queue.length, world.resp(older([38, 39, 40]), hasMoreYes));
+  scrollToTop(world); await settle();
+
+  const req = world.requests.find((r) => r.url.includes('before_id'));
+  assert.equal(req.url, '/chat/threads/7/messages?before_id=41&limit=30');
+  const ids = world.ref.list.children.map((row) => row.getAttribute('data-message-id'));
+  assert.deepEqual(ids, ['38', '39', '40', '41', '42'], 'in order, above the old first row');
+  assert.ok(world.ref.list.children[0].textContent.includes('เก่า 38'));
+});
+
+test('what the reader was looking at stays where it was: the scroll position moves by what was added', async () => {
+  const world = earlierPage();
+  world.queue.splice(0, world.queue.length, world.resp(older([38, 39, 40]), hasMoreYes));
+  scrollToTop(world); await settle();
+  assert.equal(world.ref.box.scrollTop, 10 + 300, 'three rows of 100 px were added above');
+});
+
+test('the cursor moves back with each batch and stops when the server says there is nothing earlier', async () => {
+  const world = earlierPage();
+  world.queue.splice(0, world.queue.length, world.resp(older([38, 39, 40]), hasMoreYes));
+  scrollToTop(world); await settle();
+  world.queue.splice(0, world.queue.length, world.resp(older([36, 37]), hasMoreNo));
+  scrollToTop(world); await settle();
+
+  const urls = world.requests.map((r) => r.url).filter((u) => u.includes('before_id'));
+  assert.deepEqual(urls, ['/chat/threads/7/messages?before_id=41&limit=30', '/chat/threads/7/messages?before_id=38&limit=30']);
+  assert.ok(world.ref.earlierWrap.classList.contains('hidden'), 'no more: the button goes');
+  scrollToTop(world); await settle();
+  assert.equal(world.requests.filter((r) => r.url.includes('before_id')).length, 2, 'and nothing more is asked');
+});
+
+test('two scrolls at once ask once; scrolling elsewhere than the top asks nothing', async () => {
+  const world = earlierPage();
+  world.queue.splice(0, world.queue.length, world.resp(older([40]), hasMoreYes));
+  scrollToTop(world); scrollToTop(world); await settle();
+  assert.equal(world.requests.filter((r) => r.url.includes('before_id')).length, 1);
+
+  const far = earlierPage();
+  far.ref.box.scrollTop = 600; far.ref.box.dispatch('scroll'); await settle();
+  assert.equal(far.requests.filter((r) => r.url.includes('before_id')).length, 0);
+});
+
+test('a page with no earlier messages never asks', async () => {
+  const world = boot({ answers: [[]] });
+  scrollToTop(world); await settle();
+  assert.equal(world.requests.filter((r) => r.url.includes('before_id')).length, 0);
+});
+
+test('the button does it too - for the keyboard', async () => {
+  const world = earlierPage();
+  world.queue.splice(0, world.queue.length, world.resp(older([40]), hasMoreNo));
+  world.ref.earlierBtn.dispatch('click'); await settle();
+  assert.equal(world.ref.list.children.length, 3);
+});
+
+test('older rows do not slide in, the first is flush at the top, and a deleted one is a placeholder without words', async () => {
+  const world = earlierPage();
+  const batch = older([39, 40]); batch[0] = { ...batch[0], body: null, deleted: true };
+  world.queue.splice(0, world.queue.length, world.resp(batch, hasMoreNo));
+  scrollToTop(world); await settle();
+
+  const [top, next, oldFirst] = world.ref.list.children;
+  assert.ok(top.classList.contains('mt-0') && !top.classList.contains('animate-bubble-in') && !top.classList.contains('opacity-0'));
+  assert.ok(top.textContent.includes('ข้อความนี้ถูกลบ') && !top.textContent.includes('เก่า 39'));
+  assert.ok(next.textContent.includes('เก่า 40'));
+  assert.ok(oldFirst.classList.contains('mt-4') && !oldFirst.classList.contains('mt-0'), 'the row that was first now has something above it');
+});
+
+test('while it loads the list is not a live region, so a screen reader does not read the batch as new; afterwards it is again', async () => {
+  const world = earlierPage();
+  world.ref.box.setAttribute('aria-live', 'polite');
+  world.queue.splice(0, world.queue.length, world.resp(older([40]), hasMoreYes));
+  scrollToTop(world);
+  assert.equal(world.ref.box.getAttribute('aria-live'), 'off');
+  assert.equal(world.ref.box.getAttribute('aria-busy'), 'true');
+  await settle();
+  assert.equal(world.ref.box.getAttribute('aria-live'), 'polite');
+  assert.equal(world.ref.box.getAttribute('aria-busy'), null);
+});
+
+test('a failed load says so, keeps the button, and can be tried again', async () => {
+  const world = earlierPage();
+  world.queue.splice(0, world.queue.length, world.resp({}, { status: 500 }));
+  scrollToTop(world); await settle();
+  assert.match(world.toasts.at(-1).message, /โหลดข้อความก่อนหน้าไม่สำเร็จ/);
+  assert.ok(!world.ref.earlierWrap.classList.contains('hidden'));
+  world.queue.splice(0, world.queue.length, world.resp(older([40]), hasMoreNo));
+  scrollToTop(world); await settle();
+  assert.equal(world.ref.list.children.length, 3);
+});
+
+test('an older message of mine has a bin (the thread is open); somebody else\'s has none', async () => {
+  const world = earlierPage();
+  world.queue.splice(0, world.queue.length, world.resp(older([39, 40]), hasMoreNo));   // 39 is mine (odd), 40 is not
+  scrollToTop(world); await settle();
+  const [mineRow, theirRow] = world.ref.list.children;
+  assert.ok(mineRow.querySelector('.chat-msg-delete'));
+  assert.equal(theirRow.querySelector('.chat-msg-delete'), null);
+});
+
+// ── a retry keeps its id ───────────────────────────────────────────────────────────────────────────────────────────
+const sentIds = (world) => sent(world).map((r) => JSON.parse(r.init.body).client_id);
+
+test('sending the same words again after a failure uses the same id; other words, or a success, use a new one', async () => {
+  const world = sendable();
+  const press = async (text, answer) => {
+    world.queue.splice(0, world.queue.length, answer);
+    type(world, text).dispatch('keydown', { key: 'Enter', shiftKey: false });
+    await settle();
+  };
+  await press('ข้อความ', world.resp({}, { status: 500 }));             // 1: fails
+  await press('ข้อความ', world.resp({}, { status: 500 }));             // 2: the same words again: a retry
+  await press('ข้อความ', world.resp(mine({ id: 20 }), { status: 201 })); // 3: still the same, and this one gets through
+  await press('ข้อความ', world.resp(mine({ id: 21 }), { status: 201 })); // 4: a NEW message with the same words after a success
+  await press('อีกอย่าง', world.resp({}, { status: 500 }));            // 5: other words
+  const ids = sentIds(world);
+  assert.equal(ids[0], ids[1]);
+  assert.equal(ids[1], ids[2]);
+  assert.notEqual(ids[2], ids[3], 'after a success the next message is a new attempt');
+  assert.notEqual(ids[3], ids[4]);
+});
+
+// ── the poll is a safety net while the socket is healthy ────────────────────────────────────────────────────────────
+const pollsAfter = async (world, seconds) => {
+  const before = world.requests.filter((r) => r.url.includes('after_id')).length;
+  for (let i = 0; i < seconds / 5; i++) { world.advance(Fab5); await settle(); }
+  return world.requests.filter((r) => r.url.includes('after_id')).length - before;
+};
+const Fab5 = Chat.POLL_MS;
+
+test('a healthy socket: the poll asks only every 60 s; a socket that is down: every 5 s', async () => {
+  const up = boot({ connected: true });
+  assert.equal(await pollsAfter(up, 55), 0, 'nothing in the first 55 s');
+  assert.equal(await pollsAfter(up, 5), 1, 'the 12th tick');
+  assert.equal(await pollsAfter(up, 60), 1, 'then once a minute');
+
+  const down = boot({ connected: false });
+  assert.equal(await pollsAfter(down, 60), 12);
+});
+
+test('the socket comes back after being down: what it missed is asked for at once', async () => {
+  const world = boot({ connected: false });
+  await pollsAfter(world, 10);
+  const before = world.requests.filter((r) => r.url.includes('after_id')).length;
+  world.conn.state = 'connected';
+  world.conn.bound.forEach((f) => f({ current: 'connected' }));
+  await settle();
+  assert.equal(world.requests.filter((r) => r.url.includes('after_id')).length, before + 1);
+  assert.equal(await pollsAfter(world, 20), 0, 'and then the slow poll');
+});
+
+test('a socket that drops goes back to every 5 s', async () => {
+  const world = boot({ connected: true });
+  world.conn.state = 'disconnected';
+  world.conn.bound.forEach((f) => f({ current: 'disconnected' }));
+  assert.equal(await pollsAfter(world, 25), 5);
 });
 

@@ -38,6 +38,7 @@ class ChatController extends Controller
 
         $activeThreadId = $r->integer('thread_id');
         $activeThread = null;
+        $hasEarlier = false;
         $messages = collect();
         $totalMessages = 0;
         $lastAt = null;
@@ -55,6 +56,9 @@ class ChatController extends Controller
                     ->values();
 
                 $totalMessages = $activeThread->messages()->count();
+                // older ones than the 50 drawn: the page offers to load them (and does, when scrolled to the top)
+                $hasEarlier = $messages->isNotEmpty()
+                    && $activeThread->messages()->withTrashed()->where('id', '<', $messages->first()->id)->exists();
                 $lastAt = $messages->last()?->created_at ?? $activeThread->created_at;
 
                 // Opening a thread reads it. Without this, only posting a message ever advanced the pointer
@@ -83,7 +87,7 @@ class ChatController extends Controller
         $mineOnThisPage = ChatThread::inMyList($meId)->whereIn('chat_threads.id', $listed)->pluck('chat_threads.id')->all();
         $unread = array_intersect_key($this->unreadCountsFor($meId, $mineOnThisPage), array_flip($mineOnThisPage));
 
-        return view('chat.index', compact('threads', 'activeThread', 'messages', 'totalMessages', 'lastAt', 'me', 'canManageLock', 'scope', 'counts', 'unread', 'hiddenByMe', 'canHide', 'canDelete', 'threadQuota'));
+        return view('chat.index', compact('threads', 'activeThread', 'messages', 'totalMessages', 'lastAt', 'me', 'canManageLock', 'scope', 'counts', 'unread', 'hiddenByMe', 'canHide', 'canDelete', 'threadQuota', 'hasEarlier'));
     }
 
     public function storeThread(Request $r)
@@ -117,8 +121,25 @@ class ChatController extends Controller
         return redirect()->route('chat.index', ['thread_id' => $thread->id]);
     }
 
+    /**
+     * The thread's messages for the page that has it open: NEWER than `after_id` (the poll), or - like scrolling up in any messenger -
+     * the batch OLDER than `before_id` (30 by default, oldest first, deleted ones as placeholders), with `X-Has-More` saying whether there
+     * are still older ones. Keyed by id, not by page number: a message that arrives meanwhile cannot shift what is loaded.
+     */
     public function messages(Request $r, ChatThread $thread)
     {
+        $beforeId = $r->integer('before_id');
+
+        if ($beforeId) {
+            $limit = max(1, min((int) $r->query('limit', 30), 100));
+            $older = $thread->messages()->withTrashed()->with('user:id,name')
+                ->where('id', '<', $beforeId)->orderByDesc('id')->take($limit + 1)->get();
+
+            return response()->json($older->take($limit)->sortBy('id')->values()->map(fn (ChatMessage $m) => $m->toChatArray()))
+                ->header('X-Has-More', $older->count() > $limit ? '1' : '0')
+                ->header('X-Thread-Locked', $thread->is_locked ? '1' : '0');
+        }
+
         $afterId = $r->integer('after_id');
 
         $query = $thread->messages()
@@ -135,19 +156,24 @@ class ChatController extends Controller
 
     public function storeMessage(Request $r, ChatThread $thread)
     {
+        // A retry of a message that already went through (the answer was lost on the way): answer with that one - it was accepted when it
+        // was sent, whatever has happened to the thread since - and save nothing twice.
+        if ($replay = $this->messageOfAttempt((int) Auth::id(), $thread, $r->input('client_id'))) {
+            return $r->expectsJson() ? response()->json($replay->toChatArray(), 200) : back();
+        }
+
         // ถ้าล็อกแล้ว ห้ามโพสต์
         abort_if($thread->is_locked, 403, 'กระทู้นี้ถูกล็อก ไม่สามารถส่งข้อความได้');
 
         $data = $r->validate([
             'body' => 'required|string|max:3000',
+            'client_id' => 'nullable|uuid',
         ]);
 
-        $message = $thread->messages()->create([
-            'user_id' => Auth::id(),
-            'body'    => $data['body'],
-        ]);
-
-        $message->load('user:id,name');
+        [$message, $created] = $this->saveMessageOnce($thread, (int) Auth::id(), $data['body'], $data['client_id'] ?? null);
+        if (! $created) {
+            return $r->expectsJson() ? response()->json($message->toChatArray(), 200) : back();
+        }
 
         // Advance the sender's own read pointer (the API path already did this;
         // without it their unread badge never clears for their own posts).
@@ -158,7 +184,7 @@ class ChatController extends Controller
         SafeBroadcast::send(new \App\Events\ChatMessageSent($message));
 
         // the page sends with fetch and draws the message from this; a plain form post still goes back to the page
-        return $r->expectsJson() ? response()->json($message, 201) : back();
+        return $r->expectsJson() ? response()->json($message->toChatArray(), 201) : back();
     }
 
     public function myUpdates(Request $request)

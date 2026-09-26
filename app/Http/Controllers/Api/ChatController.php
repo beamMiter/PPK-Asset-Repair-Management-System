@@ -148,9 +148,21 @@ class ChatController extends Controller
 
     public function messages(Request $r, ChatThread $thread)
     {
-        $afterId = $r->integer('after_id');
-        $limit   = (int) $r->query('limit', 50);
-        $limit   = max(1, min($limit, 100));
+        $afterId  = $r->integer('after_id');
+        $beforeId = $r->integer('before_id');
+        $limit    = (int) $r->query('limit', 50);
+        $limit    = max(1, min($limit, 100));
+
+        // ?before_id= : the batch OLDER than that message (scrolling up), oldest first, deleted ones as placeholders; meta.has_more says if more remain
+        if ($beforeId) {
+            $older = $thread->messages()->withTrashed()->with('user:id,name')
+                ->where('id', '<', $beforeId)->orderByDesc('id')->take($limit + 1)->get();
+
+            return response()->json([
+                'data' => $older->take($limit)->sortBy('id')->values()->map(fn (ChatMessage $m) => $m->toChatArray()),
+                'meta' => ['has_more' => $older->count() > $limit],
+            ]);
+        }
 
         $q = $thread->messages()
             ->with('user:id,name');
@@ -181,6 +193,18 @@ class ChatController extends Controller
 
     public function storeMessage(Request $r, ChatThread $thread)
     {
+        $shape = fn (ChatMessage $m) => [
+            'id'         => $m->id,
+            'user'       => $m->user ? ['id' => $m->user->id, 'name' => $m->user->name] : null,
+            'body'       => $m->body,
+            'created_at' => $m->created_at ? $m->created_at->toISOString() : null,
+        ];
+
+        // `client_id` (a UUID the app makes for each attempt): a retry of a message that already went through gets that message back (200)
+        if ($replay = $this->messageOfAttempt((int) Auth::id(), $thread, $r->input('client_id'))) {
+            return response()->json($shape($replay), 200);
+        }
+
         // ถ้าล็อกแล้ว ห้ามโพสต์
         if ($thread->is_locked) {
             abort(403, 'กระทู้นี้ถูกล็อก ไม่สามารถส่งข้อความได้');
@@ -188,14 +212,13 @@ class ChatController extends Controller
 
         $data = $r->validate([
             'body' => ['required', 'string', 'max:3000'],
+            'client_id' => ['nullable', 'uuid'],
         ]);
 
-        $msg = $thread->messages()->create([
-            'user_id' => Auth::id(),
-            'body'    => $data['body'],
-        ]);
-
-        $msg->load('user:id,name');
+        [$msg, $created] = $this->saveMessageOnce($thread, (int) Auth::id(), $data['body'], $data['client_id'] ?? null);
+        if (! $created) {
+            return response()->json($shape($msg), 200);
+        }
 
         if ($msg->user_id) {
             $this->markThreadRead((int) $msg->user_id, (int) $thread->id, (int) $msg->id, reappear: true);
@@ -204,15 +227,7 @@ class ChatController extends Controller
         // Real-time fan-out, same as the web path.
         SafeBroadcast::send(new \App\Events\ChatMessageSent($msg));
 
-        return response()->json([
-            'id'         => $msg->id,
-            'user'       => $msg->user ? [
-                'id'   => $msg->user->id,
-                'name' => $msg->user->name,
-            ] : null,
-            'body'       => $msg->body,
-            'created_at' => $msg->created_at ? $msg->created_at->toISOString() : null,
-        ], 201);
+        return response()->json($shape($msg), 201);
     }
 
     public function lock(Request $request, ChatThread $thread)

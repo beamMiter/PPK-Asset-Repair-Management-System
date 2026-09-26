@@ -129,6 +129,7 @@ export function installChatFab(win = window) {
         const badge = doc.getElementById('chatBadge');
         const listEl = doc.getElementById('chatList');
         const search = doc.getElementById('chatSearch');
+        const askNotify = doc.getElementById('chatNotifyAsk');
         if (!fab || !drawer || !closeBt || !badge || !listEl || !search) return null;
 
         const p = { root, isOpen: false, unreadTotal: 0, allItems: [], firstLoaded: false };
@@ -198,6 +199,19 @@ export function installChatFab(win = window) {
         };
         p.renderBadge = renderBadge;
         p.setListHtml = (html) => { listEl.innerHTML = html; };
+
+        // The browser is asked for permission to show desktop notifications only when the person presses the bell: it used to be asked
+        // on every page load, out of the blue, and a browser that is asked like that is mostly answered "block" - for good.
+        const showAskButton = () => {
+            if (askNotify) askNotify.classList.toggle('hidden', !(win.Notification && win.Notification.permission === 'default'));
+        };
+        showAskButton();
+        if (askNotify) {
+            askNotify.addEventListener('click', async () => {
+                try { await win.Notification?.requestPermission(); } catch { /* the browser refused to ask */ }
+                showAskButton();
+            });
+        }
 
         fab.addEventListener('click', () => (p.isOpen ? closeDrawer() : openDrawer()));
         closeBt.addEventListener('click', closeDrawer);
@@ -280,9 +294,6 @@ export function installChatFab(win = window) {
         if (page && page.root === root) return; // turbo:load / DOMContentLoaded / the immediate call all land here
         page = wire(root);
         if (!page) return;
-
-        const N = win.Notification;
-        if (N && N.permission === 'default') N.requestPermission();
 
         poll();
         if (timer === null) timer = win.setInterval(poll, POLL_MS); // one timer for the whole session

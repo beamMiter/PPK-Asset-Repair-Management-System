@@ -93,6 +93,8 @@ class ChatIsThaiTest extends TestCase
         $html = $this->actingAs($me)->get(route('maintenance.requests.index'))->assertOk()->getContent();
 
         $this->assertStringContainsString('กระทู้ที่มีส่วนร่วม', $html);
+        $this->assertStringContainsString('id="chatNotifyAsk"', $html, 'the bell that asks for desktop notifications when pressed');
+        $this->assertSame(1, substr_count(file_get_contents(resource_path('js/layout/chat-fab.js')), 'requestPermission('), 'asked in one place only: the bell\'s click, never on load');
         $this->assertStringContainsString('ไปที่กระทู้ทั้งหมด', $html);
         $this->assertStringNotContainsString('My Topics', $html);
         $this->assertStringNotContainsString('All topics', $html);

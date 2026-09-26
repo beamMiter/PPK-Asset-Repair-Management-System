@@ -8,6 +8,15 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The chat can be scrolled back to its beginning.** The page drew the latest 50 messages and offered no way to the ones before, so a longer
+  thread lost its start. Scrolling to the top (or the "โหลดข้อความก่อนหน้า" button, for a keyboard) loads the 30 before the first one drawn,
+  oldest first, and keeps the reader where they were; the cursor is the message id, not a page number (a message that arrives meanwhile
+  cannot shift what is loaded), as a messenger does it. A deleted one comes back as a placeholder. `GET .../messages?before_id=` with
+  `X-Has-More`; the API has `before_id` and `meta.has_more`. `ChatOlderMessagesTest`.
+- **A message sent twice by a dropped connection is saved once.** The page sends each message with an id it made for that attempt (a UUID); if
+  the connection drops after the server saved it and before the answer arrived, the same words sent again carry the same id and get the
+  message that already exists (200), not a second copy or a second announcement (an idempotency key; `chat_messages.client_uuid`,
+  migration - run `php artisan migrate`). The API takes `client_id` too. `ChatIdempotentSendTest`.
 - **One chat message can be deleted, and every lock / unlock / delete is recorded.** A wrong or unsuitable message could only be removed by
   deleting its whole thread. Now its author (while the thread is open) or a moderator (admins and the IT / repair team, always) deletes it: it
   stays in the thread as "ข้อความนี้ถูกลบ" for everybody, its words are never sent to a page again, everyone with the thread open sees it change
@@ -494,6 +503,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The chat polls as a safety net while the websocket is healthy, and screen readers hear new messages.** The open thread asked the server
+  for new messages every 5 seconds even while the websocket was delivering them; while the socket is connected it now asks once a minute
+  (every 5 seconds when it is down or still connecting, and at once when it comes back, to fetch what it missed). The message list is a
+  `role="log"` region (`aria-live="polite"`) and the "locked" notice a `role="status"`, so a new message or a lock is announced (WCAG 2.2, 4.1.3);
+  the region is switched off while an older batch loads, so it is not read out as if it were new.
+- **Desktop notifications are asked for when the person presses the bell.** The widget asked the browser for permission on every page load, out
+  of the blue - a browser asked like that mostly answers "block", for good. A bell in the widget's header asks, and only while the browser has
+  not been asked yet.
 - **A chat message's time is the server's, on the Thai clock, and a date when it is old.** A message that arrived live was stamped with the
   browser's own clock (so two people could see two times), and every message showed only a weekday and a time, so one from three weeks ago
   looked like one from this week. Now: today "15:45", yesterday "เมื่อวาน 15:45", the last few days "วันเสาร์ 15:45", older "26 ก.ย. 2569

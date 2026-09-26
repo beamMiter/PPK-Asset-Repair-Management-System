@@ -21,6 +21,46 @@ trait HandlesChatReads
     }
 
     /**
+     * A message this person already sent in this thread with the id their page made for that attempt: the answer to a RETRY (the first try
+     * reached the server, its answer did not reach the page). Null for no id, an id that is not a UUID, or a new one.
+     */
+    protected function messageOfAttempt(int $userId, ChatThread $thread, ?string $clientId): ?ChatMessage
+    {
+        if (! is_string($clientId) || ! \Illuminate\Support\Str::isUuid($clientId)) {
+            return null;
+        }
+
+        return ChatMessage::withTrashed()->where('user_id', $userId)->where('client_uuid', $clientId)
+            ->where('chat_thread_id', $thread->id)->with('user:id,name')->first();
+    }
+
+    /**
+     * Save the message - or, if the same attempt was saved a moment ago by a second request that raced this one, return that one
+     * (the unique key refuses the second insert).
+     *
+     * @return array{0:ChatMessage,1:bool} the message, and whether it was just created
+     */
+    protected function saveMessageOnce(ChatThread $thread, int $userId, string $body, ?string $clientId): array
+    {
+        $clientId = is_string($clientId) && \Illuminate\Support\Str::isUuid($clientId) ? $clientId : null;
+
+        try {
+            $message = $thread->messages()->create(['user_id' => $userId, 'body' => $body, 'client_uuid' => $clientId]);
+
+            return [$message->load('user:id,name'), true];
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            $existing = $this->messageOfAttempt($userId, $thread, $clientId);
+            if ($existing !== null) {
+                return [$existing, false];
+            }
+
+            // the same id already sent to ANOTHER thread: not a retry of this message (a page makes a fresh id for each attempt, so this is a
+            // bug or a clash). Save it without the id rather than answer with a message from elsewhere - or fail.
+            return [$thread->messages()->create(['user_id' => $userId, 'body' => $body])->load('user:id,name'), true];
+        }
+    }
+
+    /**
      * Advance a user's "last read" pointer for a thread. Opening a thread only reads it; WRITING in it ($reappear) also brings it back
      * to the person's "กระทู้ที่มีส่วนร่วม" if they had hidden it.
      */

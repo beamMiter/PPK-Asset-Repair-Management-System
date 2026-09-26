@@ -364,7 +364,8 @@
 
                 {{-- CHAT SCROLL AREA --}}
                 <div id="chatBox" data-thread-id="{{ $activeThread->id }}" data-my-id="{{ $me->id ?? 0 }}"
-                    data-last-id="{{ $messages->last()?->id ?? 0 }}"
+                    data-last-id="{{ $messages->last()?->id ?? 0 }}" data-first-id="{{ $messages->first()?->id ?? 0 }}" data-has-more="{{ ($hasEarlier ?? false) ? 1 : 0 }}"
+                    role="log" aria-live="polite" aria-relevant="additions text" aria-label="ข้อความในกระทู้"
                     data-last-user-id="{{ $messages->last()?->user_id ?? 0 }}"
                     data-chat-url="{{ route('chat.messages', $activeThread) }}" data-list-url="{{ route('chat.index') }}" data-can-moderate="{{ ($canManageLock ?? false) ? 1 : 0 }}"
                     class="flex-1 overflow-y-auto w-full px-4 pt-3 pb-4 md:px-6 md:pt-5 md:pb-6 bg-slate-50 min-h-0 relative">
@@ -374,8 +375,15 @@
                             <x-ui.empty-state icon="forum" hint="ส่งข้อความเพื่อเริ่มการสนทนา">เริ่มการสนทนา</x-ui.empty-state>
                         </div>
                     @else
+                        {{-- Older messages: loaded when the top is reached (page.js), and by this button for a keyboard --}}
+                        <div id="loadEarlierWrap" class="flex justify-center pb-3 {{ ($hasEarlier ?? false) ? '' : 'hidden' }}">
+                            <button id="btnLoadEarlier" type="button"
+                                class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/30">
+                                โหลดข้อความก่อนหน้า
+                            </button>
+                        </div>
                         {{-- Message List (Untitled UI Design) --}}
-                        <div class="pb-2 flex flex-col">
+                        <div id="chatList" class="pb-2 flex flex-col">
                             @php $lastUserId = null; @endphp
                             @foreach ($messages as $m)
                                 @php
@@ -464,7 +472,7 @@
                             </form>
                         </div>
                         <div class="w-full py-3 text-center text-gray-500 bg-gray-50 rounded-xl flex items-center justify-center gap-2 border border-gray-100"
-                            id="lockedNotice" x-show="locked" @if (!$thread->is_locked) style="display: none;" @endif>
+                            id="lockedNotice" role="status" x-show="locked" @if (!$thread->is_locked) style="display: none;" @endif>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 class="w-4 h-4">
                                 <path stroke-linecap="round" stroke-linejoin="round"

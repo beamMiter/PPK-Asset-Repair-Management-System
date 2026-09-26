@@ -40,6 +40,12 @@
                         <div class="truncate font-medium">กระทู้ที่มีส่วนร่วม</div>
                         <div class="text-xs text-zinc-500">ที่คุณตั้งหรือเคยตอบ</div>
                     </div>
+                    {{-- Desktop notifications are asked for HERE, when the person chooses (a browser that is asked on its own, on every page,
+                         mostly ends up refusing for good). Shown only while the browser has not been asked yet. --}}
+                    <button id="chatNotifyAsk" type="button" class="hidden rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100"
+                        title="เปิดการแจ้งเตือนบนเดสก์ท็อป" aria-label="เปิดการแจ้งเตือนบนเดสก์ท็อป">
+                        <span class="material-symbols-outlined text-[20px] leading-none" aria-hidden="true">notifications</span>
+                    </button>
                     <button id="chatClose" class="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100" aria-label="ปิด">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                             <path

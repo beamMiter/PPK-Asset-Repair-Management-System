@@ -17,6 +17,7 @@ import { initialsAvatarUrl } from '../avatar.js';
 import { chatTime } from './time.js';
 
 export const POLL_MS = 5000;               // polling fallback, alongside the realtime channel
+export const SAFETY_POLL_EVERY = 12;       // ...and while the socket is healthy only every 12th tick (60 s): a safety net, not the delivery path
 export const STATUS_TIMEOUT_MS = 10000;    // still "connecting" after this long → show the polling (offline) state
 
 
@@ -53,8 +54,9 @@ function deletedBubble(doc, tail) {
  * A message row, as chat/_message.blade.php renders it, for a message that arrived while the page was open.
  * m: { id, user_id, body, deleted?, created_at, user }.  canDelete: this person may delete this one.
  */
-export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr, canDelete = false }) {
+export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr, canDelete = false, animate = true }) {
     const gap = isConsecutive ? 'mt-1' : 'mt-4';
+    const enter = animate ? 'animate-bubble-in opacity-0 translate-y-2 ' : '';   // only a message that has just arrived slides in
     const row = el(doc, 'div');
     row.dataset.userId = m.user_id;
     row.setAttribute('data-message-id', String(m.id));        // attributes, not dataset: the delete handler finds a row by this selector
@@ -64,7 +66,7 @@ export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr, canDelet
     const body = el(doc, 'div', 'whitespace-pre-line break-words msg-body', m.body);
 
     if (isMe) {
-        row.className = `chat-msg-row flex flex-col items-end w-full animate-bubble-in opacity-0 translate-y-2 ${gap}`;
+        row.className = `chat-msg-row flex flex-col items-end w-full ${enter}${gap}`;
         const head = el(doc, 'div', 'flex items-center gap-2 mb-1');
         head.append(el(doc, 'span', 'text-xs text-gray-500', timeStr), el(doc, 'span', 'text-[13px] font-semibold text-gray-900', 'คุณ'));
         const line = el(doc, 'div', 'flex items-center justify-end gap-1 max-w-[85%] sm:max-w-[70%]');
@@ -80,7 +82,7 @@ export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr, canDelet
         return row;
     }
 
-    row.className = `chat-msg-row flex items-start gap-3 w-full animate-bubble-in opacity-0 translate-y-2 ${gap}`;
+    row.className = `chat-msg-row flex items-start gap-3 w-full ${enter}${gap}`;
 
     let avatar;
     if (isConsecutive) {
@@ -132,6 +134,8 @@ function mount(win) {
     const canModerate = box.dataset.canModerate === '1';   // admins and the IT / repair team: they may delete any message
     let autoScroll = true;
     const undo = []; // everything to take back when the page is left
+    let socketUp = false;   // the realtime channel is connected: the poll is only a safety net then
+    let ticks = 0;
 
     box.scrollTop = box.scrollHeight;
     box.addEventListener('scroll', () => {
@@ -233,6 +237,59 @@ function mount(win) {
         }
     });
 
+    // ── earlier messages, like scrolling up in any messenger: the batch before the first one drawn (cursor = its id, not a page number) ──
+    const list = doc.getElementById('chatList');
+    const earlierWrap = doc.getElementById('loadEarlierWrap');
+    let firstId = parseInt(box.dataset.firstId) || 0;
+    let hasMore = box.dataset.hasMore === '1';
+    let loadingOlder = false;
+
+    async function loadOlder() {
+        if (!hasMore || loadingOlder || !list || !firstId) return;
+        loadingOlder = true;
+        box.setAttribute('aria-busy', 'true');
+        box.setAttribute('aria-live', 'off');          // a screen reader must not read the whole batch as if it were new
+        try {
+            const res = await win.fetch(`${chatUrl}?before_id=${firstId}&limit=30`, { headers: { Accept: 'application/json' } });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const batch = await res.json();
+            hasMore = res.headers?.get?.('X-Has-More') === '1';
+
+            if (Array.isArray(batch) && batch.length) {
+                const oldFirst = list.firstElementChild;
+                const rows = [];
+                let previousUser = 0;
+                batch.forEach((m, i) => {
+                    const isMe = parseInt(m.user_id) === myId;
+                    const row = buildMessageRow(doc, m, {
+                        isMe, isConsecutive: parseInt(m.user_id) === previousUser, timeStr: chatTime(m.created_at ?? new Date()),
+                        canDelete: canModerate || (isMe && !isLocked()), animate: false,
+                    });
+                    previousUser = parseInt(m.user_id);
+                    if (i === 0) { row.classList.remove('mt-1', 'mt-4'); row.classList.add('mt-0'); }
+                    rows.push(row);
+                });
+                if (oldFirst) { oldFirst.classList.remove('mt-0'); oldFirst.classList.add('mt-4'); }
+
+                const heightBefore = box.scrollHeight;
+                list.prepend(...rows);
+                box.scrollTop += box.scrollHeight - heightBefore;   // what the reader was looking at stays where it was
+                firstId = batch[0].id;
+            } else {
+                hasMore = false;
+            }
+        } catch {
+            win.showToast?.({ type: 'error', message: 'โหลดข้อความก่อนหน้าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
+        } finally {
+            loadingOlder = false;
+            box.removeAttribute('aria-busy');
+            box.setAttribute('aria-live', 'polite');
+            if (earlierWrap) earlierWrap.classList.toggle('hidden', !hasMore);
+        }
+    }
+    doc.getElementById('btnLoadEarlier')?.addEventListener('click', loadOlder);
+    box.addEventListener('scroll', () => { if (box.scrollTop < 120) loadOlder(); });
+
     // the thread's message counter in the list on the left
     const bumpCounter = (by) => {
         const badge = doc.getElementById('thread-count-' + threadId);
@@ -252,6 +309,9 @@ function mount(win) {
             }
         };
         const updateStatus = (state) => {
+            const wasUp = socketUp;
+            socketUp = state === 'connected';
+            if (socketUp && !wasUp && ticks > 0) poll();   // it was down: ask what it missed at once
             if (state === 'connected') setStatus('online');
             else if (state === 'unavailable' || state === 'failed' || state === 'disconnected') setStatus('offline');
             else setStatus('connecting');
@@ -343,7 +403,13 @@ function mount(win) {
     win.forceChatPoll = forceChatPoll;
     undo.push(() => { if (win.forceChatPoll === forceChatPoll) delete win.forceChatPoll; });
 
-    const timer = win.setInterval(poll, POLL_MS);
+    // every 5 s while the socket is down or still connecting; while it is healthy only every 12th tick (60 s) - polling every 5 s beside a
+    // working websocket costs the server a request per open thread per 5 s for nothing (what the socket carries is not asked for again)
+    const timer = win.setInterval(() => {
+        ticks += 1;
+        if (socketUp && ticks % SAFETY_POLL_EVERY !== 0) return;
+        poll();
+    }, POLL_MS);
     undo.push(() => win.clearInterval(timer));
 
     // ── composer ──
@@ -351,12 +417,18 @@ function mount(win) {
     // (the broadcast and the poll that follow carry the same id, so it is never drawn twice). A refusal or a failure keeps what was typed.
     const form = msgInput ? msgInput.closest('form') : null;
     let sending = false;
+    let attempt = null;     // { text, id }: the same words sent again after a failure keep the same id, so the server can tell it is a retry
+    const newId = () => win.crypto?.randomUUID?.() ?? 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.floor(Math.random() * 16);
+        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+    });
     const sendButton = form ? form.querySelector('button[type=submit]') : null;
 
     async function sendMessage() {
         const text = msgInput.value;
         if (!form || !text.trim() || sending) return;
         sending = true;
+        if (!attempt || attempt.text !== text) attempt = { text, id: newId() };
         if (sendButton) { sendButton.disabled = true; sendButton.classList.add('opacity-60'); }
 
         try {
@@ -368,7 +440,7 @@ function mount(win) {
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-CSRF-TOKEN': doc.querySelector('meta[name=csrf-token]')?.getAttribute('content') ?? '',
                 },
-                body: JSON.stringify({ body: text }),
+                body: JSON.stringify({ body: text, client_id: attempt.id }),
             });
 
             if (res.status === 429) {                     // sending too fast: the wait is in Retry-After, the words stay
@@ -383,6 +455,7 @@ function mount(win) {
                 win.showToast?.({ type: 'error', message: 'ส่งข้อความไม่สำเร็จ ข้อความของคุณยังอยู่ในช่อง กรุณาลองใหม่อีกครั้ง' });
             } else {
                 const m = await res.json();
+                attempt = null;
                 msgInput.value = '';
                 msgInput.style.height = '48px';
                 if (m && m.id > lastId) {                 // the broadcast may have drawn it already

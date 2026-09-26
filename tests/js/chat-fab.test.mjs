@@ -28,9 +28,10 @@ function fabPage(body, world) {
   r.fab = el('button', { id: 'chatFab' });
   r.badge = el('span', { id: 'chatBadge', class: 'hidden' });
   r.close = el('button', { id: 'chatClose' });
+  r.ask = el('button', { id: 'chatNotifyAsk', class: 'hidden' });
   r.search = el('input', { id: 'chatSearch' }); r.search.value = '';
   r.list = el('div', { id: 'chatList' });
-  r.drawer = el('div', { id: 'chatDrawer' }).append(r.close, r.search, r.list);
+  r.drawer = el('div', { id: 'chatDrawer' }).append(r.ask, r.close, r.search, r.list);
   r.audio = el('audio', { id: 'chatNotifySound' }); r.audio.plays = 0; r.audio.play = () => { r.audio.plays++; return Promise.resolve(); };
   r.root = el('div', { id: 'chatWidgetRoot' }).append(r.fab, r.badge, r.drawer, r.audio);
   r.root.dataset.updatesUrl = '/chat/my-updates'; r.root.dataset.notifyIcon = '/images/logoppk.png';
@@ -281,11 +282,11 @@ test('a desktop notification only while the tab is hidden, the drawer closed and
   assert.equal(denied.notifications.length, 0);
 });
 
-test('permission is asked once per page while it is undecided; a browser without Notification still works', async () => {
+test('the browser is never asked on its own: not on load, not on the next page', async () => {
   const world = boot({ notification: 'default' });
   await settle();
-  assert.equal(world.permissionAsked.length, 1);
-  await world.go(); assert.equal(world.permissionAsked.length, 2, 'asked again on the next page while still undecided');
+  await world.go(); await settle();
+  assert.equal(world.permissionAsked.length, 0, 'nothing asked until the person presses the bell');
 
   const granted = boot({ notification: 'granted' }); await settle();
   assert.equal(granted.permissionAsked.length, 0);
@@ -293,6 +294,34 @@ test('permission is asked once per page while it is undecided; a browser without
   const none = boot({ notification: null, answers: [[item({ unread: 3 })]] });
   await settle();
   assert.equal(rows(none).length, 1, 'the list still loads where the Notification API does not exist');
+});
+
+test('the bell is offered while the browser has not been asked, and pressing it asks once and then goes', async () => {
+  const world = boot({ notification: 'default' });
+  await settle();
+  const bell = world.ref.root.querySelector('#chatNotifyAsk');
+  assert.ok(bell && !bell.classList.contains('hidden'), 'offered');
+
+  world.win.Notification.requestPermission = () => { world.permissionAsked.push(true); world.win.Notification.permission = 'granted'; return Promise.resolve('granted'); };
+  bell.dispatch('click'); await settle();
+  assert.equal(world.permissionAsked.length, 1);
+  assert.ok(bell.classList.contains('hidden'), 'answered: no bell any more');
+});
+
+test('no bell where the answer is already known, or where there is no Notification API', async () => {
+  for (const notification of ['granted', 'denied', null]) {
+    const world = boot({ notification });
+    await settle();
+    assert.ok(world.ref.root.querySelector('#chatNotifyAsk').classList.contains('hidden'), String(notification));
+  }
+});
+
+test('a refusal to ask (the browser throws) is harmless', async () => {
+  const world = boot({ notification: 'default' });
+  await settle();
+  world.win.Notification.requestPermission = () => { throw new Error('blocked'); };
+  world.ref.root.querySelector('#chatNotifyAsk').dispatch('click'); await settle();
+  assert.equal(world.errors.length, 0);
 });
 
 // ── failures ───────────────────────────────────────────────────────────────────────────────────────────────────────

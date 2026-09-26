@@ -124,7 +124,10 @@ export class FakeElement extends Target {
   get id() { return this.attrs.id || ''; }
   get classList() {
     const s = this._classes;
-    return { add: (...c) => c.forEach((x) => s.add(x)), remove: (...c) => c.forEach((x) => s.delete(x)), contains: (c) => s.has(c) };
+    return {
+      add: (...c) => c.forEach((x) => s.add(x)), remove: (...c) => c.forEach((x) => s.delete(x)), contains: (c) => s.has(c),
+      toggle: (c, force) => { const on = force === undefined ? !s.has(c) : !!force; if (on) s.add(c); else s.delete(c); return on; },
+    };
   }
   get className() { return [...this._classes].join(' '); }
   set className(v) { this._classes = new Set(String(v).split(/\s+/).filter(Boolean)); }
@@ -141,6 +144,13 @@ export class FakeElement extends Target {
     return this;
   }
   appendChild(k) { this.append(k); return k; }
+  get firstElementChild() { return this.children.find((k) => k.tagName) || null; }
+  prepend(...kids) {
+    const nodes = kids.map((k) => (typeof k === 'string' ? new FakeText(k) : k));
+    nodes.forEach((node) => { node.parentElement = this; });
+    this.children.unshift(...nodes);
+    return this;
+  }
   after(node) {
     const siblings = this.parentElement.children;
     node.parentElement = this.parentElement;
