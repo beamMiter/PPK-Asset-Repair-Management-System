@@ -56,6 +56,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A suspended person whose browser was still signed in got a 500 on any fetch.** The chat widget's poll, the channel authorisation and
+  every other JSON call made from a page carry the SESSION, not a token; `EnsureAccountIsActive` called `->delete()` on the session's
+  `TransientToken`, which has no such method. It answers 403 `account_suspended` and ends the session now. `AccountSuspensionTest`.
 - **A job in the last day of its rating window is listed, and three tests that failed at random no longer do.** The rating guard counts
   whole days and accepts a job until it is 31 days old, and the page labels that day "วันสุดท้าย", but the list of jobs waiting to be
   rated stopped at 30 days: a job closed 30 days and a few hours ago could be rated by its link and was missing from the list. Also
@@ -759,6 +762,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **The chat's live channels are private.** They were public: anybody holding the Pusher key (it is in the page's JavaScript) could subscribe
+  to `chat.{id}` - the ids count 1, 2, 3 - and read every message, name and lock live, without ever signing in. Messages, locks and deletions
+  are now announced on `private-chat.{id}`; the browser (session) and the app (bearer token) first ask `POST /broadcasting/auth`, and only a
+  signed-in account that is not suspended and not waiting to change its password is given a signature, and only for a thread that exists
+  (OWASP WebSocket Security: authenticate and authorise a subscription). Nothing to configure: the Pusher secret the server already uses
+  signs it. An app that listens on the chat must switch to a private channel and authorise through `/broadcasting/auth`. The request-created
+  channel (`maintenance-requests`, id / number / title / status) is still public. `ChatChannelAuthTest`.
 - **A Content-Security-Policy that cannot break a page, and a report-only preview of the strict one.** The enforced policy is now
   `frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'`: an injected `<form action="https://evil…">` cannot
   carry what somebody types (a password) to another host, and no plug-in content loads. Checked against every view and script: the app has

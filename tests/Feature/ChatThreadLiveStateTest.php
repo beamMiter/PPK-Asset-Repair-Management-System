@@ -121,12 +121,12 @@ class ChatThreadLiveStateTest extends TestCase
     public function test_the_events_go_out_on_the_thread_s_channel_under_the_names_the_page_listens_for(): void
     {
         $lock = new ChatThreadLockChanged(42, true);
-        $this->assertSame('chat.42', $lock->broadcastOn()[0]->name);
+        $this->assertSame('private-chat.42', $lock->broadcastOn()[0]->name, 'a private channel: only a signed-in listener is let in');
         $this->assertSame('thread.lock', $lock->broadcastAs());
         $this->assertSame(['thread_id' => 42, 'is_locked' => true], $lock->broadcastWith());
 
         $gone = new ChatThreadDeleted(42);
-        $this->assertSame('chat.42', $gone->broadcastOn()[0]->name);
+        $this->assertSame('private-chat.42', $gone->broadcastOn()[0]->name);
         $this->assertSame('thread.deleted', $gone->broadcastAs());
         $this->assertSame(['thread_id' => 42], $gone->broadcastWith());
 

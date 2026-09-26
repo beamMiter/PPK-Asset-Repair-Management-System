@@ -68,7 +68,7 @@ function boot({ page = threadPage, answers = [[]], echo = true, innerWidth = 128
   world.win.Turbo = { visit: (url) => visited.push(url) };
   if (echo) {
     world.win.Echo = { connector: { pusher: { connection: conn } },
-      channel(name) { joined.push(name); return { listen(evt, cb) { (events[name] ??= {})[evt] = cb; if (evt === '.message.sent') handlers[name] = cb; return this; } }; },
+      private(name) { joined.push(name); return { listen(evt, cb) { (events[name] ??= {})[evt] = cb; if (evt === '.message.sent') handlers[name] = cb; return this; } }; },
       leave(name) { left.push(name); delete handlers[name]; delete events[name]; } };
   }
   world.win.Alpine = { $data: (e) => e.alpine };            // the page's Alpine is there whether or not the websocket is

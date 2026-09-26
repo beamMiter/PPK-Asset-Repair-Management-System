@@ -212,4 +212,19 @@ class AccountSuspensionTest extends TestCase
         $this->assertStringNotContainsString(route('admin.users.suspend', $admin), $own);
         $this->assertStringNotContainsString('ไม่สามารถระงับบัญชีของตัวเองได้', $own);
     }
+
+    /**
+     * A suspended person whose browser is still signed in and whose page asks something with fetch (the chat widget's poll, the channel
+     * authorisation) sent a JSON request with the SESSION, not a token: the middleware called ->delete() on a TransientToken and answered 500.
+     */
+    public function test_a_suspended_person_with_a_live_browser_session_gets_403_json_not_500(): void
+    {
+        $user = User::factory()->create(['role' => 'member', 'suspended_at' => now()]);
+
+        $this->actingAs($user)->getJson('/chat/my-updates')
+            ->assertForbidden()
+            ->assertJsonPath('code', 'account_suspended');
+
+        $this->assertGuest('web');
+    }
 }

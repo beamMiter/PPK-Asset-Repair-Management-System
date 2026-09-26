@@ -182,7 +182,7 @@ function mount(win) {
 
         const channel = 'chat.' + threadId;
         win.Echo.leave(channel);
-        win.Echo.channel(channel).listen('.message.sent', (e) => {
+        win.Echo.private(channel).listen('.message.sent', (e) => {   // a PRIVATE channel: the server checks who is listening
             if (e.message && e.message.id > lastId) {
                 appendMessage(e.message);
                 lastId = Math.max(lastId, e.message.id);

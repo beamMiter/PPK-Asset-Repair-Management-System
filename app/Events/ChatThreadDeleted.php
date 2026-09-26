@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -16,10 +16,10 @@ class ChatThreadDeleted implements ShouldBroadcastNow
     {
     }
 
-    /** @return array<int, Channel> */
+    /** @return array<int, PrivateChannel> */
     public function broadcastOn(): array
     {
-        return [new Channel('chat.' . $this->threadId)];
+        return [new PrivateChannel('chat.' . $this->threadId)];
     }
 
     public function broadcastAs(): string
