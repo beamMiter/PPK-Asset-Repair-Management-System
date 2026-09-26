@@ -418,7 +418,7 @@ function mount(win) {
     win.forceChatPoll = forceChatPoll;
     undo.push(() => { if (win.forceChatPoll === forceChatPoll) delete win.forceChatPoll; });
 
-    // every 5 s while the socket is down or still connecting; while it is healthy only every 12th tick (60 s) - polling every 5 s beside a
+    // every 5 s while the socket is down or still connecting; while it is healthy only every 3rd tick (15 s, SAFETY_POLL_EVERY) - polling every 5 s beside a
     // working websocket costs the server a request per open thread per 5 s for nothing (what the socket carries is not asked for again)
     const timer = win.setInterval(() => {
         ticked = true;
