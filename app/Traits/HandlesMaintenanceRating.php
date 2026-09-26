@@ -13,8 +13,10 @@ use Illuminate\Validation\Validator;
  */
 trait HandlesMaintenanceRating
 {
-    /** Days after completion that a request can still be rated. */
-    protected int $ratingDeadlineDays = 30;
+    /** Days after completion that a request can still be rated (also what the user manual says). */
+    public const RATING_DEADLINE_DAYS = 30;
+
+    protected int $ratingDeadlineDays = self::RATING_DEADLINE_DAYS;
 
     /** Per-request memo for resolveTechnicianIdForRating(). */
     private array $resolvedTechnicianId = [];

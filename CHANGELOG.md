@@ -535,6 +535,19 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The user manual describes the system as it is.** Read against the code, `help/manual` had drifted: it sent people to a menu that does not exist
+  ("งานแจ้งซ่อมของฉัน"), promised a QR code that nothing produces, said an asset turns "In Repair" only when a technician accepts (it happens when
+  the request is sent, and ends at "ซ่อมบำรุงเสร็จสิ้น", not only at the approval), called the chat private rooms tied to a job (it is a board
+  every signed-in person reads), claimed types assign the team by themselves, named a button "อนุมัติผลการซ่อม" that is "อนุมัติปิดงาน", and
+  knew nothing of accounts, the chat's rules and limits, the admin pages, notes on every dialog, or the rating rules. It is rewritten from the
+  code: getting started (sign-in, register, forgotten password, profile, roles), the report form as it is (title is the only required field, 3 files),
+  who may do each step and what each dialog asks, the two dashboards and the rating board, SLA targets and how the deadline is worked out (a paused
+  job does not count), user / notification administration (admin only, shown only to admins), the chat (3 tabs, threads per day, hide, who may
+  lock / delete, the thread lifetime, the widget) and the asset registry (HIS lookup is said to be test data). Numbers a setting controls
+  (`chat.*`, the upload size, the rating window `MaintenanceRatingController::RATING_DEADLINE_DAYS`) are read from it. `ManualIsCurrentTest`
+  pins every button and menu name to its page, every status, the asset rule and the numbers; the old manual fails 8 of its 11 tests. The README's
+  one-line description of the chat is corrected too.
+
 - **The last five hand-written close buttons are the standard one.** The chat's create / lock / delete dialogs, the profile picture cropper and the SLA
   print dialog closed with a bare grey icon; they use `<x-ui.button variant="ghost" size="icon" icon="close" aria-label="ปิด">` like every other
   dialog, so a change to it reaches them too. `DialogCloseButtonsTest`.
