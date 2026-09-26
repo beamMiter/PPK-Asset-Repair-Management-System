@@ -29,18 +29,49 @@ function el(doc, tag, className, text) {
 }
 
 const DELETED_TEXT = 'ข้อความนี้ถูกลบ';
-const DELETE_BUTTON = 'chat-msg-delete shrink-0 rounded-full p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-200';
+const EDITED_TEXT = 'แก้ไขแล้ว';
+const EDITED_CLASS = 'msg-edited mt-[2px] text-[11px] opacity-70';
 
-/** the little bin beside a bubble; one click handler on the message list serves every row (see mount) */
-function deleteButton(doc) {
-    const btn = el(doc, 'button', DELETE_BUTTON);
+// The "⋮" beside a bubble and its menu. The class lists are the ones chat/_message_menu.blade.php prints (ChatMessageMenuParityTest compares them);
+// the button is the ghost icon button every dialog closes with (<x-ui.button variant="ghost" size="icon">).
+export const MENU_BUTTON = 'chat-msg-menu-btn inline-flex items-center justify-center font-semibold whitespace-nowrap select-none transition-all active:scale-95 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 h-8 w-8 shrink-0 rounded-full text-[13px] gap-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus:ring-slate-200';
+export const MENU_BOX = 'chat-msg-menu hidden absolute z-20 top-full mt-[4px] w-[140px] overflow-hidden rounded-md border border-slate-200 bg-white py-[4px]';
+export const MENU_ITEM = 'flex w-full items-center gap-[8px] px-[12px] py-[8px] text-left text-[13px] text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none';
+export const MENU_ITEM_DANGER = 'flex w-full items-center gap-[8px] px-[12px] py-[8px] text-left text-[13px] text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:outline-none';
+
+function menuItem(doc, className, when, icon, label) {
+    const item = el(doc, 'button', className);
+    item.type = 'button';
+    item.setAttribute('role', 'menuitem');
+    item.setAttribute('data-when', when);      // 'open': only while the thread is open (hidden the moment it is locked); 'always': a moderator's delete
+    const glyph = el(doc, 'span', 'material-symbols-outlined text-[18px]', icon);
+    glyph.setAttribute('aria-hidden', 'true');
+    item.append(glyph, el(doc, 'span', '', label));
+    return item;
+}
+
+/**
+ * The "⋮" and its menu (edit, delete) - null when this person may do neither. One click handler on the message list serves every row (see mount).
+ * canEdit: its author, while the thread is open. canDelete: its author while it is open, or a moderator (whose delete has data-when="always").
+ */
+function messageMenu(doc, { canEdit, canDelete, canModerate, side }) {
+    if (!canEdit && !canDelete) return null;
+    const wrap = el(doc, 'div', 'chat-msg-menu-wrap relative shrink-0');
+    const btn = el(doc, 'button', MENU_BUTTON);
     btn.type = 'button';
-    btn.setAttribute('title', 'ลบข้อความนี้');
-    btn.setAttribute('aria-label', 'ลบข้อความนี้');
-    const icon = el(doc, 'span', 'material-symbols-outlined text-[16px] leading-none', 'delete');
-    icon.setAttribute('aria-hidden', 'true');
-    btn.append(icon);
-    return btn;
+    btn.setAttribute('aria-haspopup', 'menu');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('title', 'ตัวเลือกข้อความ');
+    btn.setAttribute('aria-label', 'ตัวเลือกข้อความ');
+    const dots = el(doc, 'span', 'material-symbols-outlined text-[18px]', 'more_vert');
+    dots.setAttribute('aria-hidden', 'true');
+    btn.append(dots);
+    const menu = el(doc, 'div', `${MENU_BOX} ${side === 'right' ? 'right-0' : 'left-0'}`);
+    menu.setAttribute('role', 'menu');
+    if (canEdit) menu.append(menuItem(doc, `chat-msg-edit ${MENU_ITEM}`, 'open', 'edit', 'แก้ไข'));
+    if (canDelete) menu.append(menuItem(doc, `chat-msg-delete ${MENU_ITEM_DANGER}`, canModerate ? 'always' : 'open', 'delete', 'ลบ'));
+    wrap.append(btn, menu);
+    return wrap;
 }
 
 /** A bubble for a message that is not there any more: "ข้อความนี้ถูกลบ", muted, whoever wrote it. */
@@ -52,30 +83,34 @@ function deletedBubble(doc, tail) {
 
 /**
  * A message row, as chat/_message.blade.php renders it, for a message that arrived while the page was open.
- * m: { id, user_id, body, deleted?, created_at, user }.  canDelete: this person may delete this one.
+ * m: { id, user_id, body, deleted?, edited?, created_at, user }.  canDelete / canEdit: this person may delete / edit this one; canModerate: they are a moderator.
  */
-export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr, canDelete = false, animate = true }) {
+export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr, canDelete = false, canEdit = false, canModerate = false, animate = true }) {
     const gap = isConsecutive ? 'mt-1' : 'mt-4';
     const enter = animate ? 'animate-bubble-in opacity-0 translate-y-2 ' : '';   // only a message that has just arrived slides in
     const row = el(doc, 'div');
     row.dataset.userId = m.user_id;
     row.setAttribute('data-message-id', String(m.id));        // attributes, not dataset: the delete handler finds a row by this selector
     if (m.deleted) row.setAttribute('data-deleted', '1');
-    const showDelete = canDelete && !m.deleted;
+    const menuFor = (side) => (m.deleted ? null : messageMenu(doc, { canEdit, canDelete, canModerate, side }));
 
     const body = el(doc, 'div', 'whitespace-pre-line break-words msg-body', m.body);
+    const editedMark = () => (m.edited && !m.deleted ? el(doc, 'div', EDITED_CLASS, EDITED_TEXT) : null);
 
     if (isMe) {
         row.className = `chat-msg-row flex flex-col items-end w-full ${enter}${gap}`;
         const head = el(doc, 'div', 'flex items-center gap-2 mb-1');
         head.append(el(doc, 'span', 'text-xs text-gray-500', timeStr), el(doc, 'span', 'text-[13px] font-semibold text-gray-900', 'คุณ'));
         const line = el(doc, 'div', 'flex items-center justify-end gap-1 max-w-[85%] sm:max-w-[70%]');
-        if (showDelete) line.append(deleteButton(doc));
+        const mine = menuFor('right');
+        if (mine) line.append(mine);
         if (m.deleted) {
             line.append(deletedBubble(doc, 'rounded-tr-none'));
         } else {
             const bubble = el(doc, 'div', 'bg-blue-600 text-white rounded-2xl rounded-tr-none py-2.5 px-4 text-[15px] leading-relaxed');
             bubble.append(body);
+            const mark = editedMark();
+            if (mark) bubble.append(mark);
             line.append(bubble);
         }
         row.append(head, line);
@@ -107,9 +142,12 @@ export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr, canDelet
     } else {
         const bubble = el(doc, 'div', `bg-gray-50 border border-gray-100/80 text-gray-900 rounded-2xl ${!isConsecutive ? 'rounded-tl-none' : ''} py-2.5 px-4 text-[15px] leading-relaxed`);
         bubble.append(body);
+        const mark = editedMark();
+        if (mark) bubble.append(mark);
         line.append(bubble);
     }
-    if (showDelete) line.append(deleteButton(doc));
+    const theirs = menuFor('left');
+    if (theirs) line.append(theirs);
     column.append(line);
 
     row.append(avatar, column);
@@ -163,8 +201,7 @@ function mount(win) {
         }
 
         // the time the SERVER stamped it (not this browser's clock), on the Thai clock; a moderator may delete any, a person their own while it is open
-        const canDelete = canModerate || (isMe && !isLocked());
-        const row = buildMessageRow(doc, m, { isMe, isConsecutive, timeStr: chatTime(m.created_at ?? new Date()), canDelete });
+        const row = buildMessageRow(doc, m, { isMe, isConsecutive, timeStr: chatTime(m.created_at ?? new Date()), ...rights(isMe) });
         wrapper.appendChild(row);
         win.setTimeout(() => row.classList.remove('translate-y-2', 'opacity-0'), 10);
     }
@@ -174,11 +211,14 @@ function mount(win) {
     function stop() { undo.splice(0).forEach((fn) => fn()); }
     const alpineOf = () => { try { return chatPane && win.Alpine.$data(chatPane); } catch { return null; } };
     function isLocked() { const alpine = alpineOf(); return !!(alpine && alpine.locked); }
+    // what this person may do with a message: their own while the thread is open (edit, delete); a moderator deletes any, locked or not
+    const rights = (isMe) => ({ canEdit: isMe && !isLocked(), canDelete: canModerate || (isMe && !isLocked()), canModerate });
 
     const setLocked = (locked) => {
         const alpine = alpineOf();
         if (!alpine || alpine.locked === locked) return;   // whoever did it was shown at once (Alpine flipped before the request)
         alpine.locked = locked;
+        syncMenus();
         win.showToast?.({ type: 'info', message: locked ? 'กระทู้นี้ถูกล็อกแล้ว ไม่สามารถส่งข้อความใหม่ได้' : 'กระทู้นี้เปิดให้ส่งข้อความได้อีกครั้งแล้ว' });
     };
 
@@ -193,14 +233,68 @@ function mount(win) {
         if (url) win.setTimeout(() => (win.Turbo ? win.Turbo.visit(url) : win.location.assign(url)), 1200);
     };
 
-    // ── deleting one message ──
-    // A row keeps "ข้อความนี้ถูกลบ" in place of its words, for everybody (a broadcast tells the other pages).
+    // ── one message: its "⋮" menu, editing it, deleting it ──
+    // A deleted row keeps "ข้อความนี้ถูกลบ" in place of its words, for everybody; an edited one keeps its words and says "แก้ไขแล้ว" (a broadcast tells
+    // the other pages of both).
     const rowOf = (id) => box.querySelector(`[data-message-id="${id}"]`);
+    const csrf = () => doc.querySelector('meta[name=csrf-token]')?.getAttribute('content') ?? '';
+    const jsonHeaders = () => ({ Accept: 'application/json', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrf() });
+
+    // While a menu is open the document hears a click elsewhere, or Escape, and closes it; nothing listens to the document otherwise.
+    let openMenu = null;     // { btn, menu } - only one menu is open at a time
+    const outside = (e) => { if (openMenu && !e.target.closest?.('.chat-msg-menu-wrap')) closeMenu(); };
+    const escape = (e) => { if (e.key === 'Escape') closeMenu(); };
+    function closeMenu() {
+        doc.removeEventListener('click', outside);
+        doc.removeEventListener('keydown', escape);
+        if (!openMenu) return;
+        openMenu.menu.classList.add('hidden');
+        openMenu.btn.setAttribute('aria-expanded', 'false');
+        openMenu = null;
+    }
+    undo.push(closeMenu);
+    function toggleMenu(btn) {
+        const menu = btn.parentElement?.querySelector('.chat-msg-menu');
+        if (!menu) return;
+        const wasOpen = openMenu && openMenu.menu === menu;
+        closeMenu();
+        if (wasOpen) return;
+        // near the bottom of the list the menu opens upward, so it is not cut off by the edge of the scrolling box
+        const at = btn.getBoundingClientRect?.();
+        const edge = box.getBoundingClientRect?.();
+        const up = !!(at && edge && at.bottom + 96 > edge.bottom);
+        menu.classList.toggle('top-full', !up);
+        menu.classList.toggle('mt-[4px]', !up);
+        menu.classList.toggle('bottom-full', up);
+        menu.classList.toggle('mb-[4px]', up);
+        menu.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+        openMenu = { btn, menu };
+        doc.addEventListener('click', outside);
+        doc.addEventListener('keydown', escape);
+    }
+
+    // The menu follows the lock at once: while it is locked an author can neither edit nor delete their own words, a moderator can still delete.
+    function syncMenus() {
+        const locked = isLocked();
+        box.querySelectorAll('.chat-msg-menu-wrap').forEach((wrap) => {
+            let shown = 0;
+            wrap.querySelectorAll('[data-when]').forEach((item) => {
+                const hide = locked && item.getAttribute('data-when') === 'open';
+                item.classList.toggle('hidden', hide);
+                if (!hide) shown++;
+            });
+            wrap.classList.toggle('hidden', shown === 0);
+        });
+        if (locked) { closeMenu(); cancelEdit(); }
+    }
+
     function markDeleted(id) {
         const row = rowOf(id);
         if (!row || row.hasAttribute('data-deleted')) return;
+        if (editing && editing.id === String(id)) cancelEdit();
         row.setAttribute('data-deleted', '1');
-        row.querySelectorAll('.chat-msg-delete').forEach((btn) => btn.remove());
+        row.querySelectorAll('.chat-msg-menu-wrap, .msg-edited').forEach((node) => node.remove());
         const body = row.querySelector('.msg-body');
         if (body) {
             body.textContent = DELETED_TEXT;
@@ -213,21 +307,111 @@ function mount(win) {
         bumpCounter(-1);
     }
 
-    box.addEventListener('click', async (e) => {
-        const btn = e.target.closest?.('.chat-msg-delete');
-        if (!btn) return;
-        const row = btn.closest('[data-message-id]');
-        if (!row || !win.confirm('ลบข้อความนี้ใช่หรือไม่? ข้อความจะหายไปจากกระทู้สำหรับทุกคน')) return;
+    // ── editing: the bubble turns into a text box, right where it is (no dialog) ──
+    let editing = null;      // { id, row, bodyEl, mark, editor, box, save, cancel }
+    function cancelEdit() {
+        if (!editing) return;
+        const { editor, bodyEl, mark } = editing;
+        editor.remove();
+        bodyEl.style.display = '';
+        if (mark) mark.style.display = '';
+        editing = null;
+    }
 
+    /** the message's text in place: the row swaps its words and says "แก้ไขแล้ว" (its own page after saving, every other page by the broadcast) */
+    function applyEdit(id, text) {
+        const row = rowOf(id);
+        if (!row || row.hasAttribute('data-deleted')) return;
+        if (editing && editing.id === String(id)) cancelEdit();
+        const body = row.querySelector('.msg-body');
+        if (!body) return;
+        body.textContent = text;
+        if (!row.querySelector('.msg-edited')) body.parentElement?.append(el(doc, 'div', EDITED_CLASS, EDITED_TEXT));
+    }
+
+    function startEdit(row) {
+        const id = row.getAttribute('data-message-id');
+        const bodyEl = row.querySelector('.msg-body');
+        if (!bodyEl || row.hasAttribute('data-deleted')) return;
+        cancelEdit();
+
+        const original = bodyEl.textContent;
+        const mark = row.querySelector('.msg-edited');
+        const editor = el(doc, 'div', 'msg-editor w-full min-w-[240px] sm:min-w-[360px] space-y-[8px]');
+        const field = el(doc, 'textarea', 'w-full resize-none rounded-md border border-slate-300 bg-white px-[12px] py-[8px] text-[14.5px] leading-relaxed text-gray-900 focus:border-[#0F2D5C]/50 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35');
+        field.value = original;
+        field.rows = Math.min(8, Math.max(2, original.split('\n').length));
+        field.setAttribute('maxlength', '3000');
+        field.setAttribute('aria-label', 'แก้ไขข้อความ');
+        const buttons = el(doc, 'div', 'flex justify-end gap-[8px]');
+        const cancel = el(doc, 'button', 'msg-edit-cancel inline-flex h-8 items-center justify-center rounded-md border border-slate-200 bg-white px-[12px] text-[13px] font-semibold text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200', 'ยกเลิก');
+        cancel.type = 'button';
+        const save = el(doc, 'button', 'msg-edit-save inline-flex h-8 items-center justify-center rounded-md bg-[#0F2D5C] px-[12px] text-[13px] font-semibold text-white hover:bg-[#0F2D5C]/90 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/40 disabled:opacity-50', 'บันทึก');
+        save.type = 'button';
+        buttons.append(cancel, save);
+        editor.append(field, buttons);
+
+        bodyEl.style.display = 'none';
+        if (mark) mark.style.display = 'none';
+        bodyEl.parentElement.append(editor);
+        editing = { id, row, bodyEl, mark, editor };
+        field.focus?.();
+
+        let saving = false;
+        async function submit() {
+            if (saving) return;
+            const text = field.value.trim();
+            if (!text) { win.showToast?.({ type: 'warning', message: 'ข้อความต้องไม่ว่าง' }); return; }
+            if (text === original.trim()) { cancelEdit(); return; }      // nothing changed: nothing to send, nothing to mark
+            saving = true; save.disabled = true;
+            try {
+                const res = await win.fetch(`${chatUrl}/${id}`, { method: 'PATCH', headers: jsonHeaders(), body: JSON.stringify({ body: text }) });
+                if (res.ok) {
+                    const saved = await res.json().catch(() => ({}));
+                    applyEdit(id, saved.body ?? text);
+                } else if (res.status === 404) {                          // deleted a moment ago
+                    markDeleted(id);
+                    win.showToast?.({ type: 'warning', message: 'ข้อความนี้ถูกลบไปแล้ว' });
+                } else if (res.status === 403) {
+                    cancelEdit();
+                    win.showToast?.({ type: 'error', message: 'แก้ไขข้อความนี้ไม่ได้ (แก้ได้เฉพาะข้อความของตนเอง และขณะที่กระทู้ยังไม่ล็อก)' });
+                } else if (res.status === 422) {
+                    win.showToast?.({ type: 'warning', message: 'ข้อความต้องไม่ว่าง และยาวไม่เกิน 3,000 ตัวอักษร' });
+                } else if (res.status === 429) {
+                    const wait = parseInt(res.headers?.get?.('Retry-After')) || 10;
+                    win.showToast?.({ type: 'warning', message: `แก้ไขถี่เกินไป กรุณารอ ${wait} วินาทีแล้วลองใหม่` });
+                } else {
+                    win.showToast?.({ type: 'error', message: 'บันทึกการแก้ไขไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
+                }
+            } catch {
+                win.showToast?.({ type: 'error', message: 'บันทึกการแก้ไขไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
+            } finally {
+                saving = false; save.disabled = false;
+            }
+        }
+        save.addEventListener('click', submit);
+        cancel.addEventListener('click', cancelEdit);
+        field.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); return; }
+            // Enter saves, Shift+Enter is a new line; not while a Thai / Japanese input method is still composing
+            if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); submit(); }
+        });
+    }
+
+    // ── deleting: the app's own confirmation dialog (like every other page), not the browser's ──
+    function confirmDelete() {
+        const words = { title: 'ลบข้อความนี้', message: 'ข้อความจะหายไปจากกระทู้สำหรับทุกคน', confirmText: 'ลบข้อความ', cancelText: 'ยกเลิก', variant: 'danger' };
+        if (win.Confirm?.show) return win.Confirm.show(words);
+        return Promise.resolve(win.confirm(`${words.title}ใช่หรือไม่? ${words.message}`));    // the dialog is not there (yet): the browser's
+    }
+
+    async function deleteMessage(row) {
+        if (!(await confirmDelete())) return;
+        const messageId = row.getAttribute('data-message-id');
         try {
-            const messageId = row.getAttribute('data-message-id');
             const res = await win.fetch(`${chatUrl}/${messageId}`, {
                 method: 'DELETE',
-                headers: {
-                    Accept: 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': doc.querySelector('meta[name=csrf-token]')?.getAttribute('content') ?? '',
-                },
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrf() },
             });
             if (res.ok || res.status === 404) {          // 404: somebody else deleted it a moment ago
                 markDeleted(messageId);
@@ -239,6 +423,17 @@ function mount(win) {
         } catch {
             win.showToast?.({ type: 'error', message: 'ลบข้อความไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
         }
+    }
+
+    // one handler for every row (the ones that arrive live too)
+    box.addEventListener('click', (e) => {
+        const target = e.target;
+        const menuBtn = target.closest?.('.chat-msg-menu-btn');
+        if (menuBtn) { toggleMenu(menuBtn); return; }
+        const edit = target.closest?.('.chat-msg-edit');
+        if (edit) { closeMenu(); const row = edit.closest('[data-message-id]'); if (row) startEdit(row); return; }
+        const del = target.closest?.('.chat-msg-delete');
+        if (del) { closeMenu(); const row = del.closest('[data-message-id]'); if (row) deleteMessage(row); }
     });
 
     // ── earlier messages, like scrolling up in any messenger: the batch before the first one drawn (cursor = its id, not a page number) ──
@@ -267,7 +462,7 @@ function mount(win) {
                     const isMe = parseInt(m.user_id) === myId;
                     const row = buildMessageRow(doc, m, {
                         isMe, isConsecutive: parseInt(m.user_id) === previousUser, timeStr: chatTime(m.created_at ?? new Date()),
-                        canDelete: canModerate || (isMe && !isLocked()), animate: false,
+                        ...rights(isMe), animate: false,
                     });
                     previousUser = parseInt(m.user_id);
                     if (i === 0) { row.classList.remove('mt-1', 'mt-4'); row.classList.add('mt-0'); }
@@ -362,6 +557,8 @@ function mount(win) {
             }
         }).listen('.message.deleted', (e) => {
             if (e && e.message_id) markDeleted(e.message_id);
+        }).listen('.message.updated', (e) => {
+            if (e && e.message_id && typeof e.body === 'string') applyEdit(e.message_id, e.body);
         }).listen('.thread.lock', (e) => {
             if (e && typeof e.is_locked === 'boolean') setLocked(e.is_locked);
         }).listen('.thread.deleted', () => threadDeleted());

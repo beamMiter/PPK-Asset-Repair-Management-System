@@ -154,10 +154,10 @@ class ChatDeleteMessageTest extends TestCase
         $this->assertStringContainsString('ข้อความของเจ้าของ', $html, 'the others stay');
     }
 
-    public function test_the_bin_is_offered_only_where_the_person_may_use_it(): void
+    public function test_delete_is_offered_in_the_menu_only_where_the_person_may_use_it(): void
     {
         [$thread, $writer, $mine, $owner, $theirs] = $this->talk();
-        $bins = fn (User $who) => substr_count($this->actingAs($who)->get(route('chat.index', ['thread_id' => $thread->id]))->getContent(), 'aria-label="ลบข้อความนี้"');
+        $bins = fn (User $who) => substr_count($this->actingAs($who)->get(route('chat.index', ['thread_id' => $thread->id]))->getContent(), 'class="chat-msg-delete ');
 
         $this->assertSame(1, $bins($writer), 'only their own');
         $this->assertSame(1, $bins($owner), 'the owner has one message of their own, not the writer\'s');

@@ -423,6 +423,8 @@
                                 @include('chat._message', [
                                     'm' => $m, 'isMe' => $isMe, 'isConsecutive' => $isConsecutive, 'first' => $loop->first,
                                     'canDelete' => $activeThread->canDeleteMessage($m, $me),
+                                    'canEdit' => $activeThread->canEditMessage($m, $me),
+                                    'canModerate' => $canManageLock,
                                 ])
                             @endforeach
                         </div>

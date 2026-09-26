@@ -7,12 +7,16 @@
   $isConsecutive the same person wrote the message before it (no avatar and name again)
   $first        the first row of the list
   $canDelete    this person may delete this message (its author while the thread is open, or a moderator)
+  $canEdit      this person may edit it (its author, while the thread is open)
+  $canModerate  this person is a moderator (admins and the IT / repair team)
 --}}
 @php
     $deleted = $m->trashed();
     $gap = $first ? 'mt-0' : ($isConsecutive ? 'mt-1' : 'mt-4');
     $when = \App\Support\ThaiDate::chatTime($m->created_at);
-    $deleteButton = 'chat-msg-delete shrink-0 rounded-full p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-200';
+    $canEdit = $canEdit ?? false;
+    $canModerate = $canModerate ?? false;
+    $edited = ! $deleted && $m->edited_at !== null;
 @endphp
 
 @if ($isMe)
@@ -24,10 +28,8 @@
             <span class="text-[13px] font-semibold text-gray-900">คุณ</span>
         </div>
         <div class="flex items-center justify-end gap-1 max-w-[85%] sm:max-w-[70%]">
-            @if ($canDelete && ! $deleted)
-                <button type="button" class="{{ $deleteButton }}" title="ลบข้อความนี้" aria-label="ลบข้อความนี้">
-                    <span class="material-symbols-outlined text-[16px] leading-none" aria-hidden="true">delete</span>
-                </button>
+            @if (! $deleted)
+                @include('chat._message_menu', ['canEdit' => $canEdit, 'canDelete' => $canDelete, 'canModerate' => $canModerate, 'side' => 'right'])
             @endif
             @if ($deleted)
                 <div class="rounded-2xl rounded-tr-none border border-gray-100 bg-gray-50 py-2.5 px-4 text-[14px] italic text-gray-400">
@@ -36,6 +38,9 @@
             @else
                 <div class="bg-blue-600 text-white rounded-2xl rounded-tr-none py-2.5 px-4 text-[15px] leading-relaxed">
                     <div class="whitespace-pre-line break-words msg-body">{{ $m->body }}</div>
+                    @if ($edited)
+                        <div class="msg-edited mt-[2px] text-[11px] opacity-70">แก้ไขแล้ว</div>
+                    @endif
                 </div>
             @endif
         </div>
@@ -67,12 +72,13 @@
                 @else
                     <div class="bg-gray-50 border border-gray-100/80 text-gray-900 rounded-2xl {{ ! $isConsecutive ? 'rounded-tl-none' : '' }} py-2.5 px-4 text-[15px] leading-relaxed">
                         <div class="whitespace-pre-line break-words msg-body">{{ $m->body }}</div>
+                        @if ($edited)
+                            <div class="msg-edited mt-[2px] text-[11px] opacity-70">แก้ไขแล้ว</div>
+                        @endif
                     </div>
                 @endif
-                @if ($canDelete && ! $deleted)
-                    <button type="button" class="{{ $deleteButton }}" title="ลบข้อความนี้" aria-label="ลบข้อความนี้">
-                        <span class="material-symbols-outlined text-[16px] leading-none" aria-hidden="true">delete</span>
-                    </button>
+                @if (! $deleted)
+                    @include('chat._message_menu', ['canEdit' => $canEdit, 'canDelete' => $canDelete, 'canModerate' => $canModerate, 'side' => 'left'])
                 @endif
             </div>
         </div>

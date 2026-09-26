@@ -150,7 +150,8 @@ class ChatController extends Controller
             $query->where('id', '>', $afterId);
         }
 
-        return response()->json($query->take(100)->get())
+        // the same shape as an older batch, so a message that arrives by the poll is drawn like any other (edited mark included)
+        return response()->json($query->take(100)->get()->map(fn (ChatMessage $m) => $m->toChatArray()))
             ->header('X-Thread-Locked', $thread->is_locked ? '1' : '0');
     }
 
@@ -312,6 +313,24 @@ class ChatController extends Controller
         SafeBroadcast::send(new ChatMessageDeleted((int) $thread->id, (int) $message->id));
 
         return $request->expectsJson() ? response()->json(['deleted' => true, 'id' => $message->id]) : back();
+    }
+
+    // ========= Edit one message =========
+
+    /** Its author, while the thread is open, changes the words: the row says "แก้ไขแล้ว" for everybody (ChatThread::canEditMessage). */
+    public function updateMessage(Request $request, ChatThread $thread, ChatMessage $message)
+    {
+        abort_unless((int) $message->chat_thread_id === (int) $thread->id, 404);
+
+        if (! $thread->canEditMessage($message, $request->user())) {
+            throw new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException('แก้ไขได้เฉพาะข้อความของตนเอง และขณะที่กระทู้ยังไม่ล็อก');
+        }
+
+        $data = $request->validate(['body' => 'required|string|max:3000']);
+
+        $message = $this->applyEdit($thread, $message, $data['body'], $request);
+
+        return $request->expectsJson() ? response()->json($message->load('user:id,name')->toChatArray()) : back();
     }
 
     // ========= Hide from / show again in "กระทู้ที่มีส่วนร่วม" (per person; nothing is deleted) =========

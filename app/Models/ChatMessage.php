@@ -26,6 +26,7 @@ class ChatMessage extends Model
         'user_id'        => 'integer',
         'created_at'     => 'datetime',
         'updated_at'     => 'datetime',
+        'edited_at'      => 'datetime',
     ];
 
     public function thread(): BelongsTo
@@ -56,7 +57,7 @@ class ChatMessage extends Model
     /**
      * What a page draws a message from (an older batch, a reply): a deleted message carries no words, only that it is deleted.
      *
-     * @return array{id:int,chat_thread_id:int,user_id:?int,body:?string,deleted:bool,created_at:?string,user:?array{id:int,name:string,avatar_thumb_url:?string}}
+     * @return array{id:int,chat_thread_id:int,user_id:?int,body:?string,deleted:bool,edited:bool,edited_at:?string,created_at:?string,user:?array{id:int,name:string,avatar_thumb_url:?string}}
      */
     public function toChatArray(): array
     {
@@ -68,6 +69,8 @@ class ChatMessage extends Model
             'user_id' => $this->user_id ? (int) $this->user_id : null,
             'body' => $deleted ? null : $this->body,
             'deleted' => $deleted,
+            'edited' => ! $deleted && $this->edited_at !== null,   // its author changed the words after sending
+            'edited_at' => $deleted ? null : $this->edited_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
             'user' => $this->user ? [
                 'id' => (int) $this->user->id,

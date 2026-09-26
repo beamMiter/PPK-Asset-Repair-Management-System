@@ -8,6 +8,16 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A message can be edited, and the bin beside it is a "⋮" menu.** The little bin beside each bubble was odd, and there was no way to correct a typo.
+  Each message you may act on now has a "⋮" (the ghost icon button every dialog uses) that opens a menu: **แก้ไข** and **ลบ**. Editing turns the bubble into a
+  text box in place (Enter saves, Shift+Enter is a new line - not while a Thai input method is composing - Esc cancels; saving the same words does nothing),
+  and the row says "แก้ไขแล้ว" for everybody, live (`message.updated`) and in every later load (`edited`, `edited_at` on the message; a deleted message carries
+  neither). Only the author edits, and only while the thread is open: a moderator may delete somebody's message but not put other words under their name,
+  and nobody edits in a locked thread (the menu follows a lock made while the page is open; a moderator keeps delete). An edit does not bring the thread to
+  the top or restart its idle count, is written to the moderation record without the words (`edit_message`), and is throttled like sending.
+  `PATCH /chat/threads/{thread}/messages/{message}` and `PATCH /api/threads/{thread}/messages/{message}` (both documented, with the delete that was not);
+  `chat_messages.edited_at`. The poll now answers in the same shape as an older batch. `ChatEditMessageTest`, `ChatMessageMenuParityTest`, `chat-page.test.mjs`.
+
 - **A conversation is not kept for ever: an idle thread is locked, a long-locked one is deleted.** A thread nobody wrote in stayed in the database
   indefinitely, and so did the personal data in it (PDPA). The nightly `php artisan chat:expire-idle` (03:00 Thai time, before the purge) **locks** a
   thread nobody has written in, or unlocked, for `CHAT_LOCK_IDLE_AFTER_DAYS` (90) - a moderator can open it again, which restarts the count - and
@@ -538,8 +548,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Deleting a message asks with the app's own confirmation dialog.** The chat used the browser's `confirm()` box; it now uses the dialog every other page
+  uses (`Confirm.show`, the red "ลบข้อความ" button), and falls back to the browser's only if that dialog is not on the page.
+
 - **The schema changes of this branch are folded into the original migrations.** The project is not in production, so `users.suspended_at` and
-  `users.must_change_password`, `chat_thread_reads.hidden_at`, `chat_threads.locked_at` and `chat_messages.client_uuid` (with its unique key) are
+  `users.must_change_password`, `chat_thread_reads.hidden_at`, `chat_threads.locked_at`, `chat_messages.client_uuid` (with its unique key) and `chat_messages.edited_at` are
   columns of their `create` migrations instead of four separate `add_*` files, and the seeded locked thread carries its `locked_at`. Only
   `chat_moderation_logs` (a new table) has a migration of its own. **An existing database has to be rebuilt: `php artisan migrate:fresh --seed`** -
   a plain `migrate` does not add a column to a table that already exists. `SeederIntegrityTest`.

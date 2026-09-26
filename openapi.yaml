@@ -683,6 +683,58 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ChatMessage' }
+  /threads/{id}/messages/{message_id}:
+    patch:
+      tags: [Chat]
+      security: [{ bearerAuth: [] }]
+      summary: Edit a message
+      description: "Only the person who wrote it, and only while the thread is open - a moderator may delete somebody's message but not rewrite it. Saving the same words changes nothing (`edited` stays false). Everyone who has the thread open hears it (`message.updated`). A deleted message is 404."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: message_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body: { type: string, maxLength: 3000 }
+              required: [body]
+      responses:
+        '200':
+          description: The message as it is now
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatMessage' }
+        '403': { description: "Not the author, or the thread is locked" }
+        '404': { description: "Not a message of this thread, or it was deleted" }
+        '422': { description: "Empty, or longer than 3,000 characters" }
+        '429': { description: "Too many messages / edits (the same limit as sending)" }
+    delete:
+      tags: [Chat]
+      security: [{ bearerAuth: [] }]
+      summary: Delete a message
+      description: "Its author while the thread is open, or a moderator (admins and the IT / repair team) at any time. The row stays as a placeholder for everyone; the words are gone from every page."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: message_id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: "{ deleted: true, id }" }
+        '403': { description: "Not the author (or the thread is locked) and not a moderator" }
+        '404': { description: "Not a message of this thread" }
 components:
   securitySchemes:
     bearerAuth:
@@ -766,6 +818,8 @@ components:
         user:
           $ref: '#/components/schemas/UserBasic'
         body: { type: string }
+        edited: { type: boolean, description: "Its author changed the words after sending" }
+        edited_at: { type: string, nullable: true }
         created_at: { type: string }
     ChatThread:
       type: object

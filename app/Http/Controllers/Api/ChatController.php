@@ -145,6 +145,8 @@ class ChatController extends Controller
                         'name' => $m->user->name,
                     ] : null,
                     'body'       => $m->body,
+                    'edited'     => $m->edited_at !== null,
+                    'edited_at'  => $m->edited_at?->toISOString(),
                     'created_at' => $m->created_at ? $m->created_at->toISOString() : null,
                 ];
             }),
@@ -190,6 +192,8 @@ class ChatController extends Controller
                         'name' => $m->user->name,
                     ] : null,
                     'body'       => $m->body,
+                    'edited'     => $m->edited_at !== null,
+                    'edited_at'  => $m->edited_at?->toISOString(),
                     'created_at' => $m->created_at ? $m->created_at->toISOString() : null,
                 ];
             }),
@@ -289,6 +293,19 @@ class ChatController extends Controller
         SafeBroadcast::send(new ChatMessageDeleted((int) $thread->id, (int) $message->id));
 
         return response()->json(['deleted' => true, 'id' => $message->id]);
+    }
+
+    /** Edit one message: its author, while the thread is open (the same rules and record as the page's). */
+    public function updateMessage(Request $request, ChatThread $thread, ChatMessage $message)
+    {
+        abort_unless((int) $message->chat_thread_id === (int) $thread->id, 404);
+        abort_unless($thread->canEditMessage($message, $request->user()), 403, 'แก้ไขได้เฉพาะข้อความของตนเอง และขณะที่กระทู้ยังไม่ล็อก');
+
+        $data = $request->validate(['body' => 'required|string|max:3000']);
+
+        $message = $this->applyEdit($thread, $message, $data['body'], $request);
+
+        return response()->json($message->load('user:id,name')->toChatArray());
     }
 
     // Hide from / show again in "กระทู้ที่มีส่วนร่วม" — per person, nothing is deleted (same rules as the web path).

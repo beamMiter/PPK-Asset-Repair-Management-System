@@ -45,6 +45,9 @@ return new class extends Migration {
             // ไม่บันทึกซ้ำ (idempotency key); ข้อความที่ส่งโดยไม่มีรหัส (ฟอร์มธรรมดา, ไคลเอนต์เก่า) เป็น null
             $t->char('client_uuid', 36)->nullable();
 
+            // เวลาที่เจ้าของแก้ไขข้อความล่าสุด (null = ไม่เคยแก้): หน้าแชทแสดงป้าย "แก้ไขแล้ว"
+            $t->timestamp('edited_at')->nullable();
+
             $t->timestamps();
             $t->softDeletes();
 

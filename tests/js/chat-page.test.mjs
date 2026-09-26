@@ -604,13 +604,25 @@ test('a live message shows the time the server stamped, not this browser\'s cloc
 const messageRow = (world, id) => world.rows().find((r) => r.getAttribute('data-message-id') === String(id));
 const binOf = (row) => row.querySelector('.chat-msg-delete');
 
-test('a message I wrote has a bin while the thread is open; one of somebody else\'s has none', () => {
+const menuOf = (row) => row.querySelector('.chat-msg-menu-wrap');
+const dotsOf = (row) => row.querySelector('.chat-msg-menu-btn');
+const editOf = (row) => row.querySelector('.chat-msg-edit');
+const listenersNow = (world) => world.listenerList().filter((l) => /click|keydown/.test(l));
+
+test('a message I wrote has a "⋮" with edit and delete while the thread is open; one of somebody else\'s has none', () => {
   const world = boot();
   world.emit(msg({ id: 11, user_id: 5, body: 'ของฉัน' }));
   world.emit(msg({ id: 12, user_id: 6, body: 'ของเขา', user: { name: 'วรรณา' } }));
-  assert.ok(binOf(messageRow(world, 11)), 'my own');
-  assert.equal(binOf(messageRow(world, 12)), null, 'somebody else\'s');
-  assert.equal(binOf(messageRow(world, 11)).getAttribute('aria-label'), 'ลบข้อความนี้');
+  const own = messageRow(world, 11);
+  assert.ok(menuOf(own), 'my own');
+  assert.equal(menuOf(messageRow(world, 12)), null, 'somebody else\'s');
+  assert.equal(dotsOf(own).getAttribute('aria-label'), 'ตัวเลือกข้อความ');
+  assert.equal(dotsOf(own).getAttribute('aria-haspopup'), 'menu');
+  assert.equal(dotsOf(own).getAttribute('aria-expanded'), 'false');
+  assert.ok(editOf(own) && binOf(own), 'both actions');
+  assert.equal(editOf(own).textContent.includes('แก้ไข'), true);
+  assert.equal(binOf(own).textContent.includes('ลบ'), true);
+  assert.ok(own.querySelector('.chat-msg-menu').classList.contains('hidden'), 'closed until the dots are pressed');
 });
 
 test('once the thread is locked my own messages lose the bin (they cannot change a closed thread)', () => {
@@ -626,9 +638,11 @@ test('a moderator gets a bin on every message, locked or not', () => {
   world.emit(msg({ id: 11, user_id: 6, user: { name: 'วรรณา' } }));
   world.emit(msg({ id: 12, user_id: 5 }));
   assert.ok(binOf(messageRow(world, 11)) && binOf(messageRow(world, 12)));
+  assert.equal(editOf(messageRow(world, 11)), null, 'but not to rewrite what somebody else wrote');
+  assert.equal(editOf(messageRow(world, 12)), null, 'nobody edits in a locked thread, a moderator included');
 });
 
-test('pressing it asks, deletes with the CSRF token, and the message becomes "ข้อความนี้ถูกลบ" - the counter goes down', async () => {
+test('pressing delete asks, deletes with the CSRF token, and the message becomes "ข้อความนี้ถูกลบ" - the counter goes down', async () => {
   const world = boot({ answers: [[]] });
   world.body.append(world.el('meta', { name: 'csrf-token', content: 'tok-5' }));
   world.emit(msg({ id: 11, user_id: 5, body: 'ลับ' }));
@@ -642,7 +656,8 @@ test('pressing it asks, deletes with the CSRF token, and the message becomes "�
   assert.equal(del.init.headers['X-CSRF-TOKEN'], 'tok-5');
   const row = messageRow(world, 11);
   assert.ok(row.textContent.includes('ข้อความนี้ถูกลบ') && !row.textContent.includes('ลับ'));
-  assert.equal(binOf(row), null, 'no bin on what is gone');
+  assert.equal(binOf(row), null, 'no menu on what is gone');
+  assert.equal(menuOf(row), null);
   assert.equal(world.ref.counter.textContent, '4', '4 +1 (the live message) -1 (the deletion)');
 });
 
@@ -891,4 +906,296 @@ test('a socket that drops goes back to every 5 s', async () => {
   world.conn.state = 'disconnected';
   world.conn.bound.forEach((f) => f({ current: 'disconnected' }));
   assert.equal(await pollsAfter(world, 25), 5);
+});
+
+
+// ── the "⋮" menu ───────────────────────────────────────────────────────────────────────────────────────────────────
+test('the dots open the menu, press again closes it, and only one is open at a time', () => {
+  const world = boot();
+  world.emit(msg({ id: 11, user_id: 5, body: 'หนึ่ง' }));
+  world.emit(msg({ id: 12, user_id: 5, body: 'สอง' }));
+  const [a, b] = [messageRow(world, 11), messageRow(world, 12)];
+  const closed = (row) => row.querySelector('.chat-msg-menu').classList.contains('hidden');
+
+  dotsOf(a).dispatch('click');
+  assert.equal(closed(a), false);
+  assert.equal(dotsOf(a).getAttribute('aria-expanded'), 'true');
+
+  dotsOf(b).dispatch('click');
+  assert.equal(closed(a), true, 'the first closed when the second opened');
+  assert.equal(closed(b), false);
+
+  dotsOf(b).dispatch('click');
+  assert.equal(closed(b), true);
+  assert.equal(dotsOf(b).getAttribute('aria-expanded'), 'false');
+});
+
+test('a click elsewhere or Escape closes the menu; nothing listens to the document while none is open', () => {
+  const world = boot();
+  world.emit(msg({ id: 11, user_id: 5 }));
+  const row = messageRow(world, 11);
+  const before = listenersNow(world).length;
+
+  dotsOf(row).dispatch('click');
+  assert.equal(listenersNow(world).length, before + 2, 'a click and a key listener while it is open');
+  world.body.dispatch('click');
+  assert.ok(row.querySelector('.chat-msg-menu').classList.contains('hidden'), 'outside click');
+  assert.equal(listenersNow(world).length, before, 'and they are gone again');
+
+  dotsOf(row).dispatch('click');
+  world.fireDocument('keydown', { key: 'Escape' });
+  assert.ok(row.querySelector('.chat-msg-menu').classList.contains('hidden'), 'Escape');
+  assert.equal(listenersNow(world).length, before);
+});
+
+test('leaving the page with a menu open takes its listeners away', () => {
+  const world = boot();
+  world.emit(msg({ id: 11, user_id: 5 }));
+  const before = listenersNow(world).length;
+  dotsOf(messageRow(world, 11)).dispatch('click');
+  world.go(listPage);
+  assert.equal(listenersNow(world).length, before);
+});
+
+// ── deleting asks with the app's own dialog ────────────────────────────────────────────────────────────────────────
+test('delete asks with the standard confirmation dialog (danger), not the browser\'s', async () => {
+  const world = boot({ answers: [[]] });
+  const shown = [];
+  world.win.Confirm = { show: async (o) => { shown.push(o); return true; } };
+  world.emit(msg({ id: 11, user_id: 5, body: 'ลบฉัน' }));
+  world.queue.splice(0, world.queue.length, world.resp({ deleted: true }));
+  binOf(messageRow(world, 11)).dispatch('click');
+  await settle();
+
+  assert.equal(shown.length, 1);
+  assert.equal(shown[0].variant, 'danger');
+  assert.equal(shown[0].confirmText, 'ลบข้อความ');
+  assert.equal(shown[0].cancelText, 'ยกเลิก');
+  assert.equal(world.confirms.length, 0, 'the browser\'s own confirm() was not used');
+  assert.ok(messageRow(world, 11).textContent.includes('ข้อความนี้ถูกลบ'));
+});
+
+test('answering no in the standard dialog deletes nothing', async () => {
+  const world = boot({ answers: [[]] });
+  world.win.Confirm = { show: async () => false };
+  world.emit(msg({ id: 11, user_id: 5 }));
+  binOf(messageRow(world, 11)).dispatch('click');
+  await settle();
+  assert.equal(world.requests.filter((r) => r.init?.method === 'DELETE').length, 0);
+  assert.ok(menuOf(messageRow(world, 11)));
+});
+
+// ── editing ────────────────────────────────────────────────────────────────────────────────────────────────────────
+const editorOf = (row) => row.querySelector('.msg-editor');
+const patches = (world) => world.requests.filter((r) => r.init?.method === 'PATCH');
+const openEditor = (world, id) => { editOf(messageRow(world, id)).dispatch('click'); return editorOf(messageRow(world, id)); };
+
+test('edit turns the bubble into a text box with the words in it; cancel puts everything back', () => {
+  const world = boot();
+  world.emit(msg({ id: 11, user_id: 5, body: 'คำเดิม' }));
+  const row = messageRow(world, 11);
+  const editor = openEditor(world, 11);
+
+  assert.ok(editor, 'a text box');
+  assert.equal(editor.querySelector('textarea').value, 'คำเดิม');
+  assert.equal(editor.querySelector('textarea').getAttribute('maxlength'), '3000');
+  assert.equal(row.querySelector('.msg-body').style.display, 'none', 'the words are hidden while it is open');
+  assert.ok(row.querySelector('.chat-msg-menu').classList.contains('hidden'), 'and the menu is closed');
+
+  editor.querySelector('.msg-edit-cancel').dispatch('click');
+  assert.equal(editorOf(row), null);
+  assert.equal(row.querySelector('.msg-body').style.display, '');
+  assert.equal(row.querySelector('.msg-body').textContent, 'คำเดิม');
+  assert.equal(patches(world).length, 0, 'nothing was sent');
+});
+
+test('Escape leaves an edit; opening another edit closes the first (one text box at a time)', () => {
+  const world = boot();
+  world.emit(msg({ id: 11, user_id: 5, body: 'หนึ่ง' }));
+  world.emit(msg({ id: 12, user_id: 5, body: 'สอง' }));
+  const first = openEditor(world, 11);
+  first.querySelector('textarea').dispatch('keydown', { key: 'Escape' });
+  assert.equal(editorOf(messageRow(world, 11)), null, 'Escape');
+
+  openEditor(world, 11);
+  openEditor(world, 12);
+  assert.equal(editorOf(messageRow(world, 11)), null, 'the first closed');
+  assert.ok(editorOf(messageRow(world, 12)));
+});
+
+test('saving sends the new words as JSON with the CSRF token, and the row shows them with "แก้ไขแล้ว"', async () => {
+  const world = boot({ answers: [[]] });
+  world.body.append(world.el('meta', { name: 'csrf-token', content: 'tok-9' }));
+  world.emit(msg({ id: 11, user_id: 5, body: 'คำเดิม' }));
+  const editor = openEditor(world, 11);
+  editor.querySelector('textarea').value = '  คำใหม่  ';
+  world.queue.splice(0, world.queue.length, world.resp({ id: 11, body: 'คำใหม่', edited: true }));
+  editor.querySelector('.msg-edit-save').dispatch('click');
+  await settle();
+
+  assert.equal(patches(world).length, 1);
+  assert.equal(patches(world)[0].url, '/chat/threads/7/messages/11');
+  assert.equal(patches(world)[0].init.headers['X-CSRF-TOKEN'], 'tok-9');
+  assert.deepEqual(JSON.parse(patches(world)[0].init.body), { body: 'คำใหม่' }, 'trimmed');
+  const row = messageRow(world, 11);
+  assert.equal(row.querySelector('.msg-body').textContent, 'คำใหม่');
+  assert.equal(row.querySelector('.msg-body').style.display, '');
+  assert.equal(row.querySelectorAll('.msg-edited').length, 1);
+  assert.ok(row.querySelector('.msg-edited').textContent.includes('แก้ไขแล้ว'));
+  assert.equal(editorOf(row), null, 'the text box is gone');
+});
+
+test('Enter saves, Shift+Enter is a new line, and Enter while a Thai input method is composing does not save', async () => {
+  const world = boot({ answers: [[]] });
+  world.emit(msg({ id: 11, user_id: 5, body: 'เดิม' }));
+  const field = openEditor(world, 11).querySelector('textarea');
+  field.value = 'ใหม่';
+  world.queue.splice(0, world.queue.length, world.resp({ id: 11, body: 'ใหม่', edited: true }));
+
+  field.dispatch('keydown', { key: 'Enter', shiftKey: true }); await settle();
+  assert.equal(patches(world).length, 0, 'Shift+Enter');
+  field.dispatch('keydown', { key: 'Enter', shiftKey: false, isComposing: true }); await settle();
+  assert.equal(patches(world).length, 0, 'composing');
+  field.dispatch('keydown', { key: 'Enter', shiftKey: false }); await settle();
+  assert.equal(patches(world).length, 1, 'Enter');
+});
+
+test('nothing changed: no request and no "แก้ไขแล้ว"; an empty box asks for words and stays open', async () => {
+  const world = boot({ answers: [[]] });
+  world.emit(msg({ id: 11, user_id: 5, body: 'เหมือนเดิม' }));
+  let editor = openEditor(world, 11);
+  editor.querySelector('textarea').value = 'เหมือนเดิม ';
+  editor.querySelector('.msg-edit-save').dispatch('click');
+  await settle();
+  assert.equal(patches(world).length, 0);
+  assert.equal(messageRow(world, 11).querySelector('.msg-edited'), null);
+  assert.equal(editorOf(messageRow(world, 11)), null, 'it closed');
+
+  editor = openEditor(world, 11);
+  editor.querySelector('textarea').value = '   ';
+  editor.querySelector('.msg-edit-save').dispatch('click');
+  await settle();
+  assert.equal(patches(world).length, 0);
+  assert.match(world.toasts.at(-1).message, /ต้องไม่ว่าง/);
+  assert.ok(editorOf(messageRow(world, 11)), 'still open, nothing lost');
+});
+
+test('a failed save is told and keeps what was typed; 403 closes it, 404 says it is gone, 429 says to wait', async () => {
+  for (const [status, expect, stays] of [[500, /ไม่สำเร็จ/, true], [422, /ยาวไม่เกิน 3,000/, true], [403, /แก้ไขข้อความนี้ไม่ได้/, false]]) {
+    const world = boot({ answers: [[]] });
+    world.emit(msg({ id: 11, user_id: 5, body: 'เดิม' }));
+    const editor = openEditor(world, 11);
+    editor.querySelector('textarea').value = 'ใหม่';
+    world.queue.splice(0, world.queue.length, world.resp({}, { status }));
+    editor.querySelector('.msg-edit-save').dispatch('click');
+    await settle();
+    assert.match(world.toasts.at(-1).message, expect, String(status));
+    assert.equal(!!editorOf(messageRow(world, 11)), stays, `${status}: the box ${stays ? 'stays' : 'closes'}`);
+    if (stays) assert.equal(editorOf(messageRow(world, 11)).querySelector('textarea').value, 'ใหม่', 'what was typed is kept');
+  }
+
+  const wait = boot({ answers: [[]] });
+  wait.emit(msg({ id: 11, user_id: 5, body: 'เดิม' }));
+  const box = openEditor(wait, 11);
+  box.querySelector('textarea').value = 'ใหม่';
+  wait.queue.splice(0, wait.queue.length, wait.resp({}, { status: 429, headers: { 'Retry-After': '7' } }));
+  box.querySelector('.msg-edit-save').dispatch('click');
+  await settle();
+  assert.match(wait.toasts.at(-1).message, /รอ 7 วินาที/);
+
+  const gone = boot({ answers: [[]] });
+  gone.emit(msg({ id: 11, user_id: 5, body: 'เดิม' }));
+  const editor = openEditor(gone, 11);
+  editor.querySelector('textarea').value = 'ใหม่';
+  gone.queue.splice(0, gone.queue.length, gone.resp({}, { status: 404 }));
+  editor.querySelector('.msg-edit-save').dispatch('click');
+  await settle();
+  assert.ok(messageRow(gone, 11).textContent.includes('ข้อความนี้ถูกลบ'));
+  assert.equal(editorOf(messageRow(gone, 11)), null);
+});
+
+test('saving twice at once sends once', async () => {
+  const world = boot({ answers: [[]] });
+  world.emit(msg({ id: 11, user_id: 5, body: 'เดิม' }));
+  const editor = openEditor(world, 11);
+  editor.querySelector('textarea').value = 'ใหม่';
+  world.queue.splice(0, world.queue.length, world.resp({ id: 11, body: 'ใหม่', edited: true }));
+  editor.querySelector('.msg-edit-save').dispatch('click');
+  editor.querySelector('.msg-edit-save').dispatch('click');
+  await settle();
+  assert.equal(patches(world).length, 1);
+});
+
+test('another page edits a message: this page swaps the words in place and marks it, once', () => {
+  const world = boot();
+  world.emit(msg({ id: 12, user_id: 6, body: 'คำเดิม', user: { name: 'วรรณา' } }));
+  world.hear('.message.updated', { thread_id: 7, message_id: 12, body: 'คำใหม่', edited_at: '2026-09-27T10:00:00Z' });
+  world.hear('.message.updated', { thread_id: 7, message_id: 12, body: 'คำใหม่อีก', edited_at: '2026-09-27T10:01:00Z' });
+  const row = messageRow(world, 12);
+  assert.equal(row.querySelector('.msg-body').textContent, 'คำใหม่อีก');
+  assert.equal(row.querySelectorAll('.msg-edited').length, 1, 'one mark, however many edits');
+  world.hear('.message.updated', { thread_id: 7, message_id: 999, body: 'x' });     // a message this page never drew: nothing happens
+  world.hear('.message.updated', { thread_id: 7, message_id: 12 });                   // no words: ignored
+  assert.equal(row.querySelector('.msg-body').textContent, 'คำใหม่อีก');
+});
+
+test('an edit heard while my own text box is open on that message closes the box (the words moved on)', () => {
+  const world = boot();
+  world.emit(msg({ id: 11, user_id: 5, body: 'เดิม' }));
+  openEditor(world, 11);
+  world.hear('.message.updated', { thread_id: 7, message_id: 11, body: 'จากอีกแท็บ', edited_at: '2026-09-27T10:00:00Z' });
+  assert.equal(editorOf(messageRow(world, 11)), null);
+  assert.equal(messageRow(world, 11).querySelector('.msg-body').textContent, 'จากอีกแท็บ');
+});
+
+test('an edited message that is loaded (an older batch, a poll) is drawn with "แก้ไขแล้ว"; a deleted one never is', () => {
+  const doc = createWorld().doc;
+  const edited = Chat.buildMessageRow(doc, { id: 5, user_id: 6, body: 'แก้แล้ว', edited: true, deleted: false, user: { name: 'วรรณา' } }, { isMe: false, isConsecutive: false, timeStr: '15:45' });
+  assert.ok(edited.querySelector('.msg-edited').textContent.includes('แก้ไขแล้ว'));
+  const plain = Chat.buildMessageRow(doc, { id: 6, user_id: 6, body: 'ปกติ', edited: false, deleted: false, user: { name: 'วรรณา' } }, { isMe: false, isConsecutive: false, timeStr: '15:45' });
+  assert.equal(plain.querySelector('.msg-edited'), null);
+  const gone = Chat.buildMessageRow(doc, { id: 7, user_id: 6, body: null, edited: true, deleted: true, user: { name: 'วรรณา' } }, { isMe: false, isConsecutive: false, timeStr: '15:45' });
+  assert.equal(gone.querySelector('.msg-edited'), null);
+});
+
+test('deleting an edited message removes its mark, and a delete while my text box is open closes the box', () => {
+  const world = boot();
+  world.emit(msg({ id: 11, user_id: 5, body: 'จะลบ', edited: true }));
+  openEditor(world, 11);
+  world.hear('.message.deleted', { thread_id: 7, message_id: 11 });
+  const row = messageRow(world, 11);
+  assert.equal(editorOf(row), null);
+  assert.equal(row.querySelector('.msg-edited'), null);
+  assert.equal(menuOf(row), null);
+});
+
+// ── the lock ───────────────────────────────────────────────────────────────────────────────────────────────────────
+test('when the thread is locked live an author loses edit and delete at once, and gets them back when it opens again', () => {
+  const world = boot();
+  world.emit(msg({ id: 11, user_id: 5 }));
+  const row = messageRow(world, 11);
+  openEditor(world, 11);
+
+  world.hear('.thread.lock', { is_locked: true });
+  assert.ok(editOf(row).classList.contains('hidden'));
+  assert.ok(binOf(row).classList.contains('hidden'));
+  assert.ok(menuOf(row).classList.contains('hidden'), 'no dots left: nothing to choose');
+  assert.equal(editorOf(row), null, 'an open text box is closed');
+
+  world.hear('.thread.lock', { is_locked: false });
+  assert.equal(editOf(row).classList.contains('hidden'), false);
+  assert.equal(menuOf(row).classList.contains('hidden'), false);
+});
+
+test('when it is locked a moderator keeps delete (and only delete) on every message', () => {
+  const world = boot({ page: (b, w) => threadPage(b, w, { canModerate: true }) });
+  world.emit(msg({ id: 11, user_id: 6, user: { name: 'วรรณา' } }));
+  world.emit(msg({ id: 12, user_id: 5 }));
+  world.hear('.thread.lock', { is_locked: true });
+  for (const id of [11, 12]) {
+    const row = messageRow(world, id);
+    assert.equal(menuOf(row).classList.contains('hidden'), false, `${id}: the dots stay`);
+    assert.equal(binOf(row).classList.contains('hidden'), false, `${id}: delete stays`);
+  }
+  assert.ok(editOf(messageRow(world, 12)).classList.contains('hidden'), 'their own edit went');
 });

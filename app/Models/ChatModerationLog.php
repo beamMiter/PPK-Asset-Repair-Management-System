@@ -13,6 +13,7 @@ class ChatModerationLog extends Model
     public const UNLOCK = 'unlock';
     public const DELETE_THREAD = 'delete_thread';
     public const DELETE_MESSAGE = 'delete_message';
+    public const EDIT_MESSAGE = 'edit_message';   // its author changed the words: the record says that it happened, never what the words were
     public const PURGE_THREAD = 'purge_thread';
     public const RESTORE_THREAD = 'restore_thread';
     public const AUTO_LOCK = 'auto_lock';       // the nightly sweep: nobody wrote for chat.lock_idle_after_days

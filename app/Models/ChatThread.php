@@ -143,6 +143,19 @@ class ChatThread extends Model
     }
 
     /**
+     * Editing a message: only the person who wrote it, and only while the thread is open (a closed thread's history is not changed by anybody).
+     * A moderator may delete somebody's message but not rewrite it - putting other words under a person's name is not moderation.
+     */
+    public function canEditMessage(ChatMessage $message, ?User $user): bool
+    {
+        return $user !== null
+            && (int) $message->chat_thread_id === (int) $this->id
+            && ! $message->trashed()
+            && ! $this->is_locked
+            && (int) $message->user_id === (int) $user->id;
+    }
+
+    /**
      * Deleting a thread (it is hidden from everyone) belongs to whoever started it, and to an admin. Everybody else who took part
      * hides it from their own list instead (see scopeInMyList).
      */

@@ -2,8 +2,11 @@
 
 namespace App\Traits;
 
+use App\Events\Chat\ChatMessageUpdated;
 use App\Models\ChatMessage;
+use App\Models\ChatModerationLog;
 use App\Models\ChatThread;
+use App\Support\SafeBroadcast;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -14,6 +17,27 @@ use Illuminate\Support\Facades\DB;
  */
 trait HandlesChatReads
 {
+    /**
+     * The author changes the words of a message (the caller has checked ChatThread::canEditMessage and validated the text). Saving the same
+     * words again is not an edit. An edit does not bring the thread to the top of the list or restart its idle clock (the THREAD is not touched),
+     * is written to the moderation record without the words, and is announced to whoever has the thread open.
+     */
+    protected function applyEdit(ChatThread $thread, ChatMessage $message, string $body, \Illuminate\Http\Request $request): ChatMessage
+    {
+        if ($body === (string) $message->body) {
+            return $message;
+        }
+
+        ChatThread::withoutTouching(function () use ($message, $body) {
+            $message->forceFill(['body' => $body, 'edited_at' => now()])->save();
+        });
+
+        ChatModerationLog::record(ChatModerationLog::EDIT_MESSAGE, $request->user(), $thread, $message, [], $request);
+        SafeBroadcast::send(ChatMessageUpdated::of($message));
+
+        return $message;
+    }
+
     /** Locking / unlocking: admins and the IT / repair team (ChatThread::canBeLockedBy). */
     protected function assertCanLock(ChatThread $thread): void
     {
