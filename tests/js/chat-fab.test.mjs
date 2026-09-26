@@ -30,7 +30,7 @@ function fabPage(body, world) {
   r.close = el('button', { id: 'chatClose' });
   r.ask = el('button', { id: 'chatNotifyAsk', class: 'hidden' });
   r.search = el('input', { id: 'chatSearch' }); r.search.value = '';
-  r.list = el('div', { id: 'chatList' });
+  r.list = el('div', { id: 'chatWidgetList' });
   r.drawer = el('div', { id: 'chatDrawer' }).append(r.ask, r.close, r.search, r.list);
   r.audio = el('audio', { id: 'chatNotifySound' }); r.audio.plays = 0; r.audio.play = () => { r.audio.plays++; return Promise.resolve(); };
   r.root = el('div', { id: 'chatWidgetRoot' }).append(r.fab, r.badge, r.drawer, r.audio);
@@ -67,6 +67,24 @@ function boot({ answers = [[]], page = fabPage, storage = {}, session = {}, noti
 }
 
 const rows = (world) => world.ref.list.children.map((row) => (row.tagName === 'A' ? row : row.querySelector('a')));   // each row: the link, and beside it a hide button
+
+// ── the chat page has a list of its own ──────────────────────────────────────────────────────────────────────────
+// The page's message list is `#chatList` and comes first in the document; the widget's rows used to be looked up by the same id, so on /chat the
+// widget drew its rows (thread titles, "sender: text", a hide button on each) INSIDE the messages of the open thread.
+test('on the chat page the widget fills its own list and leaves the message list of the page alone', async () => {
+  const world = boot({ answers: [[item({ id: 1 }), item({ id: 2, title: 'อีกกระทู้' })]], page: (body, w) => {
+    const pageList = w.el('div', { id: 'chatList' });          // what chat/index.blade.php draws first
+    pageList.append(w.el('div', { id: 'first-message' }));
+    body.append(pageList);
+    const r = fabPage(body, w); r.pageList = pageList;
+    return r;
+  } });
+  await settle();
+
+  assert.equal(world.ref.pageList.children.length, 1, 'the page still holds only its own message');
+  assert.equal(world.ref.pageList.children[0].id, 'first-message');
+  assert.equal(world.ref.list.children.length, 2, 'the widget drew its two rows in its own list');
+});
 
 // ── the timer ──────────────────────────────────────────────────────────────────────────────────────────────────────
 test('one poll timer for the whole session: N visits still mean one poll per interval, not N', async () => {

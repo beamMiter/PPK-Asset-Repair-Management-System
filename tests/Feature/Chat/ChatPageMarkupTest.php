@@ -70,4 +70,29 @@ class ChatPageMarkupTest extends TestCase
             $this->assertScriptStaysInItsAttribute($this->pageFor($viewer, $locked));
         }
     }
+
+    /**
+     * The floating widget is on every page, /chat included. The page's message list and the widget's drawer list were both `id="chatList"`, and the
+     * widget's script looks its list up by id: on /chat it found the page's list first and drew its rows (thread titles, "sender: text", a hide
+     * button on each) inside the messages of the open thread - "the chat shows nothing", and two hide buttons.
+     */
+    public function test_no_id_on_the_chat_page_is_used_twice_and_the_widget_has_its_own_list(): void
+    {
+        $author = User::factory()->create(['role' => 'member']);
+        $thread = ChatThread::create(['title' => 'เปิด', 'author_id' => $author->id, 'is_locked' => false]);
+        \App\Models\ChatMessage::create(['chat_thread_id' => $thread->id, 'user_id' => $author->id, 'body' => 'สวัสดี']);   // the message list is drawn only when there is one
+        $dom = $this->pageFor(User::factory()->create(['role' => 'admin']), $thread);
+
+        $seen = [];
+        foreach ((new \DOMXPath($dom))->query('//*[@id]') as $node) {
+            $seen[$node->getAttribute('id')] = ($seen[$node->getAttribute('id')] ?? 0) + 1;
+        }
+        unset($seen['loaderOverlay']);   // several pages draw their own next to the layout's: an older, separate duplicate
+        $twice = array_keys(array_filter($seen, fn ($n) => $n > 1));
+
+        $this->assertSame([], $twice, 'an id used twice: a script that looks it up by id gets the first one');
+        $this->assertNotNull($dom->getElementById('chatList'), 'the page\'s message list');
+        $this->assertNotNull($dom->getElementById('chatWidgetList'), 'the widget\'s own list');
+        $this->assertNull((new \DOMXPath($dom))->query('//*[@id="chatWidgetList"]//*[@id="chatBox"]')->item(0));
+    }
 }

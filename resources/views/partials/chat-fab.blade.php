@@ -55,7 +55,7 @@
                 </div>
 
                 {{-- List --}}
-                <div id="chatList" class="overflow-y-auto p-2 space-y-1">
+                <div id="chatWidgetList" class="overflow-y-auto p-2 space-y-1">
                     {{-- แทรกรายการด้วย JS --}}
                 </div>
 

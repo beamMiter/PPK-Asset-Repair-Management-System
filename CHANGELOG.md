@@ -99,6 +99,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **On the chat page the floating widget drew its rows inside the messages of the open thread.** The page's message list and the widget's drawer list were
+  both `id="chatList"`, and the widget looks its list up by id, so on `/chat` it found the page's list first: the open thread showed thread titles with
+  "sender: text" and a hide button on each row instead of its messages (and so two hide buttons). The widget's list is `chatWidgetList`.
+  `ChatPageMarkupTest` (no id used twice on the chat page) and `chat-fab.test.mjs`.
+
 - **Behind a proxy or load balancer every user looked like the same caller.** Nothing told the app which proxies to believe, so the address it
   saw was the proxy's: the sign-in limit (30 wrong tries from one address) would lock the whole hospital together, the moderation record would
   name the proxy for every action, and an https page looked like plain http (no `Strict-Transport-Security`). `config/trustedproxy.php` reads

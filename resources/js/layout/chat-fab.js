@@ -127,7 +127,8 @@ export function installChatFab(win = window) {
         const drawer = doc.getElementById('chatDrawer');
         const closeBt = doc.getElementById('chatClose');
         const badge = doc.getElementById('chatBadge');
-        const listEl = doc.getElementById('chatList');
+        // not 'chatList': that is the id of the chat PAGE's message list, which comes first in the document on /chat - the widget's rows were drawn in it
+        const listEl = doc.getElementById('chatWidgetList');
         const search = doc.getElementById('chatSearch');
         const askNotify = doc.getElementById('chatNotifyAsk');
         if (!fab || !drawer || !closeBt || !badge || !listEl || !search) return null;
