@@ -60,13 +60,24 @@ class ChatMessageMenuParityTest extends TestCase
         $this->assertContains('text-slate-400', $classes);
     }
 
-    public function test_delete_in_the_menu_has_its_own_icon_not_the_plain_bin(): void
+    public function test_the_items_use_icons_that_say_this_message_and_both_drawings_agree(): void
     {
         $blade = file_get_contents(resource_path('views/chat/_message_menu.blade.php'));
         $js = file_get_contents(resource_path('js/chat/page.js'));
 
-        $this->assertStringContainsString('aria-hidden="true">delete_forever</span><span>ลบ</span>', $blade);
-        $this->assertStringContainsString("'delete_forever', 'ลบ'", $js);
-        $this->assertStringNotContainsString('>delete</span><span>ลบ', $blade);
+        // edit: a bubble with a pencil; delete: a bubble with a cross - not the plain pencil and bin that fit any page
+        $this->assertStringContainsString('aria-hidden="true">rate_review</span><span>แก้ไข</span>', $blade);
+        $this->assertStringContainsString('aria-hidden="true">chat_error</span><span>ลบ</span>', $blade);
+        $this->assertStringContainsString("'open', 'rate_review', 'แก้ไข'", $js);
+        $this->assertStringContainsString("'chat_error', 'ลบ'", $js);
+        $this->assertStringNotContainsString('>delete</span>', $blade);
+        $this->assertStringNotContainsString('>delete_forever</span>', $blade);
+        $this->assertStringNotContainsString('>edit</span>', $blade);
+
+        // the sizes: the dots 24px, an item's icon 20px - in both places
+        $this->assertStringContainsString('text-[24px]" aria-hidden="true">more_vert', $blade);
+        $this->assertStringContainsString("'material-symbols-outlined text-[24px]', 'more_vert'", $js);
+        $this->assertSame(2, substr_count($blade, 'text-[20px]" aria-hidden="true"'), 'edit and delete');
+        $this->assertStringContainsString("'material-symbols-outlined text-[20px]', icon", $js);
     }
 }

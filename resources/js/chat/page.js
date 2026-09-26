@@ -35,16 +35,16 @@ const EDITED_CLASS = 'msg-edited mt-[2px] text-[11px] opacity-70';
 // The "⋮" beside a bubble and its menu. The class lists are the ones chat/_message_menu.blade.php prints (ChatMessageMenuParityTest compares them).
 // The dots have no circle or box: the icon lights up under the pointer and while its menu is open.
 export const MENU_BUTTON = 'chat-msg-menu-btn inline-flex h-8 w-6 shrink-0 items-center justify-center rounded text-slate-400 transition-colors hover:text-slate-700 aria-expanded:text-slate-700 focus:outline-none focus-visible:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300';
-export const MENU_BOX = 'chat-msg-menu hidden absolute z-20 top-full mt-[4px] w-[140px] overflow-hidden rounded-md border border-slate-200 bg-white py-[4px]';
-export const MENU_ITEM = 'flex w-full items-center gap-[8px] px-[12px] py-[8px] text-left text-[13px] text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none';
-export const MENU_ITEM_DANGER = 'flex w-full items-center gap-[8px] px-[12px] py-[8px] text-left text-[13px] text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:outline-none';
+export const MENU_BOX = 'chat-msg-menu hidden absolute z-20 top-full mt-[4px] w-[136px] overflow-hidden rounded-md border border-slate-200 bg-white py-[4px]';
+export const MENU_ITEM = 'flex w-full items-center gap-[8px] px-[12px] py-[8px] text-left text-[13.5px] text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none';
+export const MENU_ITEM_DANGER = 'flex w-full items-center gap-[8px] px-[12px] py-[8px] text-left text-[13.5px] text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:outline-none';
 
 function menuItem(doc, className, when, icon, label) {
     const item = el(doc, 'button', className);
     item.type = 'button';
     item.setAttribute('role', 'menuitem');
     item.setAttribute('data-when', when);      // 'open': only while the thread is open (hidden the moment it is locked); 'always': a moderator's delete
-    const glyph = el(doc, 'span', 'material-symbols-outlined text-[18px]', icon);
+    const glyph = el(doc, 'span', 'material-symbols-outlined text-[20px]', icon);
     glyph.setAttribute('aria-hidden', 'true');
     item.append(glyph, el(doc, 'span', '', label));
     return item;
@@ -63,13 +63,13 @@ function messageMenu(doc, { canEdit, canDelete, canModerate, side }) {
     btn.setAttribute('aria-expanded', 'false');
     btn.setAttribute('title', 'ตัวเลือกข้อความ');
     btn.setAttribute('aria-label', 'ตัวเลือกข้อความ');
-    const dots = el(doc, 'span', 'material-symbols-outlined text-[18px]', 'more_vert');
+    const dots = el(doc, 'span', 'material-symbols-outlined text-[24px]', 'more_vert');
     dots.setAttribute('aria-hidden', 'true');
     btn.append(dots);
     const menu = el(doc, 'div', `${MENU_BOX} ${side === 'right' ? 'right-0' : 'left-0'}`);
     menu.setAttribute('role', 'menu');
-    if (canEdit) menu.append(menuItem(doc, `chat-msg-edit ${MENU_ITEM}`, 'open', 'edit', 'แก้ไข'));
-    if (canDelete) menu.append(menuItem(doc, `chat-msg-delete ${MENU_ITEM_DANGER}`, canModerate ? 'always' : 'open', 'delete_forever', 'ลบ'));
+    if (canEdit) menu.append(menuItem(doc, `chat-msg-edit ${MENU_ITEM}`, 'open', 'rate_review', 'แก้ไข'));
+    if (canDelete) menu.append(menuItem(doc, `chat-msg-delete ${MENU_ITEM_DANGER}`, canModerate ? 'always' : 'open', 'chat_error', 'ลบ'));
     wrap.append(btn, menu);
     return wrap;
 }
