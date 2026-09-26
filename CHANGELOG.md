@@ -548,6 +548,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **"ดูรายละเอียด" and "แก้ไข" in the requests list and the assets list are the standard grey button.** Both lists drew them by hand - view in indigo, edit in
+  emerald, three slightly different sizes - while the Technician Rating page already used `<x-ui.button size="sm">` (white, grey border and text). The rows of
+  the requests list and the assets list (table and mobile cards) now use that same button, so a change to it reaches them all. Left as they were: the repair jobs
+  list (รายการงานซ่อม), the users list and the system management pages. `ListRowActionsAreGrayTest`.
+
 - **Deleting a message asks with the app's own confirmation dialog.** The chat used the browser's `confirm()` box; it now uses the dialog every other page
   uses (`Confirm.show`, the red "ลบข้อความ" button), and falls back to the browser's only if that dialog is not on the page.
 

@@ -288,21 +288,11 @@
 
                             <td class="p-3 text-center whitespace-nowrap align-middle">
                                 <div class="h-full flex justify-center items-center gap-2">
-                                    <a href="{{ route('maintenance.requests.show', $row) }}"
-                                        class="inline-flex items-center gap-1.5 rounded-md border border-indigo-300 bg-white px-2.5 md:px-3 py-1.5 text-[12px] font-medium text-indigo-700 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-600 whitespace-nowrap justify-center"
-                                        onclick="showLoader()">
-                                        <span
-                                            class="material-symbols-outlined ms text-[15px] leading-none text-indigo-600">visibility</span>
-                                        ดูรายละเอียด
-                                    </a>
+                                    <x-ui.button :href="route('maintenance.requests.show', $row)" size="sm" icon="visibility"
+                                        onclick="showLoader()">ดูรายละเอียด</x-ui.button>
                                     @can('update', $row)
-                                        <a href="{{ route('maintenance.requests.edit', $row) }}"
-                                            class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-2.5 md:px-3 py-1.5 text-[12px] font-medium text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600 whitespace-nowrap justify-center"
-                                            onclick="showLoader()">
-                                            <span
-                                                class="material-symbols-outlined ms text-[15px] leading-none text-emerald-600">edit</span>
-                                            แก้ไข
-                                        </a>
+                                        <x-ui.button :href="route('maintenance.requests.edit', $row)" size="sm" icon="edit"
+                                            onclick="showLoader()">แก้ไข</x-ui.button>
                                     @endcan
                                 </div>
                             </td>
