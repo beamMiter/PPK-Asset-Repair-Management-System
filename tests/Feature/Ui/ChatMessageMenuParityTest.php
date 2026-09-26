@@ -2,13 +2,12 @@
 
 namespace Tests\Feature\Ui;
 
-use Illuminate\Support\Facades\Blade;
 use Tests\TestCase;
 
 /**
  * The "⋮" of a message is drawn twice: by chat/_message_menu.blade.php for the messages the server draws, and by resources/js/chat/page.js for the
  * ones that arrive while the page is open. A row that looked different depending on how it got there would be a bug nobody could see in a test of
- * either alone, so the class lists are compared. The button is also the standard ghost icon button (what every dialog closes with).
+ * either alone, so the class lists are compared.
  */
 class ChatMessageMenuParityTest extends TestCase
 {
@@ -48,13 +47,26 @@ class ChatMessageMenuParityTest extends TestCase
         $this->assertSame($this->sorted($this->constant($js, 'MENU_BOX')), $this->sorted($box), 'the box (the side is added after it)');
     }
 
-    public function test_the_dots_are_the_standard_ghost_icon_button(): void
+    public function test_the_dots_have_no_circle_or_box_only_the_icon_lights_up(): void
     {
-        $standard = Blade::render('<x-ui.button variant="ghost" size="icon" icon="more_vert" aria-label="x" />');
-        $this->assertSame(1, preg_match('/class="([^"]*)"/', $standard, $m));
+        $js = file_get_contents(resource_path('js/chat/page.js'));
+        $classes = $this->sorted($this->constant($js, 'MENU_BUTTON'));
+
+        foreach ($classes as $class) {
+            $this->assertDoesNotMatchRegularExpression('/^(rounded-full|rounded-(md|lg|xl)|bg-|hover:bg-|ring-|border)/', $class, "{$class}: a shape or a fill around the dots");
+        }
+        $this->assertContains('hover:text-slate-700', $classes, 'the icon lights up under the pointer');
+        $this->assertContains('aria-expanded:text-slate-700', $classes, 'and stays lit while its menu is open');
+        $this->assertContains('text-slate-400', $classes);
+    }
+
+    public function test_delete_in_the_menu_has_its_own_icon_not_the_plain_bin(): void
+    {
+        $blade = file_get_contents(resource_path('views/chat/_message_menu.blade.php'));
         $js = file_get_contents(resource_path('js/chat/page.js'));
 
-        $ours = $this->sorted(str_replace('chat-msg-menu-btn ', '', $this->constant($js, 'MENU_BUTTON')));
-        $this->assertSame($this->sorted($m[1]), $ours, 'the very classes of the button every dialog closes with (plus our own marker)');
+        $this->assertStringContainsString('aria-hidden="true">delete_forever</span><span>ลบ</span>', $blade);
+        $this->assertStringContainsString("'delete_forever', 'ลบ'", $js);
+        $this->assertStringNotContainsString('>delete</span><span>ลบ', $blade);
     }
 }

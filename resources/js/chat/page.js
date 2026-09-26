@@ -32,9 +32,9 @@ const DELETED_TEXT = 'ข้อความนี้ถูกลบ';
 const EDITED_TEXT = 'แก้ไขแล้ว';
 const EDITED_CLASS = 'msg-edited mt-[2px] text-[11px] opacity-70';
 
-// The "⋮" beside a bubble and its menu. The class lists are the ones chat/_message_menu.blade.php prints (ChatMessageMenuParityTest compares them);
-// the button is the ghost icon button every dialog closes with (<x-ui.button variant="ghost" size="icon">).
-export const MENU_BUTTON = 'chat-msg-menu-btn inline-flex items-center justify-center font-semibold whitespace-nowrap select-none transition-all active:scale-95 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 h-8 w-8 shrink-0 rounded-full text-[13px] gap-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus:ring-slate-200';
+// The "⋮" beside a bubble and its menu. The class lists are the ones chat/_message_menu.blade.php prints (ChatMessageMenuParityTest compares them).
+// The dots have no circle or box: the icon lights up under the pointer and while its menu is open.
+export const MENU_BUTTON = 'chat-msg-menu-btn inline-flex h-8 w-6 shrink-0 items-center justify-center rounded text-slate-400 transition-colors hover:text-slate-700 aria-expanded:text-slate-700 focus:outline-none focus-visible:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300';
 export const MENU_BOX = 'chat-msg-menu hidden absolute z-20 top-full mt-[4px] w-[140px] overflow-hidden rounded-md border border-slate-200 bg-white py-[4px]';
 export const MENU_ITEM = 'flex w-full items-center gap-[8px] px-[12px] py-[8px] text-left text-[13px] text-slate-700 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none';
 export const MENU_ITEM_DANGER = 'flex w-full items-center gap-[8px] px-[12px] py-[8px] text-left text-[13px] text-rose-600 hover:bg-rose-50 focus:bg-rose-50 focus:outline-none';
@@ -69,7 +69,7 @@ function messageMenu(doc, { canEdit, canDelete, canModerate, side }) {
     const menu = el(doc, 'div', `${MENU_BOX} ${side === 'right' ? 'right-0' : 'left-0'}`);
     menu.setAttribute('role', 'menu');
     if (canEdit) menu.append(menuItem(doc, `chat-msg-edit ${MENU_ITEM}`, 'open', 'edit', 'แก้ไข'));
-    if (canDelete) menu.append(menuItem(doc, `chat-msg-delete ${MENU_ITEM_DANGER}`, canModerate ? 'always' : 'open', 'delete', 'ลบ'));
+    if (canDelete) menu.append(menuItem(doc, `chat-msg-delete ${MENU_ITEM_DANGER}`, canModerate ? 'always' : 'open', 'delete_forever', 'ลบ'));
     wrap.append(btn, menu);
     return wrap;
 }

@@ -9,7 +9,7 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - **A message can be edited, and the bin beside it is a "⋮" menu.** The little bin beside each bubble was odd, and there was no way to correct a typo.
-  Each message you may act on now has a "⋮" (the ghost icon button every dialog uses) that opens a menu: **แก้ไข** and **ลบ**. Editing turns the bubble into a
+  Each message you may act on now has a "⋮" (no circle or box: the icon just lights up under the pointer) that opens a menu: **แก้ไข** and **ลบ** (with the `delete_forever` icon). Editing turns the bubble into a
   text box in place (Enter saves, Shift+Enter is a new line - not while a Thai input method is composing - Esc cancels; saving the same words does nothing),
   and the row says "แก้ไขแล้ว" for everybody, live (`message.updated`) and in every later load (`edited`, `edited_at` on the message; a deleted message carries
   neither). Only the author edits, and only while the thread is open: a moderator may delete somebody's message but not put other words under their name,
