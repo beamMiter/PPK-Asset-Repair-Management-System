@@ -277,7 +277,7 @@
                                 @else
                                     <div
                                         class="mt-2 min-h-[140px] rounded-md border border-dashed border-slate-300 bg-slate-50/50 flex flex-col items-center justify-center p-6 text-center">
-                                        <span class="text-[13px] text-slate-400 font-medium italic">ยังไม่มีไฟล์แนบ</span>
+                                        <x-ui.empty-state icon="attach_file">ยังไม่มีไฟล์แนบ</x-ui.empty-state>
                                     </div>
                                 @endif
                             </div>
@@ -439,7 +439,7 @@
                                                                             stroke-linejoin="round" stroke-width="2"
                                                                             d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                                                     </svg>
-                                                                    ยังไม่มอบหมาย
+                                                                    ยังไม่ได้มอบหมาย
                                                                 </div>
                                                             @else
                                                                 <div class="flex items-center -space-x-2">
@@ -516,17 +516,7 @@
                                             สร้างใบแจ้งซ่อมทันที
                                         </a>
                                     @else
-                                        <div
-                                            class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                                            <svg class="h-6 w-6 text-slate-300" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                        </div>
-                                        <p class="font-medium text-slate-600">ยังไม่มีประวัติการแจ้งซ่อม</p>
-                                        <p class="text-[12px] text-slate-400 mt-1">
-                                            ประวัติการซ่อมบำรุงทั้งหมดจะถูกรวบรวมไว้ที่นี่</p>
+                                        <x-ui.empty-state icon="history" hint="ประวัติการซ่อมบำรุงทั้งหมดจะถูกรวบรวมไว้ที่นี่">ยังไม่มีประวัติการแจ้งซ่อม</x-ui.empty-state>
                                     @endif
                                 </div>
                             @endif

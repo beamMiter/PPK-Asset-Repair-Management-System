@@ -287,8 +287,8 @@
                                         'desc' => 'แก้ไขปัญหาเรียบร้อยแล้ว',
                                     ],
                                     [
-                                        'icon' => 'verified',
-                                        'color' => 'text-emerald-800',
+                                        'icon' => 'task',
+                                        'color' => 'text-emerald-600',
                                         'name' => 'อนุมัติผลการซ่อมบำรุง',
                                         'desc' => 'ตรวจสอบและยืนยันการรับมอบงาน',
                                     ],
@@ -806,7 +806,6 @@
 @endsection
 
 @push('styles')
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         html {
             scroll-behavior: smooth;

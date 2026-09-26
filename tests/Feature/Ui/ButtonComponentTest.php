@@ -64,6 +64,7 @@ class ButtonComponentTest extends TestCase
             'ghost' => 'text-slate-400',
             'ghost-danger' => 'text-rose-500',
             'ghost-warning' => 'text-amber-600',
+            'ghost-brand' => 'text-[#0F2D5C]',
         ];
         foreach ($expected as $variant => $class) {
             $this->assertStringContainsString($class, $this->render("<x-ui.button variant=\"$variant\">x</x-ui.button>"), $variant);
@@ -171,5 +172,18 @@ BLADE);
         $bare = $this->render('<x-ui.section-head title="รายละเอียด" />');
         $this->assertStringNotContainsString('rounded-full border border-emerald-600', $bare);
         $this->assertStringNotContainsString('leading-snug', $bare);
+    }
+
+    public function test_section_head_actions_sit_at_the_right_and_an_empty_slot_leaves_nothing(): void
+    {
+        $with = $this->render('<x-ui.section-head no="4" title="ไฟล์แนบ"><x-slot:actions><x-ui.button id="tool" icon="add" /></x-slot:actions></x-ui.section-head>');
+        $this->assertStringContainsString('justify-between', $with);
+        $this->assertGreaterThan(strpos($with, 'ไฟล์แนบ'), strpos($with, 'id="tool"'), 'the tool comes after the title, on the right');
+        $this->assertStringContainsString('-mt-1', $with, 'centred on the number circle');
+
+        // a slot that shows nothing (an @if that is false) is not a gap at the right
+        $empty = $this->render("<x-ui.section-head title=\"x\"><x-slot:actions>\n  @if (false) <b>no</b> @endif\n</x-slot:actions></x-ui.section-head>");
+        $this->assertStringNotContainsString('-mt-1', $empty);
+        $this->assertStringNotContainsString('-mt-1', $this->render('<x-ui.section-head title="x" />'));
     }
 }

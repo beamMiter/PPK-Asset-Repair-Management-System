@@ -147,7 +147,7 @@
 
                 {{-- LEFT: SECTION 5 (Assigned Team) --}}
                 <section>
-                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 {{ $headCls }}">
+                    <div class="flex items-start justify-between gap-4 {{ $headCls }}">
                         <div class="flex items-start gap-3 min-w-0">
                             <div class="{{ $noCls }}">5</div>
                             <div class="{{ $accentWrap }}">
@@ -158,9 +158,8 @@
                         </div>
 
                         @can('assign', $mr)
-                            <x-ui.button id="openAssignModalBtn" icon="group_add" class="shrink-0">
-                                มอบหมายทีมเจ้าหน้าที่
-                            </x-ui.button>
+                            <x-ui.button id="openAssignModalBtn" variant="ghost" size="icon-lg" icon="group_add" class="-mt-1"
+                                aria-label="มอบหมายทีมเจ้าหน้าที่" title="มอบหมายทีมเจ้าหน้าที่" />
                         @endcan
                     </div>
 
@@ -173,7 +172,8 @@
                         <div
                             class="rounded-lg border {{ $line }} bg-white max-h-72 overflow-y-auto divide-y divide-slate-200">
                             @if ($workers->isEmpty())
-                                <div class="px-4 py-3 text-[13px] text-slate-500">ยังไม่ได้มอบหมายงานให้ทีมเจ้าหน้าที่
+                                <div class="px-4 py-6">
+                                    <x-ui.empty-state icon="group_off">ยังไม่ได้มอบหมายงานให้ทีมเจ้าหน้าที่</x-ui.empty-state>
                                 </div>
                             @else
                                 @foreach ($workers as $worker)
@@ -278,7 +278,7 @@
                             <label class="block text-sm font-medium text-slate-700">ระบุรพจ. (รหัสครุภัณฑ์)</label>
                             <input type="text" name="property_code"
                                 value="{{ old('property_code', $opLog->property_code ?? ($mr->asset?->asset_code ?? '')) }}"
-                                class="ui-input" placeholder="เช่น 68101068718">
+                                class="ui-input" placeholder="เช่น 68101068718" maxlength="100">
                         </div>
 
                         <div>
@@ -311,7 +311,7 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-700">หมายเหตุ / รายละเอียดประกอบ</label>
                             <textarea name="remark" rows="4" style="{{ $textareaStyle }}" class="ui-textarea resize-none overflow-hidden"
-                                placeholder="เช่น ตรวจเช็คแล้วพบว่า..., ผู้ใช้ทดสอบแล้วเรียบร้อย">{{ old('remark', $opLog->remark ?? '') }}</textarea>
+                                placeholder="เช่น ตรวจเช็คแล้วพบว่า..., ผู้ใช้ทดสอบแล้วเรียบร้อย" maxlength="5000" data-counter>{{ old('remark', $opLog->remark ?? '') }}</textarea>
                         </div>
 
                         <div class="pt-2 flex justify-end">
@@ -322,7 +322,7 @@
 
                         @if ($opLog)
                             <p class="mt-3 text-xs text-slate-500">
-                                บันทึกล่าสุดโดย {{ $opLog->user?->name ?? '-' }} ·
+                                บันทึกล่าสุดโดย {{ $opLog->user?->name ?? '-' }} -
                                 {{ $opLog->updated_at?->format('Y-m-d H:i') ?? '-' }}
                             </p>
                         @endif
@@ -339,7 +339,7 @@
         <div id="assignModal"
             class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-3 sm:p-4">
             <div
-                class="relative z-[10000] w-full max-w-4xl overflow-hidden rounded-2xl border {{ $line }} bg-white ">
+                class="relative z-[10000] w-full max-w-4xl overflow-hidden rounded-md border {{ $line }} bg-white ">
 
                 {{-- Modal Header --}}
                 <div class="flex items-center justify-between border-b {{ $line }} px-6 py-4">
@@ -435,8 +435,8 @@
 
                             <div class="flex-1 min-h-0 overflow-y-auto" id="assignListScroll">
                                 @if ($roleGroupsSorted->isEmpty())
-                                    <div class="px-5 py-10 text-center text-[14px] text-slate-500">
-                                        ไม่พบข้อมูลเจ้าหน้าที่ในระบบ
+                                    <div class="px-5 py-10">
+                                        <x-ui.empty-state icon="group_off">ไม่พบข้อมูลเจ้าหน้าที่ในระบบ</x-ui.empty-state>
                                     </div>
                                 @else
                                     @foreach ($roleGroupsSorted as $roleCode => $groupUsers)

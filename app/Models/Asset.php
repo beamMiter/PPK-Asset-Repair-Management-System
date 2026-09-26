@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Support\Like;
 
 class Asset extends Model
 {
@@ -149,6 +150,12 @@ class Asset extends Model
         return $this->hasMany(MaintenanceRequest::class, 'asset_id');
     }
 
+    /** True while any repair request for this asset is still open. */
+    public function hasOpenMaintenance(): bool
+    {
+        return $this->maintenanceRequests()->whereIn('status', MaintenanceRequest::OPEN_STATUSES)->exists();
+    }
+
     public function requestAttachments()
     {
         return $this->hasManyThrough(
@@ -179,10 +186,10 @@ class Asset extends Model
         if ($term === '') return $q;
 
         return $q->where(function ($w) use ($term) {
-            $w->where('asset_code', 'like', "%{$term}%")
-              ->orWhere('his_asset_id', 'like', "%{$term}%")
-              ->orWhere('name', 'like', "%{$term}%")
-              ->orWhere('serial_number', 'like', "%{$term}%");
+            $w->where('asset_code', 'like', Like::contains($term))
+              ->orWhere('his_asset_id', 'like', Like::contains($term))
+              ->orWhere('name', 'like', Like::contains($term))
+              ->orWhere('serial_number', 'like', Like::contains($term));
               
             if (ctype_digit($term)) {
                 $w->orWhere('id', (int) $term);
@@ -211,29 +218,13 @@ class Asset extends Model
     public function scopeLocation($q, ?string $location)
     {
         $location = trim((string) $location);
-        return $location !== '' ? $q->where('location', 'like', "%{$location}%") : $q;
+        return $location !== '' ? $q->where('location', 'like', Like::contains($location)) : $q;
     }
 
     public function scopeType($q, ?string $type)
     {
         $type = trim((string) $type);
-        return $type !== '' ? $q->where('type', 'like', "%{$type}%") : $q;
-    }
-
-    public function scopeSortBySafe($q, ?string $by, string $dir = 'desc')
-    {
-        $map = [
-            'id'              => 'id',
-            'asset_code'      => 'asset_code',
-            'name'            => 'name',
-            'status'          => 'status',
-            'purchase_date'   => 'purchase_date',
-            'warranty_expire' => 'warranty_expire',
-            'created_at'      => 'created_at',
-        ];
-        $col = $map[$by ?? 'id'] ?? 'id';
-        $dir = strtolower($dir) === 'asc' ? 'asc' : 'desc';
-        return $q->orderBy($col, $dir);
+        return $type !== '' ? $q->where('type', 'like', Like::contains($type)) : $q;
     }
 
     public function getDisplayNameAttribute(): string

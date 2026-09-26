@@ -3,7 +3,7 @@
   only as wide as their labels (wraps onto a second line on a very narrow screen instead of stretching).
 
   <x-ui.form-actions :cancel-href="route('assets.index')" submit-label="บันทึกข้อมูล" />
-  <x-ui.form-actions :cancel-href="..." submit-label="ส่งใบแจ้งซ่อมบำรุง" submit-icon="send" form="main-form" />
+  <x-ui.form-actions :cancel-href="..." submit-label="ส่งใบแจ้งซ่อมบำรุง" submit-icon="check" form="main-form" />
 
   cancel-href   omit to render only the submit button
   form          id of the <form> when this row sits outside it (adds form="…" to the submit button)

@@ -131,11 +131,6 @@ class Attachment extends Model
         return (bool) (optional($this->file)->isImage());
     }
 
-    public function deleteSafely(): bool
-    {
-        return (bool) $this->delete();
-    }
-
     /**
      * ลบ attachment และออปชัน cleanup ไฟล์จริงถ้าไม่มีใครอ้างแล้ว
      * @param bool $deleteOrphanFile เมื่อ true และไม่มี attachment อื่นชี้ไฟล์นี้ จะลบไฟล์ (เรคอร์ดใน files) ทิ้งด้วย

@@ -1,5 +1,18 @@
 // resources/js/repair/dashboard.js
-import Chart from 'chart.js/auto';
+
+// Chart.js is ~200 kB, and this module is part of the main bundle (app.js imports it so the turbo:load listener below
+// exists on every page). So the library is fetched the first time a page that really has a chart asks for it — not with
+// every page, as a static import did.
+let chartLib;
+const loadChart = () => (chartLib ??= import('chart.js/auto')
+  .then(({ default: Chart }) => {
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color       = '#747781';
+    return Chart;
+  })
+  .catch((error) => { chartLib = undefined; throw error; })); // never cache a failed load: the next visit asks again
+
+const CHART_CANVASES = ['trendBar', 'typeDonut', 'statusDonut', 'deptBar'];
 
 (function () {
   // Track active Chart.js instances so we can destroy them before Turbo caches the page
@@ -128,10 +141,10 @@ import Chart from 'chart.js/auto';
   }
 
   // turbo:load fires on first load AND every Turbo navigation
+  let visit = 0;
   document.addEventListener('turbo:load', () => {
+    const thisVisit = ++visit;
     destroyAllCharts(); // reset before re-initialising
-    Chart.defaults.font.family = "'Inter', sans-serif";
-    Chart.defaults.color       = '#747781';
 
     /**
      * Animates stat-card numbers.
@@ -270,7 +283,18 @@ import Chart from 'chart.js/auto';
       },
     });
 
-    document.fonts.ready.then(() => {
+    document.fonts.ready.then(async () => {
+      if (!CHART_CANVASES.some(safeGet)) return; // no chart on this page: do not fetch the library
+
+      let Chart;
+      try {
+        Chart = await loadChart();
+      } catch (error) {
+        console.error('[dashboard] Chart.js could not be loaded', error);
+        return;
+      }
+      if (thisVisit !== visit) return; // a newer visit took over while the library was loading
+
       // 1. Monthly Trend Bar
       const trendEl = safeGet('trendBar');
       if (trendEl) {

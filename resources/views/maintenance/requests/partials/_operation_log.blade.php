@@ -53,7 +53,7 @@
                         (รหัสครุภัณฑ์)</label>
                     <input id="property_code" type="text" name="property_code"
                         value="{{ old('property_code', $opLog->property_code ?? ($assetCode ?? '')) }}"
-                        class="ui-input" placeholder="เช่น 68101068718">
+                        class="ui-input" placeholder="เช่น 68101068718" maxlength="100">
                 </div>
                 <label class="inline-flex items-center gap-2 text-sm text-slate-700">
                     <input type="checkbox" name="require_precheck" value="1" @checked(old('require_precheck', $opLog->require_precheck ?? false))
@@ -79,7 +79,7 @@
                     <label for="remark" class="block text-sm font-medium text-slate-700">หมายเหตุ /
                         รายละเอียดประกอบ</label>
                     <textarea id="remark" name="remark" rows="4" style="{{ $textareaStyle }}" class="ui-textarea resize-none overflow-hidden"
-                        placeholder="เช่น ตรวจเช็คแล้วพบว่า..., ผู้ใช้ทดสอบแล้วเรียบร้อย">{{ old('remark', $opLog->remark ?? '') }}</textarea>
+                        placeholder="เช่น ตรวจเช็คแล้วพบว่า..., ผู้ใช้ทดสอบแล้วเรียบร้อย" maxlength="5000" data-counter>{{ old('remark', $opLog->remark ?? '') }}</textarea>
                 </div>
                 <div class="flex justify-end">
                     <x-ui.button type="submit" variant="primary" icon="check" split>บันทึกรายงานการปฏิบัติงาน</x-ui.button>
@@ -98,7 +98,7 @@
 
         @if ($opLog)
             <p class="mt-3 text-xs text-slate-500">
-                บันทึกล่าสุดโดย {{ $opLog->user?->name ?? '-' }} ·
+                บันทึกล่าสุดโดย {{ $opLog->user?->name ?? '-' }} -
                 {{ $opLog->updated_at?->format('Y-m-d H:i') ?? '-' }}
             </p>
         @endif

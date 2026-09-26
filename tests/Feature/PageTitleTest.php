@@ -11,14 +11,14 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Browser-tab titles follow one pattern: "<English page name> • PPK Asset Repair". The suffix lives in
+ * Browser-tab titles follow one pattern: "<English page name> - PPK Asset Repair". The suffix lives in
  * config('app.title_suffix'); each view only sets @section('title', 'Assets').
  */
 class PageTitleTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const SUFFIX = ' • PPK Asset Repair';
+    private const SUFFIX = ' - PPK Asset Repair';
 
     private function admin(): User
     {
@@ -53,7 +53,6 @@ class PageTitleTest extends TestCase
             'assets' => ['assets.index', 'Assets'],
             'new asset' => ['assets.create', 'New Asset'],
             'users' => ['admin.users.index', 'Users'],
-            'new user' => ['admin.users.create', 'New User'],
             'request types' => ['settings.maintenance-types.index', 'Request Types'],
             'new request type' => ['settings.maintenance-types.create', 'New Request Type'],
             'notifications' => ['settings.notifications.index', 'Notifications'],
@@ -104,9 +103,6 @@ class PageTitleTest extends TestCase
         $this->assertPattern('Create account', $this->get(route('register'))->assertOk()->getContent(), 'register');
         $this->assertPattern('Forgot password', $this->get(route('password.request'))->assertOk()->getContent(), 'forgot');
         $this->assertPattern('Reset password', $this->get(route('password.reset', ['token' => 'abc']))->assertOk()->getContent(), 'reset');
-
-        $unverified = User::factory()->unverified()->create();
-        $this->assertPattern('Verify email', $this->actingAs($unverified)->get(route('verification.notice'))->assertOk()->getContent(), 'verify');
     }
 
     public function test_a_view_without_a_title_still_gets_the_product_name_only(): void
@@ -142,7 +138,7 @@ class PageTitleTest extends TestCase
         foreach (['app', 'auth', 'guest'] as $layout) {
             $src = file_get_contents(resource_path("views/layouts/$layout.blade.php"));
             $this->assertStringContainsString("config('app.title_suffix')", $src, $layout);
-            $this->assertStringNotContainsString('PPK Hospital System •', $src, "$layout still hard-codes a brand in <title>");
+            $this->assertStringNotContainsString('PPK Hospital System -', $src, "$layout still hard-codes a brand in <title>");
         }
     }
 

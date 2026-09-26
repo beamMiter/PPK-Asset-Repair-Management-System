@@ -3,6 +3,35 @@
 @section('title', 'SLA Dashboard')
 
 @section('page-header')
+    @php
+        // The three quick-range links below (and the "แสดงข้อมูล:" summary further down) both need to know which one, if
+        // any, is currently applied — computed once, from the exact same `from` each link itself sends, so the two
+        // things showing it never fall out of step with each other (they used to: the summary compared against
+        // subMonths(5)->startOfMonth() / subMonths(11)->startOfMonth(), which never once matched what these links
+        // actually send — subMonths(6)->addDay() / subYear()->addDay() — so "แสดงข้อมูล:" always read "ช่วงวันที่", never
+        // "6 เดือน" or "12 เดือน", even right after clicking one).
+        $slaShortcuts = [
+            'six' => ['label' => '6 เดือน', 'from' => now()->subMonths(6)->addDay()->format('Y-m-d')],
+            'twelve' => ['label' => '12 เดือน', 'from' => now()->subYear()->addDay()->format('Y-m-d')],
+            'year' => ['label' => 'ปีนี้', 'from' => null],
+        ];
+        $activeShortcut = null;
+        if (!request('from') && !request('to')) {
+            $activeShortcut = 'year';
+        } elseif (!request('to')) {
+            $activeShortcut = collect($slaShortcuts)->search(fn ($s, $key) => $key !== 'year' && $s['from'] === request('from')) ?: null;
+        }
+    @endphp
+    @php
+        // every late job (not just the 20 the panel shows): the print dialog lets the user choose among all of them
+        $printRows = collect($breachedTickets)->map(fn ($t) => [
+            'id' => $t->id,
+            'no' => (string) $t->request_no,
+            'title' => (string) $t->title,
+            'dept' => (string) ($t->department?->name_th ?? ($t->department?->name_en ?? '-')),
+            'late' => $t->overdueLabel(now()),
+        ])->values();
+    @endphp
     <div class="sticky top-16 z-20 bg-white/90 backdrop-blur border-b border-slate-200" x-data="{ showFilters: window.innerWidth >= 768 }">
         <div class="px-4 md:px-6 lg:px-8 py-4">
             <div class="flex flex-wrap items-start justify-between gap-4">
@@ -28,24 +57,17 @@
                         <span class="material-symbols-outlined text-[16px]">filter_list</span>
                         <span x-text="showFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรอง'"></span>
                     </button>
-                    <button type="button" @click="showSignModal = true"
-                        class="inline-flex items-center overflow-hidden rounded border border-slate-200 bg-white text-[13px] font-bold text-slate-700 hover:bg-slate-50 transition-all group">
-                        <span
-                            class="px-2.5 py-2 bg-slate-50 flex items-center justify-center text-slate-500 group-hover:text-slate-700 border-r border-slate-100">
-                            <span class="material-symbols-outlined text-[17px]">print</span>
-                        </span>
-                        <span class="px-3 py-2 leading-none">รายงานสรุป</span>
-                    </button>
-                    <button type="button" onclick="window.location.reload()"
-                        class="inline-flex items-center overflow-hidden rounded bg-[#0F2D5C] text-[13px] font-bold text-white hover:bg-[#0F2D5C]/90 transition-all group active:scale-95">
-                        <span
-                            class="px-2.5 py-2 bg-black/10 flex items-center justify-center text-white/90 group-hover:text-white border-r border-white/10">
-                            <span class="material-symbols-outlined text-[17px]">refresh</span>
-                        </span>
-                        <span class="px-3 py-2 leading-none">ล่าสุด</span>
-                    </button>
+                    {{-- Bare icons, not a bordered/filled button of any size — same `icon-lg` (40px, a 24px glyph) as the
+                         live chat page's own refresh icon (chat/index.blade.php, #btnHeaderRefresh) and the paperclip/
+                         camera pair and job-page assign-team icon elsewhere. `ghost-brand`, not plain `ghost`: this whole
+                         page is navy (the submit button, the active shortcut pill, every focus ring), and plain ghost's
+                         neutral grey read as too faint to notice against it. --}}
+                    <x-ui.button type="button" @click="showSignModal = true" variant="ghost-brand" size="icon-lg"
+                        icon="print" aria-label="รายงานสรุป" title="รายงานสรุป" />
+                    <x-ui.button type="button" onclick="window.location.reload()" variant="ghost-brand" size="icon-lg"
+                        icon="refresh" aria-label="รีเฟรชข้อมูลล่าสุด" title="รีเฟรชข้อมูลล่าสุด" />
 
-                    {{-- Signature Modal Teleport --}}
+                    {{-- Print dialog: which late jobs go in the report, a note, and the preparer's signature. Teleported to the body. --}}
                     <template x-teleport="body">
                         <div x-show="showSignModal"
                             class="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
@@ -54,63 +76,76 @@
                             x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
                             style="display: none;">
 
-                            <div class="bg-white rounded-xl w-full max-w-lg overflow-hidden border border-slate-200"
-                                @click.away="showSignModal = false" x-data="{
-                                    pad: null,
-                                    initPad() {
-                                        const canvas = this.$refs.canvas;
-                                        if (!canvas) return;
-                                
-                                        if (canvas.offsetWidth === 0) {
-                                            setTimeout(() => this.initPad(), 50);
-                                            return;
-                                        }
-                                
-                                        const ratio = Math.max(window.devicePixelRatio || 1, 1);
-                                        canvas.width = canvas.offsetWidth * ratio;
-                                        canvas.height = canvas.offsetHeight * ratio;
-                                        canvas.getContext('2d').scale(ratio, ratio);
-                                
-                                        if (typeof SignaturePad === 'undefined') {
-                                            console.error('SignaturePad is not defined');
-                                            return;
-                                        }
-                                
-                                        this.pad = new SignaturePad(canvas, {
-                                            backgroundColor: 'rgba(255, 255, 255, 0)',
-                                            penColor: '#0F2D5C',
-                                            minWidth: 1.5,
-                                            maxWidth: 4
-                                        });
-                                    },
-                                    clearPad() {
-                                        this.pad && this.pad.clear();
-                                    },
-                                    submitReport() {
-                                        if (!this.pad || this.pad.isEmpty()) {
-                                            alert('กรุณาลงนามก่อนพิมพ์รายงาน');
-                                            return;
-                                        }
-                                        const dataUrl = this.pad.toDataURL('image/png');
-                                        document.getElementById('sig-input').value = dataUrl;
-                                        document.getElementById('pdf-form').submit();
-                                        this.showSignModal = false;
-                                    }
-                                }" x-init="$watch('showSignModal', value => { if (value) { $nextTick(() => initPad()); } })">
+                            <div class="bg-white rounded-md w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200"
+                                @click.away="showSignModal = false" x-data="slaPrintDialog(@js($printRows))">
 
                                 <div
-                                    class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                                    <h3 class="text-lg font-semibold text-slate-900">ลงชื่อเพื่อพิมม์รายงาน</h3>
+                                    class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+                                    <h3 class="text-lg font-semibold text-slate-900">พิมพ์รายงานสรุป SLA</h3>
                                     <button @click="showSignModal = false"
                                         class="text-slate-400 hover:text-slate-600 transition-colors">
                                         <span class="material-symbols-outlined">close</span>
                                     </button>
                                 </div>
 
-                                <div class="p-6">
-                                    <div class="mb-4">
-                                        <label
-                                            class="block text-[13px] font-medium text-slate-700 mb-2">ลายเซ็นผู้อนุมัติ</label>
+                                <div class="p-6 overflow-y-auto space-y-6">
+                                    {{-- 1. which late jobs the report lists --}}
+                                    <section>
+                                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                            <label class="block text-[13px] font-medium text-slate-700">งานที่เกินเวลาที่จะแสดงในรายงาน</label>
+                                            <span class="text-[12px] text-slate-500" x-show="rows.length > 0">
+                                                เลือก <b class="text-slate-800" x-text="selected.length"></b> จาก <span x-text="rows.length"></span> รายการ
+                                            </span>
+                                        </div>
+
+                                        <template x-if="rows.length === 0">
+                                            <div class="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-4">
+                                                <x-ui.empty-state icon="verified_user">ไม่มีงานที่เกินเวลาในขณะนี้ รายงานจะไม่มีตารางรายการ</x-ui.empty-state>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="rows.length > 0">
+                                            <div>
+                                                <div class="flex flex-wrap items-center gap-2 mb-2">
+                                                    <input type="text" x-model="q" placeholder="ค้นหาเลขที่ ชื่อปัญหา หรือแผนก..."
+                                                        class="min-w-0 flex-1 rounded-md border border-slate-200 px-3 py-1.5 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/30">
+                                                    <button type="button" @click="selectShown()"
+                                                        class="text-[12px] font-semibold text-[#0F2D5C] hover:underline">เลือกทั้งหมด</button>
+                                                    <button type="button" @click="clearShown()"
+                                                        class="text-[12px] font-semibold text-slate-500 hover:text-rose-600 hover:underline">ล้างที่เลือก</button>
+                                                </div>
+
+                                                <div class="max-h-56 overflow-y-auto rounded-md border border-slate-200 divide-y divide-slate-100">
+                                                    <template x-for="r in shown" :key="r.id">
+                                                        <label class="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-slate-50">
+                                                            <input type="checkbox" :checked="isOn(r.id)" @change="toggle(r.id)"
+                                                                class="h-4 w-4 shrink-0 rounded border-slate-300 text-[#0F2D5C] focus:ring-[#0F2D5C]/30">
+                                                            <span class="w-[88px] shrink-0 text-[12px] font-semibold text-slate-700" x-text="'#' + r.no"></span>
+                                                            <span class="min-w-0 flex-1 truncate text-[13px] text-slate-800" x-text="r.title"></span>
+                                                            <span class="hidden w-32 shrink-0 truncate text-[12px] text-slate-500 sm:block" x-text="r.dept"></span>
+                                                            <span class="shrink-0 text-[12px] font-bold text-rose-600" x-text="r.late"></span>
+                                                        </label>
+                                                    </template>
+                                                    <x-ui.empty-state x-show="shown.length === 0" icon="search_off" class="px-3 py-4">ไม่พบรายการที่ค้นหา</x-ui.empty-state>
+                                                </div>
+                                                <p class="mt-2 text-[11px] text-slate-500" x-show="selected.length < rows.length">
+                                                    รายงานจะระบุว่าแสดงเฉพาะบางรายการ (เช่น "แสดง <span x-text="selected.length"></span> จากทั้งหมด <span x-text="rows.length"></span> รายการ")
+                                                </p>
+                                            </div>
+                                        </template>
+                                    </section>
+
+                                    {{-- 2. a note that goes on the paper --}}
+                                    <section>
+                                        <label class="block text-[13px] font-medium text-slate-700 mb-2">ข้อสังเกต / ข้อเสนอแนะ <span class="font-normal text-slate-400">(ไม่บังคับ)</span></label>
+                                        <textarea x-model="note" rows="3" maxlength="1000"
+                                            placeholder="เช่น สาเหตุที่งานล่าช้า หรือแนวทางแก้ไข"
+                                            class="w-full rounded-md border border-slate-200 px-3 py-2 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/30" data-counter></textarea>
+                                    </section>
+
+                                    {{-- 3. the preparer signs --}}
+                                    <section>
+                                        <label class="block text-[13px] font-medium text-slate-700 mb-2">ลายเซ็นผู้จัดทำรายงาน</label>
                                         <div class="border-2 border-dashed border-slate-200 rounded-md bg-slate-50 overflow-hidden relative"
                                             style="height: 200px;">
                                             <canvas x-ref="canvas" class="w-full h-full cursor-crosshair"></canvas>
@@ -120,11 +155,11 @@
                                             </div>
                                         </div>
                                         <p class="mt-2 text-[11px] text-slate-500 italic text-center">*
-                                            ลายเซ็นนี้จะปรากฏในหน้าสุดท้ายของรายงาน PDF</p>
-                                    </div>
+                                            ลายเซ็นนี้จะปรากฏที่ช่อง "ผู้จัดทำรายงาน" ส่วนช่อง "ผู้อนุมัติ" เว้นไว้ให้เซ็นบนกระดาษ</p>
+                                    </section>
                                 </div>
 
-                                <div class="px-6 py-4 bg-slate-50 flex justify-end gap-3">
+                                <div class="px-6 py-4 bg-slate-50 flex justify-end gap-3 shrink-0">
                                     <button @click="showSignModal = false"
                                         class="px-4 py-2 text-[13px] font-bold text-slate-600 hover:text-slate-800">ยกเลิก</button>
                                     <button @click="submitReport()"
@@ -155,21 +190,32 @@
                                 class="rounded-md border border-slate-200 px-2 py-1.5 text-[13px] focus:ring-2 focus:ring-[#0F2D5C]/20 outline-none">
                         </div>
                     </div>
+                    {{-- The same round, filled, icon-only filter-submit button the request/asset/user lists use (a
+                         44px navy or emerald circle with a magnifying glass, title "ค้นหา") — "แสดงผล" was the one
+                         filter-apply button in the app that was a rectangle with a word on it instead. --}}
                     <button type="submit"
-                        class="px-4 py-1.5 bg-[#0F2D5C] text-white rounded-md text-[13px] font-bold hover:bg-[#0F2D5C]/90 transition-all">
-                        แสดงผล
+                        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#0F2D5C] text-white hover:bg-[#0F2D5C]/90 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/45 focus:ring-offset-1"
+                        title="แสดงผล" aria-label="แสดงผล">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M21 21l-4.3-4.3M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
                     </button>
 
                     <div class="h-4 w-[1px] bg-slate-200 mx-1 hidden md:block"></div>
 
-                    <div class="flex items-center gap-3">
+                    {{-- Quick ranges, as a small set of pills rather than plain underlined links: which one (if any) is
+                         applied right now is shown filled navy, not just implied by matching a date in the inputs above. --}}
+                    <div class="flex items-center gap-2" role="group" aria-label="ช่วงเวลาด่วน">
                         <span class="text-[12px] font-medium text-slate-500">ทางลัด:</span>
-                        <a href="{{ url()->current() }}?from={{ now()->subMonths(6)->addDay()->format('Y-m-d') }}"
-                            class="text-[12px] font-medium text-[#0F2D5C] hover:underline">6 เดือน</a>
-                        <a href="{{ url()->current() }}?from={{ now()->subYear()->addDay()->format('Y-m-d') }}"
-                            class="text-[12px] font-medium text-[#0F2D5C] hover:underline">12 เดือน</a>
-                        <a href="{{ url()->current() }}"
-                            class="text-[12px] font-medium text-[#0F2D5C] hover:underline">ปีนี้</a>
+                        @foreach ($slaShortcuts as $key => $shortcut)
+                            <a href="{{ $shortcut['from'] ? url()->current() . '?from=' . $shortcut['from'] : url()->current() }}"
+                                @if ($activeShortcut === $key) aria-current="true" @endif
+                                class="rounded-md border px-2.5 py-1 text-[12px] font-semibold transition-colors {{ $activeShortcut === $key ? 'border-[#0F2D5C] bg-[#0F2D5C] text-white' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50' }}">
+                                {{ $shortcut['label'] }}
+                            </a>
+                        @endforeach
                     </div>
 
                     @if (request('from') || request('to'))
@@ -218,18 +264,12 @@
                             return $date->day . ' ' . $months[$date->month] . ' ' . ($date->year + 543);
                         };
 
-                        // ตรวจสอบว่าเป็นช่วงเวลาแนะนำตัวไหน
-                        $periodLabel = 'ช่วงวันที่';
-                        $sixMonths = now()->subMonths(5)->startOfMonth()->format('Y-m-d');
-                        $twelveMonths = now()->subMonths(11)->startOfMonth()->format('Y-m-d');
-
-                        if (!request('from') && !request('to')) {
-                            $periodLabel = 'ปีนี้';
+                        // ช่วงเวลาที่ใช้อยู่ตอนนี้ — มาจาก $activeShortcut ตัวเดียวกับที่ทำให้ปุ่มทางลัดด้านบนติดสถานะ
+                        // "เลือกอยู่" ไม่ใช่คำนวณแยกอีกชุด (ของเดิมคำนวณแยก และคลาดกับ from ที่ลิงก์ทางลัดส่งจริง ทำให้
+                        // บรรทัดนี้ไม่เคยขึ้น "6 เดือน" / "12 เดือน" แม้เพิ่งกดปุ่มนั้นมา)
+                        $periodLabel = $activeShortcut ? $slaShortcuts[$activeShortcut]['label'] : 'ช่วงวันที่';
+                        if ($activeShortcut === 'year') {
                             $fromDate = now()->startOfYear();
-                        } elseif (request('from') === $sixMonths) {
-                            $periodLabel = '6 เดือน';
-                        } elseif (request('from') === $twelveMonths) {
-                            $periodLabel = '12 เดือน';
                         }
                     @endphp
 
@@ -262,16 +302,14 @@
     <div class="w-full flex flex-col text-slate-900">
         <div class="w-full p-4 md:p-6 max-w-[1664px] mx-auto">
 
-            {{-- signature form --}}
+            {{-- what the print dialog submits: the range, the chosen jobs, a note and the signature --}}
             <form id="pdf-form" action="{{ route('maintenance.sla.report') }}" method="POST" class="hidden">
                 @csrf
                 <input type="hidden" name="from" value="{{ request('from') }}">
                 <input type="hidden" name="to" value="{{ request('to') }}">
-                <input type="hidden" name="signature" id="sig-input">
-            </form>
-            <form id="report-form" action="{{ route('maintenance.sla.report') }}" method="POST" target="_blank"
-                style="display: none;">
-                @csrf
+                <input type="hidden" name="ticket_filter" value="1">
+                <input type="hidden" name="tickets" id="tickets-input">
+                <input type="hidden" name="note" id="note-input">
                 <input type="hidden" name="signature" id="sig-input">
             </form>
 
@@ -475,20 +513,14 @@
                         {{-- Breached Tickets Tab Content --}}
                         <template x-if="activeTab === 'breached'">
                             <div class="flex flex-col gap-3 pt-4">
-                                @forelse (collect($breachedTickets)->take(20) as $t)
-                                    @php
-                                        $now = \Carbon\Carbon::now();
-                                        $diffInMins = (int) $t->sla_due_date->diffInMinutes($now);
-                                        $days = floor($diffInMins / (60 * 24));
-                                        $hrs = floor(($diffInMins % (60 * 24)) / 60);
-                                        $mins = $diffInMins % 60;
-
-                                        if ($days > 0) {
-                                            $timeStr = "+{$days} วัน {$hrs} ชม.";
-                                        } else {
-                                            $timeStr = "+{$hrs} ชม. {$mins} น.";
-                                        }
-                                    @endphp
+                                @if (count($breachedTickets) > $ticketLimit)
+                                    <p class="text-[12px] text-slate-500" style="order: -1">
+                                        แสดง {{ $ticketLimit }} รายการที่เกินเวลานานที่สุด จากทั้งหมด
+                                        {{ count($breachedTickets) }} รายการ (ค้นหาได้เฉพาะรายการที่แสดง)
+                                    </p>
+                                @endif
+                                @forelse (collect($breachedTickets)->take($ticketLimit) as $t)
+                                    @php $timeStr = $t->overdueLabel(); @endphp
                                     <a href="{{ route('maintenance.requests.show', $t->id) }}"
                                         class="p-3 border border-red-100 rounded-lg bg-red-50/30 flex items-start flex-wrap gap-3 hover:bg-red-50/60 transition-all group"
                                         x-bind:style="'order: ' + (sortAsc ? {{ $loop->index }} :
@@ -522,12 +554,8 @@
                                         </div>
                                     </a>
                                 @empty
-                                    <div
-                                        class="p-8 text-center flex flex-col items-center justify-center gap-2 opacity-60 m-auto">
-                                        <span
-                                            class="material-symbols-outlined text-4xl text-[#006c46] ms-icon">verified_user</span>
-                                        <p class="text-[#444650] font-medium text-[13px]">ไม่มีงานที่เกินเวลาในขณะนี้
-                                        </p>
+                                    <div class="p-8 m-auto">
+                                        <x-ui.empty-state icon="verified_user">ไม่มีงานที่เกินเวลาในขณะนี้</x-ui.empty-state>
                                     </div>
                                 @endforelse
                             </div>
@@ -536,10 +564,16 @@
                         {{-- At Risk Tickets Tab Content --}}
                         <template x-if="activeTab === 'atRisk'">
                             <div class="flex flex-col gap-3 pt-4">
-                                @forelse (collect($atRiskTickets)->take(20) as $t)
+                                @if (count($atRiskTickets) > $ticketLimit)
+                                    <p class="text-[12px] text-slate-500" style="order: -1">
+                                        แสดง {{ $ticketLimit }} รายการที่ใกล้ครบกำหนดที่สุด จากทั้งหมด
+                                        {{ count($atRiskTickets) }} รายการ (ค้นหาได้เฉพาะรายการที่แสดง)
+                                    </p>
+                                @endif
+                                @forelse (collect($atRiskTickets)->take($ticketLimit) as $t)
                                     @php
                                         $now = \Carbon\Carbon::now();
-                                        $diffInMins = (int) $now->diffInMinutes($t->sla_due_date);
+                                        $diffInMins = (int) $now->diffInMinutes($t->slaDeadline($now));
                                         // 4 hours warning baseline (total = 240 mins)
                                         $pct = min(100, max(0, 100 - ($diffInMins / (4 * 60)) * 100));
                                         $hrs = floor($diffInMins / 60);
@@ -586,12 +620,8 @@
                                         </div>
                                     </a>
                                 @empty
-                                    <div
-                                        class="p-8 text-center flex flex-col items-center justify-center gap-2 opacity-60 m-auto">
-                                        <span
-                                            class="material-symbols-outlined text-4xl text-[#006c46] ms-icon">check_circle</span>
-                                        <p class="text-[#444650] font-medium text-[13px]">
-                                            ไม่มีงานที่ใกล้ครบกำหนดในขณะนี้</p>
+                                    <div class="p-8 m-auto">
+                                        <x-ui.empty-state icon="check_circle">ไม่มีงานที่ใกล้ครบกำหนดในขณะนี้</x-ui.empty-state>
                                     </div>
                                 @endforelse
                             </div>
@@ -692,5 +722,5 @@
 @endsection
 
 @section('scripts')
-    @vite(['resources/js/settings/sla/dashboard.js'])
+    @vite(['resources/js/maintenance/sla/dashboard.js'])
 @endsection

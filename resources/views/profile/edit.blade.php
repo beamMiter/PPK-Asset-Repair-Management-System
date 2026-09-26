@@ -33,6 +33,13 @@
         </div>
 
         <div class="px-4 md:px-6 lg:px-8 py-10 max-w-4xl mx-auto w-full">
+            @if ($user->must_change_password)
+                <div class="mb-8 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-[13px] text-amber-800 flex items-start gap-2" role="alert">
+                    <span class="material-symbols-outlined text-[18px] mt-px">lock_reset</span>
+                    <span>ผู้ดูแลระบบเป็นผู้ตั้งรหัสผ่านให้คุณ กรุณาตั้งรหัสผ่านใหม่ในส่วน "เปลี่ยนรหัสผ่าน" ด้านล่างก่อนใช้งานระบบต่อ</span>
+                </div>
+            @endif
+
             @if (session('status'))
                 <div
                     class="mb-8 rounded-lg bg-emerald-50 border border-emerald-100 px-4 py-3 text-[13px] text-emerald-700 flex items-center gap-2">
@@ -111,7 +118,7 @@
                         <div class="md:col-span-2">
                             <input id="name" name="name" type="text" value="{{ old('name', $user->name) }}"
                                 required
-                                class="w-full rounded-lg border-slate-200 text-[15px] py-2.5 focus:ring-emerald-600 focus:border-emerald-600 @error('name') border-rose-400 @enderror">
+                                class="w-full rounded-lg border-slate-200 text-[15px] py-2.5 focus:ring-emerald-600 focus:border-emerald-600 @error('name') border-rose-400 @enderror" maxlength="255">
                             @error('name')
                                 <p class="mt-1 text-[12px] text-rose-600">{{ $message }}</p>
                             @enderror
@@ -124,7 +131,7 @@
                             class="text-[14px] font-bold text-slate-500 uppercase tracking-wide">อีเมล</label>
                         <div class="md:col-span-2">
                             <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}"
-                                class="w-full rounded-lg border-slate-200 text-[15px] py-2.5 focus:ring-emerald-600 focus:border-emerald-600 @error('email') border-rose-400 @enderror">
+                                class="w-full rounded-lg border-slate-200 text-[15px] py-2.5 focus:ring-emerald-600 focus:border-emerald-600 @error('email') border-rose-400 @enderror" maxlength="255">
                         </div>
                     </div>
 
@@ -151,6 +158,53 @@
                     </div>
                 </div>
             </form>
+
+            {{-- เปลี่ยนรหัสผ่าน — its own form (PUT /password): the routes and the controller were there, the page for them was not, so
+                 nobody could change the password they were first given --}}
+            @php $passwordErrors = $errors->updatePassword; @endphp
+            <form id="password-form" method="POST" action="{{ route('password.update') }}" class="border-t border-slate-200"
+                data-dirty-check="true">
+                @csrf
+                @method('PUT')
+
+                <div class="grid grid-cols-1 md:grid-cols-3 py-8 gap-6">
+                    <div>
+                        <h3 class="text-[15px] font-bold text-slate-800">เปลี่ยนรหัสผ่าน</h3>
+                        <p class="text-[12px] text-slate-500 mt-1">อย่างน้อย 8 ตัวอักษร ต้องมีทั้งตัวอักษรและตัวเลข เมื่อเปลี่ยนแล้ว
+                            อุปกรณ์เครื่องอื่นที่เข้าสู่ระบบอยู่จะถูกออกจากระบบ</p>
+                    </div>
+
+                    <div class="md:col-span-2 space-y-4">
+                        <div>
+                            <label for="current_password" class="block text-[13px] font-medium text-slate-600">รหัสผ่านปัจจุบัน</label>
+                            <input id="current_password" name="current_password" type="password" required autocomplete="current-password"
+                                class="mt-1 w-full rounded-lg border-slate-200 text-[15px] py-2.5 focus:ring-emerald-600 focus:border-emerald-600 @if ($passwordErrors->has('current_password')) border-rose-400 @endif">
+                            @if ($passwordErrors->has('current_password'))
+                                <p class="mt-1 text-[12px] text-rose-600">{{ $passwordErrors->first('current_password') }}</p>
+                            @endif
+                        </div>
+
+                        <div>
+                            <label for="new_password" class="block text-[13px] font-medium text-slate-600">รหัสผ่านใหม่</label>
+                            <input id="new_password" name="password" type="password" required autocomplete="new-password"
+                                class="mt-1 w-full rounded-lg border-slate-200 text-[15px] py-2.5 focus:ring-emerald-600 focus:border-emerald-600 @if ($passwordErrors->has('password')) border-rose-400 @endif">
+                            @if ($passwordErrors->has('password'))
+                                <p class="mt-1 text-[12px] text-rose-600">{{ $passwordErrors->first('password') }}</p>
+                            @endif
+                        </div>
+
+                        <div>
+                            <label for="new_password_confirmation" class="block text-[13px] font-medium text-slate-600">ยืนยันรหัสผ่านใหม่</label>
+                            <input id="new_password_confirmation" name="password_confirmation" type="password" required autocomplete="new-password"
+                                class="mt-1 w-full rounded-lg border-slate-200 text-[15px] py-2.5 focus:ring-emerald-600 focus:border-emerald-600">
+                        </div>
+
+                        <div class="flex justify-end pt-2">
+                            <x-ui.button type="submit" variant="primary" icon="lock_reset">เปลี่ยนรหัสผ่าน</x-ui.button>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -158,7 +212,7 @@
     <div id="cropper-modal" class="fixed inset-0 z-[100] hidden overflow-y-auto">
         <div class="flex min-h-screen items-center justify-center p-4">
             <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"></div>
-            <div class="relative w-full max-w-xl rounded-2xl bg-white overflow-hidden">
+            <div class="relative w-full max-w-xl rounded-md bg-white overflow-hidden">
                 <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                     <h3 class="text-lg font-bold text-slate-900">ตัดรูปโปรไฟล์</h3>
                     <button type="button" id="cropper-close" class="text-slate-400 hover:text-slate-600">

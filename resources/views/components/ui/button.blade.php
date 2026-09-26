@@ -16,12 +16,16 @@
            ghost     no border — icon buttons such as a dialog close (X)
            ghost-danger  ghost, rose icon — icon-only destructive tool (delete)
            ghost-warning ghost, amber icon — icon-only lock tool (amber = "locked" everywhere in chat)
+           ghost-brand   ghost, navy icon — a bare icon that still has to read as this page's own colour
+                         (the SLA dashboard, all navy), not the neutral grey of plain ghost
   size     md        h-11 (44px) — the same height as a form field (.ui-input), so a button beside an input lines up
                      and stays a comfortable tap target. Page + dialog actions.                       (default)
            sm        h-8 — dense spots: table rows, cards, inline helpers
-           square    same height as md, square — icon-only next to inputs (attach file, camera)
+           square    same height as md, square — icon-only next to inputs
            icon      h-8 w-8 round — icon-only, small (dialog close X). Icon-only buttons need `aria-label`
-           icon-lg   h-10 w-10 round, 24px icon — icon-only tools that should read at a glance (chat thread header)
+           icon-lg   h-10 w-10 round, 24px icon — icon-only tools that should read at a glance (chat thread header, the
+                     paperclip and camera of <x-ui.attach-buttons>, the assign-team icon of the job page: with variant ghost
+                     they are bare icons, no box)
   icon     Material Symbols name shown before the label
   split    with `icon`: put the icon in a darker block on the left (the form-submit look)
 
@@ -70,6 +74,7 @@
         'ghost'          => 'text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus:ring-slate-200',
         'ghost-danger'   => 'text-rose-500 hover:bg-rose-50 hover:text-rose-600 focus:ring-rose-100',
         'ghost-warning'  => 'text-amber-600 hover:bg-amber-50 hover:text-amber-700 focus:ring-amber-100',
+        'ghost-brand'    => 'text-[#0F2D5C] hover:bg-[#0F2D5C]/10 hover:text-[#1a3d75] focus:ring-[#0F2D5C]/20',
     ];
 
     $size = isset($sizes[$size]) ? $size : 'md';

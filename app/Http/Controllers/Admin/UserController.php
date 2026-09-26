@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
 use App\Support\Toast;
+use App\Support\Like;
 
 class UserController extends Controller
 {
@@ -57,10 +57,10 @@ class UserController extends Controller
         if ($search !== '') {
             $needle = mb_strtolower($search);
             $q->where(function ($qq) use ($needle) {
-                $qq->whereRaw('LOWER(name) LIKE ?', ["%{$needle}%"])
-                   ->orWhereRaw('LOWER(email) LIKE ?', ["%{$needle}%"])
-                   ->orWhereRaw('LOWER(citizen_id) LIKE ?', ["%{$needle}%"])
-                   ->orWhereRaw('LOWER(COALESCE(department, \'\')) LIKE ?', ["%{$needle}%"]);
+                $qq->whereRaw('LOWER(name) LIKE ?', [Like::contains($needle)])
+                   ->orWhereRaw('LOWER(email) LIKE ?', [Like::contains($needle)])
+                   ->orWhereRaw('LOWER(citizen_id) LIKE ?', [Like::contains($needle)])
+                   ->orWhereRaw('LOWER(COALESCE(department, \'\')) LIKE ?', [Like::contains($needle)]);
             });
         }
 
@@ -100,140 +100,6 @@ class UserController extends Controller
             ],
             'departments' => $departments,
         ]);
-    }
-
-    /**
-     * ฟอร์มสร้างผู้ใช้ใหม่
-     */
-    public function create()
-    {
-        $currentUser = Auth::user();
-        if ($currentUser->isTechnician() && !$currentUser->isAdmin() && !$currentUser->isSupervisor()) {
-            abort(403, 'เฉพาะผู้ดูแลระบบและหัวหน้างานเท่านั้นทื่สามารถสร้างผู้ใช้ได้');
-        }
-
-        $roleCodes   = User::availableRoles();
-        $roleLabels  = User::roleLabels();
-
-        $departments = Department::orderBy('code')->get([
-            'id',
-            'code',
-            'name_th',
-            'name_en',
-        ]);
-
-        return view('admin.users.create', [
-            'roles'       => $roleCodes,
-            'roleLabels'  => $roleLabels,
-            'departments' => $departments,
-        ]);
-    }
-
-    /**
-     * บันทึกผู้ใช้ใหม่
-     */
-    public function store(Request $request)
-    {
-        $currentUser = Auth::user();
-        if ($currentUser->isTechnician() && !$currentUser->isAdmin() && !$currentUser->isSupervisor()) {
-            abort(403, 'เฉพาะผู้ดูแลระบบและหัวหน้างานเท่านั้นทื่สามารถสร้างผู้ใช้ได้');
-        }
-
-        $availableRoles = User::availableRoles();
-
-        $validator = Validator::make(
-            $request->all(),
-            [
-                'name'        => ['required', 'string', 'max:255'],
-                'citizen_id'  => [
-                    'required',
-                    'digits:13',
-                    'unique:users,citizen_id',
-                ],
-                'email'       => [
-                    'nullable',
-                    'email',
-                    'max:255',
-                    'unique:users,email',
-                ],
-                'password'    => ['required', 'string', 'min:8', 'confirmed'],
-                'role'        => [
-                    'required',
-                    'string',
-                    Rule::in($availableRoles),
-                ],
-                'department'  => [
-                    'nullable',
-                    'string',
-                    'max:255',
-                    Rule::exists('departments', 'code'),
-                ],
-            ],
-            [
-                'name.required'         => 'กรุณากรอกชื่อผู้ใช้',
-                'name.max'              => 'ชื่อผู้ใช้ต้องไม่เกิน :max ตัวอักษร',
-                'citizen_id.required'   => 'กรุณากรอกเลขบัตรประชาชน',
-                'citizen_id.digits'     => 'เลขบัตรประชาชนต้องมี 13 หลัก',
-                'citizen_id.unique'     => 'เลขบัตรประชาชนนี้ถูกใช้ไปแล้ว',
-                'email.email'           => 'รูปแบบอีเมลไม่ถูกต้อง',
-                'email.max'             => 'อีเมลต้องไม่เกิน :max ตัวอักษร',
-                'email.unique'          => 'อีเมลนี้ถูกใช้ไปแล้ว',
-                'password.required'     => 'กรุณากรอกรหัสผ่าน',
-                'password.min'          => 'รหัสผ่านต้องมีอย่างน้อย :min ตัวอักษร',
-                'password.confirmed'    => 'รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน',
-                'role.required'         => 'กรุณาเลือกบทบาทผู้ใช้',
-                'role.in'               => 'บทบาทที่เลือกไม่ถูกต้อง',
-                'department.max'        => 'ชื่อหน่วยงานต้องไม่เกิน :max ตัวอักษร',
-                'department.exists'     => 'หน่วยงานที่เลือกไม่ถูกต้อง',
-            ]
-        );
-
-        if ($validator->fails()) {
-            return back()
-                ->withInput()
-                ->withErrors($validator)
-                ->with('toast', Toast::error('บันทึกผู้ใช้ไม่สำเร็จ: ' . $validator->errors()->first(), 3200));
-        }
-
-        $data = $validator->validated();
-
-        // เช็คการตั้งค่า Role: เฉพาะ Admin เท่านั้นที่แอด Admin/Supervisor ได้
-        if (in_array($data['role'], [User::ROLE_ADMIN, User::ROLE_SUPERVISOR])) {
-            if (!Auth::user()->isAdmin()) {
-                return back()->withInput()->with('toast', Toast::error('เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถเพิ่มยศแอดมินหรือหัวหน้างานได้', 4000));
-            }
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $user              = new User();
-            $user->name        = $data['name'];
-            $user->citizen_id  = $data['citizen_id'];
-            $user->email       = $data['email'] ?? null;
-            $user->password    = Hash::make($data['password']);
-            $user->role        = $data['role'];
-            $user->department  = $data['department'] ?? null;
-
-            if (Schema::hasColumn('users', 'created_by')) {
-                $user->created_by = Auth::id();
-            }
-
-            $user->save();
-
-            DB::commit();
-
-            return redirect()
-                ->route('admin.users.index')
-                ->with('toast', Toast::success('สร้างผู้ใช้ใหม่เรียบร้อยแล้ว', 2800));
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            report($e);
-
-            return back()
-                ->withInput()
-                ->with('toast', Toast::error('เกิดข้อผิดพลาดระหว่างบันทึกข้อมูลผู้ใช้', 4000));
-        }
     }
 
     /**
@@ -361,6 +227,8 @@ class UserController extends Controller
 
             if (!empty($data['password'])) {
                 $user->password = Hash::make($data['password']);
+                // somebody else's password, chosen by an admin: they replace it (an admin changing their own is not asked to)
+                $user->must_change_password = $user->id !== Auth::id();
             }
 
             $user->save();
@@ -399,7 +267,15 @@ class UserController extends Controller
 
         Log::info('[Admin\UserController::suspend] account suspended', ['user_id' => $user->id, 'actor_id' => Auth::id()]);
 
-        return back()->with('toast', Toast::success("ระงับบัญชี {$user->name} แล้ว", 2800));
+        // A suspended person keeps the jobs they were on, and nothing else looks at them: say how many, so they are handed over.
+        $open = \App\Models\MaintenanceAssignment::where('user_id', $user->id)
+            ->where('status', '!=', \App\Models\MaintenanceAssignment::STATUS_CANCELLED)
+            ->whereHas('maintenanceRequest', fn ($request) => $request->whereIn('status', \App\Models\MaintenanceRequest::OPEN_STATUSES))
+            ->count();
+
+        return back()->with('toast', $open > 0
+            ? Toast::warning("ระงับบัญชี {$user->name} แล้ว แต่ยังมีงานค้าง {$open} งานที่มอบหมายให้คนนี้ กรุณามอบหมายเจ้าหน้าที่ใหม่", 6000)
+            : Toast::success("ระงับบัญชี {$user->name} แล้ว", 2800));
     }
 
     public function reactivate(User $user)

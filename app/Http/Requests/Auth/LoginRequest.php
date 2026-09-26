@@ -2,13 +2,10 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Services\LoginAttempt;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
@@ -43,67 +40,57 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * Attempt to authenticate the request's credentials.
+     * Attempt to authenticate the request's credentials (the checks themselves live in App\Services\LoginAttempt, shared with
+     * the API login).
      *
      * @throws \Illuminate\Validation\ValidationException
      */
     public function authenticate(): void
     {
-        $this->ensureIsNotRateLimited();
+        $attempt = LoginAttempt::for((string) $this->input('citizen_id'), (string) $this->ip());
+
+        $this->ensureIsNotRateLimited($attempt);
+
+        $user = $attempt->userWithPassword((string) $this->input('password'));
+
+        if (! $user) {
+            $attempt->fail();
+
+            throw ValidationException::withMessages([
+                // ✅ ผูก error กับช่อง citizen_id
+                'citizen_id' => LoginAttempt::WRONG,
+            ]);
+        }
 
         // Only after the password is right, so this message cannot be used to probe which accounts exist.
         // It still counts as an attempt, so it is no cheaper to guess against than any other account.
-        $suspended = User::where('citizen_id', $this->input('citizen_id'))->first();
-        if ($suspended && $suspended->isSuspended() && Hash::check((string) $this->input('password'), (string) $suspended->password)) {
-            RateLimiter::hit($this->throttleKey());
+        if ($user->isSuspended()) {
+            $attempt->fail();
 
             throw ValidationException::withMessages([
                 'citizen_id' => \App\Http\Middleware\EnsureAccountIsActive::MESSAGE,
             ]);
         }
 
-        if (! Auth::attempt(
-            $this->only('citizen_id', 'password'),
-            $this->boolean('remember')
-        )) {
-            RateLimiter::hit($this->throttleKey());
-
-            throw ValidationException::withMessages([
-                // ✅ ผูก error กับช่อง citizen_id
-                'citizen_id' => 'เลขบัตรประชาชนหรือรหัสผ่านไม่ถูกต้อง',
-            ]);
-        }
-
-        RateLimiter::clear($this->throttleKey());
+        Auth::login($user, $this->boolean('remember'));
+        $attempt->succeed();
     }
 
     /**
-     * Ensure the login request is not rate limited.
-     *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function ensureIsNotRateLimited(): void
+    private function ensureIsNotRateLimited(LoginAttempt $attempt): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        $seconds = $attempt->waitSeconds();
+
+        if ($seconds <= 0) {
             return;
         }
 
         event(new Lockout($this));
 
-        $seconds = RateLimiter::availableIn($this->throttleKey());
-
-        // Say it is a temporary lock-out, not "wrong password" — otherwise a locked user keeps
-        // retrying the right password and thinks login is broken.
         throw ValidationException::withMessages([
-            'citizen_id' => "พยายามเข้าสู่ระบบผิดหลายครั้งเกินไป กรุณารอ {$seconds} วินาทีแล้วลองใหม่",
+            'citizen_id' => LoginAttempt::lockedMessage($seconds),
         ]);
-    }
-
-    public function throttleKey(): string
-    {
-        // ✅ ใช้ citizen_id + IP เป็น key
-        return Str::transliterate(
-            Str::lower((string) $this->input('citizen_id')) . '|' . $this->ip()
-        );
     }
 }

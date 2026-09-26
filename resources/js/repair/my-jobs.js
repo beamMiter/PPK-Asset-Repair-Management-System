@@ -104,9 +104,14 @@
 
   const LS_KEY = "myjobs.notify.sound.enabled";
 
+  // Turbo Drive replaces the whole <body> on every visit, so nothing here may hold on to the bell or the <audio> of the
+  // page that happened to load first: the elements are looked up when they are needed, the click is caught at the
+  // document, and the state is re-read from localStorage after every visit.
+  const NOTIFY_BUTTONS = "#notifyToggleBtn, #notifyToggleBtnMobileTop, #notifyToggleBtnMobile";
+
   let soundEnabled = false;
-  let audioUnlocked = false;
-  let pendingBeep = 0;
+  let audioUnlocked = false; // the browser allows audio on this document (a Turbo visit keeps it, a reload loses it)
+  let pendingBeep = 0;       // beeps that arrived while the browser still refused to play
 
   function setNotifyUI(enabled) {
     const ids = [
@@ -186,61 +191,81 @@
     }
   }
 
-  function initRealtimeNotify() {
-    const audio = $("notifySound");
-    if (!audio) return;
+  // Unlock the browser's audio once (needs a user gesture). Returns whether audio is allowed now.
+  async function tryUnlock() {
+    if (audioUnlocked) return true;
+    if (!(await unlockAudio($("notifySound")))) return false;
+    audioUnlocked = true;
+    return true;
+  }
 
-    // restore state
+  function playPendingBeep() {
+    if (pendingBeep === 0) return;
+    pendingBeep = 0;
+    playNotifySound();
+  }
+
+  function syncNotifyUI() {
     soundEnabled = localStorage.getItem(LS_KEY) === "1";
     setNotifyUI(soundEnabled);
+  }
 
-    const toggle = async () => {
-      if (soundEnabled) {
-        soundEnabled = false;
-        localStorage.setItem(LS_KEY, "0");
-        setNotifyUI(false);
-        return;
-      }
+  async function toggleNotifySound() {
+    if (soundEnabled && audioUnlocked) {
+      soundEnabled = false;
+      localStorage.setItem(LS_KEY, "0");
+      setNotifyUI(false);
+      return;
+    }
 
-      const ok = await unlockAudio(audio);
-      if (!ok) {
-        alert("เบราว์เซอร์บล็อกเสียงอัตโนมัติ: ลองคลิกในหน้า 1 ครั้ง แล้วกดกระดิ่งอีกครั้ง");
-        return;
-      }
+    // Off → on. Also the case "on" was restored after a reload but the browser has not allowed audio yet:
+    // this click is the gesture that unlocks it — it must not switch the sound off.
+    if (!(await tryUnlock())) {
+      alert("เบราว์เซอร์บล็อกเสียงอัตโนมัติ: ลองคลิกในหน้า 1 ครั้ง แล้วกดกระดิ่งอีกครั้ง");
+      return;
+    }
 
-      audioUnlocked = true;
-      soundEnabled = true;
-      localStorage.setItem(LS_KEY, "1");
+    soundEnabled = true;
+    localStorage.setItem(LS_KEY, "1");
+    setNotifyUI(true);
+    playPendingBeep();
+  }
 
-      if (pendingBeep > 0 && audio) {
-        pendingBeep = 0;
-        try {
-          audio.currentTime = 0;
-          await audio.play();
-        } catch (e) {}
-      }
-      setNotifyUI(true);
-    };
+  // After a reload the saved "on" cannot play until the user has touched the page. The first click / key press anywhere
+  // (except on the bell itself, whose own handler deals with it) unlocks the audio, and a beep that was waiting plays.
+  async function unlockOnFirstGesture(e) {
+    if (!soundEnabled || audioUnlocked) return;
+    if (e.target?.closest?.(NOTIFY_BUTTONS)) return;
+    if (await tryUnlock()) playPendingBeep();
+  }
 
-    // Bind to all buttons
-    ["notifyToggleBtn", "notifyToggleBtnMobileTop", "notifyToggleBtnMobile"].forEach(id => {
-      const btn = $(id);
-      if (btn) btn.addEventListener("click", toggle);
-    });
+  let subscribedToNewRequests = false;
+  function subscribeToNewRequests() {
+    if (subscribedToNewRequests) return;
+    if (!$("notifySound")) return; // not a page with the bell (members have none): try again on the next visit
 
-    // ต้องมี Echo
     if (!window.Echo) {
       console.warn("[MyJobs] Echo not found. ตรวจ resources/js/echo.js และ env (Pusher/Reverb)");
       return;
     }
 
-    // subscribe + listen
+    // one subscription for the whole session: it belongs to the WebSocket, not to a page
+    subscribedToNewRequests = true;
     window.Echo.channel("maintenance-requests")
       .listen(".maintenance.created", (e) => {
         console.log("[MyJobs] maintenance.created", e);
         playNotifySound();
       });
   }
+
+  // Bound once, at the document, so they survive every Turbo visit.
+  document.addEventListener("click", (e) => {
+    if (e.target?.closest?.(NOTIFY_BUTTONS)) toggleNotifySound();
+  });
+  document.addEventListener("pointerdown", unlockOnFirstGesture, true);
+  document.addEventListener("keydown", unlockOnFirstGesture, true);
+  // the same saved setting, switched in another tab
+  window.addEventListener("storage", (e) => { if (e.key === LS_KEY) syncNotifyUI(); });
 
   // --- Inline "change job type" on a repair card (my-jobs page) ---------------
   // Delegated on document and bound once, so Turbo re-visits don't stack
@@ -345,10 +370,8 @@
     hideLoader();
     if ($("donut")) renderDonut(); // เฉพาะหน้า my-jobs
 
-    // initRealtimeNotify ทำงานครั้งเดียว (Echo subscription ผูกกับ WebSocket ไม่ควร subscribe ซ้ำ)
-    if (!window.__realtimeNotifyInit) {
-      window.__realtimeNotifyInit = true;
-      initRealtimeNotify();
-    }
+    // every visit gets a new top bar: show the saved sound state on it. The Echo subscription is made once.
+    syncNotifyUI();
+    subscribeToNewRequests();
   });
 })();

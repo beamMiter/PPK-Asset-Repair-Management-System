@@ -55,8 +55,3 @@ Thumbs.db
 
 # Optional SQLite dev db files
 database/*.sqlite
-
-# Local test / debug files
-my_test_render.html
-scratch_test_search.php
-/tmp/

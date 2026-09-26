@@ -127,8 +127,8 @@
                 'border' => 'border-emerald-200',
             ],
             'closed' => [
-                'icon' => 'fact_check',
-                'color' => 'text-emerald-800',
+                'icon' => 'task',
+                'color' => 'text-emerald-500',
                 'bg' => 'bg-emerald-50',
                 'border' => 'border-emerald-300',
             ],
@@ -154,28 +154,18 @@
                 aria-hidden="true"></div>
 
             <div class="relative z-20 px-[clamp(20px,3vw,44px)] pt-[44px]">
-                <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                    <div class="hero-left">
-                        <h1
-                            class="mt-[10px] text-white text-[32px] md:text-[38px] font-semibold leading-tight tracking-tight">
-                            Main Dashboard</h1>
-                        <p class="mt-[12px] text-white/90 text-sm font-medium leading-[1.55]">
-                            สรุปภาพรวมและสถิติการแจ้งซ่อมทั้งหมด<br>
-                            อัปเดตล่าสุด: {{ now()->format('d F Y') }}
-                        </p>
-                    </div>
-
-                    <div class="hero-right flex items-center gap-3 md:mt-[18px]">
-                        <a href="{{ route('maintenance.requests.create') }}"
-                            class="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-[13px] font-medium text-[#0B1F3B] hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-white/40 transition-all active:scale-95"
-                            onclick="showLoader()">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
-                            </svg>
-                            สร้างทะเบียนแจ้งซ่อม
-                        </a>
-                    </div>
+                {{-- The "สร้างทะเบียนแจ้งซ่อม" button that used to sit here went to the same place the request list
+                     page's own "+ สร้างใบแจ้งซ่อม" button already does, one click away from every role's sidebar — this
+                     is a KPI overview (charts, breakdowns, technician workload), and every role lands here after
+                     login (RouteServiceProvider::HOME), so it was a create action on a read-only page, duplicated. --}}
+                <div class="hero-left">
+                    <h1
+                        class="mt-[10px] text-white text-[32px] md:text-[38px] font-semibold leading-tight tracking-tight">
+                        Main Dashboard</h1>
+                    <p class="mt-[12px] text-white/90 text-sm font-medium leading-[1.55]">
+                        สรุปภาพรวมและสถิติการแจ้งซ่อมทั้งหมด<br>
+                        อัปเดตล่าสุด: {{ now()->format('d F Y') }}
+                    </p>
                 </div>
             </div>
         </header>
@@ -390,7 +380,7 @@
                                 <div class="relative">
                                     <div
                                         class="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-[#0F2D5C]/20 to-[#0F2D5C]/5 group-hover:from-[#0F2D5C] group-hover:to-blue-500 transition-all duration-300">
-                                        <img src="{{ $tech['avatar'] ?: 'https://ui-avatars.com/api/?name=' . urlencode($tech['name']) . '&background=00275f&color=fff' }}"
+                                        <img src="{{ $tech['avatar'] ?: \App\Support\InitialsAvatar::url($tech['name'], 112) }}"
                                             alt="{{ $tech['name'] }}"
                                             class="w-full h-full rounded-full object-cover border-2 border-white " />
                                     </div>

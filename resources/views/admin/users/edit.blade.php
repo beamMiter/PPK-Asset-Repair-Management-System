@@ -73,7 +73,7 @@
             @csrf
             @method('PUT')
 
-            {{-- Include Form: เรียกใช้ Input fields ชุดเดียวกับ Create --}}
+            {{-- Include Form: the input fields of a user --}}
             @include('admin.users._form', [
                 'user' => $user,
                 'roles' => $roles,
@@ -120,8 +120,6 @@
                             <x-ui.button type="submit" variant="warning" icon="block">ระงับบัญชี</x-ui.button>
                         </form>
                     @endif
-                @else
-                    <span class="text-[13px] text-amber-700">ไม่สามารถระงับบัญชีของตัวเองได้</span>
                 @endif
             </div>
         </div>

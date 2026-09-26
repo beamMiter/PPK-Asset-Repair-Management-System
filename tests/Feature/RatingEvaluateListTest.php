@@ -47,7 +47,7 @@ class RatingEvaluateListTest extends TestCase
         $ids = $this->actingAs($reporter)
             ->get(route('maintenance.requests.rating.evaluate'))
             ->assertOk()
-            ->viewData('pendingRequests')
+            ->viewData('requests')
             ->pluck('id')
             ->all();
 

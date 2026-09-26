@@ -80,7 +80,7 @@
             'in_progress' => 'autorenew',
             'on_hold' => 'pause_circle',
             'resolved' => 'task_alt',
-            'closed' => 'verified',
+            'closed' => 'task',
             'cancelled' => 'cancel',
             'rejected' => 'error',
             default => 'info',
@@ -93,7 +93,7 @@
             'in_progress' => 'text-blue-600',
             'on_hold' => 'text-slate-500',
             'resolved' => 'text-emerald-700',
-            'closed' => 'text-emerald-800',
+            'closed' => 'text-emerald-700',
             'cancelled' => 'text-rose-600',
             'rejected' => 'text-rose-700',
             default => 'text-slate-500',
@@ -258,7 +258,9 @@
                     <form method="GET" action="{{ route($myJobsRoute) }}"
                         class="mt-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end" onsubmit="showLoader()">
 
-                        <div class="md:col-span-12 lg:col-span-3 min-w-0">
+                        {{-- lg:2, not 3: freed a column for สถานะใบงาน below, whose longest label needed it more than
+                             a placeholder hint does (a clipped placeholder loses nothing already chosen). --}}
+                        <div class="md:col-span-12 lg:col-span-2 min-w-0">
                             <label for="q" class="mb-1 block text-[12px] text-slate-600">คำค้นหา</label>
                             <div class="relative">
                                 <input id="q" type="text" name="q" value="{{ $q }}"
@@ -289,7 +291,9 @@
                             </select>
                         </div>
 
-                        <div class="md:col-span-3 lg:col-span-2">
+                        {{-- lg:3, not 2: its longest label ("อนุมัติผลการซ่อมบำรุง") barely fit a 2-column box (คำค้นหา
+                             gave up the column that used to leave it that tight). --}}
+                        <div class="md:col-span-3 lg:col-span-3">
                             <label for="status" class="mb-1 block text-[12px] text-slate-600">สถานะใบงาน</label>
                             <select id="status" name="status"
                                 class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800
@@ -636,13 +640,8 @@
                     </div> {{-- end card --}}
 
                 @empty
-                    <div class="bg-white border border-slate-200 rounded-md p-12 text-center">
-                        <svg class="mx-auto h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        <p class="mt-4 text-sm text-slate-500">ไม่พบรายการงานตามเงื่อนไขที่เลือก</p>
+                    <div class="bg-white border border-slate-200 rounded-md p-8">
+                        <x-ui.empty-state icon="assignment">ไม่พบรายการงานตามเงื่อนไขที่เลือก</x-ui.empty-state>
                     </div>
                 @endforelse
 

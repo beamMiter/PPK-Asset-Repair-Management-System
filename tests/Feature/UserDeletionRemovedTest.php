@@ -56,4 +56,17 @@ class UserDeletionRemovedTest extends TestCase
         $this->actingAs($admin)->get(route('admin.users.edit', $other))->assertOk();
         $this->assertTrue(Route::has('admin.users.update'));
     }
+
+    public function test_nobody_can_delete_their_own_account_from_the_profile_route(): void
+    {
+        foreach (['admin', 'it_support', 'member'] as $role) {
+            $user = User::factory()->create(['role' => $role]);
+
+            $this->actingAs($user)->delete('/profile', ['password' => 'password'])->assertStatus(405);
+
+            $this->assertNotNull(User::find($user->id), "$role account must still exist");
+        }
+
+        $this->assertFalse(Route::has('profile.destroy'));
+    }
 }

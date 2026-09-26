@@ -17,7 +17,8 @@ class MaintenanceRequestPolicy
         // 'rate' is excluded from admin bypass so that the full rate() policy
         // always runs — this ensures the Rate button is hidden even for admins
         // once a job has already been rated (1:1 enforcement in the UI).
-        if ($ability === 'rate') {
+        // 'assign' is excluded too: not even an admin edits the team of a finished job (it is the record of who did the work).
+        if (in_array($ability, ['rate', 'assign'], true)) {
             return null;
         }
 
@@ -53,9 +54,25 @@ class MaintenanceRequestPolicy
             ->exists();
     }
 
-    protected function isOpenForAcknowledge(MR $req): bool
+    protected function isOpenForAcknowledge(MR $req, ?User $user = null): bool
     {
-        return empty($req->technician_id) && $req->status === MR::STATUS_PENDING;
+        if ($req->status !== MR::STATUS_PENDING) return false;
+
+        // nobody owns it yet — or it is already this worker's (accept / reject below say the same)
+        return empty($req->technician_id) || ($user !== null && (int) $req->technician_id === (int) $user->id);
+    }
+
+    /** Nobody is on the job: no person in charge and no team member who has not been taken off. */
+    protected function hasNoTeam(MR $req): bool
+    {
+        return empty($req->technician_id)
+            && ! $req->assignments()->where('status', '!=', MaintenanceAssignment::STATUS_CANCELLED)->exists();
+    }
+
+    /** Accepted and nobody is on it yet: every technician may start it (self-dispatch), so every technician may open it. */
+    protected function isOpenForStart(MR $req): bool
+    {
+        return $req->status === MR::STATUS_ACCEPTED && $this->hasNoTeam($req);
     }
 
     protected function isOpenForAccept(User $user, MR $req): bool
@@ -78,10 +95,18 @@ class MaintenanceRequestPolicy
         if ($this->isAdminTeam($user)) return Response::allow();
 
         // เจ้าหน้าที่ดูได้กว้างขึ้น (ดูได้เมื่ออยู่ในคิวรอรับทราบ หรือ รอคนมาตอบรับ)
-        if ($this->isWorker($user) && ($this->isOpenForAcknowledge($req) || $this->isOpenForAccept($user, $req))) return Response::allow();
+        if ($this->isWorker($user) && ($this->isOpenForAcknowledge($req, $user) || $this->isOpenForAccept($user, $req) || $this->isOpenForStart($req))) return Response::allow();
 
         // ผู้ที่ถูกมอบหมาย/รับผิดชอบ
         if ($this->isAssignedWorker($user, $req)) return Response::allow();
+
+        // A cancelled / not-taken job marks its team "cancelled", but the people who were on it still see what became of it —
+        // the technician who cancels a job is sent to its page.
+        if (
+            $this->isWorker($user)
+            && in_array((string) $req->status, [MR::STATUS_CANCELLED, MR::STATUS_REJECTED], true)
+            && $req->assignments()->where('user_id', $user->id)->exists()
+        ) return Response::allow();
 
         // ผู้แจ้ง
         if ((int) $req->reporter_id === (int) $user->id) return Response::allow();
@@ -127,6 +152,30 @@ class MaintenanceRequestPolicy
         return Response::deny('อนุญาตให้เปลี่ยนสถานะเฉพาะผู้รับผิดชอบงานนี้หรือผู้ดูแลระบบเท่านั้น');
     }
 
+    /**
+     * moveTo — may $user move $req to $target? Exactly what the button for that step asks, so the generic transition
+     * endpoint and `PUT … status` cannot do what the buttons refuse: a technician closing a job on the reporter's behalf,
+     * a job jumping from in_progress to closed, a reporter cancelling a pending request. Whether the step exists at all is
+     * still the transition map's call (409).
+     */
+    public function moveTo(User $user, MR $req, string $target): Response
+    {
+        $ability = match ($target) {
+            MR::STATUS_ACKNOWLEDGED => 'acknowledge',
+            MR::STATUS_ACCEPTED     => 'accept',
+            MR::STATUS_IN_PROGRESS  => $req->status === MR::STATUS_ON_HOLD ? 'resume' : 'startWork',
+            MR::STATUS_ON_HOLD      => 'hold',
+            MR::STATUS_RESOLVED     => 'resolve',
+            MR::STATUS_CLOSED       => 'close',
+            MR::STATUS_CANCELLED    => 'cancel',
+            MR::STATUS_REJECTED     => 'reject',
+            default                 => null,
+        };
+
+        // `pending` and the legacy `completed` are reachable from no status: the transition map refuses them for everybody
+        return $ability === null ? Response::allow() : $this->{$ability}($user, $req);
+    }
+
     // acknowledge
     public function acknowledge(User $user, MR $req): Response
     {
@@ -134,7 +183,7 @@ class MaintenanceRequestPolicy
 
         if (!$this->isWorker($user)) return Response::deny('เฉพาะเจ้าหน้าที่เท่านั้น');
 
-        if ($this->isOpenForAcknowledge($req)) return Response::allow();
+        if ($this->isOpenForAcknowledge($req, $user)) return Response::allow();
 
         return Response::deny('งานนี้ไม่อยู่ในสถานะที่รับทราบได้');
     }
@@ -223,11 +272,12 @@ class MaintenanceRequestPolicy
             return Response::deny('อนุญาตให้ปิดซ่อมเฉพาะผู้ที่ได้รับมอบหมายเท่านั้น');
         }
 
-        if (in_array($req->status, [MR::STATUS_IN_PROGRESS, MR::STATUS_ON_HOLD], true)) {
+        // "on hold" is not a place to resolve from: the state map leaves it only for in_progress or cancelled
+        if ($req->status === MR::STATUS_IN_PROGRESS) {
             return Response::allow();
         }
 
-        return Response::deny('ต้องอยู่สถานะกำลังดำเนินการหรือพักไว้เท่านั้น');
+        return Response::deny('ต้องอยู่สถานะกำลังดำเนินการเท่านั้น (ถ้าพักอยู่ ให้กลับมาดำเนินการต่อก่อน)');
     }
 
     // close (ผู้แจ้งยืนยันปิดงาน + admin/supervisor)
@@ -300,10 +350,27 @@ class MaintenanceRequestPolicy
     // assign (มอบหมายทีม)
     public function assign(User $user, MR $req): Response
     {
-        // 1. Admin/Supervisor หรือทีมงาน (เจ้าหน้าที่/IT ฯลฯ) สามารถมอบหมายงานได้
-        // เพื่อรองรับการส่งต่องาน (Handoff) เช่น IT support รับเรื่องแล้วส่งต่อให้ Programmer
-        if ($this->isAdminTeam($user) || $this->isWorker($user)) {
+        // ทีมของงานที่สิ้นสุดแล้วคือบันทึกว่าใครทำ (ใบงาน PDF, คะแนนประเมินตามทีม) — ไม่มีใครแก้ได้ แม้แต่แอดมิน
+        if (in_array((string) $req->status, [MR::STATUS_CLOSED, MR::STATUS_CANCELLED, MR::STATUS_REJECTED], true)) {
+            return Response::deny('ใบงานนี้สิ้นสุดแล้ว ไม่สามารถเปลี่ยนทีมเจ้าหน้าที่ได้');
+        }
+
+        if ($this->isAdminTeam($user)) {
             return Response::allow();
+        }
+
+        // เจ้าหน้าที่: ส่งต่องานที่ตนอยู่ในทีม (Handoff เช่น IT support → Programmer) หรือจัดคนให้งานที่ยังไม่มีใครรับ
+        // — ไม่ใช่เข้าไปแก้ทีมของงานที่คนอื่นทำอยู่
+        if ($this->isWorker($user)) {
+            if ($req->status === MR::STATUS_RESOLVED) {
+                return Response::deny('ซ่อมเสร็จแล้ว การแก้ทีมเป็นหน้าที่ของผู้ดูแลระบบ/หัวหน้า');
+            }
+
+            if ($this->isAssignedWorker($user, $req) || $this->hasNoTeam($req)) {
+                return Response::allow();
+            }
+
+            return Response::deny('เปลี่ยนทีมได้เฉพาะเจ้าหน้าที่ที่อยู่ในงานนี้ หรืองานที่ยังไม่มีผู้รับผิดชอบ');
         }
 
         return Response::deny('อนุญาตให้มอบหมายทีมเจ้าหน้าที่เฉพาะผู้ดูแลหรือทีมเจ้าหน้าที่เท่านั้น');
@@ -404,10 +471,9 @@ class MaintenanceRequestPolicy
             return Response::deny('สามารถประเมินได้เมื่ออนุมัติปิดงานเรียบร้อยแล้วเท่านั้น');
         }
 
-        // 3. ตรวจว่าเคยให้คะแนนแล้วหรือยัง (ป้องกันปุ่มแสดงซ้ำหลังให้คะแนน)
-        $alreadyRated = \App\Models\MaintenanceRating::query()
-            ->where('maintenance_request_id', $req->id)
-            ->exists();
+        // 3. ตรวจว่า "ผู้ใช้คนนี้" เคยให้คะแนนแล้วหรือยัง (ป้องกันปุ่มแสดงซ้ำหลังให้คะแนน) — a rating by somebody else (an admin's) does not
+        //    use up the reporter's: the guard and the unique key (request + rater) already count per person
+        $alreadyRated = \App\Models\MaintenanceRating::hasRated($req->id, $user->id);
 
         if ($alreadyRated) {
             return Response::deny('งานนี้มีการให้คะแนนไปแล้ว');

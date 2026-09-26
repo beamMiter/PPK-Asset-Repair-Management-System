@@ -3,19 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Asset;
+use App\Models\AssetCategory;
 use App\Models\Attachment;
+use App\Models\Department;
 use App\Models\File as FileModel;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Validator as ValidatorInstance;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\AssetInput;
 use App\Support\Toast;
 use App\Services\HisAssetSyncService;
+use App\Support\Like;
 
 class AssetController extends Controller
 {
@@ -69,19 +71,7 @@ class AssetController extends Controller
             ->type($type)
             ->location($location);
 
-        if ($q !== '') {
-            $baseQuery->orderByRaw("
-                CASE
-                    WHEN assets.asset_code = ? THEN 0
-                    WHEN assets.his_asset_id = ? THEN 1
-                    WHEN assets.asset_code LIKE ? THEN 2
-                    WHEN assets.his_asset_id LIKE ? THEN 3
-                    WHEN assets.name LIKE ? THEN 4
-                    WHEN assets.serial_number LIKE ? THEN 5
-                    ELSE 9
-                END
-            ", [$q, $q, "{$q}%", "{$q}%", "%{$q}%", "%{$q}%"]);
-        }
+        $this->rankBySearchTerm($baseQuery, $q);
 
         $filteredTotal = (clone $baseQuery)->toBase()->count();
 
@@ -124,66 +114,14 @@ class AssetController extends Controller
     public function store(Request $request)
     {
         $this->authorize('create', Asset::class);
-        $rules = [
-            'asset_code'      => ['required', 'string', 'max:100', 'unique:assets,asset_code'],
-            'name'            => ['required', 'string', 'max:255'],
-            'type'            => ['nullable', 'string', 'max:100'],
-            'category_id'     => ['nullable', 'integer', 'exists:asset_categories,id'],
-            'brand'           => ['nullable', 'string', 'max:100'],
-            'model'           => ['nullable', 'string', 'max:100'],
-            'serial_number'   => ['nullable', 'string', 'max:100', 'unique:assets,serial_number'],
-            'location'        => ['nullable', 'string', 'max:255'],
-            'department_id'   => ['nullable', 'integer', 'exists:departments,id'],
-            'his_asset_id'    => ['nullable', 'string', 'max:100', 'unique:assets,his_asset_id'],
-            'purchase_date'   => ['nullable', 'date'],
-            'warranty_start'  => ['nullable', 'date'],
-            'warranty_expire' => ['nullable', 'date', 'after_or_equal:warranty_start'],
-            'vendor_name'     => ['nullable', 'string', 'max:255'],
-            'vendor_phone'    => ['nullable', 'string', 'max:50'],
-            'price'           => ['nullable', 'numeric', 'min:0'],
-            'hero_image'      => ['nullable', 'image', 'max:5120'],
-            'files'           => ['nullable', 'array'],
-            'files.*'         => ['file', 'max:10240'],
-            'status'          => ['nullable', Rule::in([Asset::STATUS_ACTIVE, Asset::STATUS_IN_REPAIR, Asset::STATUS_DISPOSED])],
-        ];
 
-        $validator = Validator::make($request->all(), $rules);
+        $validator = Validator::make($request->all(), AssetInput::rules());
 
         if ($validator->fails()) {
-            $errors = $validator->errors();
-            $fieldsHuman = [
-                'asset_code'      => 'รหัสครุภัณฑ์',
-                'name'            => 'ชื่อครุภัณฑ์',
-                'serial_number'   => 'Serial',
-                'category_id'     => 'หมวดหมู่',
-                'department_id'   => 'หน่วยงาน',
-                'warranty_expire' => 'หมดประกัน',
-            ];
-            $bad = collect(array_keys($errors->toArray()))
-                ->map(fn($f) => $fieldsHuman[$f] ?? $f)
-                ->implode(', ');
-            $msg = $bad ? ('ข้อมูลไม่ถูกต้อง: ' . $bad) : 'ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
-
-            Log::warning('[Asset::store] validation failed', [
-                'errors'   => $errors->toArray(),
-                'actor_id' => $request->user()?->id,
-            ]);
-
-            if (!$request->expectsJson()) {
-                return redirect()->back()
-                    ->withErrors($validator)
-                    ->withInput()
-                    ->with('toast', Toast::warning($msg, 2200));
-            }
-
-            return response()->json([
-                'errors' => $errors,
-                'toast'  => Toast::warning($msg, 2200),
-            ], Response::HTTP_UNPROCESSABLE_ENTITY, [], $this->jsonOptions($request));
+            return $this->apiValidationFailure($request, $validator, '[Asset::store] validation failed');
         }
 
-        $data  = $validator->validated();
-        $asset = Asset::create($data);
+        $asset = Asset::create($validator->validated());
         // The request already validates hero_image / files.*; persist them like
         // update() and storePage() do instead of dropping them silently.
         $this->syncAttachments($request, $asset);
@@ -222,88 +160,26 @@ class AssetController extends Controller
     public function update(Request $request, Asset $asset)
     {
         $this->authorize('update', $asset);
-        $rules = [
-            'asset_code'      => ['sometimes', 'string', 'max:100', 'unique:assets,asset_code,' . $asset->id],
-            'name'            => ['sometimes', 'string', 'max:255'],
-            'type'            => ['nullable', 'string', 'max:100'],
-            'category_id'     => ['nullable', 'integer', 'exists:asset_categories,id'],
-            'brand'           => ['nullable', 'string', 'max:100'],
-            'model'           => ['nullable', 'string', 'max:100'],
-            'serial_number'   => ['nullable', 'string', 'max:100', 'unique:assets,serial_number,' . $asset->id],
-            'location'        => ['nullable', 'string', 'max:255'],
-            'department_id'   => ['nullable', 'integer', 'exists:departments,id'],
-            'his_asset_id'    => ['nullable', 'string', 'max:100', 'unique:assets,his_asset_id,' . $asset->id],
-            'purchase_date'   => ['nullable', 'date'],
-            'warranty_start'  => ['nullable', 'date'],
-            'warranty_expire' => ['nullable', 'date', 'after_or_equal:warranty_start'],
-            'vendor_name'     => ['nullable', 'string', 'max:255'],
-            'vendor_phone'    => ['nullable', 'string', 'max:50'],
-            'price'           => ['nullable', 'numeric', 'min:0'],
-            'hero_image'      => ['nullable', 'image', 'max:5120'],
-            'files'           => ['nullable', 'array'],
-            'files.*'         => ['file', 'max:10240'],
-            'status'          => ['nullable', Rule::in([Asset::STATUS_ACTIVE, Asset::STATUS_IN_REPAIR, Asset::STATUS_DISPOSED])],
-        ];
 
-        $validator = Validator::make($request->all(), $rules);
+        $validator = Validator::make($request->all(), AssetInput::rules($asset));
 
         if ($validator->fails()) {
-            $errors = $validator->errors();
-            $fieldsHuman = [
-                'asset_code'      => 'รหัสครุภัณฑ์',
-                'name'            => 'ชื่อครุภัณฑ์',
-                'serial_number'   => 'Serial',
-                'category_id'     => 'หมวดหมู่',
-                'department_id'   => 'หน่วยงาน',
-                'warranty_expire' => 'หมดประกัน',
-            ];
-            $bad = collect(array_keys($errors->toArray()))
-                ->map(fn($f) => $fieldsHuman[$f] ?? $f)
-                ->implode(', ');
-            $msg = $bad ? ('ข้อมูลไม่ถูกต้อง: ' . $bad) : 'ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
-
-            Log::warning('[Asset::update] validation failed', [
-                'asset_id' => $asset->id,
-                'errors'   => $errors->toArray(),
-                'actor_id' => $request->user()?->id,
-            ]);
-
-            if (!$request->expectsJson()) {
-                return redirect()->back()
-                    ->withErrors($validator)
-                    ->withInput()
-                    ->with('toast', Toast::warning($msg, 2200));
-            }
-
-            return response()->json([
-                'errors' => $errors,
-                'toast'  => Toast::warning($msg, 2200),
-            ], Response::HTTP_UNPROCESSABLE_ENTITY, [], $this->jsonOptions($request));
+            return $this->apiValidationFailure($request, $validator, '[Asset::update] validation failed', ['asset_id' => $asset->id]);
         }
 
         $data = $validator->validated();
 
-        // ป้องกันการเปลี่ยนสถานะกลับเป็น active ดัวยมือ หากยังมีใบแจ้งซ่อมค้างอยู่
-        if (isset($data['status']) && $data['status'] === Asset::STATUS_ACTIVE && $asset->status !== Asset::STATUS_ACTIVE) {
-            $hasActiveRequests = $asset->maintenanceRequests()
-                ->whereIn('status', [
-                    \App\Models\MaintenanceRequest::STATUS_PENDING,
-                    \App\Models\MaintenanceRequest::STATUS_ACKNOWLEDGED,
-                    \App\Models\MaintenanceRequest::STATUS_ACCEPTED,
-                    \App\Models\MaintenanceRequest::STATUS_IN_PROGRESS,
-                    \App\Models\MaintenanceRequest::STATUS_ON_HOLD,
-                ])->exists();
+        if (AssetInput::blocksReactivation($asset, $data)) {
+            $msg = AssetInput::REACTIVATION_BLOCKED;
 
-            if ($hasActiveRequests) {
-                $msg = 'ไม่สามารถเปลี่ยนสถานะเป็น "ใช้งานปกติ" ได้ เนื่องจากยังมีใบแจ้งซ่อมที่ยังไม่แล้วเสร็จค้างอยู่';
-                if (!$request->expectsJson()) {
-                    return redirect()->back()->withInput()->with('toast', Toast::warning($msg, 3000));
-                }
-                return response()->json([
-                    'errors' => ['status' => [$msg]],
-                    'toast'  => Toast::warning($msg, 3000),
-                ], Response::HTTP_UNPROCESSABLE_ENTITY, [], $this->jsonOptions($request));
+            if (!$request->expectsJson()) {
+                return redirect()->back()->withInput()->with('toast', Toast::warning($msg, 3000));
             }
+
+            return response()->json([
+                'errors' => ['status' => [$msg]],
+                'toast'  => Toast::warning($msg, 3000),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY, [], $this->jsonOptions($request));
         }
 
         $before = $asset->only(['asset_code', 'name', 'status', 'department_id', 'category_id']);
@@ -374,19 +250,7 @@ class AssetController extends Controller
             ->type($type)
             ->location($location);
 
-        if ($q !== '') {
-            $assetsQ->orderByRaw("
-                CASE
-                    WHEN assets.asset_code = ? THEN 0
-                    WHEN assets.his_asset_id = ? THEN 1
-                    WHEN assets.asset_code LIKE ? THEN 2
-                    WHEN assets.his_asset_id LIKE ? THEN 3
-                    WHEN assets.name LIKE ? THEN 4
-                    WHEN assets.serial_number LIKE ? THEN 5
-                    ELSE 9
-                END
-            ", [$q, $q, "{$q}%", "{$q}%", "%{$q}%", "%{$q}%"]);
-        }
+        $this->rankBySearchTerm($assetsQ, $q);
 
         if ($sortCol === 'category') {
             $assetsQ->orderByRaw(
@@ -397,15 +261,11 @@ class AssetController extends Controller
         }
 
         $assets      = $assetsQ->paginate(20)->withQueryString();
-        $categories  = \App\Models\AssetCategory::orderBy('name')->get(['id', 'name']);
-        $departments = \App\Models\Department::query()
-            ->select(['id', 'code', 'name_th', 'name_en'])
-            ->orderByRaw('COALESCE(name_th, name_en, code) asc')
-            ->get()
-            ->map(fn($d) => [
-                'id'           => $d->id,
-                'display_name' => $d->display_name,
-            ]);
+        $categories  = $this->categoryOptions();
+        $departments = $this->departmentOptions()->map(fn ($d) => [
+            'id'           => $d->id,
+            'display_name' => $d->display_name,
+        ]);
 
         if ($q !== '' && $assets->total() > 0) {
             session()->flash('toast', Toast::success("ค้นหาพบ {$assets->total()} รายการ", 1600));
@@ -423,19 +283,10 @@ class AssetController extends Controller
     public function createPage()
     {
         $this->authorize('create', Asset::class);
-        $departments = \App\Models\Department::query()
-            ->select(['id', 'code', 'name_th', 'name_en'])
-            ->orderByRaw('COALESCE(name_th, name_en, code) asc')
-            ->get();
 
-        $categories = \App\Models\AssetCategory::orderBy('name')->get(['id', 'name']);
-
-        if ($departments->isEmpty()) {
-            session()->flash('toast', Toast::info('ยังไม่มีข้อมูลหน่วยงาน กรุณา seed หรือเพิ่มใหม่ก่อน', 3200));
-        }
-        if ($categories->isEmpty()) {
-            session()->flash('toast', Toast::info('ยังไม่มีหมวดหมู่ทรัพย์สิน กรุณา seed หรือเพิ่มใหม่ก่อน', 3200));
-        }
+        $departments = $this->departmentOptions();
+        $categories  = $this->categoryOptions();
+        $this->flashIfMasterDataMissing($departments, $categories);
 
         return view('assets.create', compact('departments', 'categories'));
     }
@@ -443,59 +294,14 @@ class AssetController extends Controller
     public function storePage(Request $request)
     {
         $this->authorize('create', Asset::class);
-        $validator = Validator::make($request->all(), [
-            'asset_code'      => ['required', 'string', 'max:100', 'unique:assets,asset_code'],
-            'name'            => ['required', 'string', 'max:255'],
-            'type'            => ['nullable', 'string', 'max:100'],
-            'category_id'     => ['nullable', 'integer', 'exists:asset_categories,id'],
-            'brand'           => ['nullable', 'string', 'max:100'],
-            'model'           => ['nullable', 'string', 'max:100'],
-            'serial_number'   => ['nullable', 'string', 'max:100', 'unique:assets,serial_number'],
-            'location'        => ['nullable', 'string', 'max:255'],
-            'department_id'   => ['nullable', 'integer', 'exists:departments,id'],
-            'his_asset_id'    => ['nullable', 'string', 'max:100', 'unique:assets,his_asset_id'],
-            'purchase_date'   => ['nullable', 'date'],
-            'warranty_start'  => ['nullable', 'date'],
-            'warranty_expire' => ['nullable', 'date', 'after_or_equal:warranty_start'],
-            'vendor_name'     => ['nullable', 'string', 'max:255'],
-            'vendor_phone'    => ['nullable', 'string', 'max:50'],
-            'price'           => ['nullable', 'numeric', 'min:0'],
-            'hero_image'      => ['nullable', 'image', 'max:5120'],
-            'files'           => ['nullable', 'array'],
-            'files.*'         => ['file', 'max:10240'],
-            'status'          => ['nullable', Rule::in([Asset::STATUS_ACTIVE, Asset::STATUS_IN_REPAIR, Asset::STATUS_DISPOSED])],
-        ]);
+
+        $validator = Validator::make($request->all(), AssetInput::rules());
 
         if ($validator->fails()) {
-            $errors = $validator->errors();
-            $fieldsHuman = [
-                'asset_code'      => 'รหัสครุภัณฑ์',
-                'name'            => 'ชื่อครุภัณฑ์',
-                'serial_number'   => 'Serial',
-                'category_id'     => 'หมวดหมู่',
-                'department_id'   => 'หน่วยงาน',
-                'warranty_expire' => 'หมดประกัน',
-            ];
-            $bad = collect(array_keys($errors->toArray()))
-                ->map(fn($f) => $fieldsHuman[$f] ?? $f)
-                ->implode(', ');
-            $msg = $bad ? ('ข้อมูลไม่ถูกต้อง: ' . $bad) : 'ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
-
-            Log::warning('[Asset::storePage] validation failed', [
-                'errors'   => $errors->toArray(),
-                'input'    => $request->except(['_token']),
-                'actor_id' => $request->user()?->id,
-            ]);
-
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput()
-                ->with('toast', Toast::warning($msg, 3000));
+            return $this->pageValidationFailure($request, $validator, '[Asset::storePage] validation failed');
         }
 
-        $data = $validator->validated();
-
-        $asset = Asset::create($data);
+        $asset = Asset::create($validator->validated());
         $this->syncAttachments($request, $asset);
 
         Log::info('[Asset::storePage] created', [
@@ -520,22 +326,12 @@ class AssetController extends Controller
                 'requestAttachments as attachments_count',
             ]);
 
-        $logs = $asset->requestLogs()
-            ->with(['user', 'request'])
-            ->select('maintenance_logs.*')
-            ->orderBy('maintenance_logs.created_at', 'desc')
-            ->orderBy('maintenance_logs.id', 'desc')
-            ->limit(20)
-            ->get();
+        $logs = $this->recentLogs($asset);
 
-        $attQuery = $asset->requestAttachments()->select('attachments.*');
-        $attQuery->orderBy(
-            Schema::hasColumn('attachments', 'created_at')
-                ? 'attachments.created_at'
-                : 'attachments.id',
-            'desc'
-        );
-        $attachments = $attQuery->get();
+        $attachments = $asset->requestAttachments()
+            ->select('attachments.*')
+            ->orderBy('attachments.created_at', 'desc')
+            ->get();
 
         Log::info('[Asset::showPage] viewed', [
             'asset_id'   => $asset->id,
@@ -543,9 +339,6 @@ class AssetController extends Controller
             'mr_count'   => $asset->maintenance_requests_count,
             'actor_id'   => request()->user()?->id,
         ]);
-
-
-
 
         return view('assets.show', compact('asset', 'logs', 'attachments'));
     }
@@ -555,27 +348,11 @@ class AssetController extends Controller
         $this->authorize('update', $asset);
         $asset->load(['categoryRef', 'department', 'maintenanceRequests.reporter']);
 
-        $departments = \App\Models\Department::query()
-            ->select(['id', 'code', 'name_th', 'name_en'])
-            ->orderByRaw('COALESCE(name_th, name_en, code) asc')
-            ->get();
+        $departments = $this->departmentOptions();
+        $categories  = $this->categoryOptions();
+        $this->flashIfMasterDataMissing($departments, $categories);
 
-        $categories = \App\Models\AssetCategory::orderBy('name')->get(['id', 'name']);
-
-        if ($departments->isEmpty()) {
-            session()->flash('toast', Toast::info('ยังไม่มีข้อมูลหน่วยงาน กรุณา seed หรือเพิ่มใหม่ก่อน', 3200));
-        }
-        if ($categories->isEmpty()) {
-            session()->flash('toast', Toast::info('ยังไม่มีหมวดหมู่ทรัพย์สิน กรุณา seed หรือเพิ่มใหม่ก่อน', 3200));
-        }
-
-        $logs = $asset->requestLogs()
-            ->with(['user', 'request'])
-            ->select('maintenance_logs.*')
-            ->orderBy('maintenance_logs.created_at', 'desc')
-            ->orderBy('maintenance_logs.id', 'desc')
-            ->limit(20)
-            ->get();
+        $logs = $this->recentLogs($asset);
 
         return view('assets.edit', compact('asset', 'departments', 'categories', 'logs'));
     }
@@ -583,74 +360,19 @@ class AssetController extends Controller
     public function updatePage(Request $request, Asset $asset)
     {
         $this->authorize('update', $asset);
-        $validator = Validator::make($request->all(), [
-            'asset_code'      => ['sometimes', 'string', 'max:100', 'unique:assets,asset_code,' . $asset->id],
-            'name'            => ['sometimes', 'string', 'max:255'],
-            'type'            => ['nullable', 'string', 'max:100'],
-            'category_id'     => ['nullable', 'integer', 'exists:asset_categories,id'],
-            'brand'           => ['nullable', 'string', 'max:100'],
-            'model'           => ['nullable', 'string', 'max:100'],
-            'serial_number'   => ['nullable', 'string', 'max:100', 'unique:assets,serial_number,' . $asset->id],
-            'location'        => ['nullable', 'string', 'max:255'],
-            'department_id'   => ['nullable', 'integer', 'exists:departments,id'],
-            'his_asset_id'    => ['nullable', 'string', 'max:100', 'unique:assets,his_asset_id,' . $asset->id],
-            'purchase_date'   => ['nullable', 'date'],
-            'warranty_start'  => ['nullable', 'date'],
-            'warranty_expire' => ['nullable', 'date', 'after_or_equal:warranty_start'],
-            'vendor_name'     => ['nullable', 'string', 'max:255'],
-            'vendor_phone'    => ['nullable', 'string', 'max:50'],
-            'price'           => ['nullable', 'numeric', 'min:0'],
-            'hero_image'      => ['nullable', 'image', 'max:5120'],
-            'files'           => ['nullable', 'array'],
-            'files.*'         => ['file', 'max:10240'],
-            'status'          => ['nullable', Rule::in([Asset::STATUS_ACTIVE, Asset::STATUS_IN_REPAIR, Asset::STATUS_DISPOSED])],
-        ]);
+
+        $validator = Validator::make($request->all(), AssetInput::rules($asset));
 
         if ($validator->fails()) {
-            $errors = $validator->errors();
-            $fieldsHuman = [
-                'asset_code'      => 'รหัสครุภัณฑ์',
-                'name'            => 'ชื่อครุภัณฑ์',
-                'serial_number'   => 'Serial',
-                'category_id'     => 'หมวดหมู่',
-                'department_id'   => 'หน่วยงาน',
-                'warranty_expire' => 'หมดประกัน',
-            ];
-            $bad = collect(array_keys($errors->toArray()))
-                ->map(fn($f) => $fieldsHuman[$f] ?? $f)
-                ->implode(', ');
-            $msg = $bad ? ('ข้อมูลไม่ถูกต้อง: ' . $bad) : 'ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
-
-            Log::warning('[Asset::updatePage] validation failed', [
-                'asset_id' => $asset->id,
-                'errors'   => $errors->toArray(),
-                'actor_id' => $request->user()?->id,
-            ]);
-
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput()
-                ->with('toast', Toast::warning($msg, 3000));
+            return $this->pageValidationFailure($request, $validator, '[Asset::updatePage] validation failed', ['asset_id' => $asset->id]);
         }
 
-        $data   = $validator->validated();
+        $data = $validator->validated();
 
-        // ป้องกันการเปลี่ยนสถานะกลับเป็น active ดัวยมือ หากยังมีใบแจ้งซ่อมค้างอยู่
-        if (isset($data['status']) && $data['status'] === Asset::STATUS_ACTIVE && $asset->status !== Asset::STATUS_ACTIVE) {
-            $hasActiveRequests = $asset->maintenanceRequests()
-                ->whereIn('status', [
-                    \App\Models\MaintenanceRequest::STATUS_PENDING,
-                    \App\Models\MaintenanceRequest::STATUS_ACKNOWLEDGED,
-                    \App\Models\MaintenanceRequest::STATUS_ACCEPTED,
-                    \App\Models\MaintenanceRequest::STATUS_IN_PROGRESS,
-                    \App\Models\MaintenanceRequest::STATUS_ON_HOLD,
-                ])->exists();
-
-            if ($hasActiveRequests) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('toast', Toast::warning('ไม่สามารถเปลี่ยนสถานะเป็น "ใช้งานปกติ" ได้ เนื่องจากยังมีใบแจ้งซ่อมที่ยังไม่แล้วเสร็จค้างอยู่', 4000));
-            }
+        if (AssetInput::blocksReactivation($asset, $data)) {
+            return redirect()->back()
+                ->withInput()
+                ->with('toast', Toast::warning(AssetInput::REACTIVATION_BLOCKED, 4000));
         }
 
         $before = $asset->only(['asset_code', 'name', 'status', 'department_id', 'category_id', 'location']);
@@ -774,6 +496,90 @@ class AssetController extends Controller
             ],
             'toast' => Toast::success('ดึงข้อมูล HIS สำเร็จ', 1600),
         ], 200, [], $this->jsonOptions($request));
+    }
+
+    /** Exact code first, then code / HIS id prefix, then name / serial contains — only when searching. */
+    private function rankBySearchTerm($query, string $q): void
+    {
+        if ($q === '') {
+            return;
+        }
+
+        $query->orderByRaw("
+            CASE
+                WHEN assets.asset_code = ? THEN 0
+                WHEN assets.his_asset_id = ? THEN 1
+                WHEN assets.asset_code LIKE ? THEN 2
+                WHEN assets.his_asset_id LIKE ? THEN 3
+                WHEN assets.name LIKE ? THEN 4
+                WHEN assets.serial_number LIKE ? THEN 5
+                ELSE 9
+            END
+        ", [$q, $q, Like::startsWith($q), Like::startsWith($q), Like::contains($q), Like::contains($q)]);
+    }
+
+    private function departmentOptions()
+    {
+        return Department::query()
+            ->select(['id', 'code', 'name_th', 'name_en'])
+            ->orderByRaw('COALESCE(name_th, name_en, code) asc')
+            ->get();
+    }
+
+    private function categoryOptions()
+    {
+        return AssetCategory::orderBy('name')->get(['id', 'name']);
+    }
+
+    /** The forms are useless without these lists; say so instead of showing empty selects (categories win if both are empty). */
+    private function flashIfMasterDataMissing($departments, $categories): void
+    {
+        if ($departments->isEmpty()) {
+            session()->flash('toast', Toast::info('ยังไม่มีข้อมูลหน่วยงาน กรุณา seed หรือเพิ่มใหม่ก่อน', 3200));
+        }
+        if ($categories->isEmpty()) {
+            session()->flash('toast', Toast::info('ยังไม่มีหมวดหมู่ทรัพย์สิน กรุณา seed หรือเพิ่มใหม่ก่อน', 3200));
+        }
+    }
+
+    /** Latest 20 log lines of the asset's repair requests. */
+    private function recentLogs(Asset $asset)
+    {
+        return $asset->requestLogs()
+            ->with(['user', 'request'])
+            ->select('maintenance_logs.*')
+            ->orderBy('maintenance_logs.created_at', 'desc')
+            ->orderBy('maintenance_logs.id', 'desc')
+            ->limit(20)
+            ->get();
+    }
+
+    /** Failed validation on the shared create/update endpoint: back with errors for a browser, 422 for JSON. */
+    private function apiValidationFailure(Request $request, ValidatorInstance $validator, string $logTag, array $context = [])
+    {
+        $errors = $validator->errors();
+        $msg    = AssetInput::failureMessage($errors);
+
+        Log::warning($logTag, $context + ['errors' => $errors->toArray(), 'actor_id' => $request->user()?->id]);
+
+        if (!$request->expectsJson()) {
+            return redirect()->back()->withErrors($validator)->withInput()->with('toast', Toast::warning($msg, 2200));
+        }
+
+        return response()->json([
+            'errors' => $errors,
+            'toast'  => Toast::warning($msg, 2200),
+        ], Response::HTTP_UNPROCESSABLE_ENTITY, [], $this->jsonOptions($request));
+    }
+
+    private function pageValidationFailure(Request $request, ValidatorInstance $validator, string $logTag, array $context = [])
+    {
+        $errors = $validator->errors();
+        $msg    = AssetInput::failureMessage($errors);
+
+        Log::warning($logTag, $context + ['errors' => $errors->toArray(), 'actor_id' => $request->user()?->id]);
+
+        return redirect()->back()->withErrors($validator)->withInput()->with('toast', Toast::warning($msg, 3000));
     }
 
     protected function resolveAssetSort(Request $request, array $allowedKeys): array

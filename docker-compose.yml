@@ -1,24 +1,50 @@
+# What the PHP containers (app, worker) share. `environment` wins over `env_file`, so whatever the host's .env says (it
+# usually points at localhost), inside the containers the database and redis are reached by their service names.
+x-php-environment: &php-environment
+  APP_ENV: local
+  APP_DEBUG: "true"
+  DB_CONNECTION: mysql
+  DB_HOST: db
+  DB_PORT: "3306"
+  DB_DATABASE: arm
+  DB_USERNAME: arm
+  DB_PASSWORD: arm
+  REDIS_HOST: redis
+
 services:
   app:
     build:
       context: .
       dockerfile: .docker/Dockerfile
       args:
-        PHP_VERSION: "8.2"
+        PHP_VERSION: "8.4"
     image: arm-system/php-app
     container_name: arm-app
+    env_file: .env
     environment:
-      APP_ENV: local
-      APP_DEBUG: "true"
+      <<: *php-environment
+      # only this container migrates, so two never migrate at once
+      RUN_MIGRATIONS: "true"
     volumes:
-      - ./:/var/www/html
+      - ./:/var/www/html:delegated
       - ./storage:/var/www/html/storage
-      # If present, override Laravel env inside the container without touching your local .env
-      - ./.env.docker:/var/www/html/.env
+      # Uploaded files (attachments, avatars, private files) live in their own volumes, layered on top of the bind mount
+      # above: without this, `./:/var/www/html` mounts the whole project, so a file the container writes to
+      # storage/app/public lands in the same host folder as the source code — physically the checkout, not a separate
+      # store. Named volumes here keep it out of the project tree; `web` shares storage_uploads to serve them.
+      - storage_uploads:/var/www/html/storage/app/public
+      - storage_private:/var/www/html/storage/app/private
     expose:
       - "9000"
     depends_on:
       - db
+    # ready = the database answered and the migrations ran (entrypoint.sh writes /tmp/ready): the worker waits for that
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 5s
 
   web:
     image: nginx:1.25-alpine
@@ -26,7 +52,10 @@ services:
     ports:
       - "8000:80"
     volumes:
-      - ./:/var/www/html
+      - ./:/var/www/html:delegated
+      # the same volume `app` writes uploads to — nginx's `location ^~ /storage/` (.docker/nginx.conf) reads straight
+      # from storage/app/public, so it has to be the same store, not another copy from the plain bind mount
+      - storage_uploads:/var/www/html/storage/app/public
       - ./.docker/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - app
@@ -40,6 +69,9 @@ services:
       - "5173:5173"
     volumes:
       - ./:/app
+      # the container's own node_modules: without this, `npm ci` here replaces the host's node_modules (macOS binaries)
+      # with Linux ones, and vite on the host stops working
+      - node_modules:/app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
       - VITE_HOST=0.0.0.0
@@ -71,21 +103,28 @@ services:
       context: .
       dockerfile: .docker/Dockerfile
       args:
-        PHP_VERSION: "8.2"
+        PHP_VERSION: "8.4"
     image: arm-system/php-app
     container_name: arm-worker
-    depends_on:
-      - app
-      - redis
-    working_dir: /var/www/html
+    env_file: .env
+    # the image's command is php-fpm; the worker has to run the queue instead
     command: php artisan queue:work --verbose --tries=1 --timeout=90
-    environment:
-      APP_ENV: local
-      APP_DEBUG: "true"
+    depends_on:
+      app:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    working_dir: /var/www/html
+    environment: *php-environment
     volumes:
-      - ./:/var/www/html
-      # If present, override Laravel env inside the container without touching your local .env
-      - ./.env.docker:/var/www/html/.env
+      - ./:/var/www/html:delegated
+      # same reasoning as `app`: keep whatever the worker writes (e.g. a queued job that touches an attachment) out of
+      # the project tree, and in the same store `app` and `web` use
+      - storage_uploads:/var/www/html/storage/app/public
+      - storage_private:/var/www/html/storage/app/private
 
 volumes:
   dbdata:
+  node_modules:
+  storage_uploads:
+  storage_private:

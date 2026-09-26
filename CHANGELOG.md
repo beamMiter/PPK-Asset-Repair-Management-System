@@ -6,8 +6,269 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **What people delete from the chat is erased for good after 30 days.** Deleting a thread or a message only hid it (so it could be brought
+  back), and nothing ever cleared it: a deleted conversation stayed in the database for ever, personal data kept for no reason (PDPA). The nightly
+  `php artisan chat:purge-deleted` (03:10 Thai time; the scheduler must run, as for `sanctum:prune-expired`) erases a thread that has been deleted
+  for 30 days with its messages and read marks, and single messages deleted from live threads; the days are `CHAT_PURGE_DELETED_AFTER_DAYS` (0 =
+  off) or `--days=`, `--dry-run` only says what it would erase. What is erased is written to the moderation record (title, count - never the
+  words). Until then `php artisan chat:restore {id}` brings a deleted thread back. Backups still hold what they held. Threads nobody has written in
+  for months are NOT purged: that policy (lock first, erase much later) is still to be decided. `ChatPurgeTest`.
+- **The chat can be scrolled back to its beginning.** The page drew the latest 50 messages and offered no way to the ones before, so a longer
+  thread lost its start. Scrolling to the top (or the "โหลดข้อความก่อนหน้า" button, for a keyboard) loads the 30 before the first one drawn,
+  oldest first, and keeps the reader where they were; the cursor is the message id, not a page number (a message that arrives meanwhile
+  cannot shift what is loaded), as a messenger does it. A deleted one comes back as a placeholder. `GET .../messages?before_id=` with
+  `X-Has-More`; the API has `before_id` and `meta.has_more`. `ChatOlderMessagesTest`.
+- **A message sent twice by a dropped connection is saved once.** The page sends each message with an id it made for that attempt (a UUID); if
+  the connection drops after the server saved it and before the answer arrived, the same words sent again carry the same id and get the
+  message that already exists (200), not a second copy or a second announcement (an idempotency key; `chat_messages.client_uuid`,
+  migration - run `php artisan migrate`). The API takes `client_id` too. `ChatIdempotentSendTest`.
+- **One chat message can be deleted, and every lock / unlock / delete is recorded.** A wrong or unsuitable message could only be removed by
+  deleting its whole thread. Now its author (while the thread is open) or a moderator (admins and the IT / repair team, always) deletes it: it
+  stays in the thread as "ข้อความนี้ถูกลบ" for everybody, its words are never sent to a page again, everyone with the thread open sees it change
+  (`message.deleted`), the thread does not jump to the top of the list, and the counters drop. A bin appears only where the person may use it
+  (page and live rows alike); `DELETE /chat/threads/{thread}/messages/{message}` and `DELETE /api/threads/{thread}/messages/{message}`. The
+  new table `chat_moderation_logs` (migration; run `php artisan migrate`) records who locked, unlocked or deleted what - a thread or a message
+  - from which address and when, with the thread's title and no message text; ids are plain numbers so the record outlives a purged thread
+  (OWASP Logging). `ChatDeleteMessageTest`.
+- **The chat is limited against a flood, and a person may start 5 threads a day.** Nothing limited posting or creating threads. What a person
+  SENDS is now stopped when it is a flood, not for what it says: 8 messages in 10 seconds, or 60 in 5 minutes (a person writing normally is
+  never near either); the answer is a 429 with `Retry-After`, the page says "รอ N วินาที" and keeps what was typed. New threads: 5 a day for
+  each person, the day being the THAI calendar day (00:00 น., worked out from Asia/Bangkok whatever the server's clock says), a deleted
+  thread still counting, admins unlimited, plus a short limit that stops a double click making the same thread twice. The page says how
+  many are left ("ตั้งกระทู้ได้อีก 4 จาก 5 ครั้งวันนี้", in the dialog too, with when it starts again), the button goes off with the reason
+  when none is left, and the API answers 429 `chat_thread_daily_limit` with the quota (`meta.thread_quota` in the list). Every number is in
+  `config/chat.php` (env `CHAT_*`). `ChatFloodAndQuotaTest`.
+- **The chat page's thread list shows "ใหม่ N" and has a "ซ่อนไว้" list.** Only the floating widget knew which threads had messages a
+  person had not read; the page's list now says "ใหม่ 3" beside a thread they took part in with three unread (99+ at most; the open thread
+  is read, a hidden one does not count, and a thread they have no part in shows nothing however many messages it has) - counted for a
+  whole page of the list in one query. And the threads a person hid from "กระทู้ที่มีส่วนร่วม" were only findable by scanning "ทั้งหมด": a
+  third tab, "ซ่อนไว้" (there only while something is hidden), lists them, and a thread opened from it carries the button that shows it
+  again. `GET /api/threads?scope=hidden` for the app. `ChatListUnreadAndHiddenTabTest`.
+- **The app can change its own password: `PUT /api/auth/password`.** A person an admin gave a password to gets 403 `password_change_required`
+  from every API call, and nothing on the API could clear it (the e-mail reset is no use to somebody with no e-mail), so they had to
+  find the website. The endpoint takes `current_password`, `password`, `password_confirmation` (the profile page's rules), clears the
+  flag, keeps the token used and ends every other token; 6 calls a minute. Both paths share `PasswordChange`. `ApiChangePasswordTest`.
+- **README says what the login is.** Self-registration on `/register` is a trial setup for local / internal testing (nothing verifies the
+  citizen ID); the real login will be built on the hospital's personnel database once it is connected, and the HIS asset lookup stays a
+  mock until the hospital's API is. Also noted on `RegisteredUserController`.
+- **A person can hide a thread from "กระทู้ที่มีส่วนร่วม", and a locked thread they have read leaves the widget.** Whoever once wrote in
+  a thread had it in the tab and the floating widget for good, its every new message counting toward their badge, and only an admin
+  could delete it (for everybody). The button "ซ่อนจากกระทู้ที่มีส่วนร่วม" (the thread's header, and on each row of the widget) hides it
+  for that person alone: it is read up to its last message, leaves the tab, its count, the widget and the badge, and stays in "ทั้งหมด",
+  readable. It comes back when they write in it again (reading it, or somebody else writing, does not bring it back), or when they
+  press "แสดงในกระทู้ที่มีส่วนร่วมอีกครั้ง". A locked thread that a person has read to the end also drops out of the widget - nobody can
+  add to it - and returns when it is unlocked; the tab keeps listing it. `chat_thread_reads.hidden_at` (migration; run
+  `php artisan migrate`), `POST` / `DELETE /api/threads/{id}/hide`, `hidden_by_me` in the API's list. `ChatHideThreadTest`.
+- **The chat page can show only the threads I took part in.** The floating widget's "กระทู้ที่มีส่วนร่วม" was the only place that knew which
+  threads a person had started or written in (and it shows the latest 15). The thread list on the chat page has two tabs now, "ทั้งหมด"
+  and "กระทู้ที่มีส่วนร่วม", each with its count; the second is every thread I started or wrote in - opening a thread to read it does not
+  make it mine. Search, paging and the links to a thread stay inside the tab that is open, and an empty list says "คุณยังไม่ได้ตั้งหรือตอบกระทู้ใดเลย".
+  `GET /api/threads?scope=mine` does the same for the mobile app (`openapi.yaml`). One definition, `ChatThread::involving()`, serves the
+  page, the API and the widget. `ChatMineScopeTest`.
+- **A change-password form on the profile page.** `PUT /password` and its controller (which also ends the other sessions, API tokens and
+  "remember me" cookies) were there and tested, but nothing on any page led to them: nobody could change the password they were first
+  given, and a member with no e-mail could never rotate it. The form (current, new, confirm) sits under the profile form, states the rule
+  (8+ characters with a letter and a digit) and prints its errors under the fields. `ChangeOwnPasswordFormTest`.
+- **Suspending an account says how many open jobs are still in that person's hands.** A suspended technician keeps their jobs and nothing
+  else looks at them; the toast now warns with the count (open statuses only, not jobs they left) so they are handed over.
+  `SuspendWarnsOfOpenJobsTest`.
+- **Choose which late jobs go in the printed SLA report, and a fuller report.** Printing every late job cannot always fit
+  one page, so the print button now opens a dialog listing *every* late job (the panel on the page shows only the
+  20 most overdue) with a tick box each, a search, select all / clear and a count. Ticking fewer prints only those, and
+  the paper says so ("แสดง 8 จากงานที่เกินเวลาทั้งหมด 16 รายการ"): a cut list read as the whole picture would understate
+  the backlog. Up to about ten jobs still end on one A4 page. The dialog also takes a note (ข้อสังเกต / ข้อเสนอแนะ)
+  that is printed on the report. The report itself gains: the time the data is as of, who prepared it, the total number
+  of jobs in the period, the person responsible and how late each job is (replacing the due date), a short "how the
+  figures are worked out" so the numbers can be taken at face value, page numbers, and two signature blocks (the
+  preparer's drawn on screen with their name under it, the approver's left for the paper). Long Thai text now breaks
+  between words (`App\Support\ThaiText`) instead of in the middle of one. Covered by `SlaReportLayoutTest` and
+  `ThaiFormattingTest`.
+
 ### Fixed
 
+- **A throttled API answer said nothing about how long to wait.** The API's error renderer built its JSON answer without the headers the
+  exception carries, so a 429 lost its `Retry-After` (and a 405 its `Allow`). They are kept.
+- **A suspended person whose browser was still signed in got a 500 on any fetch.** The chat widget's poll, the channel authorisation and
+  every other JSON call made from a page carry the SESSION, not a token; `EnsureAccountIsActive` called `->delete()` on the session's
+  `TransientToken`, which has no such method. It answers 403 `account_suspended` and ends the session now. `AccountSuspensionTest`.
+- **A job in the last day of its rating window is listed, and three tests that failed at random no longer do.** The rating guard counts
+  whole days and accepts a job until it is 31 days old, and the page labels that day "วันสุดท้าย", but the list of jobs waiting to be
+  rated stopped at 30 days: a job closed 30 days and a few hours ago could be rated by its link and was missing from the list. Also
+  found while hunting the one full-suite run in ten that failed: `DepartmentFactory` ended its unique code in `rand(10,99)` (two names
+  that begin alike collided 1 time in 90), and a rating-page test called the factory's people "Jan Batz" an English month. The factory
+  counts now (`DepartmentFactoryTest`), the test looks for a month next to a day or a year, and the last day has a test with hours
+  in it (`RatingPagesTest`).
+- **`?q[]=x` in a URL no longer answers 500, and `%` / `_` in a search are text.** An array where a word is expected ("Array to string
+  conversion") was a 500 on the chat, the assets, the requests (`q`, `status`), my jobs and two API lists. `IgnoreArrayQuery` drops
+  array-valued query parameters on GET / HEAD once, for the whole app (nothing takes an array in a query string; the arrays of the
+  forms are POSTed). And a `%` or `_` typed into any search was a LIKE wildcard (a lone `_` matched every row): every search of the
+  app - requests, assets, departments, users, types, chat, the API lists, my jobs - goes through `App\Support\Like` now, as the rating
+  page already did. `ArrayQueryAndLikeTest`.
+- **Only the person who reported a job can rate it.** The rate button, the policy and the API already said so, but the web door
+  (`rating/{job}/store`) let admins and supervisors in "to help rate", and their stars were counted in a technician's average
+  beside the reporter's — a rating is the reporter's word on the service they received. Everyone else now gets a 403. Ratings already made
+  by somebody else stay in the data; the reporter's lists ignore them (`RatingIsPerRaterTest`). `RatingIsReporterOnlyTest`.
+
+- **An edit that did not send the operation report wiped it.** `PUT /maintenance/requests/{id}` or `PUT /api/repair-requests/{id}` with only
+  a title rewrote the technician's report from nothing — method, remark, property code and flags became empty, under the caller's name.
+  The edit form always sends its text fields (and leaves an unticked box out), so "one of them is here" still writes the whole report;
+  a call that sends only flags changes only the flags; one that sends none of them leaves the report alone. Found walking a request
+  end to end. `OperationReportKeptOnPartialEditTest`.
+- **An admin who pressed "ดำเนินการ" on a job with no team became its technician.** The person who started a job was made its technician
+  and lead whoever they were, so the reporter's rating was credited to an admin — a person the technician board never lists, so the
+  score vanished from every figure about the staff. Accepting or starting is the process, not the repair (`joinTeam` already kept
+  admins out of the team for that reason): the lead is now whoever presses start if they are a worker, otherwise the first worker of the
+  team, on resume too; and a job with no worker on it **cannot be started** — "ต้องมอบหมายเจ้าหน้าที่ซ่อมบำรุงให้ใบงานนี้ก่อนเริ่มดำเนินการ". The
+  same rule applies to accepting through the edit form. `StartNeedsAWorkerTest`.
+- **One person's rating used up another's.** The reporter's waiting list, history and rate button counted a rating by *anyone*, while the
+  rating guard and the unique key (request + rater) count per person: an admin's rating took the job off the reporter's list, showed the
+  admin's stars in the reporter's history, and left the reporter free to rate it by URL. Each person's own rating now decides what is
+  theirs. `RatingIsPerRaterTest`.
+- **Two requests made at the same moment could be given the same number.** The number is worked out from the highest in the table when the
+  row is created and the column is unique, so the second request failed; it now asks again (three tries). `RequestNumberCollisionTest`.
+
+- **The team board and a person's own rating page disagreed about what a score is called, and a person nobody had rated was
+  "ควรปรับปรุง".** The same 4.2 was "ดี" on the board and "ดีมาก" on the person's page (each page kept its own wording), and an
+  average of no ratings at all was 0.00, which the board read as "needs improvement" and the person's page as a percentage. The
+  wording is now one class (`App\Support\RatingLevel`: ≥ 4.5 ดีมาก · ≥ 4.0 ดี · ≥ 3.0 ปานกลาง · below that ควรปรับปรุง), a person
+  with no ratings is "ยังไม่มีการประเมิน" with no score, and a single rater's 1–5 stars have their own names (ไม่พอใจ … พอใจมาก)
+  in place of "เร่งด่วน/วิกฤต" on a 1–2 star review. On the person's page the "วันที่เสร็จสิ้น" column showed the day the
+  assignment row was created, the job column showed the request's database id instead of its number, the month was English
+  ("Sep 26"), and "ดูประวัติทั้งหมด" was a link to `#`; all four are fixed or gone. `RatingComponentsTest`, `RatingPagesTest`.
+
+- **`POST /api/auth/logout` answered 500 to a call made with the browser's own session.** It called `delete()` on
+  `currentAccessToken()`, which is a `TransientToken` (no such method) when the request is signed in by a session cookie
+  rather than a bearer token — reachable from the same site, or from Swagger while signed in. A bearer token still ends that
+  one token; a session-signed call now ends the session. No screen calls this endpoint and no test did, which is how it
+  stayed unseen. `ApiTokenLifecycleTest`.
+
+- **Text fields let you type past what the server takes, and a file was refused only after it was uploaded.** A text longer
+  than the server's `max:` was sent, refused, and on a page that prints no errors the form came back with nothing said — or the
+  browser cut a long paste silently, so text you thought you had written was not there. Every text field a form limits now
+  carries the server's own `maxlength` (the request form and its edit page, the job modals and operation log, the asset form,
+  the user, profile, sign-up, job-type and chat-title fields), read from the server's refusal in `FormFieldLimitsTest`, so a
+  rule changed on one side and forgotten on the other is what fails. The long text areas (reasons, notes, the request
+  description) also show "123 / 1000" and warn when a paste was cut (`layout/char-counter.js`, opt in with `data-counter`).
+  The notification-sound input refuses a file over 2 MB or that is not .mp3 / .wav the moment it is chosen, with a toast,
+  instead of after the upload (`layout/file-guard.js`, from `data-max-kb` / `data-ext`; the limit is
+  `NotificationSettingController::SOUND_MAX_KB`, the same number the upload rule uses). Cancelling that file dialog no longer
+  throws. `tests/js/char-counter.test.mjs`, `tests/js/file-guard.test.mjs`.
+- **A form the server refused said nothing on most pages.** A form that fails validation is sent back with its errors, and only a
+  handful of pages print them (login, register, the profile, the asset form…). The job modals (พักชั่วคราว / ซ่อมเสร็จ /
+  ยกเลิก / ไม่รับเรื่อง), the notification-sound and SLA settings and the chat bounced back with nothing said — probing every
+  web write route with bad input found no form left silent after this. `bootstrap/app.php` adds the first message as a toast
+  to every such web refusal, with "(และมีอีก N ข้อ)" when there are more. Left alone: JSON / API requests (they get their
+  422), and a request that already flashed a toast of its own this request (the profile form). The pause modal now calls its
+  field "เหตุผลในการพักชั่วคราว", not "หมายเหตุ". `ValidationToastTest`.
+- **Validation toasts were in English ("The title field is required.") in a system whose staff are Thai.** The app ran with
+  locale `en`: `config/app.php` said `env('APP_LOCALE', 'th')` and a checkout's `.env` carried the framework's stock `en`, so
+  `lang/th/validation.php` was never read — and that file lacked 46 of the framework's keys (among them `password.*`, so a
+  weak password on the register / reset forms was refused in English) and had a Thai name for 15 fields only. The locale is
+  `th` in the code now (`.env`'s `APP_LOCALE` is no longer read; remove it there if you like), the file has every key of
+  the framework's own and a Thai name for every field a form can get wrong (technical terms — SLA, HIS, Serial — stay in
+  English inside a Thai sentence). Same cause, smaller: the login toast said "Login successful"; a non-admin deleting a chat
+  thread got a 403 page in English (now a Thai toast, like every other refusal); the asset form's "ข้อมูลไม่ถูกต้อง: …" named
+  a field with no Thai name by its raw key (`brand`, `price`) and now looks the name up in the same file. Because Carbon
+  follows the locale, dates read Thai too: the chat list's "5 นาทีที่แล้ว", the SLA trend chart's "ก.ย. 2026".
+  `ValidationMessagesThaiTest` compares the file with the framework's, so a Laravel upgrade that adds a rule says so.
+- **The SLA print dialog warned with a browser `alert()`, and said nothing at all when a print was refused.** A missing
+  signature was an `alert()`; the server refusing a print (a signature that is not an image, a selection that is not a
+  list of ids, a note over 1000 characters) bounced back to the page with errors that page never shows — nothing was said;
+  and a report that failed to build was a 500 page. All of these are toasts now, in Thai: no signature (warning), a
+  signature pad that never started (error, "refresh the page"), printing with no late job chosen (warning, asks to press
+  again to confirm — a report with a summary alone is allowed, but rarely meant), "กำลังสร้างรายงาน PDF..." while the PDF
+  is made (the page is still there for a second or two), a refused print (error with the reason), a failed build (error;
+  the exception is reported, the user stays on the page). A second click while the PDF is being built no longer sends it
+  twice. The dialog's script moved out of a 70-line Blade attribute into `resources/js/maintenance/sla/print-dialog.js`
+  (an Alpine component, registered in `app.js` so it exists on a Turbo visit too) so it can be tested:
+  `tests/js/sla-print-dialog.test.mjs`, and `SlaReportLayoutTest` for the server side.
+- **The printed SLA report ran to four pages and its signature did not sit on the signature line.** The report is
+  rebuilt to end on one A4 page for a normal report (the sample of 16 late jobs in 8 departments was four pages; about
+  ten jobs fit one page, and the dialog above lets the user choose which): a smaller body, the status split shown as figures instead of a table, the departments in two columns, and column widths taken
+  from the real values (Thai has no spaces to wrap at, so a value wider than its column printed over the next one). A
+  really long list of late jobs still runs on to a second page rather than being cut, with its header row repeated and
+  the signature block kept whole. The signature canvas hands over its whole area, so the strokes floated a hand's
+  breadth above the line: the empty margin is now trimmed (`App\Support\ReportSignature`) and the picture sits on a
+  dotted line after "ลงชื่อ", with the name, the role and the date under it. The report also now states the period
+  it covers (the headings said "this month" while the default is the year so far), prints dates with Thai month names
+  and the Buddhist year like the SLA page, and shows the status in Thai instead of the raw code (`In_progress`). Covered
+  by `SlaReportLayoutTest` and `ReportSignatureTest`; `phpunit.xml` gets a 512M memory limit because the suite, run in one
+  process, was already close to the 128M default and each PDF test builds a whole dompdf document.
+- **Thai tone marks vanished in every PDF: "ที่" printed as "ที", "ทั้งหมด" as "ทังหมด", "เฉลี่ย" as "เฉลีย".** A browser
+  puts a tone mark on an upper vowel with the font's GSUB/GPOS tables (a smaller mark, moved up and along); dompdf reads
+  neither, so it drew the mark at its default place — inside the vowel, where it cannot be seen. The layout is now left to
+  HarfBuzz once: `scripts/build-thai-pdf-fonts.py` builds `sarabunpdf_normal.ttf` / `sarabunpdf_bold.ttf` (Sarabun, SIL OFL,
+  plus ~100 / ~160 ready-made glyphs for vowel + tone, tone + ำ, and a lone vowel or tone over ป ฝ ฟ, reached through
+  private-use characters), and `App\Support\ThaiPdfText` swaps each such cluster for its character in the HTML before dompdf
+  sees it. Used by the SLA report for now; the work order and asset sheet print the same way and can adopt it with one call
+  and one font-family name. The font is registered by fixed names in `installed-fonts.json` (with its `.ufm`), not by
+  `@font-face`: dompdf's own registration copies the font under a hash of the machine's path and left that absolute path in
+  the tracked json. `ThaiPdfTextTest`.
+- **Running the test suite reset every password and signed everyone out.** `phpunit.xml` had `RefreshDatabase` running
+  `migrate:fresh` against the same MySQL database the app itself (and anyone logged in) uses — every test run wiped
+  the `sessions` table and reset every user's password to the seeder's, so a login attempt right after tests ran
+  could fail for a real reason (wrong password, or literally no account left) that had nothing to do with the login
+  code. Tests now point at a separate database on the same MySQL server (same host/port/user); the dev database is
+  untouched by a full test run.
+- **Filter-bar selects (สถานะ, ประเภทงาน, บทบาท, หน่วยงาน, เรียงลำดับข้อมูล) had column widths that did not match what
+  their own options needed** — worked out from Sarabun's advance widths against the pixel width each `lg:col-span-N`
+  resolves to. The request list's สถานะ and ประเภทงาน had it backwards (สถานะ's longest label needed more room than
+  ประเภทงาน's did); the user list's บทบาท had a column to spare that หน่วยงาน needed more than it did; the technician
+  rating page's เรียงลำดับข้อมูล ("ผลงานดีที่สุด (Impact Score)") was in a row with 5+ columns going unused.
+  `FilterSelectWidthTest`.
+- **SLA dashboard: the quick date-range shortcuts never showed which one was applied, "แสดงข้อมูล:" was wrong about
+  it too, and the icon-only tools were easy to miss.** "รายงานสรุป" and "ล่าสุด" were split buttons (icon block +
+  label) of their own, which the shared `<x-ui.button icon="..." split>` already draws. They are bare icons now — no
+  box of any size, not even a bordered square — sized the same as the live chat page's own refresh icon
+  (`chat/index.blade.php`, `#btnHeaderRefresh`) and the paperclip/camera pair elsewhere, but in a new `ghost-brand`
+  variant (navy icon, navy-tinted hover, still no border or background at rest) rather than plain `ghost`'s neutral
+  grey — this whole page is navy (the apply button, the active shortcut pill, every focus ring), and grey read as too
+  faint to notice against it. "แสดงผล" (apply the date range) was the one filter-submit button in the app that was a
+  rectangle with a word on it; it is the same round, filled, magnifying-glass icon button the request/asset/user
+  list pages already use for their own search-submit button. The three quick ranges (6 เดือน / 12 เดือน / ปีนี้) were
+  plain underlined links; they are a small set of pills now, the one that's applied filled navy — which needed
+  knowing which one is applied, and the page already computed that once, for the "แสดงข้อมูล:" summary below the
+  filters, but compared `request('from')` against dates worked out a different way (`subMonths(5)->startOfMonth()` /
+  `subMonths(11)->startOfMonth()`) than the ones the links themselves send (`subMonths(6)->addDay()` /
+  `subYear()->addDay()`) — so that line read "ช่วงวันที่" even right after clicking "6 เดือน" or "12 เดือน", never the
+  shortcut's own name. Both places now read the one `$activeShortcut` the links' own dates produce.
+  `SlaShortcutsTest`, `ButtonComponentTest`.
+- **Docker: an uploaded file landed in the project folder, not a separate store.** `app` (and `web`, `worker`) bind-mount the
+  whole project (`./:/var/www/html`) for live-reload dev, so a file the app wrote to `storage/app/public` (or `/private`)
+  came out at that same path on the host — inside the git checkout, next to `app/` and `resources/`, not a store decoupled
+  from the source tree. Two named volumes (`storage_uploads`, `storage_private`) are now layered on that path in `app`,
+  `worker` and `web` (nginx reads uploads from the same `storage_uploads`, matching `.docker/nginx.conf`'s
+  `location ^~ /storage/`), so a container's uploads live in their own store, not the bind-mounted project folder.
+  `Storage::disk()` and the request/asset attachment code are unchanged — this is a Docker volume fix, not an app one.
+- **Opening a chat thread from the widget did not mark it read.** The web chat controller only advanced a user's read
+  pointer when they posted a message; viewing one (`GET /chat?thread_id=…`, what the widget's "My Topics" links to) never
+  did, so a thread you had just read stayed "unread" — the widget's badge and "ใหม่" label kept alerting on it until you
+  replied. Opening a thread now advances the pointer to its newest message, the same way sending one already did.
+  `ChatReadTrackingTest`.
+- **The "ใหม่" label in the chat widget was a boxed green pill.** Every unread row got a filled, ringed badge, which read as
+  loud on a list where most rows have one. It is blue text now, no fill, no border — blue rather than red so it does not
+  compete with the FAB's own red unread dot. `tests/js/chat-fab.test.mjs`.
+- **A long thread title in the chat widget could run under the "ใหม่" label instead of truncating.** The title's
+  `truncate` class does nothing on a flex item that refuses to shrink, and it had no `min-w-0`: a title with no early
+  break point kept its full width, and the label — `shrink-0`, pushed to the end with `ml-auto` — had nowhere left to
+  sit but on top of it. `min-w-0 flex-1` on the title fixes it, the same pair its own parent row already used one
+  level up. `tests/js/chat-fab.test.mjs`.
+- **The unread count on the chat FAB was not quite round, and the digit sat low.** `#chatBadge` had a min-width but no
+  height and no line-height, so at 11px the browser's default line box was taller than the 20px min-width —
+  `rounded-full` drew an oval. A fixed height equal to the min-width plus flex centring made it a circle, but the digit
+  still sat low even at `leading-none`: the page's default font is Sarabun, whose ascent is unusually tall (headroom for
+  Thai marks stacked above a vowel), which pushes a plain digit's ink low within a line box built from its metrics. The
+  badge never shows Thai, so it now uses `font-sans` (system-ui / Segoe UI / Roboto — ordinary, balanced metrics for a
+  digit) instead of the page's Sarabun. It still optically sat a little low even in that normal font (a digit's ink is
+  baseline-up, so the font's own em-box centre sits a touch above it): `pb-0.5` eats 2px off the bottom of the box only —
+  its height stays a fixed 20px, so the circle itself does not move — which nudges the centred content up about 1px.
+  `ChatBadgeShapeTest`.
+- **The "closed" dialog's backdrop did not match every other dialog's.** Assign team, reject/cancel/hold/close confirm, the
+  history log and the shared confirm dialog all dim the page with `bg-slate-900/40 backdrop-blur-sm`; the dialog that pops
+  up right after approving a job's repair (`_modal_post_close`, "อนุมัติผลการซ่อมบำรุงเรียบร้อยแล้ว!") used a darker tint
+  and a heavier blur of its own. It now matches. `ModalBackdropTest`.
 - **Login feedback:** a failed sign-in was completely silent. The auth layout now renders the
   session toast (`<x-toast />` only consumed it), the messages under the CID / password fields
   are shown, and every login message is in Thai. A lock-out after 5 attempts now says to wait N
@@ -20,6 +281,219 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`npm run dev` no longer collides with another project's Vite on port 5173** (styles and
   scripts came back as HTML). It picks the first free port itself; HMR follows it. `VITE_PORT`
   still sets the starting port.
+- **Print PDF on a request was a 500.** The controller rendered a view that had been left under another name, dompdf
+  ignored `config/dompdf.php` (`setOptions()` replaces the whole option object) and the committed
+  `installed-fonts.json` held one machine's absolute path. Fixed all three; the template now uses the model's status
+  labels (it printed the raw code for "acknowledged").
+- **Dashboard "เวลาเฉลี่ยปิดงาน"** averaged an unordered `limit(3000)` sample; it is now one SQL `AVG` over every
+  finished request. The dashboard controller also lost 17 cached `Schema::hasColumn` probes and a dead `monthCost`.
+- **Password reset in the browser never worked:** both POST handlers returned raw JSON and the e-mailed link pointed
+  at an undefined `app.frontend_url`. It now redirects with a message, the link opens `/reset-password/<token>`, and
+  accounts without an e-mail are told to ask an admin (JSON clients unchanged).
+- **Request-type dropdown was stale for up to an hour** after an admin added / renamed / disabled a type (cached with
+  no invalidation, in four copies); a **suspended account could still be suggested as a type's default assignee**.
+- **A mistyped URL was a 500:** `?from=garbage` on the SLA dashboard, `GET /api/stats/assets/by-department`
+  (selected a column that does not exist — failed on every call) and `?limit=-1` / `0` on the technician rating board.
+- **N+1 queries** on My Jobs (team members), the request list (department) and the SLA ticket table (type).
+- **The sound bell stopped working after the first page change.** It was wired once, to the buttons of the page that
+  loaded first; Turbo replaces the body on every visit, so from the second page on the bell did nothing and showed the
+  default icon whatever was saved. Also fixed in the same flow: a first page without a bell disabled the feature for the
+  session; after a reload with the sound saved as "on" the browser blocks audio until the user touches the page, so beeps
+  were swallowed while the bell claimed "on" (and clicking it switched the sound *off*) — the first click / key press now
+  unlocks it, and a bell click while locked unlocks instead of switching off; the setting changed in another tab is now
+  followed. `npm run test:js` (`tests/js/notify-sound.test.mjs`, 12 cases) drives the real module through a model of the
+  page and Turbo.
+- **The notification sound you chose was saved but never played.** The settings page says "เสียงแจ้งเตือนที่ใช้งานอยู่"
+  and stores the pick, but the layout's `<audio>` was hard-wired to `new-request.mp3` (only the preview used the choice).
+  It now plays the user's pick (`User::notificationSoundUrl()`), falling back to the default when the file has since been
+  removed from the library; file names with spaces / Thai are URL-encoded.
+- **A Pusher outage broke saves that had already succeeded.** The push runs inside the user's request and after the row
+  is written, but was unguarded: creating a request showed a warning toast with the raw cURL error (so people created
+  it twice), `POST /api/repair-requests` and posting a chat message (web and API) answered 500 for records that
+  existed. `SafeBroadcast` now logs the failure and carries on, and the Pusher connection ships with 2 s / 4 s timeouts
+  instead of Laravel's 10 s / 30 s (`PUSHER_CONNECT_TIMEOUT`, `PUSHER_TIMEOUT`). Nothing changes while Pusher works.
+- **The local Sarabun web font never loaded.** `public/fonts` was deleted in `a33f009`, but the layout kept asking for
+  `/fonts/Sarabun-*.woff2` (8 files, all 404). It went unnoticed because the top bar also imports Sarabun from Google
+  Fonts — on a network with no internet (a hospital intranet) every page fell back to the system font. The layout now
+  points at `public/images/fonts` (where the files are; SemiBold has no `.woff`, so woff2 is its only source). The
+  PDFs were not affected — they embed Sarabun through the family registered in `installed-fonts.json` — so the dead
+  `@font-face` blocks in the work-order and asset-sheet templates are simply removed. `FontFilesTest` fails when any
+  declared font file is missing, empty or not the kind of file its extension says, and when a PDF stops embedding
+  Sarabun. Not changed: the top bar's Google Fonts `@import` (part of the CDN clean-up still to come).
+- **`GET /api/repair-requests/my-jobs` answered 404 to everyone** — it was declared below `/{req}`, which took "my-jobs"
+  for a request id. It now sits above it and returns the caller's own jobs; `RouteReachabilityTest` fails when any
+  static route is shadowed by an earlier one.
+- **The app layout stacked its listeners on every page you opened.** Its scripts were inline, and Turbo Drive re-runs inline
+  scripts in the `<body>` on every visit, so each visit added another copy of 16 `document` / `window` listeners (the link
+  spinner, the form spinner, the sidebar, the unsaved-changes guard, a media-query listener …) — none guarded. They now live
+  in `resources/js/layout/` and are registered once when that module loads; each visit only re-applies the per-page work
+  (saved sidebar state, TomSelect / dropdowns / auto-growing textareas on the new page, watching its forms). Behaviour is
+  unchanged, apart from three side effects that went away: the "unsaved changes" flag no longer carries over to the next page,
+  each form is watched once instead of once per visit, and blocked `localStorage` no longer aborts the whole layout script.
+  Covered by `tests/js/layout.test.mjs` (23 tests; run `npm run test:js`) and `LayoutScriptsTest`.
+- **Technician rating board: the sort dropdown and the name search did nothing after opening the page from the menu** (they
+  were wired on `DOMContentLoaded`, which does not fire on a Turbo visit; a full reload worked). They are now bound from the
+  page bundle on every `turbo:load` (`technician-board.js`, `tests/js/technician-board.test.mjs`). The page's inline script also
+  left an Escape-key listener behind that threw `Cannot read properties of null` on every other page.
+- **The chat button's poll timer was started again by every page you opened.** Its inline script ran on each Turbo visit and
+  each run added another `setInterval`, so after N pages `/chat/my-updates` was fetched N times per interval. There is one
+  timer for the whole session now (30 s, the interval that was in the working copy), started by
+  `resources/js/layout/chat-fab.js`; each page load only wires the freshly rendered button and drawer. The endpoint and the
+  notification icon reach the module as `data-*` attributes of `#chatWidgetRoot`. `tests/js/chat-fab.test.mjs` (19 tests).
+- **The live chat page did not update the open thread when you opened it from the menu, and kept running after you left it.**
+  Its inline script started on `DOMContentLoaded` and on Livewire's `livewire:navigated`; neither fires on a Turbo visit, so
+  new messages only appeared after a full reload. Nothing ever stopped its 5 s poll timer, its Echo channel or its Pusher
+  `state_change` handler either, so they went on (the handler stacking up) on every other page. The page now lives in
+  `resources/js/chat/` (`boot.js` installs it once; each page load mounts the thread on screen and the page it replaces is
+  torn down on `turbo:before-render`). `wire:navigate`, `data-navigate-once` and the `livewire:*` listeners are gone — Livewire
+  was removed earlier — and the Alpine methods and the search form use the layout's `window.Loader`.
+  `tests/js/chat-page.test.mjs` (20 tests).
+- **Toast: script and styles moved out of the component** into `resources/js/toast.js` (evaluated once per session, like the
+  layout) and `resources/css/toast.css` — the file the layout and `vite.config.js` were already loading but that was an empty
+  placeholder, untracked, so a clean checkout could not build. The auth layout, which also renders toasts, now loads it too.
+  `Escape` now closes the toasts on screen at any time (it used to work only if it was the very first key pressed, because each
+  toast registered a `{ once: true }` listener), and two declarations that were a truncated `text-shadow` and never applied are
+  gone. `tests/js/toast.test.mjs` (17 tests).
+- **A job's status moves one way only — through the transition service, after the permission of that step's button.**
+  `PUT /maintenance/requests/{id}` / `PUT /api/repair-requests/{id}` accept a `status` from the team and used to save it into
+  the row *before* the service looked at it, so the service saw "no change" and checked nothing: the state map, the
+  reporter-approves rule, the SLA pause and the history were all skipped. An assigned technician could send `status=closed`
+  and close an in-progress job (no `resolved_at`, no approval by the reporter), an admin could reopen a closed job
+  (`closed → pending`, history "pending → pending", nobody recorded), resuming from hold left `paused_duration_minutes` at 0 and
+  the SLA deadline where it was, and a reporter could cancel a pending job the cancel button refuses. Now a `status` change
+  needs `MaintenanceRequestPolicy::moveTo` (the same rule as the button for that step) and then goes through
+  `applyTransition` (an illegal move = 409 and the rest of the edit is not saved). `POST /api/repair-requests/{id}/transition`
+  had the same gap — any assigned worker could do any step, incl. closing a job for the reporter — and asks `moveTo` too. The
+  edit form of the web UI has no status field, so no page changes. `PUT` also takes an optional `note` (the reason for the move;
+  on hold needs one), and answers a refused move with the state map's 409 instead of 422. Also: the `acknowledge` policy now lets
+  the worker a job is already assigned to acknowledge it (accept and reject already did; the transition tests relied on it).
+  `tests/Feature/RequestStatusPathTest.php` (7 tests).
+- **A technician who pressed "รับเรื่อง" was thrown off the job.** Accepting did not put him on the job's team, and the job page
+  only opens for the reporter, the team and admins — so the redirect after the button went back to the dashboard with "no
+  permission", and so did every other technician (he also could not put it on hold or resolve it later). Accepting now adds the
+  technician who pressed it (admins and supervisors who accept on someone's behalf do not become the worker), and a job that is
+  accepted with nobody on it can be opened by every technician, since every technician may start it (self-dispatch). No test
+  drove the acknowledge / accept / hold / resume / cancel / reject buttons before; `RequestLifecycleEndpointsTest` does.
+- **The assign-team dialog had no rules.** Any technician could change the team of any job in any status, and the dialog took
+  any account and an empty list: a technician who was not on a *closed* job could put himself on it (the worker who did it
+  was cancelled, the job showed "in progress" again, and the rating followed the newest assignment), submitting with every box
+  unticked left an in-progress job with nobody on it (from then on only an admin could hold or resolve it), and a plain
+  member account could be put on a team. Now: nobody — admins included — changes the team of a closed, cancelled or rejected
+  job (it is the record of who did the work); on a resolved job only admins and supervisors do; a technician changes the team
+  of a job he is on (hand-over) or of a job nobody is on yet (dispatch), not somebody else's; a job that is accepted, in
+  progress, on hold or resolved refuses an empty list (`PUT /api/repair-requests/{id}` with `user_ids: []` too, 422);
+  and only working staff (admin, supervisor, technician roles, not suspended) can be picked, also for a hand-made request.
+  `RequestAssignmentRulesTest` (7 tests).
+- **An asset stayed "in repair" for good when its request moved away or was deleted, and a deleted request's number was handed
+  out again.** Changing a pending request's asset (the edit form lets the reporter do it) only marked the *new* asset busy; the
+  one it left kept "in repair" although nothing was open on it any more. A deleted (trashed) request kept its asset busy, and
+  `generateLegacyRequestNo()` read the highest number among non-deleted rows, so the next new request got the deleted one's number
+  and failed on the unique key — every new request from then on. The asset it left / deleted is now released when no other open
+  request is on it, a restored request takes its asset again, and numbering counts trashed rows (by the year's prefix rather than
+  a scan of `created_at`). No screen deletes a request today (`DELETE /api/repair-requests/{id}` answers 403 to everybody — the
+  policy has no `delete` method, so the admin bypass is never consulted), so the deletion half is a guard for when something
+  does. `RequestAssetAndNumberingTest` (5 tests).
+- **The SLA clock: the type chosen later, and a job on hold.** The deadlines were worked out once, when the request was made. A
+  request made without a type (optional in the form) had no deadline for good — choosing the type afterwards did nothing, so the
+  SLA page never listed it — and one moved to another type kept the old type's. The deadlines are now set whenever the type is
+  chosen or changed on a job that is still open (resolution = request date + the type's minutes + the time already spent on
+  hold; the response deadline only until the job is acknowledged); a finished job is history, and a type without minutes leaves
+  the deadline as it is. And a job on hold, whose clock is stopped, was listed under "เกินเวลา" (list, KPI, chart) as soon as its
+  raw deadline passed and flipped back after it resumed: `MaintenanceRequest::slaDeadline()` moves the deadline out with the
+  time on hold, so it is late only if it was already late when it was put on hold. The job page's "เกินกำหนด SLA" banner uses it too
+  and no longer calls a cancelled or rejected job overdue. `RequestSlaClockTest` (9 tests).
+- **Loose ends around the job buttons.** *Resolve* was allowed on a job on hold by the policy while the state map only leaves
+  "on hold" for in-progress / cancelled (the button was hidden, a hand-made POST got a 409); it now follows the map. A finished
+  or cancelled job only settled its team rows (done / cancelled) when it had a `technician_id`, which the assign dialog leaves empty
+  — the others kept "in progress" rows for good, so the work order printed the team of a cancelled job as still working; every
+  finish / cancel now settles them (and the people who were on a cancelled or rejected job can still open its page — the
+  technician who cancels one is not thrown back to the dashboard). An outsider posting an invalid body to reject / cancel / hold /
+  resolve got a 422 before the permission check (telling him what a valid request looks like); permission now comes first.
+  Failures that were not ours (SQL with table names, a PHP error) were shown as they are in the toast / JSON of the job buttons,
+  the edit and the new-request form, and the assign dialog; they are logged and replaced by a plain message (our own refusals —
+  409s, "asset already disposed" — still show). A repeated move to the status a job is already in (a double click that got past
+  the gate) wrote an "in progress → in progress" history row; it is now refused with 409. `RequestLifecycleHygieneTest` (7 tests).
+- **The default of a select ("— ไม่ระบุ —") stayed in the field like text you had typed.** Every form select that TomSelect wraps
+  (`select.ts-basic` / `.ts-department`: the asset, department and type of the request form, the asset form, the user form, the
+  job-type select of My Jobs) showed its empty option as an ordinary value, in the same colour, and it stayed there while you
+  typed to search. It is still the default value — a real option, so picking it from the list gives "ไม่ระบุ" back, and the first
+  row of the list, set apart by a hairline — but it is drawn like a placeholder: muted grey in the field and in the list, and
+  hidden the moment you type (`is-typing` on the wrapper, set from the text box's own `input` event — TomSelect's `type` event
+  waits 300 ms), back when the text is deleted, the list closes or a value is picked. No button inside the field. Checked against
+  the real TomSelect (row order, the submitted value, one `change` per pick). `tests/js/layout.test.mjs`, `LayoutScriptsTest`.
+  Needs `npm run build` in production.
+- **The foot of the Thai lower vowel ู (and ุ) was cut off in the input fields.** Thai lower vowels hang further below the baseline
+  than the font's own descent (Sarabun: ู reaches 0.332 em down against a descent of 0.232 em — 4.65px against 3px at 14px), so a box
+  that clips its text needs to be taller than the font's ascent + descent. *Text inputs:* the inner editor is `overflow: scroll`, and
+  Chromium (`text_control_inner_elements.cc`) removes its line-height — sets it to `normal`, the font's ascent + descent — when the input
+  has a **fixed height** taller than the line-height. `.ui-input` (58 fields, every `<input>` of the forms) was `h-11`, so it was cut
+  exactly 3px under the baseline whatever line-height it declared (measured on a screenshot of the request form: ู had 3 rows of ink
+  inside the field and 5 outside it). It now has no `height` — Chromium only looks at that — and is clamped with `min-h-11` + `max-h-11` instead (and no
+  vertical padding, a 1.5rem line): every kind of field, text, number, date or select, is exactly 44px whatever its own inner layout
+  (a date input has padding of its own, a number input spin buttons; an automatic height had made them taller than a text field), the
+  browser centres the text, and the line-height applies. *Other text inputs and selects* (the sign-in / register forms, the profile page, the filter
+  bars) have an automatic height and take `line-height: 1.5rem` from `@tailwindcss/forms`, which is 24px on the default 16px font —
+  0.19px of room, none for anti-aliasing; one base rule, `line-height: max(1.5rem, 1.625em)`, raises those to 1.625 em when the font is
+  big enough for 24px to be too tight (16px → 26px, so the sign-in inputs are 44px tall like the rest) and never lowers it (13px
+  fields stay 24px). *Select fields (TomSelect):* the item is `overflow: hidden` for the "…" on a long value and used a 1.25rem line; it
+  and its text box use 1.5rem now. `ThaiTextRoomTest` reads Sarabun's metrics from the font file, lays a line out the way Chrome does
+  (whole-pixel ascent / descent, half a pixel kept for anti-aliasing), pins the fixed-height mechanism (a 14px field on `normal` is cut
+  1.65px short), checks each rule at every font size in use, and fails if an `<input>` gets a fixed height (class or inline style) or an
+  `<input>` / `<select>` is written with `text-xs` / `text-sm` and no `leading-*`. Not changed: textareas (they do not clip) and the rows
+  of the dropdown list. Needs `npm run build` in production.
+- **"Attach a file" and "take a photo" are bare icons everywhere.** The request form had a paperclip and a camera as two boxed square
+  buttons; the job page had a text button "เลือกไฟล์เพิ่ม", the camera, and a third "แนบไฟล์" beside them (two buttons that read as the
+  same thing), and the asset form had text buttons "เลือกรูปภาพ" / "เลือกไฟล์แนบ" beside the camera. All four places now use one
+  component, `<x-ui.attach-buttons>`: a paperclip and a camera, nothing else — no box, no border, no background, just the icon with a
+  soft circle on hover (the `ghost` variant at `icon-lg`, the look of the icons in the chat header). They are still real `<button>`s
+  underneath, so the keyboard and screen readers work, and each says what it is on hover (`title`) and to a screen reader (`aria-label`);
+  the ids their scripts bind are unchanged. On the job page the upload button ("แนบไฟล์") moved into the "ไฟล์ที่เลือก" box, which is
+  hidden until a file is chosen: with nothing to upload there is no button. `tests/Feature/Ui/AttachButtonsTest.php`.
+- **Job page: the paperclip and camera sit top right, and "assign the team" is a bare icon too.** The two file icons used to be a row
+  inside the "ไฟล์แนบ" section; they are now the right-hand end of that section's header, in the corner where "มอบหมายทีมเจ้าหน้าที่"
+  sits in the section below (and only for someone who may attach). That green text button is now a bare `group_add` icon in the same
+  style (`ghost`, `icon-lg`; `title` and `aria-label` "มอบหมายทีมเจ้าหน้าที่", same id, so the dialog opens as before), on the job page
+  and on the edit page. Both section headers stay on one row on a phone (the text button used to drop under the title). The request
+  form, the request edit page and the asset form (the picture and the files sections) do the same, so the paperclip and camera are in
+  the same corner on every page: `<x-ui.section-head>` has a new `actions` slot for icon tools at the right-hand end of the heading
+  (an empty slot leaves no gap). In the request form the hint "รองรับรูปภาพ / PDF" stays as a line under the heading; in the asset form
+  the labels "เลือกรูปภาพครุภัณฑ์" / "เลือกไฟล์เอกสารเพิ่มเติม" that stood above the icons are gone (the section titles say it), and the
+  hidden file inputs travel with the icons, still inside the form. `AttachButtonsTest`, `AssignIconTest`, `ButtonComponentTest`.
+- **The button that sends a new repair request has a tick, not a paper plane.** "ส่งใบแจ้งซ่อมบำรุง" used the `send` icon; it is `check`
+  now, like the confirming buttons of the other pages. Editing a request keeps the save icon. `RequestFormSubmitIconTest`.
+- **Job page: the workflow buttons are the size and shape of the buttons beside them.** รับทราบ, รับเรื่อง, ดำเนินการ, หยุดชั่วคราว,
+  กลับเข้าดำเนินการ, เสร็จสิ้น, อนุมัติปิดงาน, ประเมินความพึงพอใจ, ไม่รับเรื่อง and ยกเลิกการซ่อมบำรุง were `split` buttons (the icon in
+  a darker block of its own on the left, so wider and heavier on a wide screen); they are plain buttons now, the icon in front of the
+  label, exactly like แก้ไข, พิมพ์ PDF and กลับ in the same row. Same 44px height as before; nothing else about them changed (colours,
+  ids, forms, dialogs). The save buttons of the forms and of the cards on the job page keep the split look. `JobHeaderButtonsTest`.
+- **Changing page makes far fewer requests.** Turbo Drive replaces the `<body>` on every visit and re-creates what is in it, so a normal
+  page asked for about 15 things each time (30+ on lists with avatars), and Turbo 8 also prefetched the page of every link the pointer
+  rested on for 100 ms (17 links in the menu, each a full render). Four of the causes are gone (`NavigationCostTest`,
+  `InitialsAvatarTest`, `tests/js/avatar.test.mjs`): **(1)** `<meta name="turbo-prefetch" content="false">` in the three layouts;
+  **(2)** the avatar of someone with no photo was an image from `ui-avatars.com` — 4 per page, 23 on My Jobs, 34 on the user list, and
+  a hospital network with no internet waited on each — it is now their initials on a coloured square as an SVG carried in the `src`
+  (`App\Support\InitialsAvatar`, and `resources/js/avatar.js` for chat lines that arrive live), same colours as before, a leading
+  Thai vowel (เ แ โ ใ ไ) is not taken as the initial; **(3)** both `<audio>` elements were `preload="auto"` (one an mp3 from
+  `assets.mixkit.co`) — nothing is fetched now until a sound rings; **(4)** Bootstrap's bundle and TomSelect were `<script>`s at the end
+  of the body, fetched and run again by every visit (Bootstrap stacking its document listeners once more each time) — they are in the
+  `<head>` with `defer`, which Turbo keeps, and still run before the layout's modules. Not changed yet: the chat widget's poll on every
+  visit, the sidebar / top bar images re-created each visit, gzip and cache headers in `.docker/nginx.conf`, the chat sound's host.
+- **The × on the picture of the asset form did nothing.** A hidden, never-shown "ล้างรูปภาพ" button had the same id
+  (`hero_image_remove_btn`) as the round × on the preview and came first in the page, so the script bound "remove picture" to the
+  button nobody could see. The dead button is gone; the × is the only element with the id.
+- **The asset picker of the request form could not be searched by HIS number.** It searches the option text, which was only
+  "code - name"; the HIS registry number (รหัสทะเบียน รพจ) is now part of it — `AST-001 - name (รพจ. 6500123)`, not repeated when it
+  is the asset code itself (an asset registered from HIS takes the number as its code). The list is still the assets registered in
+  this system: HIS is only a *mock* (`HisAssetSyncService::getMockHisData`, used by the "ดึงข้อมูล HIS" button of the asset form) until
+  the real HIS API is connected. The HIS part is drawn in the colour the HIS number has on the asset table (bold blue,
+  `font-semibold text-blue-700`), in the list and in the chosen value: the option carries `data-his` and `initTomSelect` renders
+  it apart, while the text stays whole so the search still finds it. `RequestFormAssetOptionTest` (2 tests), `tests/js/layout.test.mjs`.
+- **A form's second select never turned yellow (and did not count as an unsaved edit).** The "edited field" highlight bound a
+  select through `wrapper.parentElement.querySelector('select')` — the *first* select of the wrapper's parent. TomSelect puts its
+  wrapper next to the select, and the request form keeps the asset and the department in one `<section>`, so the department's
+  wrapper was matched to the asset select (already bound) and skipped: it never turned yellow, and changing it did not count as an
+  unsaved edit either. Selects are now bound one by one, each to its own wrapper (`ts.wrapper`). The JS tests' fake TomSelect now
+  puts its wrapper beside the select like the real one — the old fake wrapped the select, which hid this.
 
 ### Added
 
@@ -36,6 +510,145 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The chat widget closes with the same X as every dialog.** Its close was a hand-drawn SVG in its own grey box; it is now
+  `<x-ui.button variant="ghost" size="icon" icon="close">`, the button the job dialogs close with (and so is the bell beside it), so a change to that
+  button is one change. `ChatWidgetCloseTest` compares its classes with a dialog's.
+- **Opening a chat thread draws the latest 30 messages; the poll is a 15-second safety net that only counts when push really works.** The page
+  drew 50 messages on opening; it draws 30 (`CHAT_INITIAL_MESSAGES`), and scrolling up loads 30 more each time (`CHAT_OLDER_BATCH`). While the
+  websocket is healthy the open thread asks the server for new messages every 15 seconds (it was 5, then 60 in a first draft - too long for a
+  conversation); it asks every 5 seconds whenever push is not certain: the connection is down or still connecting, or - new - the connection
+  is up but this thread's private channel was not subscribed (its authorisation was refused), which would otherwise have left nothing
+  arriving. When push comes back it asks at once for what it missed. `tests/js/chat-page.test.mjs`.
+- **The chat polls as a safety net while the websocket is healthy, and screen readers hear new messages.** The open thread asked the server
+  for new messages every 5 seconds even while the websocket was delivering them; while the socket is connected it now asks once a minute
+  (every 5 seconds when it is down or still connecting, and at once when it comes back, to fetch what it missed). The message list is a
+  `role="log"` region (`aria-live="polite"`) and the "locked" notice a `role="status"`, so a new message or a lock is announced (WCAG 2.2, 4.1.3);
+  the region is switched off while an older batch loads, so it is not read out as if it were new.
+- **Desktop notifications are asked for when the person presses the bell.** The widget asked the browser for permission on every page load, out
+  of the blue - a browser asked like that mostly answers "block", for good. A bell in the widget's header asks, and only while the browser has
+  not been asked yet.
+- **A chat message's time is the server's, on the Thai clock, and a date when it is old.** A message that arrived live was stamped with the
+  browser's own clock (so two people could see two times), and every message showed only a weekday and a time, so one from three weeks ago
+  looked like one from this week. Now: today "15:45", yesterday "เมื่อวาน 15:45", the last few days "วันเสาร์ 15:45", older "26 ก.ย. 2569
+  15:45" - the time the server stamped, worked out on Asia/Bangkok whatever the server's or the browser's timezone is (`ThaiDate::chatTime` and
+  `resources/js/chat/time.js` follow the same rules, both tested).
+- **Sending a chat message no longer reloads the page.** The composer submitted a form, so every message reloaded the whole page (losing the
+  scroll position and the focus) even though the message also arrives live. It now posts with fetch: the box empties, the message is drawn
+  from the server's answer (`201` with the message and who wrote it) and never twice (the broadcast and the poll carry the same id); a
+  locked or deleted thread, a failure or a dropped connection says so and keeps what was typed. Enter and the send button do the same, a
+  double press sends once, and a plain form post (no JavaScript) still works. `ChatSendJsonTest`, `tests/js/chat-page.test.mjs`.
+- **Locking a chat thread, unlocking it or deleting it reaches everyone who has it open, with no refresh.** Before, the lock only
+  showed after a reload (until then the composer was still there and a message came back "locked"), and the person who pressed the
+  button watched the whole page reload. Now the lock button answers in JSON and the page flips at once; the server broadcasts
+  `thread.lock` / `thread.deleted` on the thread's channel and the composer, the "Locked" badges, the lock button and its dialog
+  follow (a toast says what happened, once). Browsers with no websocket learn of it from the 5-second poll, which now carries an
+  `X-Thread-Locked` header (the body is still a bare array) and answers 404 for a deleted thread; whoever had a deleted thread open
+  is told and taken back to the list.
+- **Locking a chat thread is for admins and the IT / repair team.** Any signed-in non-member could lock or unlock a thread, which put it in
+  the hands of supervisors as well. Now only admins, IT support, network, programmers and technicians can; a supervisor and a plain
+  member cannot (no lock button, 403 on a direct call) - a member, the thread's author included, may still delete their own thread or hide
+  it from their list, but cannot unlock one that staff locked. The rule is `ChatThread::canBeLockedBy()`, used by the page, the web
+  actions and the API. `ChatLockPermissionTest`.
+- **Deleting a chat thread is for whoever started it and for an admin; everybody else who took part hides it.** Only an admin could delete a
+  thread; now the person who started it can too (any role), since it is theirs - the delete button and its dialog show for them and for
+  admins, and the refusal reads "เฉพาะเจ้าของกระทู้และผู้ดูแลระบบเท่านั้นที่ลบกระทู้ได้". Someone who only wrote in it has "ซ่อนจากกระทู้ที่มีส่วนร่วม"
+  (above) and no delete. The rule is `ChatThread::canBeDeletedBy()`. `ChatDeleteThreadTest`.
+- **The chat speaks Thai.** It said "You", "Unknown user", "Send a message", "My Topics", "Go All topics" and, on a locked thread,
+  "Thread locked" among Thai. They read คุณ, ไม่ทราบผู้ใช้งาน, พิมพ์ข้อความ..., กระทู้ที่มีส่วนร่วม, ไปที่กระทู้ทั้งหมด and
+  กระทู้นี้ถูกล็อก... now. A message's time was English too ("Saturday 3:45pm", and the browser's own format in the drawer); it is the
+  Thai weekday and a 24-hour clock ("วันเสาร์ 15:45") on the page and in a message that arrives live, and the drawer's list shows
+  "26 ก.ย. 2569 15:45". Technical terms stay English on purpose: "Locked" on the badges, "Emoji" and its groups (Smileys, Hands & Hearts,
+  Tasks & Objects), "Live Chat", "refresh".
+- **"Nothing found" is one component, the same size on every page.** The evaluate page said it with a 48px icon and a 14px bold
+  heading, the technician scores with a bare sentence, the job list with a 48px icon and 14px words, the chat with a 12px sentence
+  and a paler icon, the job timeline with a 48px icon, the SLA panels with a green 36px one; the request and type lists had copied
+  the document icon with a slip in its outline. They all use `<x-ui.empty-state>` now - a 40px icon and 13px words, an optional
+  12px hint and an optional link - and only the icon and the sentence differ from page to page: the lists (requests, assets, users,
+  types, evaluate, technician scores, my jobs, chat threads), the detail sections (attachments, timeline, team, repair history,
+  the technician's jobs and comments), the SLA panels and print dialog, the chat's "no thread chosen" and "no messages" panes, the
+  assign dialogs, and the chat drawer (built in JS with the same sizes). A note about a single cell or field ("ยังไม่ได้ประเมิน",
+  "ยังไม่ได้มอบหมาย") is a value, not an empty state, and stays as it is; so does the amber "repairing, but no request" warning on the
+  asset page, which is a call to act. The asset page's "no repair history" note had the same broken outline and is corrected.
+- **One separator between facts on a line: a hyphen, not a dot.** Pages ran two facts together with a middle dot (·) or a bullet (•),
+  and not the same one everywhere ("ประเมินได้ภายใน 30 วันหลังปิดงาน · …", "4.0 · พอใจ", the page subtitles of the request and asset
+  lists, the reporter's position and phone in the request list, "บันทึกล่าสุดโดย … ·", the work order's role, the notes of the printed
+  SLA report and its footer, the browser-tab titles). They all read " - " now, as does the note the system writes into a request's
+  history when a technician accepts ("… - เจ้าหน้าที่: ชื่อ"; notes already written keep the bullet they were saved with).
+  `NoDotSeparatorsTest` fails if either character comes back anywhere under `resources/`. Not checked in a browser.
+- **The bar in the job page's header row is drawn only when there is a status button, and between the buttons that need it.**
+  On "ทะเบียนแจ้งซ่อม" a thin vertical bar stood first in the row of action buttons on every job, whether or not there was a status
+  button (รับทราบ, ดำเนินการ, เสร็จสิ้น, ประเมินความพึงพอใจ …) to press — with none it was a stray bar at the edge of the row — and
+  since it stood *before* the status buttons it separated nothing. It now sits between the status buttons and the tools after them
+  (แก้ไข, พิมพ์ PDF, กลับ) and is left out when there is no status button. `JobHeaderDividerTest`. Not checked in a browser.
+- **The rating dialog is built like the other dialogs, and every popup card has one corner: `rounded-md`.** The dialog on the job
+  page ("ประเมินความพึงพอใจ") was the odd one out: a darker backdrop (60% against 40%), a 2px square card with no border, `p-8`
+  padding, an 18px bold title, upper-case letter-spaced labels, its own text box inside a grey frame — and no length limit on
+  the comment (the server refuses over 1,000 characters, so a long one was sent, refused and only then said so; missed when
+  `maxlength` was added everywhere else). It now uses the frame of reject / cancel / hold / close: the same dimming, a bordered
+  card, a header with a close button (Escape and a click outside close it too), a body of `px-4 py-4 space-y-4`, the same
+  footer and the same text box, with `maxlength="1000"` and the character counter. What stays its own: the five big stars, which
+  now say what they mean as they are picked ("พอใจมาก" — the words of `RatingLevel`), and a 1–2 star rating shows the reason
+  box as required and stops an empty submit in the browser (the server already refused it). The popup cards had drifted to five
+  different radii over time (2px, 12px …); they are now all `rounded-md` (6px, the radius of the buttons and fields inside) —
+  assign team (both copies), the history log, the four confirm dialogs, the "closed" dialog, the rating dialog, the shared
+  confirm dialog, the SLA print dialog, the three chat dialogs, the photo cropper and the chat drawer — so a dialog stays a
+  little square. `DialogRadiusTest` pins each card and scans every view that holds an overlay, so a popup added later with a
+  corner of its own fails a test; `RatingDialogTest` pins the rating dialog. Not checked in a browser.
+- **"ประเมินความพึงพอใจ" copes with a long list, and a status is coloured text, not a boxed label.** The waiting jobs and the
+  history were two lists one under the other, ten to a page, each with its own pager: with a hundred jobs neither could be read
+  or paged, and the second was a long scroll away. They are now two **tabs** (รอประเมิน / ประเมินแล้ว, each with its count,
+  which is not narrowed by the search), **one list at a time, 20 to a page** (the asset list's size), with a **search**
+  (number, title, place or technician's name — `%` and `_` typed into it are text, not wildcards) and one filter per list
+  (the jobs about to run out; the score given). A result narrowed to nothing says so and offers to clear it, the pager keeps
+  the search and the filter, "หน้า 2 จาก 5" says where you are, garbage in the query string is ignored, and the number of
+  queries does not grow with the number of rows. The level label ("ปานกลาง" …), the days left and the counts lost their ring
+  and tinted background: every other list writes a status as plain coloured text (the request list, the asset list), so a boxed
+  one was the odd one out — and with no box there is no corner radius to decide about.
+- **"ความคิดเห็นล่าสุด" on a person's rating page lists only ratings that have a comment, each worn by the system's own
+  avatar, and the demo data now has the people to write them.** The section listed the latest six ratings, most of them
+  without a word ("ไม่มีข้อความความคิดเห็น" on card after card), and drew each rater as a hand-made coloured circle with
+  two letters; it now lists the latest six *comments* (a person with none says "ยังไม่มีความคิดเห็น") and shows the rater's
+  photo, or the initials avatar every other page uses when there is none (`avatar_thumb_url`). The JSON of the same page is
+  unchanged. The seeded data had 6 members and 10 comments in 31 ratings, and two technicians with no comment at all, so
+  the section could not look like the real thing: `UserSeeder` now has **5 more members** (radiology, administration,
+  personnel, and a second one in OPD and IPD — 20 people in all) and `DemoDataSeeder` **16 more closed jobs they
+  reported**, spread over the last six months, each rated with a Thai comment of a different kind (praise, "fixed, but…",
+  and two low scores with the reason a 1–2 star rating needs). Now 88 requests, 48 ratings, 27 with a comment; every
+  technician has at least three, and the six-month trend has ratings in every month. `SeederIntegrityTest` pins all of that
+  (the relationships of the new jobs are checked like every other), `RatingPagesTest` the section. Re-seed
+  (`php artisan migrate:fresh --seed`) to see it.
+- **The three rating pages follow the same pattern as the other list pages, and say more.** "ประเมินความพึงพอใจ", the team
+  board and a person's summary each had a layout of their own (square-cornered cards and a sticky side column, an English
+  heading with an image icon, a narrow centred page with hand-drawn icons). They now use the list pages' frame — the same
+  header, full width, a table on a desktop and cards on a phone, the shared buttons and one star component — and carry what
+  a reader needs to act on:
+  - **ประเมินความพึงพอใจ:** every job shows who did it, where, when it closed and **how many days are left to rate it**
+    (coloured text: green, amber inside a week, red inside three days, "วันสุดท้าย" on the last one); the waiting list starts
+    with the job that runs out first (it was newest first), a banner counts the jobs with a week or less left over the whole
+    list and links to just those, the statistics are visible on a phone too (they were hidden), and the history is ordered by
+    when it was rated and shows the stars, their name and the date. The window is counted in one place (`ratingDaysLeft`),
+    so the list's "N days left" and the guard's "too late" cannot disagree. How it copes with a long list is the next entry.
+  - **A person's summary:** four figures instead of three — average with its level, ratings received (and what share of
+    their finished jobs were rated), finished jobs with the **average repair time**, and how many ratings were 1–2 stars —
+    beside the score distribution and a **six-month trend**; a notice when there are fewer than five ratings ("ยังไม่ควรใช้
+    ตัดสินผลงาน"), which replaces the old generated "ประสิทธิภาพเชิงกลยุทธ์" paragraph that called one 5-star review
+    "consistently above standard"; the recent jobs show the request number, close date and **what each was rated**; each
+    comment links to its job.
+  - **The team board:** Thai headings, a Material Symbols icon like the other pages, and the shared level / stars / button.
+  Dates on these pages are Thai with the Buddhist year (`ThaiDate::short`, `monthYear`). The rating dialog itself is not
+  touched. Not checked in a browser.
+- **One password rule for a password a person chooses for themselves.** Sign-up, the reset page and changing your own
+  password accepted 8 characters of anything, while the API's reset asked for 8 with a letter and a digit. All of them now
+  ask for at least 8 characters with both a letter (Thai letters count) and a digit, the sign-up and reset forms say so
+  under the field, and a refused password says why in Thai. It is one line in `AppServiceProvider` (`Password::defaults`)
+  if the rule should be looser. A password an admin sets for someone else on the user form is still checked by that form
+  (8 characters), and passwords already in use are not touched: sign-in never checks the rule.
+- **Every popup card has a smaller corner radius.** Assign team (the job page's own copy and the edit page's), the
+  history log, the four confirm dialogs, the "closed" dialog, the shared confirm dialog, the profile photo cropper and
+  the chat widget's drawer were `rounded-2xl` (16px), and the "closed" dialog was `rounded-3xl` (24px, rounder than the
+  rest). All of them are `rounded-xl` (12px) now — smaller than either, and the same as each other. The rating dialog
+  (`rounded-sm`, 2px) is untouched: it was already smaller than the new size, and the ask was to shrink the ones that
+  were too round, not round up the one that wasn't. `DialogRadiusTest`.
 - Header icons restored on the request list, assets, chat, users, maintenance-types and
   notification-settings pages (Material Symbols, same style as My Jobs).
 - **Buttons only have to match inside a pattern group** (form pages, list-page row actions, dialogs, back button) —
@@ -70,9 +683,75 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   share look-alike ticks — approval is a filled paper-with-tick), the "เริ่มต้น -> x" chip is replaced by
   "เปลี่ยนจาก <status>", the creation card no longer repeats its own sentence, all text is ≥ 12px, and rows that
   only carry the status in the note prefix (seeded / legacy) now show the right title and icon.
+- **Refactors with unchanged behaviour** (each pinned by tests written against the old code first):
+  `MaintenanceRequestController` (list visibility / ordering became `visibleTo()` / `orderedForList()` scopes),
+  `AssetController` 865 → 677 lines (one `AssetInput` for the rules, messages and the "not back to active while a repair
+  is open" guard), `Repair\DashboardController` (small private methods, output identical on ten filter combinations)
+  and the 1,199-line request detail view (`show.blade.php` → 171 lines + eight partials; the rendered HTML of 27 pages is
+  identical). 16 files lost unused imports. Login / logout / register no longer answer 204 to browsers "when testing" —
+  the real redirects are now what the tests exercise.
+- **Less is loaded on every page** (measured with `vite build`): the JS every page fetches went from 511 kB to 300 kB
+  (gzip 165 → 94 kB) because Chart.js — 200 kB — is now fetched with `import()` only on a page that has a chart, instead of
+  being part of `app.js` for the login page and everything else (`JsBundleTest` guards it). Also gone from every page: the
+  Lottie player (unpinned `@latest`, no view used it), a second Alpine on the manual page, Font Awesome (six icons on the
+  sound-settings page, where it is now loaded), and the top bar's `@import` of Sarabun from Google Fonts (the local files
+  are used since the font fix above; weights 400–700, same family). `CdnAssetsTest` fails on an unpinned or duplicated
+  third-party asset. Still loaded from a CDN: Bootstrap (css + js) and Bootstrap Icons, TomSelect, Material Symbols and
+  Inter from Google Fonts, Cropper on the profile page.
+
+- **Controllers grouped by area:** 12 controllers moved from the root of `app/Http/Controllers` into `Maintenance/` (request,
+  transition, assignment, attachment, operation log, log, print, rating, SLA), `Settings/` (request types, notification sounds)
+  and `Repair/` (my jobs, next to the dashboard) to match the `/maintenance`, `/settings` and `/repair` URLs. Namespace only:
+  no class, method, route, URL or route name changed (the route table is identical before and after). The SLA dashboard script
+  moved from `resources/js/settings/sla/` to `resources/js/maintenance/sla/`, next to its view.
+- **The app layout's CSS is a file now.** ~500 lines of plain CSS (page frame, sidebar / content widths, the form and
+  dirty-field looks, TomSelect overrides) were an inline `<style>` in `layouts/app.blade.php`, sent again with every page. It is
+  `resources/css/layout.css`, linked from the same place in `<head>` — after the page-level `@stack('styles')` and the CDN
+  stylesheets — so the cascade is unchanged (`LayoutScriptsTest` pins the position). The four `@font-face` rules stay inline
+  because their URLs come from `asset()`. The file is byte-for-byte the old CSS (whitespace aside); the layout goes from 648
+  to 150 lines, and each page's HTML is 14 KB lighter (the stylesheet is 7.6 KB minified and cached).
+- **The top bar's CSS is a file too** (`resources/css/topbar.css`, 207 lines with its header): the bar's styles, and the
+  layout variables it defines (`--topbar-h`, `--side-w`, the `--ppk-*` palette). It was an inline `<style>` at the top of `<body>`
+  in every page, so it is linked right after `layout.css` — after every head style, before every style a page body brings, the
+  place it always had (`LayoutScriptsTest` pins the order). No page overrides the bar, so it always applied on the app layout.
+  The component (387 → 174 lines) also lost a `<script>` that held two comment lines.
+- **The sidebar's CSS is a file too** (`resources/css/sidebar.css`, 0.6 KB built): the hidden scrollbar, the press effect on the
+  phone close button and the full-height phone drawer. Its `<style>` sat inside `<aside>`, after the top bar's, so the file is
+  linked after `topbar.css` (`LayoutScriptsTest` pins the order). No page overrides the sidebar. With this the only inline
+  `<style>` left on a page of the app layout is the four `@font-face` rules (they need `asset()`); a test says so.
+- **"อนุมัติผลการซ่อมบำรุง" has one icon everywhere:** `task` (a page with a tick), the one the history timeline already
+  used. It was `verified` on the my-jobs list and in the manual's status legend, `fact_check` in the dashboard's status map,
+  a plain `check` on the "อนุมัติปิดงาน" button (the "เสร็จสิ้น" button already shares its icon with its status, `task_alt`)
+  and `check_circle` in the "approved" dialog. The manual's guide section "การตรวจสอบและปิดงาน" (its side-menu link and its
+  heading) keeps `verified`: it is a section of the guide, not the status. The SLA page's `verified` (on-time rate) and
+  the manual's shield note about ratings are other things and stay.
+  The icon is also the same green as "ซ่อมบำรุงเสร็จสิ้น" wherever a page colours both (it was one or two shades darker):
+  the manual's status legend (`emerald-600`), the status chip beside a job on my-jobs (`emerald-700`, the icon and its label
+  share the class) and the dashboard's status map (`emerald-500`). Places where the colour goes on a label, a dot or an
+  accent bar rather than an icon (request list, asset page, the my-jobs card bar) are unchanged.
+  `ApprovalIconTest` pins each place. (The dashboard's `$statusTH` / `$statusPill` / `$statusStyle` are declared but nothing
+  calls them; only the glyph name and the icon colour were changed there.)
+- **SLA page: the "เกินเวลา" / "ใกล้ครบกำหนด" lists have a stated limit.** Each tab cut its rows at 20 inside the view without a
+  word, so a badge saying 45 sat over a list of 20, and the search box could not find the other 25. The limit is now one
+  named constant (`SlaPerformanceController::TICKET_LIST_LIMIT`, still 20), used by both tabs, and a cut list says
+  "แสดง 20 รายการที่เกินเวลานานที่สุด จากทั้งหมด 45 รายการ (ค้นหาได้เฉพาะรายการที่แสดง)" (the near-due tab: "ใกล้ครบกำหนดที่สุด").
+  The most overdue / the soonest due are the rows kept. The badges, the KPI counts and the PDF report keep the full list — the
+  cap is applied to the screen only (a test fails if the shared list is cut).
 
 ### Removed
 
+- **Creating a user on the admin pages.** Accounts are made by people signing themselves up, and an admin then sets the role, department and
+  status on the edit-user page — so the "สร้างผู้ใช้ใหม่" button, `GET /admin/users/create`, `POST /admin/users`, the create view and
+  the create branches of the shared form are gone (`admin.users.create` / `admin.users.store` no longer exist; the list, edit, suspend
+  and reactivate stay). An admin no longer types a password for somebody who has not signed up, which is where the shared first password
+  came from. The edit form still lets an admin set a password (the person must change it, see Security). Tests that used the create
+  page use the edit page; `SystemManagementAccessTest` pins that the routes are gone.
+- **The "สร้างทะเบียนแจ้งซ่อม" button in the Main Dashboard hero.** Every role lands on this dashboard after login
+  (`RouteServiceProvider::HOME`, no role branching in `DashboardController::index`), and the button went to the same
+  place ("+ สร้างใบแจ้งซ่อม") the request list page already offers, one click from the sidebar. A KPI overview page —
+  charts, department/asset breakdowns, technician workload, no other action on it — is not where a create button
+  belongs, and it duplicated one that already exists. The hero is now just the title and the "updated" line.
+  `DashboardHeroTest`.
 - **Deleting a user from the app** (route `admin.users.destroy`, `UserController::destroy`, the "ลบ" buttons in the
   user list and the "danger zone" on the edit page). Users are referenced by requests, logs, assignments, ratings and
   chat with `ON DELETE CASCADE` / `SET NULL`, so a delete destroyed other people's data (whole chat threads with every
@@ -81,9 +760,162 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Unused files: `components/_form-standard.blade.php` (a template with `{{ page_title }}`
   placeholders), `maintenance/requests/partials/_form_submit.blade.php` and
   `_form_operation_log.blade.php` (nothing included them).
+- **Dead code:** `/repair/queue` (its view was deleted in #8 — a guaranteed 500), `MaintenanceAssignmentService`,
+  unrouted controller methods and 200 lines of commented-out controllers, the duplicated `GET|POST /register`, the
+  unreachable confirm-password controller + view, the `tech-only` (defined twice, differently) and `admin-only` gates,
+  and `DELETE /profile` — a hidden self-delete that still hard-deleted the caller and cascaded like the user-admin one.
+- `DELETE /maintenance/requests/{req}/assignments/{assignment}`: it threw a TypeError on every call and nothing used it
+  (the team is edited through `assignments.store`).
+- **Seeders: 13 files / 2,700 lines → 5 files.** `DatabaseSeeder` now runs `ReferenceDataSeeder` (roles, 12 departments, 8 asset
+  categories, 5 request types), `UserSeeder` (15 people), `DemoDataSeeder` (35 assets, 71 requests) and `ChatSeeder`
+  (6 threads). Seven seeders that nothing called (`AssetSeeder`, `DepartmentSeeder`, `DevAdminSeeder`, …) and the
+  overlapping ones (`MockUsers`, `DemoRating`, `AdminEvaluation`, …) are gone; the data is deterministic (no faker), relative
+  to "now", and seeds in under a second instead of ~9 s. It fixes what was wrong in it: the Hardware type's default role was
+  `support` (no such role), the chat was pinned to a hard-coded user id 409, and demo accounts with known passwords were
+  seeded on any environment — production now gets the reference data only. The requests are built the way the app builds
+  them (timeline by status, lead = `technician_id`, one log row per allowed transition, SLA dates from the type, ratings only
+  on closed requests by their reporter, assets `in_repair` exactly while they have an open request) and cover the situations
+  the screens handle: every status, SLA breached / about to breach / met, on hold and resumed, a three-person team, a
+  hand-over, four unrated requests for the admin plus one whose rating window has passed, last year's requests, disposed
+  assets, a suspended technician's history, a request with no asset / no type / a switched-off type, a member with no e-mail.
+  `SeederIntegrityTest` checks all of that (and that production gets only reference data). Logins: `1234567890123` /
+  `Dev12345!` (admin, the developer account) and `10000000000NN` / `12345678` for the other roles.
+- **Dead front-end code:** the 350-line "SearchSelect" script in `app.js` and the two components it served
+  (`search-select`, `searchable-select` — no view used them), `intro-frame-reveal.js` (imported by nothing) and
+  `assets/_tomselect.blade.php` (included by nothing).
+- **The unused queue leftovers:** `composer dev` no longer starts `php artisan queue:listen` (nothing in the app is queued —
+  the push events are `ShouldBroadcastNow`, mail and notifications are sent inline), `/api/health` no longer reports a
+  "queue" check (it only built the connection object, so it said ok whatever the queue's state), and the breadcrumb
+  label of the removed `/repair/queue` page is gone. `HealthEndpointTest` also fails if a queued job / listener / mail is
+  ever added, as a reminder to bring a worker and a real check back. The `jobs` tables from Laravel's default migration
+  are left alone (empty, harmless).
+- **Unused files (clean-up):** 18 Blade views and the `AppLayout` / `Icon` component classes that nothing rendered (Breeze's
+  `modal`, `dropdown`, `nav-link` … , `app-icon`, `stat-card`, `layouts/layout`, `layouts/navigation`, `dynamic-search-dropdown`,
+  `partials/repair-action`), the unregistered `app/Exceptions/Handler.php`, `config/reverb.php` (the reverb server package is
+  not installed), the placeholder `tests/Unit/ExampleTest.php`, five Lottie animations (the toast has used inline SVG since
+  2026-04-26), 19 Sarabun font files that no page or PDF loads (1.4 MB — both PDFs render identically without them), an
+  unused icon, the README logo copy `imagesREADME/PPK.png` (byte-identical to `public/images/logoppk.png`) and `.styleci.yml`.
+  Everything is in git history.
+- **The technician board's "rating detail" modal** (markup, `openRatingModal` / `renderRatingModal` and their Escape listener):
+  nothing ever called it — the rows link to the full rating page — and it wrote the rating comments and names it fetched
+  into `innerHTML` unescaped, so it would have been a stored XSS the day something opened it. The JSON branch of
+  `MaintenanceRatingController::summary()` that fed it is still there.
+- **The e-mail verification scaffolding from Breeze:** three controllers, the `verified` middleware alias, the `verify-email`
+  view and the three `verification.*` routes. Nothing ever sent a link (`User` is not `MustVerifyEmail`) or redirected to
+  it, people sign in with the citizen id and some have no e-mail. Forgot / reset password are unchanged.
+- **Unused packages:** `laravel/scout`, `spatie/laravel-query-builder`, `livewire/livewire`, `blade-ui-kit/blade-icons` and
+  `codeat3/blade-simple-icons` (registered 3,413 icon components at every boot, none used), `laravel/breeze` (dev) and the
+  npm `@tailwindcss/line-clamp` (Tailwind 3.4 has `line-clamp-*` built in and the plugin was never in the config). No other
+  package changed version. Livewire also registered 9 routes on its own (`/livewire-…/update`, `/upload-file`,
+  `/preview-file/{filename}`, its JS and source maps) — they are gone with it. **After pulling this: `composer install`, `npm install` and `php artisan view:clear`** — views
+  compiled while Livewire was installed call its classes and answer 500 until the compiled-view cache is cleared.
+  The layout's leftover `livewire:navigated` listeners went too (that event never fired: Livewire's JS was never on a page);
+  the chat page still has its own.
+- **21 model methods nobody called that were a trap or a copy** — `MaintenanceAssignment::mark*` (state changes that skip the
+  transition rules, the log and the asset sync), `User::rating_average` / `rating_count` (an N+1 per read), `Toast::isSuccess`,
+  a second copy of the asset sort whitelist and of the operation-log upsert, and pure wrappers. 21 other unused relations,
+  predicates and one-line scopes were kept on purpose.
 
 ### Security
 
+- **The chat's live channels are private.** They were public: anybody holding the Pusher key (it is in the page's JavaScript) could subscribe
+  to `chat.{id}` - the ids count 1, 2, 3 - and read every message, name and lock live, without ever signing in. Messages, locks and deletions
+  are now announced on `private-chat.{id}`; the browser (session) and the app (bearer token) first ask `POST /broadcasting/auth`, and only a
+  signed-in account that is not suspended and not waiting to change its password is given a signature, and only for a thread that exists
+  (OWASP WebSocket Security: authenticate and authorise a subscription). Nothing to configure: the Pusher secret the server already uses
+  signs it; the channel rules are registered when somebody asks to listen, not while the app boots (an unset key cannot take the whole app down), and the test suite never uses the developer's real Pusher app (`BROADCAST_CONNECTION=null` in `phpunit.xml`). An app that listens on the chat must switch to a private channel and authorise through `/broadcasting/auth`. The request-created
+  channel (`maintenance-requests`, id / number / title / status) is still public. `ChatChannelAuthTest`.
+- **A Content-Security-Policy that cannot break a page, and a report-only preview of the strict one.** The enforced policy is now
+  `frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'`: an injected `<form action="https://evil…">` cannot
+  carry what somebody types (a password) to another host, and no plug-in content loads. Checked against every view and script: the app has
+  no `<base>`, `<object>`, `<embed>`, `<iframe>`, no form that posts to another site, no navigation to another origin. What a full policy
+  would add (`script-src` / `style-src`) is not enforced - the pages take scripts from three CDNs, carry inline Alpine (~60 inline
+  handlers, 19 inline scripts) and come from the Vite dev server in development - but outside production the strict policy is sent as
+  `Content-Security-Policy-Report-Only` (nothing is blocked; the browser console lists what a strict policy would refuse: the work list
+  for moving the pages to nonces). Production sends no report-only header. `SecurityHeadersTest` also fails if a view starts using an
+  external host the preview does not name.
+- **Who carries how much, and how long each person takes, is for management, not for a plain member.** The technician rating board
+  was closed to plain members for this reason (R6), and three doors to the same information were left open: `GET
+  /api/stats/maintenance/technicians` (names, jobs open / closed, average hours), the dashboard's "Technician Workload" (names and open
+  jobs per person, linking to their job board) and `GET /api/meta/users` (a directory of every user with role and department, other
+  members included). The first is now behind `maintenance-type-manage` like the board, the second is not drawn for a member, and the
+  third gives a member the staff they deal with, not other members (`?role=member` finds none); management sees everything as before, and the
+  totals that are not about people (`stats/summary`, `status-counts`, `by-department`) stay open. `StaffPerformanceIsManagementOnlyTest`.
+- **A password an admin chose for somebody must be changed before they use the system.** A password an admin sets for somebody else on the
+  edit-user form is known to the admin and usually written on a slip of paper — and the seeded / documented defaults are the same for
+  everybody. `users.must_change_password` (new column, default false, existing accounts untouched) is set then: every page sends the person
+  to the profile page with the reason, every API call answers 403 `password_change_required` (the API sign-in returns
+  `must_change_password: true` so a client knows); the profile page, the password form and signing out stay open. It is cleared when they change
+  the password (the new one must differ from the old) or reset it through the e-mail link. An admin changing their own password, a self sign-up
+  and the seeded demo accounts are not forced; the edit form says so under the password field. **Deploy: run `php artisan migrate`** (without
+  it the change-password form, which clears the flag, fails). `ForcedPasswordChangeTest`.
+
+- **Choosing a file with a hostile name ran a script in the page.** The upload previews (new request, request attachments,
+  asset form) put the file's name into `innerHTML` as it was, and `<img src=x onerror=…>.jpg` is a legal file name on macOS
+  and Linux. It needed the person to pick such a file from their own disk, so the risk was small, but the name now goes in
+  as text (`textContent`). `FileNamesAreTextTest` scans the views and scripts so a preview built the old way fails a test.
+
+- **An API token worked for ever.** `sanctum.expiration` was `null`, so a token that leaked (a lost phone, a script left on a
+  shared machine) kept its access until somebody thought to revoke it. Tokens now expire 30 days after they were issued
+  (`SANCTUM_TOKEN_EXPIRATION_MINUTES`, `0` = never) and the client signs in again; expired rows are pruned daily
+  (`sanctum:prune-expired`, needs the scheduler running — an expired token is refused whether or not it is pruned).
+  **Tokens issued more than 30 days ago stop working when this is deployed.** `ApiTokenLifecycleTest`.
+- **"Forgot my password" told anyone which e-mail addresses have an account, and a reset left the old way in open.** The
+  browser page said "ไม่พบบัญชีที่ใช้อีเมลนี้" for an address without an account (the API answered 400 instead of 200), a
+  second request within a minute said "wait" only for an address that has one, and setting a new password answered
+  differently for an unknown address than for a wrong token — three ways to list the staff's addresses. All of them now
+  answer the same: "หากอีเมลนี้มีบัญชีอยู่ในระบบ จะได้รับลิงก์…(บัญชีที่ไม่มีอีเมลให้ติดต่อผู้ดูแลระบบ)", the mail is sent
+  after the answer has gone (so the time it takes says nothing either), and a mail server that is down is reported to us
+  instead of shown to whoever asked. Setting a new password — and changing your own — now ends every other way into the
+  account: API tokens, "remember me" cookies and, with database sessions, every other browser session (the device you
+  change it on stays signed in). A password is reset because someone else may have it; before, their session simply
+  carried on. The browser pages and the API shared no code for this and differed in wording and rules; both now go through
+  `App\Services\PasswordRecovery` and `ActiveLogins`, and the API speaks Thai like the pages. `PasswordRecoverySecurityTest`
+  (mutation-checked: the revoke on reset, the revoke on change and "mail after the answer" each fail a test when removed).
+- **One password could be tried against every account from one machine, and the sign-in form and the API had drifted into
+  two different checks.** Sign-in stopped a guesser only per account and address (5 wrong tries), so one likely password
+  tried once against each citizen id never tripped it; the public forms (`/login`, `/register`, `/forgot-password`,
+  `/reset-password`) had no request ceiling at all, and a refused browser saw the bare "429" page. Both sign-ins now go
+  through one class, `App\Services\LoginAttempt`, with a second counter: 30 wrong tries in 5 minutes from one address, over
+  any accounts, lock that address for the rest of the window — only wrong tries count, so a ward signing in behind one
+  address at the start of a shift does not lock itself out, and a right password never clears it. Each form also has a
+  per-address ceiling (login 60/min, register 5/min and 30/hour, password recovery 5/min), and a browser that hits one goes
+  back to the form with what it typed and a toast that says how long to wait ("ส่งคำขอถี่เกินไป กรุณารอ N วินาที"). The
+  API login stopped answering faster for a citizen id nobody has (one hash check either way, so the time no longer says which
+  ids exist), stopped refusing a short password with a 422 before looking at the account (`min:6`; the form never did), and
+  now sends `Retry-After` with its 429. A password stored with older hash settings is re-hashed when it is used, as
+  `Auth::attempt` did. `LoginAttemptTest` (mutation-checked: each of the counters, the dummy hash and "a success does not
+  clear the address counter" fails a test when removed).
+- **The sign-in page could be put in an invisible frame on another site.** No response carried a framing rule, so a page
+  on any other site could load `/login` in a transparent frame and have staff type their password "into" it. Every response
+  (web, API, error pages) now carries `X-Frame-Options: SAMEORIGIN` and CSP `frame-ancestors 'self'`, `base-uri 'self'` (an
+  injected `<base>` cannot redirect every relative link and form), `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: strict-origin-when-cross-origin` (a reset link has its token in the path) and, in production over
+  https only, `Strict-Transport-Security` for 180 days on this host. A header a response already sets is left alone.
+  There is no full Content-Security-Policy yet — the pages take scripts from a CDN and carry inline Alpine, so one that
+  forbids them would break every screen; that is its own piece of work. `SecurityHeadersTest`.
+- **A password-reset e-mail could carry a link to somebody else's site.** The link was built by `route()`, which takes its
+  address from the request's `Host` header, so a request that said `Host: evil.test` and named a victim's e-mail address got
+  the victim a genuine message from this system whose button led to `evil.test/reset-password/<token>` — the token then
+  reset the password on the real site. The link now starts with `APP_URL` whatever the request said, and in production a
+  `Host` this app is not known by is refused with a 400 (`TrustProductionHosts`; known = the host of `APP_URL` plus
+  `APP_TRUSTED_HOSTS`, comma separated, for an IP address or a second name). Left off in `local`, under test, and while
+  `APP_URL` is still `localhost` — that is a setting nobody has filled in, and refusing every real host because of it would
+  lock everyone out. Covered by `HostHeaderTest`.
+- **`GET /debug/login` signed anyone in as user 410** — no middleware, no password (`Auth::loginUsingId(410)`), in the
+  routes since the UI-polish merge. Removed together with `/debug/whoami`; `NoDebugRoutesTest` forbids any "debug"
+  route from coming back.
+- **A reporter could assign staff to, or wipe the team of, their own request — and back-date it.** In
+  `MaintenanceRequestService::updateRequest` the "not a team member" branch read `user_ids` before stripping it and never
+  stripped `request_date`, so `PUT /maintenance/requests/{id}` (or the API twin) with `user_ids` / `user_ids: []` /
+  `request_date` changed the team and the date every SLA figure starts from. Both are now ignored for non-team users;
+  staff behave as before and no screen sent these fields.
+- **`GET /api/search/maintenance-requests` leaked every request's number, title and status to any signed-in user** (it
+  read the table directly: no visibility rule, and soft-deleted rows included). It now follows the request list: a member
+  only finds their own, deleted requests never appear.
+- **Private attachments were readable by every signed-in user** (`GET /attachments/{id}` with a guessed id) and ignored
+  `expires_at`. A file is now as visible as what it is attached to (request policy / asset policy; orphans: uploader or
+  admin) and an expired one answers 410.
 - **System management is admin-only.** The sidebar "การจัดการระบบ" pages — maintenance types, notification
   sounds and user admin — now sit behind one `manage-system` gate (admin role). Maintenance types and the
   notification settings used to be open to supervisors and every worker role, and the notification controller
@@ -92,6 +924,17 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the same gate, and the SLA page's "จัดการประเภทงาน" shortcut is hidden for other roles. The SLA dashboard and
   technician rating board keep their existing `maintenance-type-manage` gate (supervisors / workers).
   Note: only admins can now choose their notification sound on the settings page.
+- **Stored XSS in the chat button's "My Topics" drawer.** The drawer (on every page of the app) built its rows with
+  `innerHTML` from `/chat/my-updates`, which returns thread titles, sender names and message text exactly as typed. Anyone who
+  could post in a thread — every role — could run script in the browser of everyone who had taken part in it, on every page
+  they opened, as that user. The rows are now built from DOM nodes with `textContent` (`buildItem` in `chat-fab.js`), and the
+  test posts `<img onerror>` / `<script>` payloads through the title, sender, message and avatar URL. The chat page itself
+  (`chat/index.blade.php`) was not part of this change.
+- **Stored XSS through a display name on the live chat page.** A message that arrives while the page is open (Echo or the
+  poll) was built with `innerHTML`, with the sender's name interpolated as-is. Users can change their own name on the profile
+  page, so anyone could run script in the browser of everyone who had that thread open. Rows are DOM nodes with
+  `textContent` now (`buildMessageRow`); message bodies were already set as text, and the messages the server renders were
+  always escaped.
 
 ## [2.0.0] - 2026-09-10
 

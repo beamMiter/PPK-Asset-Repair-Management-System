@@ -56,10 +56,16 @@ export default defineConfig(async ({ command, mode }) => {
         input: [
           'resources/css/app.css',
           'resources/css/toast.css',
+          'resources/css/layout.css', // the app layout's styles, loaded from its <head> after the page stacks
+          'resources/css/topbar.css', // the top bar's, linked right after it
+          'resources/css/sidebar.css', // the sidebar's, after the top bar's
           'resources/js/app.js',
+          // The app layout's behaviour (sidebar, spinner, TomSelect, unsaved-changes guard) — only for pages of that layout
+          'resources/js/layout/boot.js',
           // Page-specific bundles
           'resources/js/repair/dashboard.js',
-          'resources/js/settings/sla/dashboard.js',
+          'resources/js/chat/boot.js',
+          'resources/js/maintenance/sla/dashboard.js',
           'resources/js/maintenance/rating/technicians-dashboard.js',
         ],
         refresh: true,

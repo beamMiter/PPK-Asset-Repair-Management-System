@@ -48,7 +48,7 @@
                             aria-hidden="true">handyman</span>
                         <div class="flex flex-col min-w-0 gap-1">
                             <h1 class="text-[17px] font-semibold text-slate-900">รายการใบงานซ่อมบำรุง</h1>
-                            <p class="text-[13px] text-slate-600">รายการแจ้งซ่อมบำรุงรักษา • ค้นหา กรอง และตรวจทานรายการ</p>
+                            <p class="text-[13px] text-slate-600">รายการแจ้งซ่อมบำรุงรักษา - ค้นหา กรอง และตรวจทานรายการ</p>
                         </div>
                     </div>
 
@@ -96,7 +96,9 @@
                             </div>
                         </div>
 
-                        <div class="md:col-span-2">
+                        {{-- 3 columns, not 2: the longest status ("หยุดการซ่อมบำรุงชั่วคราว") needs more room than the
+                             longest type name did — they had it backwards (see ประเภทงาน below). --}}
+                        <div class="md:col-span-3">
                             <label for="status" class="mb-1 block text-[12px] text-slate-600">สถานะ</label>
                             <select id="status" name="status"
                                 class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35">
@@ -108,8 +110,9 @@
                             </select>
                         </div>
 
-                        {{-- ✅ NEW: filter type --}}
-                        <div class="md:col-span-3">
+                        {{-- ✅ NEW: filter type — 2 columns: its longest option ("ยังไม่ระบุประเภท") is shorter than
+                             any status label, so it had a column to spare while สถานะ ran short of one. --}}
+                        <div class="md:col-span-2">
                             <label for="type_id" class="mb-1 block text-[12px] text-slate-600">ประเภทงาน</label>
                             <select id="type_id" name="type_id"
                                 class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35">
@@ -155,7 +158,7 @@
                 <div class="text-[13px] font-semibold text-slate-800">
                     ทะเบียนรายการแจ้งซ่อมบำรุง
                     @if ($assetId)
-                        <span class="ml-2 text-[12px] font-medium text-slate-500">• (กรองตามครุภัณฑ์
+                        <span class="ml-2 text-[12px] font-medium text-slate-500">- (กรองตามครุภัณฑ์
                             #{{ $assetId }})</span>
                     @endif
                 </div>
@@ -253,7 +256,7 @@
                                 <div class="text-[13px] font-semibold text-slate-900">
                                     {{ $reporterName ?? '—' }}
                                     @if ($row->reporter_position)
-                                        <span class="text-[11px] text-slate-500">• {{ $row->reporter_position }}</span>
+                                        <span class="text-[11px] text-slate-500">- {{ $row->reporter_position }}</span>
                                     @endif
                                 </div>
                                 @if ($reporterEmail || $reporterPhone)
@@ -262,7 +265,7 @@
                                             <span>{{ $reporterEmail }}</span>
                                         @endif
                                         @if ($reporterPhone)
-                                            <span>• {{ $reporterPhone }}</span>
+                                            <span>- {{ $reporterPhone }}</span>
                                         @endif
                                     </div>
                                 @endif
@@ -314,18 +317,11 @@
                         @endphp
                         <tr>
                             <td colspan="8" class="py-16 text-center text-slate-600">
-                                <div class="flex flex-col items-center gap-2">
-                                    <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    @if ($hasFilter)
-                                        <p class="text-[13px]">ไม่พบคำขอบำรุงรักษาตามเงื่อนไขที่เลือก</p>
-                                    @else
-                                        <p class="text-[13px]">ตอนนี้ยังไม่มีคำขอบำรุงรักษาในระบบ</p>
-                                    @endif
-                                </div>
+                                @if ($hasFilter)
+                                    <x-ui.empty-state>ไม่พบคำขอบำรุงรักษาตามเงื่อนไขที่เลือก</x-ui.empty-state>
+                                @else
+                                    <x-ui.empty-state>ตอนนี้ยังไม่มีคำขอบำรุงรักษาในระบบ</x-ui.empty-state>
+                                @endif
                             </td>
                         </tr>
                     @endforelse

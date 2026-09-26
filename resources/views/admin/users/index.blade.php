@@ -53,7 +53,6 @@
                             <span x-text="showFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรอง'"></span>
                         </button>
 
-                        <x-ui.button :href="route('admin.users.create')" variant="primary" icon="add" onclick="showLoader()">สร้างผู้ใช้ใหม่</x-ui.button>
                     </div>
                 </div>
 
@@ -61,8 +60,9 @@
                     x-show="showFilters" x-collapse x-cloak
                     class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end md:!grid" onsubmit="showLoader()">
 
-                    {{-- Search --}}
-                    <div class="md:col-span-4 lg:col-span-4 min-w-0">
+                    {{-- Search — 5, not 4: the column บทบาท gave up (it only needed 2), a search box benefits more
+                         from extra room than a select whose longest option already fits. --}}
+                    <div class="md:col-span-5 lg:col-span-5 min-w-0">
                         <label for="s" class="mb-1 block text-[12px] text-slate-600">คำค้นหา</label>
                         <div class="relative">
                             <input id="s" name="s" value="{{ $filters['s'] }}"
@@ -80,8 +80,9 @@
                         </div>
                     </div>
 
-                    {{-- Role --}}
-                    <div class="md:col-span-3 lg:col-span-3 min-w-0">
+                    {{-- Role — 2, not 3: its longest option ("เจ้าหน้าที่ซ่อมบำรุง") is shorter than หน่วยงาน's, which
+                         needs every one of its 3 columns for "กลุ่มงานเทคโนโลยีสารสนเทศ". --}}
+                    <div class="md:col-span-2 lg:col-span-2 min-w-0">
                         <label for="role" class="mb-1 block text-[12px] text-slate-600">บทบาท</label>
                         <select id="role" name="role"
                             class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800
@@ -245,16 +246,7 @@
                     @empty
                         <tr>
                             <td colspan="6" class="py-16 text-center text-slate-600">
-                                <div class="flex flex-col items-center gap-2">
-                                    <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    <p class="text-[13px]">
-                                        {{ $hasFilter ? 'ไม่พบผู้ใช้ตามเงื่อนไขที่เลือก' : 'ตอนนี้ยังไม่มีผู้ใช้ในระบบ' }}
-                                    </p>
-                                </div>
+                                <x-ui.empty-state>{{ $hasFilter ? 'ไม่พบผู้ใช้ตามเงื่อนไขที่เลือก' : 'ตอนนี้ยังไม่มีผู้ใช้ในระบบ' }}</x-ui.empty-state>
                             </td>
                         </tr>
                     @endforelse
@@ -337,15 +329,8 @@
                     </div>
                 </div>
             @empty
-                <div class="rounded-md border border-slate-200 bg-white p-8 text-center text-slate-600 text-[13px]">
-                    <div class="flex flex-col items-center gap-2">
-                        <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <p class="text-[13px]">
-                            {{ $hasFilter ? 'ไม่พบผู้ใช้ตามเงื่อนไขที่เลือก' : 'ตอนนี้ยังไม่มีผู้ใช้ในระบบ' }}
-                        </p>
-                    </div>
+                <div class="rounded-md border border-slate-200 bg-white p-8">
+                    <x-ui.empty-state>{{ $hasFilter ? 'ไม่พบผู้ใช้ตามเงื่อนไขที่เลือก' : 'ตอนนี้ยังไม่มีผู้ใช้ในระบบ' }}</x-ui.empty-state>
                 </div>
             @endforelse
         </div>

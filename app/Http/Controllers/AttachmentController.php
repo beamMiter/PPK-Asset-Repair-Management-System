@@ -2,45 +2,34 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Asset;
 use App\Models\Attachment;
 use App\Models\MaintenanceRequest as MR;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AttachmentController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * A private file is exactly as visible as the thing it is attached to: a request's files follow the request
+     * policy (reporter, assigned team, admin team), an asset's files follow the asset policy. Before this, any
+     * signed-in user could read any private attachment just by changing the id in the URL.
+     */
+    private function authorizeDownload(User $user, Attachment $attachment): void
     {
-        return response()->json([
-            'error'   => 'deprecated',
-            'message' => 'This endpoint is no longer supported. Use /maintenance/requests/{req} and its attachments relation.',
-        ], 410);
-    }
+        $target = $attachment->attachable;
 
-    public function indexByRequest(MR $req)
-    {
-        $list = $req->attachments()
-            ->orderByDesc('created_at')
-            ->paginate(20);
+        if ($target instanceof MR || $target instanceof Asset) {
+            Gate::forUser($user)->authorize('view', $target);
 
-        $list->getCollection()->transform(function (Attachment $a) {
-            return [
-                'id'            => $a->id,
-                'url'           => $a->url,
-                'filename'      => $a->filename,
-                'mime'          => $a->mime,
-                'size'          => $a->size,
-                'is_private'    => $a->is_private,
-                'caption'       => $a->caption,
-                'alt_text'      => $a->alt_text,
-                'order_column'  => $a->order_column,
-                'uploaded_by'   => $a->uploaded_by,
-                'created_at'    => $a->created_at,
-            ];
-        });
+            return;
+        }
 
-        return response()->json($list);
+        // orphaned / unknown target: only whoever uploaded it, or an admin
+        abort_unless($user->isAdmin() || (int) $attachment->uploaded_by === (int) $user->id, 403);
     }
 
     public function show(Request $request, Attachment $attachment)
@@ -50,6 +39,11 @@ class AttachmentController extends Controller
             abort_unless($publicUrl, 404);
             return redirect()->away($publicUrl);
         }
+
+        $this->authorizeDownload($request->user(), $attachment);
+
+        // retention: an attachment past its expiry is no longer served
+        abort_if($attachment->expires_at && $attachment->expires_at->isPast(), 410, 'ไฟล์แนบนี้หมดอายุแล้ว');
 
         // path / disk / mime / size live on the linked File, not on Attachment —
         // reading them off $attachment made every private download 404.
@@ -103,14 +97,6 @@ class AttachmentController extends Controller
         return response()->json([
             'error'   => 'deprecated',
             'message' => 'This endpoint is no longer supported. Use maintenance.requests.attachments.destroy.',
-        ], 410);
-    }
-
-    public function storeForRequest(Request $request, MR $req)
-    {
-        return response()->json([
-            'error'   => 'deprecated',
-            'message' => 'This endpoint is no longer supported. Use maintenance.requests.attachments.upload.',
         ], 410);
     }
 }

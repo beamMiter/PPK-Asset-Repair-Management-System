@@ -82,7 +82,7 @@
                     <label for="name" class="block text-sm font-medium text-slate-700">
                         ชื่อประเภทงานซ่อม <span class="text-rose-500 font-bold">*</span>
                     </label>
-                    <input type="text" name="name" id="name" value="{{ old('name', $type->name) }}" autocomplete="off" class="ui-input" required placeholder="เช่น งานซ่อมคอมพิวเตอร์, งานประปา">
+                    <input type="text" name="name" id="name" value="{{ old('name', $type->name) }}" autocomplete="off" class="ui-input" required placeholder="เช่น งานซ่อมคอมพิวเตอร์, งานประปา" maxlength="150">
                 </div>
 
                 <div>

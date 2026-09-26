@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:js": "node --test tests/js/*.test.mjs"
   },
   "repository": {
     "type": "git",
@@ -24,7 +25,6 @@
   "homepage": "https://github.com/iMookatayou/Asset-Repair-Management-System#readme",
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.10",
-    "@tailwindcss/line-clamp": "^0.4.4",
     "alpinejs": "^3.15.1",
     "autoprefixer": "^10.4.21",
     "baseline-browser-mapping": "^2.10.20",

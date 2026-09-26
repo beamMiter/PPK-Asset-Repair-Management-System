@@ -26,6 +26,9 @@ paths:
     post:
       tags: [Auth]
       summary: Login and receive bearer token
+      description: |
+        The token expires 30 days after it is issued (then sign in again). Wrong tries are counted per citizen_id + IP
+        (5, then 60 s) and per IP over all accounts (30 in 5 minutes); a locked caller gets 429 with `Retry-After`.
       requestBody:
         required: true
         content:
@@ -33,10 +36,10 @@ paths:
             schema:
               type: object
               properties:
-                email: { type: string, format: email }
+                citizen_id: { type: string, pattern: '^[0-9]{13}$', description: 13-digit citizen id }
                 password: { type: string }
-                device_name: { type: string }
-              required: [email,password]
+                device_name: { type: string, maxLength: 120 }
+              required: [citizen_id, password]
       responses:
         '201':
           description: Created
@@ -49,6 +52,12 @@ paths:
                   token_type: { type: string }
                   user:
                     $ref: '#/components/schemas/User'
+        '401': { description: "invalid_credentials (a wrong password and an unknown citizen id read the same)" }
+        '403': { description: "account_suspended (only shown when the password was right)" }
+        '429':
+          description: "too_many_attempts (see Retry-After) or RATE_LIMITED"
+          headers:
+            Retry-After: { schema: { type: integer }, description: Seconds to wait }
   /auth/me:
     get:
       tags: [Auth]
@@ -98,11 +107,42 @@ paths:
           schema: { type: integer }
       responses:
         '200': { description: Revoked }
+  /auth/password:
+    put:
+      tags: [Auth]
+      security: [{ bearerAuth: [] }]
+      summary: Change my own password
+      description: >
+        Also the way out for an account whose password an admin chose: every other call answers 403 `password_change_required` until this
+        succeeds. The token used for this call stays valid; every other token of the account ends. 6 calls a minute.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, password, password_confirmation]
+              properties:
+                current_password: { type: string }
+                password: { type: string, description: "8+ characters with a letter and a digit, different from the current one" }
+                password_confirmation: { type: string }
+      responses:
+        '200':
+          description: Changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  must_change_password: { type: boolean }
+        '422': { description: The current password is wrong, or the new one is weak, unconfirmed or the same }
   /auth/logout:
     post:
       tags: [Auth]
       security: [{ bearerAuth: [] }]
       summary: Logout (revoke current token)
+      description: With a bearer token that token is revoked; called with the browser's own session the session ends.
       responses:
         '200': { description: Logged out }
   /auth/logout-all:
@@ -116,6 +156,9 @@ paths:
     post:
       tags: [Auth]
       summary: Request password reset email
+      description: |
+        Answers 200 with the same message whether or not the address has an account (a different answer would list the
+        addresses that do); the mail, if any, is sent after the response. 5 requests per minute per IP.
       requestBody:
         required: true
         content:
@@ -126,11 +169,15 @@ paths:
                 email: { type: string, format: email }
               required: [email]
       responses:
-        '200': { description: Sent }
+        '200': { description: "Accepted — \"if this address has an account, a link is on its way\"" }
+        '422': { description: Not a well-formed address }
   /auth/password/reset:
     post:
       tags: [Auth]
       summary: Reset password with token
+      description: |
+        Success ends every other way into the account: all API tokens, "remember me" cookies and browser sessions.
+        A wrong token, an expired one and an unknown address are refused in the same words.
       requestBody:
         required: true
         content:
@@ -140,11 +187,13 @@ paths:
               properties:
                 email: { type: string, format: email }
                 token: { type: string }
-                password: { type: string }
+                password: { type: string, minLength: 8, description: At least 8 characters with a letter and a digit }
                 password_confirmation: { type: string }
               required: [email,token,password,password_confirmation]
       responses:
         '200': { description: Reset OK }
+        '400': { description: "password_reset_failed" }
+        '422': { description: Password does not meet the rule }
   /assets:
     get:
       tags: [Assets]
@@ -492,6 +541,10 @@ paths:
         - in: query
           name: q
           schema: { type: string }
+        - in: query
+          name: scope
+          description: "`mine` lists only the threads the caller started or wrote in (minus the ones they hid); `hidden` lists the ones they hid from that; anything else lists every thread"
+          schema: { type: string, enum: [all, mine, hidden], default: all }
       responses:
         '200':
           description: OK
@@ -539,6 +592,46 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ChatThreadDetail' }
+  /threads/{id}/hide:
+    post:
+      tags: [Chat]
+      security: [{ bearerAuth: [] }]
+      summary: Hide a thread from my "กระทู้ที่มีส่วนร่วม"
+      description: >
+        Per person; nothing is deleted and nobody else is affected. The thread is read up to its last message, leaves `scope=mine`,
+        the widget list (`/chat/my-updates`) and the unread badge, and stays in the full list. It comes back when the caller posts in it.
+        A caller who neither started nor wrote in the thread gets 422.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Hidden
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HiddenState' }
+        '422':
+          description: The caller has no part in the thread
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HiddenState' }
+    delete:
+      tags: [Chat]
+      security: [{ bearerAuth: [] }]
+      summary: Show a hidden thread in my "กระทู้ที่มีส่วนร่วม" again
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Shown again
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HiddenState' }
   /threads/{id}/messages:
     get:
       tags: [Chat]
@@ -680,6 +773,7 @@ components:
         id: { type: integer }
         title: { type: string }
         is_locked: { type: boolean }
+        hidden_by_me: { type: boolean, description: "Hidden from the caller's กระทู้ที่มีส่วนร่วม (list only)" }
         created_at: { type: string }
         author:
           $ref: '#/components/schemas/UserBasic'
@@ -687,6 +781,11 @@ components:
         unread_count: { type: integer }
         latest_message:
           $ref: '#/components/schemas/ChatMessage'
+    HiddenState:
+      type: object
+      properties:
+        hidden: { type: boolean }
+        message: { type: string }
     ChatThreadDetail:
       allOf:
         - $ref: '#/components/schemas/ChatThread'

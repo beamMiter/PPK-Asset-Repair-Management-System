@@ -19,6 +19,14 @@ trait HandlesMaintenanceRating
     /** Per-request memo for resolveTechnicianIdForRating(). */
     private array $resolvedTechnicianId = [];
 
+    /** The date the rating window is counted from: the first of closed_at / resolved_at / completed_date. */
+    protected function ratingBaseDate(MaintenanceRequest $maintenanceRequest): ?\Carbon\CarbonInterface
+    {
+        return $maintenanceRequest->closed_at
+            ?? $maintenanceRequest->resolved_at
+            ?? $maintenanceRequest->completed_date;
+    }
+
     /**
      * A request is ratable while the first of closed_at / resolved_at /
      * completed_date is in the past and within the deadline. Carbon 3's
@@ -26,16 +34,24 @@ trait HandlesMaintenanceRating
      */
     protected function withinRatingWindow(MaintenanceRequest $maintenanceRequest): bool
     {
-        $base = $maintenanceRequest->closed_at
-            ?? $maintenanceRequest->resolved_at
-            ?? $maintenanceRequest->completed_date;
+        return $this->ratingDaysLeft($maintenanceRequest) !== null;
+    }
 
-        if (! $base) {
-            return false;
+    /**
+     * Whole days left to rate it: the deadline on the day it was closed, 0 on the last day, null when it can no longer (or
+     * not yet) be rated. The one place that counts, so the list's "N days left" and the guard's "too late" cannot disagree.
+     */
+    protected function ratingDaysLeft(MaintenanceRequest $maintenanceRequest): ?int
+    {
+        $base = $this->ratingBaseDate($maintenanceRequest);
+
+        if (! $base || ! $base->isPast()) {
+            return null;
         }
 
-        return $base->isPast()
-            && (int) now()->diffInDays($base, true) <= $this->ratingDeadlineDays;
+        $used = (int) now()->diffInDays($base, true);
+
+        return $used <= $this->ratingDeadlineDays ? $this->ratingDeadlineDays - $used : null;
     }
 
     /**
