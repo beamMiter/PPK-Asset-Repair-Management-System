@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\ChatMessageDeleted;
-use App\Events\ChatThreadDeleted;
-use App\Events\ChatThreadLockChanged;
+use App\Events\Chat\ChatMessageDeleted;
+use App\Events\Chat\ChatThreadDeleted;
+use App\Events\Chat\ChatThreadLockChanged;
 use App\Models\ChatMessage;
 use App\Models\ChatModerationLog;
 use App\Models\ChatThread;
-use App\Support\ChatQuota;
+use App\Services\ChatQuota;
 use App\Support\SafeBroadcast;
 use App\Traits\HandlesChatReads;
 use Illuminate\Http\Request;
@@ -181,7 +181,7 @@ class ChatController extends Controller
             $this->markThreadRead((int) $message->user_id, (int) $thread->id, (int) $message->id, reappear: true);
         }
 
-        SafeBroadcast::send(new \App\Events\ChatMessageSent($message));
+        SafeBroadcast::send(new \App\Events\Chat\ChatMessageSent($message));
 
         // the page sends with fetch and draws the message from this; a plain form post still goes back to the page
         return $r->expectsJson() ? response()->json($message->toChatArray(), 201) : back();

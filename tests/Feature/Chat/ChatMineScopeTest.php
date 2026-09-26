@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Chat;
 
 use App\Models\ChatMessage;
 use App\Models\ChatThread;

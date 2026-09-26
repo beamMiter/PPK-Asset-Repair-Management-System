@@ -1,10 +1,10 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Chat;
 
-use App\Events\ChatMessageSent;
-use App\Events\ChatThreadDeleted;
-use App\Events\ChatThreadLockChanged;
+use App\Events\Chat\ChatMessageSent;
+use App\Events\Chat\ChatThreadDeleted;
+use App\Events\Chat\ChatThreadLockChanged;
 use App\Models\ChatMessage;
 use App\Models\ChatThread;
 use App\Models\User;

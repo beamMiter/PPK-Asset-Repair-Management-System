@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Events\ChatMessageSent;
+use App\Events\Chat\ChatMessageSent;
 use App\Events\MaintenanceRequestCreated;
 use App\Models\Asset;
 use App\Models\ChatMessage;

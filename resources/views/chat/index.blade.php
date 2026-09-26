@@ -114,7 +114,7 @@
                     <div class="flex flex-col items-end">
                     <button type="button" @click="showCreateModal = true" @disabled($noneLeft)
                         class="inline-flex items-center gap-2 rounded-md bg-[#0F2D5C] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#0F2D5C]/90 transition-all focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/40 active:scale-95"
-                        title="{{ $noneLeft ? \App\Support\ChatQuota::refusal() : 'สร้างกระทู้ใหม่' }}">
+                        title="{{ $noneLeft ? \App\Services\ChatQuota::refusal() : 'สร้างกระทู้ใหม่' }}">
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>

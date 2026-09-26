@@ -1,8 +1,8 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Chat;
 
-use App\Events\ChatMessageSent;
+use App\Events\Chat\ChatMessageSent;
 use App\Models\ChatMessage;
 use App\Models\ChatThread;
 use App\Models\User;

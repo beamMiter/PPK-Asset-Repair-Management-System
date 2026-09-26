@@ -523,6 +523,10 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The chat's files sit together.** The four chat broadcast events moved to `app/Events/Chat/` (from beside the repair-request event), the
+  thread-quota service from `app/Support/` (helpers) to `app/Services/` (it reads the database, as its neighbours do), and the thirteen chat test
+  classes to `tests/Feature/Chat/`. Only the paths and namespaces change: the names the pages listen for (`message.sent`, `thread.lock`, ...) are
+  set by each event and are the same, so nothing needs to be redeployed on the browser side.
 - **The chat widget closes with the same X as every dialog.** Its close was a hand-drawn SVG in its own grey box; it is now
   `<x-ui.button variant="ghost" size="icon" icon="close">`, the button the job dialogs close with (and so is the bell beside it), so a change to that
   button is one change. `ChatWidgetCloseTest` compares its classes with a dialog's.

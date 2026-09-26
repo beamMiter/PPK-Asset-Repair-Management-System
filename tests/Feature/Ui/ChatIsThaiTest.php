@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Ui;
 
-use App\Events\ChatMessageSent;
+use App\Events\Chat\ChatMessageSent;
 use App\Models\ChatMessage;
 use App\Models\ChatThread;
 use App\Models\User;

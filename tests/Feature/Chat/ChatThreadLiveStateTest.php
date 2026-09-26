@@ -1,9 +1,9 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Chat;
 
-use App\Events\ChatThreadDeleted;
-use App\Events\ChatThreadLockChanged;
+use App\Events\Chat\ChatThreadDeleted;
+use App\Events\Chat\ChatThreadLockChanged;
 use App\Models\ChatThread;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;

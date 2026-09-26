@@ -1,9 +1,9 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Chat;
 
-use App\Events\ChatMessageDeleted;
-use App\Events\ChatMessageSent;
+use App\Events\Chat\ChatMessageDeleted;
+use App\Events\Chat\ChatMessageSent;
 use App\Models\ChatMessage;
 use App\Models\ChatModerationLog;
 use App\Models\ChatThread;

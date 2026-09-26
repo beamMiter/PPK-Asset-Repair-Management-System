@@ -1,11 +1,11 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Chat;
 
-use App\Events\ChatMessageSent;
+use App\Events\Chat\ChatMessageSent;
 use App\Models\ChatThread;
 use App\Models\User;
-use App\Support\ChatQuota;
+use App\Services\ChatQuota;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
