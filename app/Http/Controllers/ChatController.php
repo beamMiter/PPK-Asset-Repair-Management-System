@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ChatMessageDeleted;
 use App\Events\ChatThreadDeleted;
 use App\Events\ChatThreadLockChanged;
+use App\Models\ChatMessage;
+use App\Models\ChatModerationLog;
 use App\Models\ChatThread;
 use App\Support\ChatQuota;
 use App\Support\SafeBroadcast;
@@ -43,8 +46,9 @@ class ChatController extends Controller
             $activeThread = ChatThread::find($activeThreadId);
             if ($activeThread) {
                 $messages = $activeThread->messages()
+                    ->withTrashed()                 // a deleted message is drawn as "ข้อความนี้ถูกลบ", not left out
                     ->with('user:id,name')
-                    ->latest('created_at')
+                    ->orderByDesc('id')
                     ->take(50)
                     ->get()
                     ->reverse()
@@ -214,6 +218,8 @@ class ChatController extends Controller
         $thread->is_locked = $locked;
         $thread->save();
 
+        ChatModerationLog::record($locked ? ChatModerationLog::LOCK : ChatModerationLog::UNLOCK, $request->user(), $thread, request: $request);
+
         SafeBroadcast::send(new ChatThreadLockChanged((int) $thread->id, $locked));
 
         $toast = [
@@ -233,7 +239,7 @@ class ChatController extends Controller
         return back();
     }
 
-    public function destroy(ChatThread $thread)
+    public function destroy(Request $request, ChatThread $thread)
     {
         if (! $thread->canBeDeletedBy(Auth::user())) {
             // AccessDeniedHttpException, not abort(403): bootstrap/app.php turns that one into a toast on the page the user was on
@@ -241,6 +247,8 @@ class ChatController extends Controller
         }
 
         $thread->delete();
+
+        ChatModerationLog::record(ChatModerationLog::DELETE_THREAD, $request->user(), $thread, meta: ['own' => (int) $thread->author_id === (int) $request->user()->id], request: $request);
 
         SafeBroadcast::send(new ChatThreadDeleted((int) $thread->id));
 
@@ -251,6 +259,33 @@ class ChatController extends Controller
         ]]);
 
         return redirect()->route('chat.index');
+    }
+
+    // ========= Delete one message =========
+
+    /**
+     * Its author (while the thread is open) or a moderator deletes a message: it stays in the thread as "ข้อความนี้ถูกลบ" for everybody,
+     * the text is gone from every page, and the deletion is written to the moderation record. It is a soft delete (the purge clears it later).
+     */
+    public function destroyMessage(Request $request, ChatThread $thread, ChatMessage $message)
+    {
+        abort_unless((int) $message->chat_thread_id === (int) $thread->id, 404);
+
+        if (! $thread->canDeleteMessage($message, $request->user())) {
+            throw new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException('เฉพาะเจ้าของข้อความและผู้ดูแลเท่านั้นที่ลบข้อความได้');
+        }
+
+        // deleting a message must not bring the thread to the top of the list ("updated"): the THREAD is what is not touched
+        ChatThread::withoutTouching(fn () => $message->delete());
+
+        ChatModerationLog::record(ChatModerationLog::DELETE_MESSAGE, $request->user(), $thread, $message, [
+            'message_author_id' => (int) $message->user_id,
+            'own' => (int) $message->user_id === (int) $request->user()->id,
+        ], $request);
+
+        SafeBroadcast::send(new ChatMessageDeleted((int) $thread->id, (int) $message->id));
+
+        return $request->expectsJson() ? response()->json(['deleted' => true, 'id' => $message->id]) : back();
     }
 
     // ========= Hide from / show again in "กระทู้ที่มีส่วนร่วม" (per person; nothing is deleted) =========

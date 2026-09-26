@@ -366,7 +366,7 @@
                 <div id="chatBox" data-thread-id="{{ $activeThread->id }}" data-my-id="{{ $me->id ?? 0 }}"
                     data-last-id="{{ $messages->last()?->id ?? 0 }}"
                     data-last-user-id="{{ $messages->last()?->user_id ?? 0 }}"
-                    data-chat-url="{{ route('chat.messages', $activeThread) }}" data-list-url="{{ route('chat.index') }}"
+                    data-chat-url="{{ route('chat.messages', $activeThread) }}" data-list-url="{{ route('chat.index') }}" data-can-moderate="{{ ($canManageLock ?? false) ? 1 : 0 }}"
                     class="flex-1 overflow-y-auto w-full px-4 pt-3 pb-4 md:px-6 md:pt-5 md:pb-6 bg-slate-50 min-h-0 relative">
                     @if ($messages->isEmpty())
                         {{-- Empty State --}}
@@ -382,53 +382,12 @@
                                     $isMe = $me && $m->user_id === $me->id;
                                     $isConsecutive = $lastUserId === $m->user_id;
                                     $lastUserId = $m->user_id;
-                                    $intl = mb_substr($m->user->name, 0, 1);
                                 @endphp
 
-                                @if ($isMe)
-                                    {{-- RIGHT SIDE (ME) --}}
-                                    <div class="chat-msg-row flex flex-col items-end w-full {{ $loop->first ? 'mt-0' : ($isConsecutive ? 'mt-1' : 'mt-4') }}"
-                                        data-user-id="{{ $m->user_id }}">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span
-                                                class="text-xs text-gray-500">{{ \App\Support\ThaiDate::weekdayTime($m->created_at) }}</span>
-                                            <span class="text-[13px] font-semibold text-gray-900">คุณ</span>
-                                        </div>
-                                        <div
-                                            class="bg-blue-600 text-white rounded-2xl rounded-tr-none py-2.5 px-4 max-w-[85%] sm:max-w-[70%] text-[15px] leading-relaxed ">
-                                            <div class="whitespace-pre-line break-words">{{ $m->body }}</div>
-                                        </div>
-                                    </div>
-                                @else
-                                    {{-- LEFT SIDE (THEM) --}}
-                                    <div class="chat-msg-row flex items-start gap-3 w-full {{ $loop->first ? 'mt-0' : ($isConsecutive ? 'mt-1' : 'mt-4') }}"
-                                        data-user-id="{{ $m->user_id }}">
-                                        <div
-                                            class="relative shrink-0 {{ $isConsecutive ? 'opacity-0 h-0 pointer-events-none' : '' }}">
-                                            @if (!$isConsecutive)
-                                                <img src="{{ $m->user?->avatar_thumb_url ?? \App\Support\InitialsAvatar::url($m->user->name ?? '?', 80) }}"
-                                                    class="h-10 w-10 rounded-full object-cover border border-gray-200 "
-                                                    alt="{{ $m->user?->name ?? 'ผู้ใช้' }}">
-                                            @else
-                                                <div class="w-10"></div>
-                                            @endif
-                                        </div>
-                                        <div class="flex flex-col items-start min-w-0 max-w-[85%] sm:max-w-[70%]">
-                                            @if (!$isConsecutive)
-                                                <div class="flex items-center gap-2 mb-1">
-                                                    <span
-                                                        class="text-[13px] font-semibold text-gray-900">{{ $m->user->name }}</span>
-                                                    <span
-                                                        class="text-xs text-gray-500">{{ \App\Support\ThaiDate::weekdayTime($m->created_at) }}</span>
-                                                </div>
-                                            @endif
-                                            <div
-                                                class="bg-gray-50 border border-gray-100/80 text-gray-900 rounded-2xl {{ !$isConsecutive ? 'rounded-tl-none' : '' }} py-2.5 px-4 text-[15px] leading-relaxed">
-                                                <div class="whitespace-pre-line break-words">{{ $m->body }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endif
+                                @include('chat._message', [
+                                    'm' => $m, 'isMe' => $isMe, 'isConsecutive' => $isConsecutive, 'first' => $loop->first,
+                                    'canDelete' => $activeThread->canDeleteMessage($m, $me),
+                                ])
                             @endforeach
                         </div>
                     @endif

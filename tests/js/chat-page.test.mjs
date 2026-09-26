@@ -23,11 +23,11 @@ const EXPECTED = ['document:DOMContentLoaded', 'document:turbo:before-render', '
 const msg = (over = {}) => ({ id: 11, user_id: 9, body: 'สวัสดี', user: { id: 9, name: 'สมชาย', avatar_thumb_url: '/img/9.png' }, ...over });
 
 // what chat/index.blade.php renders with a thread open
-function threadPage(body, world, { thread = 7, last = 10, lastUser = 9 } = {}) {
+function threadPage(body, world, { thread = 7, last = 10, lastUser = 9, canModerate = false } = {}) {
   const el = world.el; const r = {};
   r.pane = el('div', { id: 'chat-pane' }); r.pane.alpine = { chatStatus: 'connecting', locked: false, deleting: false };
   r.box = el('div', { id: 'chatBox' });
-  Object.assign(r.box.dataset, { threadId: String(thread), myId: '5', lastId: String(last), lastUserId: String(lastUser), chatUrl: `/chat/threads/${thread}/messages`, listUrl: '/chat' });
+  Object.assign(r.box.dataset, { threadId: String(thread), myId: '5', lastId: String(last), lastUserId: String(lastUser), chatUrl: `/chat/threads/${thread}/messages`, listUrl: '/chat', canModerate: canModerate ? '1' : '0' });
   r.box.scrollHeight = 1000; r.box.clientHeight = 500; r.box.scrollTop = 0;
   r.empty = el('div', { id: 'emptyStateMsg' });
   r.input = el('textarea', { id: 'msgInput' }); r.input.value = ''; r.input.scrollHeight = 100;
@@ -65,6 +65,7 @@ function boot({ page = threadPage, answers = [[]], echo = true, innerWidth = 128
   const conn = { state: 'connecting', bound: [], bind(_e, f) { conn.bound.push(f); }, unbind(_e, f) { conn.bound = conn.bound.filter((x) => x !== f); } };
   const handlers = {}; const events = {}; const joined = []; const left = []; const toasts = []; const visited = [];
   world.win.showToast = (o) => toasts.push(o);
+  const confirms = []; world.win.confirm = (text) => { confirms.push(text); return world.confirmAnswer !== false; };
   world.win.Turbo = { visit: (url) => visited.push(url) };
   if (echo) {
     world.win.Echo = { connector: { pusher: { connection: conn } },
@@ -72,7 +73,7 @@ function boot({ page = threadPage, answers = [[]], echo = true, innerWidth = 128
       leave(name) { left.push(name); delete handlers[name]; delete events[name]; } };
   }
   world.win.Alpine = { $data: (e) => e.alpine };            // the page's Alpine is there whether or not the websocket is
-  Object.assign(world, { fetches, requests, conn, handlers, events, joined, left, queue, toasts, visited });
+  Object.assign(world, { confirms, fetches, requests, conn, handlers, events, joined, left, queue, toasts, visited });
   world.ref = page(world.body, world);
   world.chat = Chat.installChatPage(world.win);
   world.go = (build = page, opts) => {                       // a Turbo visit: the old page is torn down, the body replaced
@@ -215,7 +216,7 @@ test('my messages sit on the right as "คุณ"; others show avatar and name, 
   world.emit(msg({ id: 13, user_id: 6, body: 'b', user: { name: 'วรรณา' } }));
   const [mine, first, follow] = world.rows();
   assert.ok(mine.className.includes('items-end') && mine.textContent.includes('คุณ') && mine.textContent.includes('ของฉัน'));
-  assert.match(mine.textContent, /วัน[ก-๙]+ \d{2}:\d{2}/, 'the time is the Thai weekday and a 24-hour clock');
+  assert.match(mine.textContent, /\d{2}:\d{2}/, 'a message of today: the time on a 24-hour clock');
   assert.ok(!/\b(AM|PM)\b/i.test(mine.textContent) && !/Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/.test(mine.textContent));
   assert.equal(first.querySelector('img').alt, 'รูปผู้ใช้');
   const src = first.querySelector('img').src;
@@ -542,5 +543,120 @@ test('a 429 with no Retry-After still says to wait (10 s), not nothing', async (
   type(world, 'x').dispatch('keydown', { key: 'Enter', shiftKey: false });
   await settle();
   assert.match(world.toasts.at(-1).message, /รอ 10 วินาที/);
+});
+
+// ── the time of a message: the server's, on the Thai clock ─────────────────────────────────────────────────────────
+import { chatTime } from '../../resources/js/chat/time.js';
+
+test('a message is read the way a person says it - the same rules as ThaiDate::chatTime', () => {
+  const now = new Date('2026-09-26T11:00:00Z');                       // 18:00 Saturday in Thailand
+  const at = (iso) => chatTime(iso, now);
+  assert.equal(at('2026-09-26T08:45:00Z'), '15:45');                  // today
+  assert.equal(at('2026-09-25T17:05:00Z'), '00:05');                  // 00:05 today in Thailand, still "yesterday" in UTC
+  assert.equal(at('2026-09-25T16:59:00Z'), 'เมื่อวาน 23:59');
+  assert.equal(at('2026-09-23T02:30:00Z'), 'วันพุธ 09:30');
+  assert.equal(at('2026-09-21T02:30:00Z'), 'วันจันทร์ 09:30');       // five days ago
+  assert.equal(at('2026-09-20T02:30:00Z'), '20 ก.ย. 2569 09:30');    // six days ago: a date, Buddhist year
+  assert.equal(at('2026-07-04T06:05:00Z'), '4 ก.ค. 2569 13:05');
+  assert.equal(at('not a date'), '');
+});
+
+test('a live message shows the time the server stamped, not this browser\'s clock', () => {
+  const world = boot();
+  world.emit(msg({ id: 11, user_id: 6, user: { name: 'วรรณา' }, created_at: '2020-01-05T03:07:00Z' }));
+  const [row] = world.rows();
+  assert.ok(row.textContent.includes('5 ม.ค. 2563 10:07'), row.textContent);
+});
+
+// ── deleting a message ─────────────────────────────────────────────────────────────────────────────────────────────
+const messageRow = (world, id) => world.rows().find((r) => r.getAttribute('data-message-id') === String(id));
+const binOf = (row) => row.querySelector('.chat-msg-delete');
+
+test('a message I wrote has a bin while the thread is open; one of somebody else\'s has none', () => {
+  const world = boot();
+  world.emit(msg({ id: 11, user_id: 5, body: 'ของฉัน' }));
+  world.emit(msg({ id: 12, user_id: 6, body: 'ของเขา', user: { name: 'วรรณา' } }));
+  assert.ok(binOf(messageRow(world, 11)), 'my own');
+  assert.equal(binOf(messageRow(world, 12)), null, 'somebody else\'s');
+  assert.equal(binOf(messageRow(world, 11)).getAttribute('aria-label'), 'ลบข้อความนี้');
+});
+
+test('once the thread is locked my own messages lose the bin (they cannot change a closed thread)', () => {
+  const world = boot();
+  world.ref.pane.alpine.locked = true;
+  world.emit(msg({ id: 11, user_id: 5 }));
+  assert.equal(binOf(messageRow(world, 11)), null);
+});
+
+test('a moderator gets a bin on every message, locked or not', () => {
+  const world = boot({ page: (b, w) => threadPage(b, w, { canModerate: true }) });
+  world.ref.pane.alpine.locked = true;
+  world.emit(msg({ id: 11, user_id: 6, user: { name: 'วรรณา' } }));
+  world.emit(msg({ id: 12, user_id: 5 }));
+  assert.ok(binOf(messageRow(world, 11)) && binOf(messageRow(world, 12)));
+});
+
+test('pressing it asks, deletes with the CSRF token, and the message becomes "ข้อความนี้ถูกลบ" - the counter goes down', async () => {
+  const world = boot({ answers: [[]] });
+  world.body.append(world.el('meta', { name: 'csrf-token', content: 'tok-5' }));
+  world.emit(msg({ id: 11, user_id: 5, body: 'ลับ' }));
+  world.queue.splice(0, world.queue.length, world.resp({ deleted: true }));
+  binOf(messageRow(world, 11)).dispatch('click');
+  await settle();
+
+  assert.match(world.confirms[0], /ลบข้อความนี้/);
+  const del = world.requests.find((r) => r.init?.method === 'DELETE');
+  assert.equal(del.url, '/chat/threads/7/messages/11');
+  assert.equal(del.init.headers['X-CSRF-TOKEN'], 'tok-5');
+  const row = messageRow(world, 11);
+  assert.ok(row.textContent.includes('ข้อความนี้ถูกลบ') && !row.textContent.includes('ลับ'));
+  assert.equal(binOf(row), null, 'no bin on what is gone');
+  assert.equal(world.ref.counter.textContent, '4', '4 +1 (the live message) -1 (the deletion)');
+});
+
+test('answering "cancel" to the question deletes nothing', async () => {
+  const world = boot();
+  world.confirmAnswer = false;
+  world.emit(msg({ id: 11, user_id: 5 }));
+  binOf(messageRow(world, 11)).dispatch('click');
+  await settle();
+  assert.equal(world.requests.filter((r) => r.init?.method === 'DELETE').length, 0);
+  assert.ok(binOf(messageRow(world, 11)));
+});
+
+test('another person deletes a message: this page hears it and shows the placeholder, once', () => {
+  const world = boot();
+  world.emit(msg({ id: 12, user_id: 6, body: 'จะถูกลบ', user: { name: 'วรรณา' } }));
+  world.hear('.message.deleted', { thread_id: 7, message_id: 12 });
+  world.hear('.message.deleted', { thread_id: 7, message_id: 12 });
+  const row = messageRow(world, 12);
+  assert.ok(row.textContent.includes('ข้อความนี้ถูกลบ') && !row.textContent.includes('จะถูกลบ'));
+  assert.equal(world.ref.counter.textContent, '4', '+1 for the message, -1 once for the deletion (not twice)');
+  world.hear('.message.deleted', { thread_id: 7, message_id: 999 });     // a message this page never drew: nothing happens
+});
+
+test('a refusal (403) or a failure is told and the message stays; a 404 means it is gone already', async () => {
+  for (const [answer, expect] of [[403, /ไม่มีสิทธิ์/], [500, /ไม่สำเร็จ/]]) {
+    const world = boot({ answers: [[]] });
+    world.emit(msg({ id: 11, user_id: 5, body: 'อยู่ต่อ' }));
+    world.queue.splice(0, world.queue.length, world.resp({}, { status: answer }));
+    binOf(messageRow(world, 11)).dispatch('click');
+    await settle();
+    assert.match(world.toasts.at(-1).message, expect);
+    assert.ok(messageRow(world, 11).textContent.includes('อยู่ต่อ'));
+  }
+  const gone = boot({ answers: [[]] });
+  gone.emit(msg({ id: 11, user_id: 5, body: 'x' }));
+  gone.queue.splice(0, gone.queue.length, gone.resp({}, { status: 404 }));
+  binOf(messageRow(gone, 11)).dispatch('click');
+  await settle();
+  assert.ok(messageRow(gone, 11).textContent.includes('ข้อความนี้ถูกลบ'));
+});
+
+test('a deleted message that arrives (older load, or a poll) is drawn as the placeholder with no words in it', () => {
+  const row = Chat.buildMessageRow(createWorld().doc, { id: 5, user_id: 6, body: null, deleted: true, user: { name: 'วรรณา' } }, { isMe: false, isConsecutive: false, timeStr: '15:45', canDelete: true });
+  assert.ok(row.textContent.includes('ข้อความนี้ถูกลบ'));
+  assert.equal(row.getAttribute('data-deleted'), '1');
+  assert.equal(row.querySelector('.chat-msg-delete'), null);
 });
 

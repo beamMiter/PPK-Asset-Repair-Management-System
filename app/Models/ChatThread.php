@@ -49,6 +49,19 @@ class ChatThread extends Model
     }
 
     /**
+     * Deleting one message: whoever wrote it (while the thread is open - nobody changes a closed thread's history but a moderator), and
+     * a moderator - the people who may lock: admins and the IT / repair team.
+     */
+    public function canDeleteMessage(ChatMessage $message, ?User $user): bool
+    {
+        if ($user === null || (int) $message->chat_thread_id !== (int) $this->id) {
+            return false;
+        }
+
+        return $this->canBeLockedBy($user) || ((int) $message->user_id === (int) $user->id && ! $this->is_locked);
+    }
+
+    /**
      * Deleting a thread (it is hidden from everyone) belongs to whoever started it, and to an admin. Everybody else who took part
      * hides it from their own list instead (see scopeInMyList).
      */

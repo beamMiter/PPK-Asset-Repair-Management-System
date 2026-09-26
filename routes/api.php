@@ -170,6 +170,8 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     //   POST .../messages   body: body* (≤ 3,000) → 201 และ broadcast แบบ real-time · กระทู้ที่ล็อกอยู่ = 403
     Route::get('/threads/{thread}/messages',  [ChatController::class, 'messages'])->name('messages.index');
     Route::post('/threads/{thread}/messages', [ChatController::class, 'storeMessage'])->middleware('throttle:chat-message')->name('messages.store');
+    //   DELETE .../messages/{message}  ผู้เขียน (ตอนกระทู้ยังไม่ล็อก) หรือผู้ดูแล (admin + ทีม IT/ช่าง) → {deleted:true}; ข้อความกลายเป็น "ข้อความนี้ถูกลบ" และมีบันทึกการดูแล
+    Route::delete('/threads/{thread}/messages/{message}', [ChatController::class, 'destroyMessage'])->name('messages.destroy');
 
     // Thread lock / unlock — admin และทีม IT / ช่าง (User::workerRoles) เท่านั้น ไม่รวม supervisor และ member (เช็คใน ChatThread::canBeLockedBy)
     Route::post('/threads/{thread}/lock',   [ChatController::class, 'lock'])->name('threads.lock');

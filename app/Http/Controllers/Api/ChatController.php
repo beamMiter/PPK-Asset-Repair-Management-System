@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ChatThread;
+use App\Events\ChatMessageDeleted;
 use App\Events\ChatThreadLockChanged;
+use App\Models\ChatModerationLog;
 use App\Support\ChatQuota;
 use App\Support\SafeBroadcast;
 use App\Models\ChatMessage;
@@ -213,12 +215,14 @@ class ChatController extends Controller
         ], 201);
     }
 
-    public function lock(ChatThread $thread)
+    public function lock(Request $request, ChatThread $thread)
     {
         $this->authorizeLocking($thread);
 
         $thread->is_locked = true;
         $thread->save();
+
+        ChatModerationLog::record(ChatModerationLog::LOCK, $request->user(), $thread, request: $request);
 
         SafeBroadcast::send(new ChatThreadLockChanged((int) $thread->id, true));
 
@@ -230,12 +234,14 @@ class ChatController extends Controller
         ]);
     }
 
-    public function unlock(ChatThread $thread)
+    public function unlock(Request $request, ChatThread $thread)
     {
         $this->authorizeLocking($thread);
 
         $thread->is_locked = false;
         $thread->save();
+
+        ChatModerationLog::record(ChatModerationLog::UNLOCK, $request->user(), $thread, request: $request);
 
         SafeBroadcast::send(new ChatThreadLockChanged((int) $thread->id, false));
 
@@ -245,6 +251,24 @@ class ChatController extends Controller
             'is_locked'  => (bool) $thread->is_locked,
             'created_at' => $thread->created_at ? $thread->created_at->toISOString() : null,
         ]);
+    }
+
+    /** Delete one message (its author while the thread is open, or a moderator): the same rules and record as the page's. */
+    public function destroyMessage(Request $request, ChatThread $thread, ChatMessage $message)
+    {
+        abort_unless((int) $message->chat_thread_id === (int) $thread->id, 404);
+        abort_unless($thread->canDeleteMessage($message, $request->user()), 403, 'เฉพาะเจ้าของข้อความและผู้ดูแลเท่านั้นที่ลบข้อความได้');
+
+        ChatThread::withoutTouching(fn () => $message->delete());
+
+        ChatModerationLog::record(ChatModerationLog::DELETE_MESSAGE, $request->user(), $thread, $message, [
+            'message_author_id' => (int) $message->user_id,
+            'own' => (int) $message->user_id === (int) $request->user()->id,
+        ], $request);
+
+        SafeBroadcast::send(new ChatMessageDeleted((int) $thread->id, (int) $message->id));
+
+        return response()->json(['deleted' => true, 'id' => $message->id]);
     }
 
     // Hide from / show again in "กระทู้ที่มีส่วนร่วม" — per person, nothing is deleted (same rules as the web path).

@@ -46,8 +46,10 @@ class ChatIsThaiTest extends TestCase
     public function test_a_thread_reads_in_thai(): void
     {
         [$me, $thread] = $this->threadWithTalk(false);
+        \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::create(2026, 9, 28, 10, 0, 0, 'Asia/Bangkok'));   // two days after the messages
 
         $html = $this->actingAs($me)->get(route('chat.index', ['thread_id' => $thread->id]))->assertOk()->getContent();
+        \Illuminate\Support\Carbon::setTestNow();
 
         foreach (['>คุณ<', 'placeholder="พิมพ์ข้อความ..."', 'title="Emoji"', "'Smileys'", "'Hands & Hearts'", "'Tasks & Objects'"] as $thai) {
             $this->assertStringContainsString($thai, $html, $thai);
@@ -112,7 +114,10 @@ class ChatIsThaiTest extends TestCase
         $this->assertStringNotContainsString("'You'", $js);
         $this->assertStringNotContainsString("'Unknown'", $js);
         $this->assertStringNotContainsString("'en-US'", $js);
-        $this->assertStringContainsString("toLocaleString('th-TH', TIME_FORMAT)", $js);
-        $this->assertStringContainsString("hourCycle: 'h23'", $js);
+        $this->assertStringContainsString('chatTime(m.created_at', $js, 'the time the server stamped, on the Thai clock');
+        $this->assertStringNotContainsString('toLocaleString', $js);
+        $time = file_get_contents(resource_path('js/chat/time.js'));
+        $this->assertStringContainsString("const TZ = 'Asia/Bangkok'", $time);
+        $this->assertStringContainsString("hourCycle: 'h23'", $time);
     }
 }

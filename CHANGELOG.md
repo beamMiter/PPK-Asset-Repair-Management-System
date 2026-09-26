@@ -8,6 +8,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **One chat message can be deleted, and every lock / unlock / delete is recorded.** A wrong or unsuitable message could only be removed by
+  deleting its whole thread. Now its author (while the thread is open) or a moderator (admins and the IT / repair team, always) deletes it: it
+  stays in the thread as "ข้อความนี้ถูกลบ" for everybody, its words are never sent to a page again, everyone with the thread open sees it change
+  (`message.deleted`), the thread does not jump to the top of the list, and the counters drop. A bin appears only where the person may use it
+  (page and live rows alike); `DELETE /chat/threads/{thread}/messages/{message}` and `DELETE /api/threads/{thread}/messages/{message}`. The
+  new table `chat_moderation_logs` (migration; run `php artisan migrate`) records who locked, unlocked or deleted what - a thread or a message
+  - from which address and when, with the thread's title and no message text; ids are plain numbers so the record outlives a purged thread
+  (OWASP Logging). `ChatDeleteMessageTest`.
 - **The chat is limited against a flood, and a person may start 5 threads a day.** Nothing limited posting or creating threads. What a person
   SENDS is now stopped when it is a flood, not for what it says: 8 messages in 10 seconds, or 60 in 5 minutes (a person writing normally is
   never near either); the answer is a 429 with `Retry-After`, the page says "รอ N วินาที" and keeps what was typed. New threads: 5 a day for
@@ -486,6 +494,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A chat message's time is the server's, on the Thai clock, and a date when it is old.** A message that arrived live was stamped with the
+  browser's own clock (so two people could see two times), and every message showed only a weekday and a time, so one from three weeks ago
+  looked like one from this week. Now: today "15:45", yesterday "เมื่อวาน 15:45", the last few days "วันเสาร์ 15:45", older "26 ก.ย. 2569
+  15:45" - the time the server stamped, worked out on Asia/Bangkok whatever the server's or the browser's timezone is (`ThaiDate::chatTime` and
+  `resources/js/chat/time.js` follow the same rules, both tested).
 - **Sending a chat message no longer reloads the page.** The composer submitted a form, so every message reloaded the whole page (losing the
   scroll position and the focus) even though the message also arrives live. It now posts with fetch: the box empties, the message is drawn
   from the server's answer (`201` with the message and who wrote it) and never twice (the broadcast and the poll carry the same id); a

@@ -126,6 +126,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/chat/threads/{thread}', [ChatController::class, 'show'])->name('chat.show');
     Route::get('/chat/threads/{thread}/messages', [ChatController::class, 'messages'])->name('chat.messages');
     Route::post('/chat/threads/{thread}/messages', [ChatController::class, 'storeMessage'])->middleware('throttle:chat-message')->name('chat.messages.store');
+    Route::delete('/chat/threads/{thread}/messages/{message}', [ChatController::class, 'destroyMessage'])->name('chat.messages.destroy');
     Route::get('/chat/my-updates', [ChatController::class, 'myUpdates'])->name('chat.my_updates');
     Route::post('/chat/threads/{thread}/lock', [ChatController::class, 'lock'])->name('chat.lock');
     Route::post('/chat/threads/{thread}/unlock', [ChatController::class, 'unlock'])->name('chat.unlock');

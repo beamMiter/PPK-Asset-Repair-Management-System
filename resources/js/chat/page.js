@@ -14,11 +14,11 @@
 // go through `innerHTML`.
 
 import { initialsAvatarUrl } from '../avatar.js';
+import { chatTime } from './time.js';
 
 export const POLL_MS = 5000;               // polling fallback, alongside the realtime channel
 export const STATUS_TIMEOUT_MS = 10000;    // still "connecting" after this long → show the polling (offline) state
 
-const TIME_FORMAT = { weekday: 'long', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };   // วันเสาร์ 15:45, as ThaiDate::weekdayTime prints it
 
 function el(doc, tag, className, text) {
     const node = doc.createElement(tag);
@@ -27,11 +27,39 @@ function el(doc, tag, className, text) {
     return node;
 }
 
-/** A message row, as the server renders them, for a message that arrived while the page was open. */
-export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr }) {
+const DELETED_TEXT = 'ข้อความนี้ถูกลบ';
+const DELETE_BUTTON = 'chat-msg-delete shrink-0 rounded-full p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-200';
+
+/** the little bin beside a bubble; one click handler on the message list serves every row (see mount) */
+function deleteButton(doc) {
+    const btn = el(doc, 'button', DELETE_BUTTON);
+    btn.type = 'button';
+    btn.setAttribute('title', 'ลบข้อความนี้');
+    btn.setAttribute('aria-label', 'ลบข้อความนี้');
+    const icon = el(doc, 'span', 'material-symbols-outlined text-[16px] leading-none', 'delete');
+    icon.setAttribute('aria-hidden', 'true');
+    btn.append(icon);
+    return btn;
+}
+
+/** A bubble for a message that is not there any more: "ข้อความนี้ถูกลบ", muted, whoever wrote it. */
+function deletedBubble(doc, tail) {
+    const bubble = el(doc, 'div', `rounded-2xl ${tail} border border-gray-100 bg-gray-50 py-2.5 px-4 text-[14px] italic text-gray-400`);
+    bubble.append(el(doc, 'div', 'msg-body', DELETED_TEXT));
+    return bubble;
+}
+
+/**
+ * A message row, as chat/_message.blade.php renders it, for a message that arrived while the page was open.
+ * m: { id, user_id, body, deleted?, created_at, user }.  canDelete: this person may delete this one.
+ */
+export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr, canDelete = false }) {
     const gap = isConsecutive ? 'mt-1' : 'mt-4';
     const row = el(doc, 'div');
     row.dataset.userId = m.user_id;
+    row.setAttribute('data-message-id', String(m.id));        // attributes, not dataset: the delete handler finds a row by this selector
+    if (m.deleted) row.setAttribute('data-deleted', '1');
+    const showDelete = canDelete && !m.deleted;
 
     const body = el(doc, 'div', 'whitespace-pre-line break-words msg-body', m.body);
 
@@ -39,9 +67,16 @@ export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr }) {
         row.className = `chat-msg-row flex flex-col items-end w-full animate-bubble-in opacity-0 translate-y-2 ${gap}`;
         const head = el(doc, 'div', 'flex items-center gap-2 mb-1');
         head.append(el(doc, 'span', 'text-xs text-gray-500', timeStr), el(doc, 'span', 'text-[13px] font-semibold text-gray-900', 'คุณ'));
-        const bubble = el(doc, 'div', 'bg-blue-600 text-white rounded-2xl rounded-tr-none py-2.5 px-4 max-w-[85%] sm:max-w-[70%] text-[15px] leading-relaxed');
-        bubble.append(body);
-        row.append(head, bubble);
+        const line = el(doc, 'div', 'flex items-center justify-end gap-1 max-w-[85%] sm:max-w-[70%]');
+        if (showDelete) line.append(deleteButton(doc));
+        if (m.deleted) {
+            line.append(deletedBubble(doc, 'rounded-tr-none'));
+        } else {
+            const bubble = el(doc, 'div', 'bg-blue-600 text-white rounded-2xl rounded-tr-none py-2.5 px-4 text-[15px] leading-relaxed');
+            bubble.append(body);
+            line.append(bubble);
+        }
+        row.append(head, line);
         return row;
     }
 
@@ -64,9 +99,16 @@ export function buildMessageRow(doc, m, { isMe, isConsecutive, timeStr }) {
         head.append(el(doc, 'span', 'text-[13px] font-semibold text-gray-900', m.user?.name || 'ไม่ทราบผู้ใช้งาน'), el(doc, 'span', 'text-xs text-gray-500', timeStr));
         column.append(head);
     }
-    const bubble = el(doc, 'div', `bg-gray-50 border border-gray-100/80 text-gray-900 rounded-2xl ${!isConsecutive ? 'rounded-tl-none' : ''} py-2.5 px-4 text-[15px] leading-relaxed`);
-    bubble.append(body);
-    column.append(bubble);
+    const line = el(doc, 'div', 'flex items-center gap-1');
+    if (m.deleted) {
+        line.append(deletedBubble(doc, !isConsecutive ? 'rounded-tl-none' : ''));
+    } else {
+        const bubble = el(doc, 'div', `bg-gray-50 border border-gray-100/80 text-gray-900 rounded-2xl ${!isConsecutive ? 'rounded-tl-none' : ''} py-2.5 px-4 text-[15px] leading-relaxed`);
+        bubble.append(body);
+        line.append(bubble);
+    }
+    if (showDelete) line.append(deleteButton(doc));
+    column.append(line);
 
     row.append(avatar, column);
     return row;
@@ -87,6 +129,7 @@ function mount(win) {
     let lastId = parseInt(box.dataset.lastId) || 0;
     let lastAppendedUserId = parseInt(box.dataset.lastUserId) || 0;
     const chatUrl = box.dataset.chatUrl;
+    const canModerate = box.dataset.canModerate === '1';   // admins and the IT / repair team: they may delete any message
     let autoScroll = true;
     const undo = []; // everything to take back when the page is left
 
@@ -111,7 +154,9 @@ function mount(win) {
             box.appendChild(wrapper);
         }
 
-        const row = buildMessageRow(doc, m, { isMe, isConsecutive, timeStr: new Date().toLocaleString('th-TH', TIME_FORMAT) });
+        // the time the SERVER stamped it (not this browser's clock), on the Thai clock; a moderator may delete any, a person their own while it is open
+        const canDelete = canModerate || (isMe && !isLocked());
+        const row = buildMessageRow(doc, m, { isMe, isConsecutive, timeStr: chatTime(m.created_at ?? new Date()), canDelete });
         wrapper.appendChild(row);
         win.setTimeout(() => row.classList.remove('translate-y-2', 'opacity-0'), 10);
     }
@@ -120,6 +165,7 @@ function mount(win) {
     // The page's Alpine state (`locked`) drives the composer, the badges and the lock button, so a change is one assignment.
     function stop() { undo.splice(0).forEach((fn) => fn()); }
     const alpineOf = () => { try { return chatPane && win.Alpine.$data(chatPane); } catch { return null; } };
+    function isLocked() { const alpine = alpineOf(); return !!(alpine && alpine.locked); }
 
     const setLocked = (locked) => {
         const alpine = alpineOf();
@@ -138,6 +184,54 @@ function mount(win) {
         const url = box.dataset.listUrl;
         if (url) win.setTimeout(() => (win.Turbo ? win.Turbo.visit(url) : win.location.assign(url)), 1200);
     };
+
+    // ── deleting one message ──
+    // A row keeps "ข้อความนี้ถูกลบ" in place of its words, for everybody (a broadcast tells the other pages).
+    const rowOf = (id) => box.querySelector(`[data-message-id="${id}"]`);
+    function markDeleted(id) {
+        const row = rowOf(id);
+        if (!row || row.hasAttribute('data-deleted')) return;
+        row.setAttribute('data-deleted', '1');
+        row.querySelectorAll('.chat-msg-delete').forEach((btn) => btn.remove());
+        const body = row.querySelector('.msg-body');
+        if (body) {
+            body.textContent = DELETED_TEXT;
+            body.className = 'msg-body';
+            const bubble = body.parentElement;
+            if (bubble) bubble.className = bubble.className
+                .replace(/\bbg-blue-600\b|\btext-white\b|\bbg-gray-50\b|\btext-gray-900\b|\bborder-gray-100\/80\b|\btext-\[15px\]\b|\bleading-relaxed\b/g, '')
+                .trim() + ' border border-gray-100 bg-gray-50 text-[14px] italic text-gray-400';
+        }
+        bumpCounter(-1);
+    }
+
+    box.addEventListener('click', async (e) => {
+        const btn = e.target.closest?.('.chat-msg-delete');
+        if (!btn) return;
+        const row = btn.closest('[data-message-id]');
+        if (!row || !win.confirm('ลบข้อความนี้ใช่หรือไม่? ข้อความจะหายไปจากกระทู้สำหรับทุกคน')) return;
+
+        try {
+            const messageId = row.getAttribute('data-message-id');
+            const res = await win.fetch(`${chatUrl}/${messageId}`, {
+                method: 'DELETE',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': doc.querySelector('meta[name=csrf-token]')?.getAttribute('content') ?? '',
+                },
+            });
+            if (res.ok || res.status === 404) {          // 404: somebody else deleted it a moment ago
+                markDeleted(messageId);
+            } else if (res.status === 403) {
+                win.showToast?.({ type: 'error', message: 'คุณไม่มีสิทธิ์ลบข้อความนี้ (ผู้เขียนลบได้ขณะที่กระทู้ยังไม่ล็อก และผู้ดูแลลบได้ทุกข้อความ)' });
+            } else {
+                win.showToast?.({ type: 'error', message: 'ลบข้อความไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
+            }
+        } catch {
+            win.showToast?.({ type: 'error', message: 'ลบข้อความไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
+        }
+    });
 
     // the thread's message counter in the list on the left
     const bumpCounter = (by) => {
@@ -190,6 +284,8 @@ function mount(win) {
                 bumpCounter(1);
                 if (autoScroll) box.scrollTop = box.scrollHeight;
             }
+        }).listen('.message.deleted', (e) => {
+            if (e && e.message_id) markDeleted(e.message_id);
         }).listen('.thread.lock', (e) => {
             if (e && typeof e.is_locked === 'boolean') setLocked(e.is_locked);
         }).listen('.thread.deleted', () => threadDeleted());

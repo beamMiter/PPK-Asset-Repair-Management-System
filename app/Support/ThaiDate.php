@@ -34,10 +34,25 @@ final class ThaiDate
         return $date->format('d/m/') . ($date->year + 543) . $date->format(' H:i');
     }
 
-    /** วันเสาร์ 15:45 - a chat message's time: the weekday and the clock, 24-hour */
-    public static function weekdayTime(CarbonInterface $date): string
+    /**
+     * A chat message's time as a person reads it, on the THAI clock whatever the server's timezone is:
+     * today "15:45", yesterday "เมื่อวาน 15:45", the last few days "วันเสาร์ 15:45", older "26 ก.ย. 2569 15:45" (a weekday alone is
+     * ambiguous for a message from three weeks ago). resources/js/chat/time.js does the same for a message that arrives live.
+     */
+    public static function chatTime(CarbonInterface $date, ?CarbonInterface $now = null): string
     {
-        return 'วัน' . $date->copy()->locale('th')->translatedFormat('l H:i');   // Carbon names the day "เสาร์"; a Thai reader expects "วันเสาร์"
+        $tz = 'Asia/Bangkok';
+        $at = $date->copy()->timezone($tz);
+        $today = ($now ?? now())->copy()->timezone($tz);
+        $days = (int) $at->copy()->startOfDay()->diffInDays($today->copy()->startOfDay(), false);
+        $clock = $at->format('H:i');
+
+        return match (true) {
+            $days <= 0 => $clock,   // today (or a moment ahead of this server's clock)
+            $days === 1 => 'เมื่อวาน ' . $clock,
+            $days <= 5 => 'วัน' . $at->copy()->locale('th')->translatedFormat('l') . ' ' . $clock,
+            default => self::short($at) . ' ' . $clock,
+        };
     }
 
     /** 24 กันยายน 2569 เวลา 10:00 น. */

@@ -23,10 +23,26 @@ class ThaiFormattingTest extends TestCase
         $this->assertSame('4 กันยายน 2569 เวลา 09:05 น.', ThaiDate::longWithTime($date));
     }
 
-    public function test_a_chat_time_is_the_thai_weekday_and_a_24_hour_clock(): void
+    public function test_a_chat_time_is_read_the_way_a_person_says_it(): void
     {
-        $this->assertSame('วันเสาร์ 15:45', ThaiDate::weekdayTime(Carbon::create(2026, 9, 26, 15, 45)));
-        $this->assertSame('วันเสาร์ 00:05', ThaiDate::weekdayTime(Carbon::create(2026, 9, 26, 0, 5)));
+        $now = Carbon::create(2026, 9, 26, 18, 0, 0, 'Asia/Bangkok');   // a Saturday evening
+
+        $this->assertSame('15:45', ThaiDate::chatTime(Carbon::create(2026, 9, 26, 15, 45, 0, 'Asia/Bangkok'), $now), 'today');
+        $this->assertSame('00:05', ThaiDate::chatTime(Carbon::create(2026, 9, 26, 0, 5, 0, 'Asia/Bangkok'), $now), 'today, just after midnight');
+        $this->assertSame('เมื่อวาน 23:59', ThaiDate::chatTime(Carbon::create(2026, 9, 25, 23, 59, 0, 'Asia/Bangkok'), $now));
+        $this->assertSame('วันพุธ 09:30', ThaiDate::chatTime(Carbon::create(2026, 9, 23, 9, 30, 0, 'Asia/Bangkok'), $now), 'three days ago');
+        $this->assertSame('วันจันทร์ 09:30', ThaiDate::chatTime(Carbon::create(2026, 9, 21, 9, 30, 0, 'Asia/Bangkok'), $now), 'five days ago');
+        $this->assertSame('20 ก.ย. 2569 09:30', ThaiDate::chatTime(Carbon::create(2026, 9, 20, 9, 30, 0, 'Asia/Bangkok'), $now), 'six days ago: a date');
+        $this->assertSame('4 ก.ค. 2569 13:05', ThaiDate::chatTime(Carbon::create(2026, 7, 4, 13, 5, 0, 'Asia/Bangkok'), $now), 'older: date, Buddhist year');
+    }
+
+    public function test_a_chat_time_is_on_the_thai_clock_whatever_the_servers_timezone(): void
+    {
+        // 17:30 UTC on the 26th is 00:30 on the 27th in Thailand
+        $utcNow = Carbon::create(2026, 9, 26, 17, 40, 0, 'UTC');
+
+        $this->assertSame('00:30', ThaiDate::chatTime(Carbon::create(2026, 9, 26, 17, 30, 0, 'UTC'), $utcNow), 'the same Thai day, though the UTC date is not that of "now" + 7 h');
+        $this->assertSame('เมื่อวาน 23:30', ThaiDate::chatTime(Carbon::create(2026, 9, 26, 16, 30, 0, 'UTC'), $utcNow), '16:30 UTC is 23:30 the day before in Thailand');
     }
 
     public function test_a_thai_phrase_is_put_in_a_span_per_word_so_a_line_can_break_between_them(): void
