@@ -60,7 +60,8 @@
             }
         },
         // Set once the lock flips while the page is open (by hand, by a moderator, live): the deletion date below was worked out for the state the
-        // page was drawn in, so from then on the notice speaks of the rule ("within N days") instead of a date that may no longer be right.
+        // page was drawn in, so from then on the notice speaks of the rule (N days) instead of a date that may no longer be right.
+        // (No double quote in a comment here: this is the value of an HTML attribute, and one would end it - the script would print on the page.)
         lockChanged: false,
         init() { this.$watch('locked', () => { this.lockChanged = true; }); },
         deleting: false,
