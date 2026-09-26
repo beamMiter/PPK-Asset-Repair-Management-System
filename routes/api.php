@@ -193,6 +193,10 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     Route::get('/auth/tokens',         [AuthController::class, 'tokens'])->name('auth.tokens');
     Route::delete('/auth/tokens/{id}', [AuthController::class, 'revokeToken'])->name('auth.tokens.revoke');
     Route::get('/auth/me',             [AuthController::class, 'me'])->name('auth.me');
+    // PUT /api/auth/password   body: current_password, password + password_confirmation (≥ 8 ตัว มีตัวอักษรและตัวเลข ต่างจากรหัสเดิม)
+    //   200 {message, must_change_password:false} · 422 · token ที่ใช้เรียกยังใช้ได้ token อื่นทั้งหมดถูกยกเลิก (6 ครั้ง/นาที)
+    //   ผู้ที่แอดมินตั้งรหัสให้ (403 password_change_required) ใช้ route นี้เป็นทางออก
+    Route::put('/auth/password',       [AuthController::class, 'changePassword'])->middleware('throttle:6,1')->name('auth.password.update');
     Route::post('/auth/logout',        [AuthController::class, 'logout'])->name('auth.logout');
     Route::post('/auth/logout-all',    [AuthController::class, 'logoutAll'])->name('auth.logout-all');
 

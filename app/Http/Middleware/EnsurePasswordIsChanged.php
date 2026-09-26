@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 /**
  * A person whose password an admin chose for them (the edit-user form) may do nothing but change it: every page
  * sends them to the profile page, every API call answers 403 `password_change_required`. What stays open is the way out of this state —
- * the profile page, the password form itself, and signing out.
+ * the profile page, the password form itself (`PUT /password`, and `PUT /api/auth/password` for the app), and signing out.
  */
 class EnsurePasswordIsChanged
 {
@@ -23,7 +23,7 @@ class EnsurePasswordIsChanged
             return $next($request);
         }
 
-        if ($request->routeIs('profile.edit', 'profile.update', 'password.update', 'logout', 'auth.logout', 'auth.logout-all')) {
+        if ($request->routeIs('profile.edit', 'profile.update', 'password.update', 'auth.password.update', 'logout', 'auth.logout', 'auth.logout-all')) {
             return $next($request);
         }
 

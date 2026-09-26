@@ -107,6 +107,36 @@ paths:
           schema: { type: integer }
       responses:
         '200': { description: Revoked }
+  /auth/password:
+    put:
+      tags: [Auth]
+      security: [{ bearerAuth: [] }]
+      summary: Change my own password
+      description: >
+        Also the way out for an account whose password an admin chose: every other call answers 403 `password_change_required` until this
+        succeeds. The token used for this call stays valid; every other token of the account ends. 6 calls a minute.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, password, password_confirmation]
+              properties:
+                current_password: { type: string }
+                password: { type: string, description: "8+ characters with a letter and a digit, different from the current one" }
+                password_confirmation: { type: string }
+      responses:
+        '200':
+          description: Changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  must_change_password: { type: boolean }
+        '422': { description: The current password is wrong, or the new one is weak, unconfirmed or the same }
   /auth/logout:
     post:
       tags: [Auth]

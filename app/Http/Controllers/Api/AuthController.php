@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\LoginAttempt;
+use App\Services\PasswordChange;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -119,6 +121,25 @@ class AuthController extends Controller
         $token->delete();
 
         return response()->json(['message' => 'ยกเลิกโทเค็นเรียบร้อยแล้ว']);
+    }
+
+    /**
+     * Change my own password (a bearer token). It is also the way out for somebody an admin gave a password to: every other call answers
+     * 403 `password_change_required` until this succeeds. The token used here stays valid; every other token ends.
+     */
+    public function changePassword(Request $request)
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'current_password:sanctum'],
+            'password' => ['required', Password::defaults(), 'confirmed', 'different:current_password'],
+        ]);
+
+        $token = $request->user()->currentAccessToken();
+        $keepTokenId = $token instanceof PersonalAccessToken ? (int) $token->getKey() : null;
+
+        PasswordChange::apply($request->user(), $data['password'], null, $keepTokenId);
+
+        return response()->json(['message' => 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'must_change_password' => false]);
     }
 
     public function logout(Request $request)

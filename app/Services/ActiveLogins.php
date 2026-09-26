@@ -15,11 +15,11 @@ final class ActiveLogins
 {
     /**
      * Every API token, every "remember me" cookie and — when sessions are kept in the database — every browser session of the
-     * user, except the one named (the person changing their own password stays signed in on the device they are using).
+     * user, except the session / token named (the person changing their own password stays signed in on the device they are using).
      */
-    public static function endAll(User $user, ?string $exceptSessionId = null): void
+    public static function endAll(User $user, ?string $exceptSessionId = null, ?int $exceptTokenId = null): void
     {
-        $user->tokens()->delete();
+        $user->tokens()->when($exceptTokenId, fn ($tokens) => $tokens->where('id', '!=', $exceptTokenId))->delete();
 
         $user->forceFill(['remember_token' => Str::random(60)])->save();
 

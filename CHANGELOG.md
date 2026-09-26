@@ -8,6 +8,10 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The app can change its own password: `PUT /api/auth/password`.** A person an admin gave a password to gets 403 `password_change_required`
+  from every API call, and nothing on the API could clear it (the e-mail reset is no use to somebody with no e-mail), so they had to
+  find the website. The endpoint takes `current_password`, `password`, `password_confirmation` (the profile page's rules), clears the
+  flag, keeps the token used and ends every other token; 6 calls a minute. Both paths share `PasswordChange`. `ApiChangePasswordTest`.
 - **README says what the login is.** Self-registration on `/register` is a trial setup for local / internal testing (nothing verifies the
   citizen ID); the real login will be built on the hospital's personnel database once it is connected, and the HIS asset lookup stays a
   mock until the hospital's API is. Also noted on `RegisteredUserController`.
