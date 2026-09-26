@@ -159,7 +159,7 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     // Threads
     //   GET  /api/threads   ?q= (ค้นจากหัวข้อ) ?scope=mine (เฉพาะกระทู้ที่ตั้งเองหรือเคยตอบ) 15 กระทู้/หน้า → {data, meta}; แต่ละรายการมี latest_message และ unread_count ของผู้เรียก
     //   POST /api/threads   body: title* (≤ 180) → 201
-    //   GET  /api/threads/{thread}   กระทู้ + latest_messages (10 ข้อความล่าสุด เรียงเก่า→ใหม่)
+    //   GET  /api/threads/{thread}   กระทู้ + latest_messages (10 ข้อความล่าสุด เรียงเก่า→ใหม่) · locked_at, auto_lock_on (วันที่จะถูกล็อกอัตโนมัติ เฉพาะ 14 วันสุดท้าย), auto_delete_on (วันที่จะถูกลบอัตโนมัติ เมื่อถูกล็อก)
     Route::get('/threads',          [ChatController::class, 'index'])->name('threads.index');
     Route::post('/threads',         [ChatController::class, 'store'])->middleware('throttle:chat-thread')->name('threads.store');
     Route::get('/threads/{thread}', [ChatController::class, 'show'])->name('threads.show');

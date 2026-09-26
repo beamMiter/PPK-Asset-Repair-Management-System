@@ -15,6 +15,8 @@ class ChatModerationLog extends Model
     public const DELETE_MESSAGE = 'delete_message';
     public const PURGE_THREAD = 'purge_thread';
     public const RESTORE_THREAD = 'restore_thread';
+    public const AUTO_LOCK = 'auto_lock';       // the nightly sweep: nobody wrote for chat.lock_idle_after_days
+    public const AUTO_DELETE = 'auto_delete';   // the nightly sweep: locked for chat.delete_locked_after_days, nobody unlocked it
 
     public $timestamps = false;
 

@@ -67,7 +67,7 @@ docker compose exec app php artisan migrate:fresh --seed    # a fresh dev databa
 | `app` | PHP-FPM; the only container that runs migrations (`RUN_MIGRATIONS`) |
 | `web` | nginx on `:8000`: static files, `/build` (cached for a year, gzip), `/storage` uploads (served sandboxed, with `nosniff`) |
 | `worker` | `queue:work` |
-| `scheduler` | `schedule:work` — **required**: it runs `chat:purge-deleted` (03:10 Thai time) and `sanctum:prune-expired`; without it nothing scheduled ever runs |
+| `scheduler` | `schedule:work` — **required**: it runs `chat:expire-idle` (03:00 Thai time), `chat:purge-deleted` (03:10) and `sanctum:prune-expired`; without it nothing scheduled ever runs |
 | `db`, `redis`, `node` | MariaDB, Redis, the Vite dev server |
 
 PHP limits live in `.docker/php.ini` (uploads 12 MB a file, 40 MB a request, `memory_limit` 512M, opcache); nginx's `client_max_body_size`
@@ -81,7 +81,7 @@ re-reading files that never change.
 | `TRUSTED_PROXIES` | The proxy / load balancer address(es) in front of nginx (comma separated, CIDR allowed; `*` only if the app is reachable through the proxy alone) | nobody is a proxy — right for a machine with none in front. **Behind one, set it**: otherwise every user shares the proxy's address (the sign-in limit locks everybody together, records name the proxy) and https is not detected |
 | `APP_TRUSTED_HOSTS` | Host names besides `APP_URL`'s that the app may be reached by in production | any other Host header gets a 400 |
 | `BROADCAST_CONNECTION`, `PUSHER_APP_*` | Real-time chat and notifications | the chat page polls every 5 s instead of receiving pushes |
-| `CHAT_*` (see `config/chat.php`) | Flood limits, threads per day (5), messages loaded per page (30), days before deleted chat is erased (30, `0` = never) | the defaults in that file |
+| `CHAT_*` (see `config/chat.php`) | Flood limits, threads per day (5), messages loaded per page (30), and how long a conversation lives: idle → locked after 90 days (`CHAT_LOCK_IDLE_AFTER_DAYS`), locked → deleted after 90 more (`CHAT_DELETE_LOCKED_AFTER_DAYS`), deleted → erased after 30 (`CHAT_PURGE_DELETED_AFTER_DAYS`); `0` turns a rule off | the defaults in that file |
 | `SANCTUM_TOKEN_EXPIRATION_MINUTES` | API token lifetime | 30 days |
 
 ## Tests

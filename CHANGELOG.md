@@ -8,6 +8,18 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A conversation is not kept for ever: an idle thread is locked, a long-locked one is deleted.** A thread nobody wrote in stayed in the database
+  indefinitely, and so did the personal data in it (PDPA). The nightly `php artisan chat:expire-idle` (03:00 Thai time, before the purge) **locks** a
+  thread nobody has written in, or unlocked, for `CHAT_LOCK_IDLE_AFTER_DAYS` (90) - a moderator can open it again, which restarts the count - and
+  **deletes** a thread that has stayed locked `CHAT_DELETE_LOCKED_AFTER_DAYS` (90); that is the ordinary delete (hidden, `chat:restore` brings it
+  back, and `chat:purge-deleted` erases it 30 days later): about seven months from the last word to erasure. Both are written to the moderation
+  record with no actor, the open pages see the lock / disappearance live, and the sweep is not a new word (a locked thread keeps its place in every
+  list). Either rule is off at 0; `--dry-run` says what it would do. The chat says so ahead of time: the create dialog states the rule, an open
+  thread in the last `CHAT_WARN_DAYS_BEFORE` (14) days before its lock says the date (and drops the note when somebody writes), a locked thread says
+  the day it will be deleted (and, if it was locked while the page was open, the rule in days); the API thread has `locked_at`, `auto_lock_on`,
+  `auto_delete_on`. Needs the new `chat_threads.locked_at` (migration - run `php artisan migrate`; the threads locked today start their clock at
+  the migration, so nothing locked long ago is deleted the first night). `ChatIdleLifecycleTest`.
+
 - **What people delete from the chat is erased for good after 30 days.** Deleting a thread or a message only hid it (so it could be brought
   back), and nothing ever cleared it: a deleted conversation stayed in the database for ever, personal data kept for no reason (PDPA). The nightly
   `php artisan chat:purge-deleted` (03:10 Thai time; the scheduler must run, as for `sanctum:prune-expired`) erases a thread that has been deleted
@@ -523,6 +535,10 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The last five hand-written close buttons are the standard one.** The chat's create / lock / delete dialogs, the profile picture cropper and the SLA
+  print dialog closed with a bare grey icon; they use `<x-ui.button variant="ghost" size="icon" icon="close" aria-label="ปิด">` like every other
+  dialog, so a change to it reaches them too. `DialogCloseButtonsTest`.
+
 - **The chat's files sit together.** The four chat broadcast events moved to `app/Events/Chat/` (from beside the repair-request event), the
   thread-quota service from `app/Support/` (helpers) to `app/Services/` (it reads the database, as its neighbours do), and the thirteen chat test
   classes to `tests/Feature/Chat/`. Only the paths and namespaces change: the names the pages listen for (`message.sent`, `thread.lock`, ...) are
@@ -535,10 +551,6 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   websocket is healthy the open thread asks the server for new messages every 15 seconds (it was 5, then 60 in a first draft - too long for a
   conversation); it asks every 5 seconds whenever push is not certain: the connection is down or still connecting, or - new - the connection
   is up but this thread's private channel was not subscribed (its authorisation was refused), which would otherwise have left nothing
-- **The last five hand-written close buttons are the standard one.** The chat's create / lock / delete dialogs, the profile picture cropper and the SLA
-  print dialog closed with a bare grey icon; they use `<x-ui.button variant="ghost" size="icon" icon="close" aria-label="ปิด">` like every other
-  dialog, so a change to it reaches them too. `DialogCloseButtonsTest`.
-
   arriving. When push comes back it asks at once for what it missed. `tests/js/chat-page.test.mjs`.
 - **The chat polls as a safety net while the websocket is healthy, and screen readers hear new messages.** The open thread asked the server
   for new messages every 5 seconds even while the websocket was delivering them; while the socket is connected it now asks once a minute

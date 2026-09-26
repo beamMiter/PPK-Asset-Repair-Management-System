@@ -252,6 +252,23 @@ test('the first live message hides the empty-state text and reveals itself on th
   assert.ok(!row.classList.contains('opacity-0'));
 });
 
+test('"this thread will be locked if nobody writes" goes away as soon as somebody does', () => {
+  const world = boot({ answers: [[]] });
+  const warning = world.el('p', { id: 'idleLockWarning' });
+  world.body.append(warning);
+  assert.ok(world.doc.getElementById('idleLockWarning'), 'the server drew it');
+
+  world.emit(msg());
+
+  assert.equal(world.doc.getElementById('idleLockWarning'), null, 'the silence it warns of is over');
+});
+
+test('a thread with no such warning is drawn as before', () => {
+  const world = boot({ answers: [[]] });
+  world.emit(msg());
+  assert.equal(world.rows().length, 1);
+});
+
 test('a sender name or message containing HTML is shown as text and creates no elements', () => {
   const world = boot({ answers: [[]] });
   const evil = '<img src=x onerror="alert(document.cookie)"><script>alert(1)</script>';

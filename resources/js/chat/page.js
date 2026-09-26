@@ -154,6 +154,7 @@ function mount(win) {
 
         const emptyState = doc.getElementById('emptyStateMsg');
         if (emptyState) emptyState.style.display = 'none';
+        doc.getElementById('idleLockWarning')?.remove?.();   // "will be locked if nobody writes": somebody has
 
         let wrapper = box.querySelector('.space-y-6');
         if (!wrapper) {

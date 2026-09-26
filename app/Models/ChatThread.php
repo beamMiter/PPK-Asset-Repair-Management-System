@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Console\Commands\ExpireIdleChat;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +17,85 @@ class ChatThread extends Model
     use SoftDeletes;
 
     protected $fillable = ['title', 'author_id', 'is_locked'];
+
+    protected $casts = ['is_locked' => 'boolean', 'locked_at' => 'datetime'];
+
+    protected static function booted(): void
+    {
+        // When a thread was locked is written wherever it is locked (a moderator, the API, the nightly sweep, a seeder), so no caller can forget:
+        // the "locked for N days, then deleted" clock starts here, and unlocking stops it. A caller that sets locked_at itself keeps its value.
+        static::saving(function (self $thread) {
+            if ($thread->isDirty('is_locked') && ! $thread->isDirty('locked_at')) {
+                if ($thread->is_locked) {
+                    $thread->locked_at = now();
+                } elseif ($thread->locked_at !== null) {
+                    $thread->locked_at = null;   // (a new open thread has nothing to write: it does not need the column)
+                }
+            }
+        });
+    }
+
+    /**
+     * The day the nightly sweep will lock this open thread if nobody writes in it: the first run after `lock_idle_after_days` of silence. Null
+     * when the thread is locked already, or the rule is off. (updated_at is the last word: a message, or a moderator's lock / unlock.)
+     */
+    public function autoLocksOn(): ?CarbonImmutable
+    {
+        $days = (int) config('chat.lock_idle_after_days');
+
+        if ($days <= 0 || $this->is_locked || $this->updated_at === null) {
+            return null;
+        }
+
+        return self::sweepDayAfter(CarbonImmutable::instance($this->updated_at)->addDays($days));
+    }
+
+    /** The day the nightly sweep will delete this LOCKED thread if nobody unlocks it. Null when it is open, or the rule is off. */
+    public function autoDeletesOn(): ?CarbonImmutable
+    {
+        $days = (int) config('chat.delete_locked_after_days');
+
+        if ($days <= 0 || ! $this->is_locked || $this->locked_at === null) {
+            return null;
+        }
+
+        return self::sweepDayAfter(CarbonImmutable::instance($this->locked_at)->addDays($days));
+    }
+
+    /** The lock date, only in the last `warn_days_before` days before it - what an open thread warns with. */
+    public function autoLockWarningOn(): ?CarbonImmutable
+    {
+        $on = $this->autoLocksOn();
+
+        return $on !== null && $on->lte(now()->timezone('Asia/Bangkok')->addDays((int) config('chat.warn_days_before'))->startOfDay()) ? $on : null;
+    }
+
+    /** What the chat tells everybody about how long a thread lives (the create dialog), or null when neither rule is on. */
+    public static function lifecycleNotice(): ?string
+    {
+        $lock = (int) config('chat.lock_idle_after_days');
+        $delete = (int) config('chat.delete_locked_after_days');
+        $parts = [];
+
+        if ($lock > 0) {
+            $parts[] = "กระทู้ที่ไม่มีการตอบครบ {$lock} วันจะถูกล็อกอัตโนมัติ";
+        }
+        if ($delete > 0) {
+            $parts[] = "กระทู้ที่ถูกล็อกครบ {$delete} วันโดยไม่มีการปลดล็อกจะถูกลบอัตโนมัติ";
+        }
+
+        return $parts ? implode(' และ', $parts) : null;
+    }
+
+    /** The sweep runs at 03:00 Thai time: a thread whose limit passes at 14:00 on the 5th is dealt with on the morning of the 6th. */
+    private static function sweepDayAfter(CarbonImmutable $limit): CarbonImmutable
+    {
+        $at = $limit->timezone('Asia/Bangkok');
+        [$h, $m] = array_map('intval', explode(':', ExpireIdleChat::RUNS_AT));
+        $run = $at->setTime($h, $m);
+
+        return ($run->gt($at) ? $run : $run->addDay())->startOfDay();
+    }
 
     public function author(): BelongsTo
     {

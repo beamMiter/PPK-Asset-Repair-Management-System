@@ -13,3 +13,7 @@ Schedule::command('sanctum:prune-expired --hours=24')->daily();
 
 // What people deleted from the chat more than chat.purge_deleted_after_days ago (30) is erased for good - at 03:10 Thai time, when nobody is on.
 Schedule::command('chat:purge-deleted')->dailyAt('03:10')->timezone('Asia/Bangkok')->withoutOverlapping();
+
+// Threads nobody has used: locked after chat.lock_idle_after_days (90) of silence, deleted after chat.delete_locked_after_days (90) locked. Thai time,
+// ten minutes before the purge above (a thread deleted here is not erased yet: chat.purge_deleted_after_days later).
+Schedule::command('chat:expire-idle')->dailyAt(\App\Console\Commands\ExpireIdleChat::RUNS_AT)->timezone('Asia/Bangkok')->withoutOverlapping();

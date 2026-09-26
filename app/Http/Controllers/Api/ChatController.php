@@ -127,6 +127,11 @@ class ChatController extends Controller
             'id'         => $thread->id,
             'title'      => $thread->title,
             'is_locked'  => (bool) $thread->is_locked,
+            'locked_at'  => $thread->locked_at?->toISOString(),
+            // The Thai calendar day the nightly sweep will lock this thread if nobody writes (only in its last chat.warn_days_before days),
+            // or delete it if nobody unlocks it (locked threads); null when neither applies. A client shows its own notice with these.
+            'auto_lock_on'   => $thread->autoLockWarningOn()?->toDateString(),
+            'auto_delete_on' => $thread->autoDeletesOn()?->toDateString(),
             'created_at' => $thread->created_at ? $thread->created_at->toISOString() : null,
             'author'     => $thread->author ? [
                 'id'   => $thread->author->id,

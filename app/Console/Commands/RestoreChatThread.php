@@ -24,6 +24,12 @@ class RestoreChatThread extends Command
         }
 
         $thread->restore();
+
+        // A thread the sweep deleted after months locked would be deleted again tomorrow night: it gets the whole period back.
+        if ($thread->is_locked) {
+            $thread->forceFill(['locked_at' => now()])->save();
+        }
+
         ChatModerationLog::record(ChatModerationLog::RESTORE_THREAD, null, $thread, meta: ['by' => 'artisan']);
 
         $this->info("Thread #{$thread->id} \"{$thread->title}\" is back.");

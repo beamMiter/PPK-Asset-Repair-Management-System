@@ -59,6 +59,10 @@
                 window.showToast?.({ type: 'error', message: 'ไม่สามารถเปลี่ยนสถานะการล็อกกระทู้ได้ กรุณาลองใหม่อีกครั้ง' });
             }
         },
+        // Set once the lock flips while the page is open (by hand, by a moderator, live): the deletion date below was worked out for the state the
+        // page was drawn in, so from then on the notice speaks of the rule ("within N days") instead of a date that may no longer be right.
+        lockChanged: false,
+        init() { this.$watch('locked', () => { this.lockChanged = true; }); },
         deleting: false,
         submitDelete() {
             this.deleting = true; // this page is on its way to the list, so the broadcast that the thread was deleted has nothing to tell it
@@ -404,6 +408,13 @@
                 {{-- BOTTOM INPUT FORM --}}
                 <div class="shrink-0 w-full bg-white px-4 py-4 sm:px-6 border-t border-gray-100">
                     <div class="mx-auto w-full max-w-screen-lg" x-show="!locked" @if ($thread->is_locked) style="display: none;" @endif>
+                        @if ($autoLockOn = $thread->autoLockWarningOn())
+                            {{-- taken away by resources/js/chat/page.js as soon as a message is added: the silence it warns of is over --}}
+                            <p id="idleLockWarning" role="status" class="mb-2 flex items-center gap-1.5 text-[12px] text-amber-700">
+                                <span class="material-symbols-outlined text-[16px]" aria-hidden="true">schedule</span>
+                                กระทู้นี้ไม่มีการตอบมานาน จะถูกล็อกอัตโนมัติในวันที่ {{ \App\Support\ThaiDate::long($autoLockOn) }} หากยังไม่มีข้อความใหม่
+                            </p>
+                        @endif
                             <form method="POST" action="{{ route('chat.messages.store', $thread) }}" id="chatForm">
                                 @csrf
                                 <div
@@ -471,14 +482,25 @@
                                 </div>
                             </form>
                         </div>
-                        <div class="w-full py-3 text-center text-gray-500 bg-gray-50 rounded-xl flex items-center justify-center gap-2 border border-gray-100"
+                        <div class="w-full py-3 px-4 text-center text-gray-500 bg-gray-50 rounded-xl flex items-center justify-center gap-2 border border-gray-100"
                             id="lockedNotice" role="status" x-show="locked" @if (!$thread->is_locked) style="display: none;" @endif>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                class="w-4 h-4">
+                                class="w-4 h-4 shrink-0">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                             </svg>
-                            <span class="text-[13px] font-medium">กระทู้นี้ถูกล็อก ไม่สามารถส่งข้อความใหม่ได้</span>
+                            <div>
+                                <span class="block text-[13px] font-medium">กระทู้นี้ถูกล็อก ไม่สามารถส่งข้อความใหม่ได้</span>
+                                @php($deleteAfter = (int) config('chat.delete_locked_after_days'))
+                                @if ($deleteAfter > 0)
+                                    @if ($autoDeleteOn = $thread->autoDeletesOn())
+                                        <span class="block text-[12px] text-amber-700 mt-0.5" id="autoDeleteDate" x-show="!lockChanged">
+                                            หากไม่มีการปลดล็อก กระทู้นี้จะถูกลบอัตโนมัติในวันที่ {{ \App\Support\ThaiDate::long($autoDeleteOn) }}</span>
+                                    @endif
+                                    <span class="block text-[12px] text-amber-700 mt-0.5" x-show="lockChanged" style="display: none;">
+                                        หากไม่มีการปลดล็อกภายใน {{ $deleteAfter }} วัน กระทู้นี้จะถูกลบอัตโนมัติ</span>
+                                @endif
+                            </div>
                         </div>
                 </div>
             @else
@@ -535,6 +557,9 @@
                                 <p class="mt-1 text-[11px] text-slate-500">* วันนี้ตั้งกระทู้ได้อีก {{ $threadQuota['remaining'] }} จาก {{ $threadQuota['limit'] }} ครั้ง
                                     (นับใหม่ตั้งแต่ 00:00 น. ตามเวลาไทย)</p>
                             @endunless
+                            @if ($lifecycle = \App\Models\ChatThread::lifecycleNotice())
+                                <p class="mt-1 text-[11px] text-slate-500">* {{ $lifecycle }}</p>
+                            @endif
                         </div>
                     </div>
 

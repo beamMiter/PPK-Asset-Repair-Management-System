@@ -791,6 +791,17 @@ components:
         - $ref: '#/components/schemas/ChatThread'
         - type: object
           properties:
+            locked_at: { type: string, nullable: true, description: "When the thread was locked (null when open)" }
+            auto_lock_on:
+              type: string
+              format: date
+              nullable: true
+              description: "Thai calendar day the nightly sweep locks this open thread if nobody writes - only in the last CHAT_WARN_DAYS_BEFORE (14) days before it, else null. A thread nobody has written in for CHAT_LOCK_IDLE_AFTER_DAYS (90) is locked."
+            auto_delete_on:
+              type: string
+              format: date
+              nullable: true
+              description: "Thai calendar day the sweep deletes this LOCKED thread if nobody unlocks it (locked for CHAT_DELETE_LOCKED_AFTER_DAYS, 90). Null when open or the rule is off. Unlocking (POST .../unlock) restarts both counts."
             latest_messages:
               type: array
               items: { $ref: '#/components/schemas/ChatMessage' }

@@ -25,4 +25,15 @@ return [
     // A deleted thread or message is only hidden (so it can be brought back with `php artisan chat:restore`); after this many days the nightly
     // `chat:purge-deleted` erases it for good. 0 turns the purge off. (Backups hold what they held.)
     'purge_deleted_after_days' => (int) env('CHAT_PURGE_DELETED_AFTER_DAYS', 30),
+
+    // Threads nobody uses are not kept for ever (PDPA: personal data has no reason to sit in the database once the conversation is over).
+    // The nightly `chat:expire-idle` (03:00 Thai time) LOCKS a thread nobody has written in, or unlocked, for this many days; 0 = never.
+    'lock_idle_after_days' => (int) env('CHAT_LOCK_IDLE_AFTER_DAYS', 90),
+
+    // ...and DELETES a thread that has stayed locked this many days with nobody unlocking it (it is then only hidden, like any deleted thread:
+    // `purge_deleted_after_days` later it is erased for good). 0 = never. Idle 90 + locked 90 + purge 30 = about 7 months from the last word.
+    'delete_locked_after_days' => (int) env('CHAT_DELETE_LOCKED_AFTER_DAYS', 90),
+
+    // The thread says, this many days ahead, that it is about to be locked; a locked thread always says when it will be deleted.
+    'warn_days_before' => (int) env('CHAT_WARN_DAYS_BEFORE', 14),
 ];
