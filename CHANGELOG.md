@@ -447,6 +447,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Locking a chat thread is for admins and the IT / repair team.** Any signed-in non-member could lock or unlock a thread, which put it in
+  the hands of supervisors as well. Now only admins, IT support, network, programmers and technicians can; a supervisor and a plain
+  member cannot (no lock button, 403 on a direct call) - a member, the thread's author included, may still delete their own thread or hide
+  it from their list, but cannot unlock one that staff locked. The rule is `ChatThread::canBeLockedBy()`, used by the page, the web
+  actions and the API. `ChatLockPermissionTest`.
 - **Deleting a chat thread is for whoever started it and for an admin; everybody else who took part hides it.** Only an admin could delete a
   thread; now the person who started it can too (any role), since it is theirs - the delete button and its dialog show for them and for
   admins, and the refusal reads "เฉพาะเจ้าของกระทู้และผู้ดูแลระบบเท่านั้นที่ลบกระทู้ได้". Someone who only wrote in it has "ซ่อนจากกระทู้ที่มีส่วนร่วม"

@@ -57,7 +57,7 @@ class ChatController extends Controller
         }
 
         $me = Auth::user();
-        $canManageLock = $activeThread && $activeThread->canBeLockedBy($me);   // staff: any non-member
+        $canManageLock = $activeThread && $activeThread->canBeLockedBy($me);   // admins and the IT / repair team
 
         // the open thread and me: can I hide it from my list (I took part, and have not), or bring it back (I hid it)?
         $hiddenByMe = $activeThread ? $this->hasHiddenThread($meId, (int) $activeThread->id) : false;
@@ -260,6 +260,6 @@ class ChatController extends Controller
 
     protected function authorizeLocking(ChatThread $thread): void
     {
-        $this->assertCanLock($thread);   // staff only: any non-member (see HandlesChatReads)
+        $this->assertCanLock($thread);   // admins and the IT / repair team (see HandlesChatReads)
     }
 }

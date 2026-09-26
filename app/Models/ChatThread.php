@@ -39,13 +39,13 @@ class ChatThread extends Model
     }
 
     /**
-     * Locking and unlocking a thread is moderation, so it is for staff: admins, supervisors, IT support and technicians - anybody but a
-     * plain member, the thread's own author included (an author may delete their thread, or hide it, but not overrule a moderator by
-     * unlocking one that staff locked).
+     * Locking and unlocking a thread is moderation: admins and the IT / repair team (User::workerRoles - IT support, network,
+     * programmers, technicians). Not a supervisor, and not a plain member, the thread's own author included (an author may delete their
+     * thread, or hide it, but not overrule a moderator by unlocking one that staff locked).
      */
     public function canBeLockedBy(?User $user): bool
     {
-        return $user !== null && $user->role !== 'member';
+        return $user !== null && ($user->role === User::ROLE_ADMIN || in_array($user->role, User::workerRoles(), true));
     }
 
     /**

@@ -13,9 +13,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Locking and unlocking a chat thread is moderation: admins, supervisors, IT support and technicians may, whoever started the thread;
- * a plain member may not - not another person's thread and not their own (they may delete it, or hide it: ChatDeleteThreadTest,
- * ChatHideThreadTest). A member could otherwise unlock a thread that staff had locked.
+ * Locking and unlocking a chat thread is moderation: admins and the IT / repair team (IT support, network, programmers, technicians) may,
+ * whoever started the thread. A supervisor may not, and a plain member may not - not another person's thread and not their own (they
+ * may delete it, or hide it: ChatDeleteThreadTest, ChatHideThreadTest). A member could otherwise unlock a thread that staff had locked.
  */
 class ChatLockPermissionTest extends TestCase
 {
@@ -40,14 +40,16 @@ class ChatLockPermissionTest extends TestCase
         return (bool) $thread->fresh()->is_locked;
     }
 
+    private const MODERATORS = ['admin', 'it_support', 'network', 'programmer', 'technician'];
+
     /** @return array<string,array{0:string}> */
-    public static function staffRoles(): array
+    public static function moderatorRoles(): array
     {
-        return ['admin' => ['admin'], 'supervisor' => ['supervisor'], 'it_support' => ['it_support'], 'technician' => ['technician']];
+        return array_combine(self::MODERATORS, array_map(fn ($r) => [$r], self::MODERATORS));
     }
 
-    #[DataProvider('staffRoles')]
-    public function test_staff_lock_and_unlock_any_thread_including_a_members(string $role): void
+    #[DataProvider('moderatorRoles')]
+    public function test_admins_and_the_it_team_lock_and_unlock_any_thread_including_a_members(string $role): void
     {
         $thread = $this->thread(User::factory()->create(['role' => 'member']));
         $staff = User::factory()->create(['role' => $role]);
@@ -57,6 +59,21 @@ class ChatLockPermissionTest extends TestCase
 
         $this->actingAs($staff)->post(route('chat.unlock', $thread))->assertRedirect()->assertSessionHas('toast.type', 'success');
         $this->assertFalse($this->locked($thread));
+    }
+
+    public function test_a_supervisor_cannot_lock_or_unlock(): void
+    {
+        $supervisor = User::factory()->create(['role' => 'supervisor']);
+        $open = $this->thread(User::factory()->create(['role' => 'member']));
+        $shut = $this->thread(User::factory()->create(['role' => 'member']), true);
+
+        $this->actingAs($supervisor)->post(route('chat.lock', $open))->assertForbidden();
+        $this->actingAs($supervisor)->post(route('chat.unlock', $shut))->assertForbidden();
+
+        $this->assertFalse($this->locked($open));
+        $this->assertTrue($this->locked($shut));
+
+        $this->assertStringNotContainsString('title="ล็อกกระทู้"', $this->html($supervisor, $open));
     }
 
     public function test_a_plain_member_cannot_lock_or_unlock_not_even_the_thread_they_started(): void
@@ -77,8 +94,10 @@ class ChatLockPermissionTest extends TestCase
         $member = User::factory()->create(['role' => 'member']);
         $thread = $this->thread($member);
 
-        Sanctum::actingAs($member);
-        $this->postJson("/api/threads/{$thread->id}/lock")->assertForbidden();
+        foreach (['member', 'supervisor'] as $role) {
+            Sanctum::actingAs(User::factory()->create(['role' => $role]));
+            $this->postJson("/api/threads/{$thread->id}/lock")->assertForbidden();
+        }
         $this->assertFalse($this->locked($thread));
 
         Sanctum::actingAs(User::factory()->create(['role' => 'technician']));
@@ -90,9 +109,10 @@ class ChatLockPermissionTest extends TestCase
     {
         $thread = $this->thread(User::factory()->create(['role' => 'member']));
 
-        foreach (['admin', 'supervisor', 'it_support', 'technician'] as $role) {
+        foreach (self::MODERATORS as $role) {
             $this->assertTrue($thread->canBeLockedBy(User::factory()->create(['role' => $role])), $role);
         }
+        $this->assertFalse($thread->canBeLockedBy(User::factory()->create(['role' => 'supervisor'])));
         $this->assertFalse($thread->canBeLockedBy(User::factory()->create(['role' => 'member'])));
         $this->assertFalse($thread->canBeLockedBy($thread->author), 'the author is a member');
         $this->assertFalse($thread->canBeLockedBy(null));
@@ -105,12 +125,12 @@ class ChatLockPermissionTest extends TestCase
         return $this->actingAs($viewer)->get(route('chat.index', ['thread_id' => $thread->id]))->assertOk()->getContent();
     }
 
-    public function test_the_lock_button_is_for_staff_only_and_a_member_owner_gets_delete_instead(): void
+    public function test_the_lock_button_is_for_admins_and_the_it_team_only_and_a_member_owner_gets_delete_instead(): void
     {
         $owner = User::factory()->create(['role' => 'member']);
         $thread = $this->thread($owner);
 
-        foreach (['admin', 'supervisor', 'it_support', 'technician'] as $role) {
+        foreach (self::MODERATORS as $role) {
             $this->assertStringContainsString('title="ล็อกกระทู้"', $this->html(User::factory()->create(['role' => $role]), $thread), $role);
         }
 
