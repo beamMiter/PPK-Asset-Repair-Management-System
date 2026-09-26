@@ -88,6 +88,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Behind a proxy or load balancer every user looked like the same caller.** Nothing told the app which proxies to believe, so the address it
+  saw was the proxy's: the sign-in limit (30 wrong tries from one address) would lock the whole hospital together, the moderation record would
+  name the proxy for every action, and an https page looked like plain http (no `Strict-Transport-Security`). `config/trustedproxy.php` reads
+  `TRUSTED_PROXIES` (Laravel's own middleware already consults it): empty = nobody is a proxy, which is what a machine with none in front of it
+  needs and changes nothing; the proxy's address(es), comma separated, CIDR allowed, or `*` only when the app can be reached through the proxy
+  alone. `X-Forwarded-*` from any other address is ignored. `TrustedProxiesTest`.
 - **The containers had no scheduler, no php.ini and an unlimited memory limit.** `docker-compose.yml` never ran the scheduler, so the chat purge
   and the token prune did not run: a `scheduler` service (`php artisan schedule:work`) does now. The image had no php.ini, so uploads were capped
   at PHP's 2 MB while the app promises 10 MB a file (a phone photo failed) and nginx allowed 20 MB while a form takes 3 files: `.docker/php.ini`
