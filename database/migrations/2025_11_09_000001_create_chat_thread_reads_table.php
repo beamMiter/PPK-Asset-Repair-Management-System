@@ -23,6 +23,9 @@ return new class extends Migration
             // วันที่และเวลาที่มีการเข้ามาอ่านล่าสุด
             $table->timestamp('last_read_at')->nullable();
 
+            // ผู้ใช้ซ่อนกระทู้นี้จาก "กระทู้ที่มีส่วนร่วม" ของตนเอง (ไม่ลบให้ใคร) — เคลียร์เมื่อเขียนในกระทู้นั้นอีกครั้ง
+            $table->timestamp('hidden_at')->nullable();
+
             $table->timestamps();
 
             $table->unique(['user_id','chat_thread_id'], 'utr_user_thread_unique');

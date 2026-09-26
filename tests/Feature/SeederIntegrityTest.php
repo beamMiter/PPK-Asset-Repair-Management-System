@@ -259,6 +259,10 @@ class SeederIntegrityTest extends TestCase
             DB::table('chat_messages')->where('id', $read->last_read_message_id)->where('chat_thread_id', $read->chat_thread_id)->exists() || $problems[] = 'a read marker points at a message of another thread';
         }
         $this->assertTrue(ChatThread::where('is_locked', true)->exists(), 'a locked announcement thread');
+        // the seeder inserts without the model, which is what stamps the moment of the lock: a locked thread with no stamp would never be deleted by
+        // chat:expire-idle, and would announce no date
+        $this->assertSame(0, ChatThread::where('is_locked', true)->whereNull('locked_at')->count(), 'every locked thread says when it was locked');
+        $this->assertSame(0, ChatThread::where('is_locked', false)->whereNotNull('locked_at')->count());
         $unread = DB::table('chat_thread_reads as r')->join('chat_messages as m', 'm.chat_thread_id', '=', 'r.chat_thread_id')->whereColumn('m.id', '>', 'r.last_read_message_id')->exists();
         $this->assertTrue($unread, 'somebody has an unread thread');
 

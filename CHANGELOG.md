@@ -17,8 +17,7 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   list). Either rule is off at 0; `--dry-run` says what it would do. The chat says so ahead of time: the create dialog states the rule, an open
   thread in the last `CHAT_WARN_DAYS_BEFORE` (14) days before its lock says the date (and drops the note when somebody writes), a locked thread says
   the day it will be deleted (and, if it was locked while the page was open, the rule in days); the API thread has `locked_at`, `auto_lock_on`,
-  `auto_delete_on`. Needs the new `chat_threads.locked_at` (migration - run `php artisan migrate`; the threads locked today start their clock at
-  the migration, so nothing locked long ago is deleted the first night). `ChatIdleLifecycleTest`.
+  `auto_delete_on`. Adds `chat_threads.locked_at` (in the `chat_threads` create migration; a seeded locked thread has it too). `ChatIdleLifecycleTest`.
 
 - **What people delete from the chat is erased for good after 30 days.** Deleting a thread or a message only hid it (so it could be brought
   back), and nothing ever cleared it: a deleted conversation stayed in the database for ever, personal data kept for no reason (PDPA). The nightly
@@ -35,13 +34,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **A message sent twice by a dropped connection is saved once.** The page sends each message with an id it made for that attempt (a UUID); if
   the connection drops after the server saved it and before the answer arrived, the same words sent again carry the same id and get the
   message that already exists (200), not a second copy or a second announcement (an idempotency key; `chat_messages.client_uuid`,
-  migration - run `php artisan migrate`). The API takes `client_id` too. `ChatIdempotentSendTest`.
+  in the `chat_messages` create migration). The API takes `client_id` too. `ChatIdempotentSendTest`.
 - **One chat message can be deleted, and every lock / unlock / delete is recorded.** A wrong or unsuitable message could only be removed by
   deleting its whole thread. Now its author (while the thread is open) or a moderator (admins and the IT / repair team, always) deletes it: it
   stays in the thread as "ข้อความนี้ถูกลบ" for everybody, its words are never sent to a page again, everyone with the thread open sees it change
   (`message.deleted`), the thread does not jump to the top of the list, and the counters drop. A bin appears only where the person may use it
   (page and live rows alike); `DELETE /chat/threads/{thread}/messages/{message}` and `DELETE /api/threads/{thread}/messages/{message}`. The
-  new table `chat_moderation_logs` (migration; run `php artisan migrate`) records who locked, unlocked or deleted what - a thread or a message
+  new table `chat_moderation_logs` (its own create migration) records who locked, unlocked or deleted what - a thread or a message
   - from which address and when, with the thread's title and no message text; ids are plain numbers so the record outlives a purged thread
   (OWASP Logging). `ChatDeleteMessageTest`.
 - **The chat is limited against a flood, and a person may start 5 threads a day.** Nothing limited posting or creating threads. What a person
@@ -71,8 +70,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   for that person alone: it is read up to its last message, leaves the tab, its count, the widget and the badge, and stays in "ทั้งหมด",
   readable. It comes back when they write in it again (reading it, or somebody else writing, does not bring it back), or when they
   press "แสดงในกระทู้ที่มีส่วนร่วมอีกครั้ง". A locked thread that a person has read to the end also drops out of the widget - nobody can
-  add to it - and returns when it is unlocked; the tab keeps listing it. `chat_thread_reads.hidden_at` (migration; run
-  `php artisan migrate`), `POST` / `DELETE /api/threads/{id}/hide`, `hidden_by_me` in the API's list. `ChatHideThreadTest`.
+  add to it - and returns when it is unlocked; the tab keeps listing it. `chat_thread_reads.hidden_at` (in the `chat_thread_reads`
+  create migration), `POST` / `DELETE /api/threads/{id}/hide`, `hidden_by_me` in the API's list. `ChatHideThreadTest`.
 - **The chat page can show only the threads I took part in.** The floating widget's "กระทู้ที่มีส่วนร่วม" was the only place that knew which
   threads a person had started or written in (and it shows the latest 15). The thread list on the chat page has two tabs now, "ทั้งหมด"
   and "กระทู้ที่มีส่วนร่วม", each with its count; the second is every thread I started or wrote in - opening a thread to read it does not
@@ -522,8 +521,7 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **Suspend an account instead of deleting it.** `users.suspended_at` (new migration — an ordinary
-  `php artisan migrate`, no data touched). A suspended user keeps every record but cannot sign in (web or API; the
+- **Suspend an account instead of deleting it.** `users.suspended_at` (in the `users` create migration). A suspended user keeps every record but cannot sign in (web or API; the
   message is shown only when the password is right), loses an open session / "remember me" cookie / API tokens on the
   next request (`EnsureAccountIsActive`), and is no longer offered or accepted as an assignee or in `/api/meta/users`.
   Admins suspend / reactivate from the user list and the user's edit page (not their own account); the list shows a
@@ -534,6 +532,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `.ui-label` / `.ui-hint` / `.ui-error` field classes in `app.css`.
 
 ### Changed
+
+- **The schema changes of this branch are folded into the original migrations.** The project is not in production, so `users.suspended_at` and
+  `users.must_change_password`, `chat_thread_reads.hidden_at`, `chat_threads.locked_at` and `chat_messages.client_uuid` (with its unique key) are
+  columns of their `create` migrations instead of four separate `add_*` files, and the seeded locked thread carries its `locked_at`. Only
+  `chat_moderation_logs` (a new table) has a migration of its own. **An existing database has to be rebuilt: `php artisan migrate:fresh --seed`** -
+  a plain `migrate` does not add a column to a table that already exists. `SeederIntegrityTest`.
 
 - **The board shows how many of today's threads are left, as "5/5", for everybody.** The count was a small grey line under the "สร้างกระทู้" button (and in
   the create dialog), and an admin saw nothing at all. Under the board's title there is now one quiet line, "จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ", with the
@@ -912,8 +916,7 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   to the profile page with the reason, every API call answers 403 `password_change_required` (the API sign-in returns
   `must_change_password: true` so a client knows); the profile page, the password form and signing out stay open. It is cleared when they change
   the password (the new one must differ from the old) or reset it through the e-mail link. An admin changing their own password, a self sign-up
-  and the seeded demo accounts are not forced; the edit form says so under the password field. **Deploy: run `php artisan migrate`** (without
-  it the change-password form, which clears the flag, fails). `ForcedPasswordChangeTest`.
+  and the seeded demo accounts are not forced; the edit form says so under the password field. `users.must_change_password` is in the `users` create migration. `ForcedPasswordChangeTest`.
 
 - **Choosing a file with a hostile name ran a script in the page.** The upload previews (new request, request attachments,
   asset form) put the file's name into `innerHTML` as it was, and `<img src=x onerror=…>.jpg` is a legal file name on macOS

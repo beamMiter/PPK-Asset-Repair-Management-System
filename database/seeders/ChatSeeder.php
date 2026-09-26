@@ -25,6 +25,7 @@ class ChatSeeder extends Seeder
                 'title' => $thread['title'],
                 'author_id' => UserSeeder::find($thread['by'])->id,
                 'is_locked' => $thread['locked'] ?? false,
+                'locked_at' => ($thread['locked'] ?? false) ? $lastAt : null,   // inserted without the model, which would set it
                 'created_at' => $started,
                 'updated_at' => $lastAt,
             ]);
