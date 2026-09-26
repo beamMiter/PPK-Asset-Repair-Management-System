@@ -128,17 +128,32 @@
                     </div>
                 </div>
 
-                {{-- How many threads I may still start today, as "5/5": for everybody (an admin saw nothing at all) --}}
+                {{-- How many threads I may still start today: a quiet line, the fraction in bold and one dot per thread (filled = still mine) --}}
                 @php
-                    $quotaLow = ! $quota['unlimited'] && $quota['remaining'] <= 1;
-                    $quotaTone = $quotaLow ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-slate-50 text-slate-600';
+                    $quotaLow = ! $quota['unlimited'] && $quota['remaining'] === 1;
+                    $quotaTone = $noneLeft ? 'text-rose-600' : ($quotaLow ? 'text-amber-600' : 'text-[#0F2D5C]');
+                    $quotaDot = $noneLeft ? 'bg-rose-500' : ($quotaLow ? 'bg-amber-500' : 'bg-[#0F2D5C]');
                 @endphp
-                <div id="threadQuotaNote" role="status" title="นับใหม่ทุกวันตั้งแต่ 00:00 น. ตามเวลาไทย"
-                    class="mt-[12px] flex items-center justify-between gap-[12px] rounded-md border px-[12px] py-[8px] text-[12.5px] {{ $quotaTone }}">
-                    <span>จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ@if ($noneLeft) <span class="font-semibold">(ตั้งใหม่ได้ตั้งแต่ 00:00 น.)</span>@endif</span>
-                    <span id="threadQuotaCount" class="shrink-0 rounded-full bg-white px-[10px] py-[2px] text-[13px] font-bold tabular-nums ring-1 ring-inset {{ $quotaLow ? 'text-amber-800 ring-amber-200' : 'text-[#0F2D5C] ring-slate-200' }}">
-                        {{ $quota['unlimited'] ? 'ไม่จำกัด' : $quota['remaining'] . '/' . $quota['limit'] }}
-                    </span>
+                <div id="threadQuotaNote" role="status" title="นับใหม่ทุกวันตั้งแต่ 00:00 น. ตามเวลาไทย" class="mt-[14px]">
+                    <div class="flex items-center justify-between gap-[12px] text-[12.5px] text-slate-500">
+                        <span class="flex min-w-0 items-center gap-[6px]">
+                            <span class="material-symbols-outlined text-[16px] text-slate-400" aria-hidden="true">edit_note</span>
+                            <span>จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ</span>
+                        </span>
+                        <span class="flex shrink-0 items-center gap-[10px]">
+                            @if (! $quota['unlimited'] && $quota['limit'] > 0 && $quota['limit'] <= 10)
+                                <span class="flex items-center gap-[3px]" aria-hidden="true">
+                                    @for ($i = 1; $i <= $quota['limit']; $i++)
+                                        <span class="h-[6px] w-[6px] rounded-full {{ $i <= $quota['remaining'] ? $quotaDot : 'bg-slate-200' }}"></span>
+                                    @endfor
+                                </span>
+                            @endif
+                            <span id="threadQuotaCount" class="text-[15px] font-bold leading-none tabular-nums {{ $quotaTone }}">{{ $quota['unlimited'] ? 'ไม่จำกัด' : $quota['remaining'] . '/' . $quota['limit'] }}</span>
+                        </span>
+                    </div>
+                    @if ($noneLeft)
+                        <p class="mt-[4px] pl-[22px] text-[12px] text-rose-600">ตั้งกระทู้ใหม่ได้ตั้งแต่ 00:00 น. ของพรุ่งนี้</p>
+                    @endif
                 </div>
 
                 <div class="mt-4">

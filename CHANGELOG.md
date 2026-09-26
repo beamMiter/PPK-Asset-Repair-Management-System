@@ -536,9 +536,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - **The board shows how many of today's threads are left, as "5/5", for everybody.** The count was a small grey line under the "สร้างกระทู้" button (and in
-  the create dialog), and an admin saw nothing at all. Under the board's title there is now a bar "จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ" with the fraction in a
-  pill: amber at the last one, "0/5" with "ตั้งใหม่ได้ตั้งแต่ 00:00 น." and the button off when none is left, "ไม่จำกัด" for an admin. The 5 is
-  `CHAT_THREADS_PER_DAY`. `ChatFloodAndQuotaTest`.
+  the create dialog), and an admin saw nothing at all. Under the board's title there is now one quiet line, "จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ", with the
+  fraction in bold and a dot for each thread of the day (filled = still yours, up to 10 a day): amber at the last one, "0/5" in red with when it starts again and
+  the button off when none is left, "ไม่จำกัด" for an admin. The 5 is `CHAT_THREADS_PER_DAY`. `ChatFloodAndQuotaTest`.
 
 - **The user manual describes the system as it is.** Read against the code, `help/manual` had drifted: it sent people to a menu that does not exist
   ("งานแจ้งซ่อมของฉัน"), promised a QR code that nothing produces, said an asset turns "In Repair" only when a technician accepts (it happens when

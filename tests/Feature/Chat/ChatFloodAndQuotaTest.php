@@ -236,7 +236,7 @@ class ChatFloodAndQuotaTest extends TestCase
         return $this->actingAs($who)->get(route('chat.index'))->assertOk()->getContent();
     }
 
-    /** The counter on the board itself (not the create dialog): its sentence, the "3/5" in its pill, and the class list of its box. */
+    /** The counter on the board itself (not the create dialog): its sentence, the "3/5", the class list of the fraction, and how many dots are filled. */
     private function quotaNote(User $who): array
     {
         $dom = new \DOMDocument;
@@ -248,7 +248,12 @@ class ChatFloodAndQuotaTest extends TestCase
         $this->assertNotNull($note, 'the board carries a counter of the threads of the day');
         $this->assertNotNull($count);
 
-        return [preg_replace('/\s+/u', ' ', trim($note->textContent)), preg_replace('/\s+/u', '', $count->textContent), $note->getAttribute('class')];
+        $dots = [];
+        foreach ((new \DOMXPath($dom))->query('//*[@id="threadQuotaNote"]//span[contains(@class, "rounded-full")]') as $dot) {
+            $dots[] = str_contains($dot->getAttribute('class'), 'bg-slate-200') ? 0 : 1;
+        }
+
+        return [preg_replace('/\s+/u', ' ', trim($note->textContent)), preg_replace('/\s+/u', '', $count->textContent), $count->getAttribute('class'), $dots];
     }
 
     public function test_the_board_shows_how_many_of_todays_threads_are_left_as_a_fraction(): void
@@ -256,14 +261,18 @@ class ChatFloodAndQuotaTest extends TestCase
         config(['chat.thread_burst_max' => 100]);
         $me = User::factory()->create(['role' => 'member']);
 
-        [$text, $count, $class] = $this->quotaNote($me);
-        $this->assertStringStartsWith('จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ', $text);
+        [$text, $count, $class, $dots] = $this->quotaNote($me);
+        $this->assertStringContainsString('จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ', $text);
         $this->assertSame('5/5', $count);
+        $this->assertSame([1, 1, 1, 1, 1], $dots, 'one dot a thread, all still there');
         $this->assertStringNotContainsString('amber', $class, 'plenty left: no warning colour');
+        $this->assertStringNotContainsString('rose', $class);
 
         $this->start($me);
         $this->start($me);
-        $this->assertSame('3/5', $this->quotaNote($me)[1]);
+        [, $count, , $dots] = $this->quotaNote($me);
+        $this->assertSame('3/5', $count);
+        $this->assertSame([1, 1, 1, 0, 0], $dots, 'two used');
         $this->assertStringContainsString('วันนี้ตั้งกระทู้ได้อีก 3 จาก 5 ครั้ง', $this->page($me), 'the dialog still says it in words, with when it starts again');
     }
 
@@ -275,17 +284,25 @@ class ChatFloodAndQuotaTest extends TestCase
             $this->start($me);
         }
 
-        [, $count, $class] = $this->quotaNote($me);
+        [, $count, $class, $dots] = $this->quotaNote($me);
 
         $this->assertSame('1/5', $count);
-        $this->assertStringContainsString('bg-amber-50', $class);
+        $this->assertSame([1, 0, 0, 0, 0], $dots);
+        $this->assertStringContainsString('text-amber-600', $class);
     }
 
     public function test_the_number_on_the_board_follows_the_setting(): void
     {
         config(['chat.threads_per_day' => 3]);
 
-        $this->assertSame('3/3', $this->quotaNote(User::factory()->create(['role' => 'member']))[1]);
+        [, $count, , $dots] = $this->quotaNote(User::factory()->create(['role' => 'member']));
+        $this->assertSame('3/3', $count);
+        $this->assertSame([1, 1, 1], $dots);
+
+        config(['chat.threads_per_day' => 30]);
+        [, $count, , $dots] = $this->quotaNote(User::factory()->create(['role' => 'member']));
+        $this->assertSame('30/30', $count);
+        $this->assertSame([], $dots, 'thirty dots would be a bar of noise: the fraction alone');
     }
 
     public function test_when_none_is_left_the_button_is_off_and_the_counter_says_when_it_starts_again(): void
@@ -296,20 +313,22 @@ class ChatFloodAndQuotaTest extends TestCase
             $this->start($me);
         }
 
-        [$text, $count, $class] = $this->quotaNote($me);
+        [$text, $count, $class, $dots] = $this->quotaNote($me);
 
         $this->assertSame('0/5', $count);
-        $this->assertStringContainsString('ตั้งใหม่ได้ตั้งแต่ 00:00 น.', $text);
-        $this->assertStringContainsString('bg-amber-50', $class);
+        $this->assertSame([0, 0, 0, 0, 0], $dots);
+        $this->assertStringContainsString('ตั้งกระทู้ใหม่ได้ตั้งแต่ 00:00 น. ของพรุ่งนี้', $text);
+        $this->assertStringContainsString('text-rose-600', $class);
         $this->assertMatchesRegularExpression('/<button[^>]*disabled[^>]*title="วันนี้คุณตั้งกระทู้ครบ 5 ครั้งแล้ว/s', $this->page($me));
     }
 
     public function test_an_admin_sees_the_counter_too_and_it_says_no_limit(): void
     {
-        [$text, $count, $class] = $this->quotaNote(User::factory()->create(['role' => 'admin']));
+        [$text, $count, $class, $dots] = $this->quotaNote(User::factory()->create(['role' => 'admin']));
 
-        $this->assertStringStartsWith('จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ', $text);
+        $this->assertStringContainsString('จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ', $text);
         $this->assertSame('ไม่จำกัด', $count);
+        $this->assertSame([], $dots, 'nothing to count down');
         $this->assertStringNotContainsString('amber', $class);
     }
 
