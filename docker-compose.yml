@@ -123,6 +123,29 @@ services:
       - storage_uploads:/var/www/html/storage/app/public
       - storage_private:/var/www/html/storage/app/private
 
+  scheduler:
+    # The app's scheduled work (routes/console.php): `chat:purge-deleted` erases what people deleted from the chat 30 days ago, and
+    # `sanctum:prune-expired` tidies the token table. Without this service they never run - nothing else in this file calls the scheduler.
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile
+      args:
+        PHP_VERSION: "8.4"
+    image: arm-system/php-app
+    container_name: arm-scheduler
+    env_file: .env
+    # once a minute it asks Laravel what is due (a task keeps its own time, e.g. 03:10 Thai time) - `schedule:work` needs no cron
+    command: php artisan schedule:work
+    depends_on:
+      app:
+        condition: service_healthy
+    working_dir: /var/www/html
+    environment: *php-environment
+    volumes:
+      - ./:/var/www/html:delegated
+      - storage_uploads:/var/www/html/storage/app/public
+      - storage_private:/var/www/html/storage/app/private
+
 volumes:
   dbdata:
   node_modules:

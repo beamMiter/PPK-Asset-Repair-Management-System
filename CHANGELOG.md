@@ -88,6 +88,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The containers had no scheduler, no php.ini and an unlimited memory limit.** `docker-compose.yml` never ran the scheduler, so the chat purge
+  and the token prune did not run: a `scheduler` service (`php artisan schedule:work`) does now. The image had no php.ini, so uploads were capped
+  at PHP's 2 MB while the app promises 10 MB a file (a phone photo failed) and nginx allowed 20 MB while a form takes 3 files: `.docker/php.ini`
+  sets `upload_max_filesize` 12M, `post_max_size` 40M (nginx `client_max_body_size` the same 40m), `memory_limit` 512M, no displayed errors,
+  and opcache (installed now; re-checks files every 2 s until `PHP_OPCACHE_VALIDATE_TIMESTAMPS=0`). `public/.user.ini` (`memory_limit = -1`, no
+  limit for any request, left from the first commit) is removed. Built `/build/*` files are cached for a year and gzipped (pages are not
+  compressed). Rebuild the images (`docker compose build`) and start the new service (`docker compose up -d`). `DockerInfraTest`.
 - **A throttled API answer said nothing about how long to wait.** The API's error renderer built its JSON answer without the headers the
   exception carries, so a 429 lost its `Retry-After` (and a 405 its `Allow`). They are kept.
 - **A suspended person whose browser was still signed in got a 500 on any fetch.** The chat widget's poll, the channel authorisation and
@@ -818,6 +825,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **nginx no longer serves dotfiles, and an uploaded file is never run as a page.** `/.user.ini` and `/.htaccess` (tracked in `public/`) could be
+  read from outside, and files under `/storage/` (what people uploaded, served straight by nginx) carried no protection: an SVG or HTML file
+  opened directly ran its script on the site's own address, as whoever opened it. Dotfiles answer 404 (except `/.well-known/`); `/storage/`
+  now sends `X-Content-Type-Options: nosniff` and `Content-Security-Policy: sandbox` (a PDF is left out: Chrome's viewer will not open one in a
+  sandbox); `server_tokens off`. `DockerInfraTest`.
 - **The chat's live channels are private.** They were public: anybody holding the Pusher key (it is in the page's JavaScript) could subscribe
   to `chat.{id}` - the ids count 1, 2, 3 - and read every message, name and lock live, without ever signing in. Messages, locks and deletions
   are now announced on `private-chat.{id}`; the browser (session) and the app (bearer token) first ask `POST /broadcasting/auth`, and only a

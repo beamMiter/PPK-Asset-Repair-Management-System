@@ -22,9 +22,11 @@ RUN apk add --no-cache bash git curl icu-libs icu-dev libzip-dev libpng-dev libj
 # WebP, which is what the avatar upload does. pcntl lets `queue:work --timeout` actually stop a job that overruns.
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure intl \
-    && docker-php-ext-install pdo_mysql intl mbstring zip exif gd pcntl
+    && docker-php-ext-install pdo_mysql intl mbstring zip exif gd pcntl opcache
 # Install and enable phpredis
 RUN pecl install redis && docker-php-ext-enable redis
+# PHP settings (upload sizes, memory, opcache): the image has no php.ini of its own. `zz-` so it loads after the extensions' own files.
+COPY .docker/php.ini /usr/local/etc/php/conf.d/zz-app.ini
 RUN addgroup -g 1000 laravel && adduser -G laravel -u 1000 -D laravel
 WORKDIR /var/www/html
 # Copy composer
@@ -46,6 +48,7 @@ RUN mkdir -p storage/app/public storage/app/private storage/framework/cache/data
     && chown -R laravel:laravel storage bootstrap/cache
 
 USER laravel
+# 1 = opcache re-reads a changed file (the bind-mounted dev setup); set 0 in a production deployment (see zz-app.ini)
 ENV PHP_OPCACHE_VALIDATE_TIMESTAMPS=1 APP_ENV=production
 
 EXPOSE 9000
