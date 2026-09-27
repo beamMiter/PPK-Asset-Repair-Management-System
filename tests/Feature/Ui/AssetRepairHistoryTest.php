@@ -35,13 +35,13 @@ class AssetRepairHistoryTest extends TestCase
 
         $this->assertStringContainsString('ประวัติการแจ้งซ่อม', $html);
         $this->assertMatchesRegularExpression('/ประวัติการแจ้งซ่อม\s*<span[^>]*>3<\/span>/u', $html, 'the count badge, like the job page\'s own history button');
-        $this->assertStringContainsString('id="openAssetHistoryModalBtn"', $html);
-        $this->assertStringContainsString('id="assetHistoryModal"', $html);
-        // the trigger and the modal are in two different @section blocks (the header is wrapped in "sticky-under-topbar",
-        // which traps a nested fixed modal below the topbar's own z-index - see the comment in the view), so this is plain
-        // classList wiring like the job page's own history modal, not an Alpine scope shared between the two
-        $this->assertStringContainsString("getElementById('assetHistoryModal')", $html);
-        $this->assertStringNotContainsString('x-data="{ showHistory', $html);
+        $this->assertStringContainsString('x-data="{ showHistory: false }"', $html);
+        $this->assertStringContainsString('@click="showHistory = true"', $html);
+        // the header sits in "sticky-under-topbar" (position: sticky + z-index: 10 - see resources/css/layout.css), which
+        // establishes its own stacking context: a modal merely nested inside it can never paint above the topbar no matter
+        // its own z-index. x-teleport moves the modal's real DOM node out to <body> at runtime, the same fix already used
+        // for the SLA page's print dialog (maintenance/sla/index.blade.php), triggered from this same kind of sticky header.
+        $this->assertStringContainsString('x-teleport="body"', $html);
     }
 
     public function test_the_timeline_shows_the_five_most_recent_requests_newest_first(): void

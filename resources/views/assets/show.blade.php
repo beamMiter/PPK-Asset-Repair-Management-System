@@ -58,24 +58,138 @@
                 </div>
 
                 {{-- RIGHT --}}
-                <div class="flex flex-wrap items-center justify-start sm:justify-end gap-2">
+                <div class="flex flex-wrap items-center justify-start sm:justify-end gap-2" x-data="{ showHistory: false }">
                     <x-ui.button variant="primary" :href="$createMrUrl" icon="add">สร้างคำขอซ่อมใหม่</x-ui.button>
                     @if ($canUpdate)
                         <x-ui.button :href="route('assets.edit', $asset)" icon="edit">แก้ไข</x-ui.button>
                     @endif
 
-                    {{-- Same trigger as the job page's own "ประวัติการดำเนินงาน" - an icon button with a count, top-right - opening
-                         the same dot / connecting-line timeline, one item per repair request instead of per status change. The
-                         modal itself is in @section('content'), not here: this header is wrapped in "sticky-under-topbar"
-                         (layouts/app.blade.php), which creates its own stacking context, so a modal nested inside it can never
-                         paint above the topbar no matter its z-index - the job page keeps the same trigger/modal split for the
-                         same reason (_page_header.blade.php vs _modal_history.blade.php). --}}
-                    <x-ui.button id="openAssetHistoryModalBtn" icon="history">
+                    {{-- Same trigger as the job page's own "ประวัติการดำเนินงาน" - an icon button with a count, top-right -
+                         opening the same dot / connecting-line timeline, one item per repair request instead of per status
+                         change. This header sits in "sticky-under-topbar" (layouts/app.blade.php), which sets its own
+                         z-index and so establishes a stacking context: a modal merely nested inside it can never paint above
+                         the topbar no matter what z-index the modal itself asks for. `x-teleport="body"` sidesteps that
+                         entirely by moving the modal's real DOM node out to <body> at runtime - the same fix already used for
+                         the SLA page's print dialog, triggered from this same kind of sticky header
+                         (maintenance/sla/index.blade.php). --}}
+                    <x-ui.button icon="history" @click="showHistory = true">
                         ประวัติการแจ้งซ่อม
                         <span class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">{{ $asset->maintenanceRequests->count() }}</span>
                     </x-ui.button>
 
                     <x-ui.back-button :fallback="route('assets.index')" />
+
+                    <template x-teleport="body">
+                        <div x-show="showHistory" style="display: none"
+                            class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
+                            x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
+                            x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
+                            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                            <div @click.away="showHistory = false"
+                                class="relative w-full max-w-2xl rounded-md border {{ $line }} bg-white overflow-hidden">
+                                <div class="flex items-center justify-between border-b {{ $line }} px-6 py-4">
+                                    <div class="flex items-start gap-3 min-w-0">
+                                        <span class="mt-0.5 inline-flex h-10 w-10 items-center justify-center text-slate-800">
+                                            <span class="material-symbols-outlined text-[36px]" aria-hidden="true">history</span>
+                                        </span>
+                                        <div class="min-w-0">
+                                            <div class="text-[16px] font-semibold text-slate-900 leading-tight">ประวัติการแจ้งซ่อม</div>
+                                            <p class="text-[13px] text-slate-500">รายการซ่อมล่าสุดของครุภัณฑ์ชิ้นนี้</p>
+                                        </div>
+                                    </div>
+                                    <x-ui.button @click="showHistory = false" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
+                                </div>
+
+                                <div class="px-6 py-6 max-h-[60vh] overflow-y-auto bg-white">
+                                    @if ($asset->maintenanceRequests && $asset->maintenanceRequests->count() > 0)
+                                        @php
+                                            // same mapping as the job page's own "ประวัติการดำเนินงาน" timeline
+                                            // (resources/views/maintenance/requests/partials/_timeline.blade.php): one dot style per status
+                                            $statusStyle = [
+                                                'pending'      => ['icon' => 'hourglass_empty', 'dot' => 'bg-amber-50 text-amber-600'],
+                                                'acknowledged' => ['icon' => 'visibility',      'dot' => 'bg-blue-50 text-blue-600'],
+                                                'accepted'     => ['icon' => 'thumb_up',        'dot' => 'bg-indigo-50 text-indigo-600'],
+                                                'in_progress'  => ['icon' => 'directions_run',  'dot' => 'bg-sky-50 text-sky-600'],
+                                                'on_hold'      => ['icon' => 'pause_circle',    'dot' => 'bg-rose-50 text-rose-600'],
+                                                'resolved'     => ['icon' => 'task_alt',        'dot' => 'bg-emerald-50 text-emerald-600'],
+                                                'closed'       => ['icon' => 'task',            'dot' => 'bg-emerald-600 text-white'],
+                                                'completed'    => ['icon' => 'task_alt',        'dot' => 'bg-emerald-50 text-emerald-600'],
+                                                'cancelled'    => ['icon' => 'cancel',          'dot' => 'bg-slate-100 text-slate-500'],
+                                                'rejected'     => ['icon' => 'block',           'dot' => 'bg-rose-50 text-rose-600'],
+                                            ];
+                                            $neutralStyle = ['icon' => 'info', 'dot' => 'bg-slate-100 text-slate-500'];
+                                            $statusTextClass = fn(?string $s) => match (strtolower((string) $s)) {
+                                                'acknowledged' => 'text-blue-700',
+                                                'pending' => 'text-amber-700',
+                                                'accepted' => 'text-emerald-700',
+                                                'in_progress' => 'text-sky-700',
+                                                'on_hold' => 'text-slate-600',
+                                                'resolved' => 'text-emerald-800',
+                                                'closed' => 'text-emerald-950',
+                                                'cancelled', 'rejected' => 'text-rose-700',
+                                                default => 'text-slate-700',
+                                            };
+                                            $recentRequests = $asset->maintenanceRequests->sortByDesc('created_at')->take(5)->values();
+                                        @endphp
+
+                                        {{-- Same dot / connecting-line / card skeleton as the "ประวัติการดำเนินงาน" timeline, only
+                                             lighter: each item here is a separate repair request, not one status change of a single
+                                             job, so there is no actor, no note, no "time spent in this state". --}}
+                                        <ol class="space-y-5">
+                                            @foreach ($recentRequests as $mr)
+                                                @php
+                                                    $mrStatus = strtolower((string) ($mr->status ?? ''));
+                                                    $style = $statusStyle[$mrStatus] ?? $neutralStyle;
+                                                @endphp
+                                                <li class="relative pl-[52px]">
+                                                    @unless ($loop->last)
+                                                        <span class="absolute left-[17px] top-[18px] -bottom-5 w-0.5 bg-slate-200" aria-hidden="true"></span>
+                                                    @endunless
+
+                                                    <span class="absolute left-0 top-0 z-10 flex h-9 w-9 items-center justify-center rounded-full ring-4 ring-white {{ $style['dot'] }}">
+                                                        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">{{ $style['icon'] }}</span>
+                                                    </span>
+
+                                                    <div class="rounded-xl border border-slate-200 bg-white p-[16px]">
+                                                        <div class="flex flex-wrap items-start justify-between gap-x-[12px] gap-y-1">
+                                                            <div class="min-w-0">
+                                                                <a href="{{ route('maintenance.requests.show', $mr) }}"
+                                                                    class="text-[14px] font-semibold leading-snug text-slate-900 hover:underline">{{ $mr->title }}</a>
+                                                                <div class="mt-0.5 text-[12px] text-slate-500">
+                                                                    {{ $mr->request_no ?: '#' . $mr->id }}
+                                                                    - <span class="font-medium {{ $statusTextClass($mrStatus) }}">{{ $mr->statusLabel() }}</span>
+                                                                </div>
+                                                            </div>
+                                                            <time class="whitespace-nowrap text-[12px] text-slate-500">{{ \App\Support\ThaiDate::short($mr->created_at) }}</time>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            @endforeach
+                                        </ol>
+
+                                        <div class="mt-6 flex justify-start">
+                                            <x-ui.button :href="$mrListRoute">ดูประวัติการแจ้งซ่อมทั้งหมด</x-ui.button>
+                                        </div>
+                                    @else
+                                        @php $isInRepair = $asset->status === \App\Models\Asset::STATUS_IN_REPAIR; @endphp
+                                        <div class="text-sm text-slate-500 italic p-8 rounded-md bg-slate-50 border border-dashed border-slate-300 flex flex-col items-center justify-center text-center">
+                                            @if ($isInRepair)
+                                                <div class="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mb-3">
+                                                    <span class="material-symbols-outlined text-[28px] text-amber-500" aria-hidden="true">build</span>
+                                                </div>
+                                                <p class="font-bold text-amber-700 text-base">กำลังซ่อม (แต่ไม่พบใบแจ้งซ่อม)</p>
+                                                <p class="text-[13px] text-slate-500 mt-1 max-w-md">สถานะครุภัณฑ์ถูกตั้งเป็น
+                                                    "กำลังซ่อม" แต่ยังไม่ได้สร้างใบแจ้งซ่อมในระบบ</p>
+                                                <x-ui.button :href="$createMrUrl" variant="warning" icon="add" class="mt-4">สร้างใบแจ้งซ่อมทันที</x-ui.button>
+                                            @else
+                                                <x-ui.empty-state icon="history" hint="ประวัติการซ่อมบำรุงทั้งหมดจะถูกรวบรวมไว้ที่นี่">ยังไม่มีประวัติการแจ้งซ่อม</x-ui.empty-state>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
             </form>
@@ -298,134 +412,5 @@
                     </div>
 
                 </div>
-
-                {{-- History modal: same shell as maintenance/requests/partials/_modal_history.blade.php, opened by the button
-                     in the header via plain classList (see @push('scripts') below) rather than Alpine, because the trigger and
-                     this modal live in two different @section blocks with no shared component scope between them - exactly how
-                     the job page itself splits _page_header.blade.php from _modal_history.blade.php. --}}
-                <div id="assetHistoryModal"
-                    class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-                    <div class="relative z-[10000] w-full max-w-2xl rounded-md border {{ $line }} bg-white overflow-hidden">
-                        <div class="flex items-center justify-between border-b {{ $line }} px-6 py-4">
-                            <div class="flex items-start gap-3 min-w-0">
-                                <span class="mt-0.5 inline-flex h-10 w-10 items-center justify-center text-slate-800">
-                                    <span class="material-symbols-outlined text-[36px]" aria-hidden="true">history</span>
-                                </span>
-                                <div class="min-w-0">
-                                    <div class="text-[16px] font-semibold text-slate-900 leading-tight">ประวัติการแจ้งซ่อม</div>
-                                    <p class="text-[13px] text-slate-500">รายการซ่อมล่าสุดของครุภัณฑ์ชิ้นนี้</p>
-                                </div>
-                            </div>
-                            <x-ui.button id="closeAssetHistoryModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
-                        </div>
-
-                        <div class="px-6 py-6 max-h-[60vh] overflow-y-auto bg-white">
-                            @if ($asset->maintenanceRequests && $asset->maintenanceRequests->count() > 0)
-                                @php
-                                    // same mapping as the job page's own "ประวัติการดำเนินงาน" timeline
-                                    // (resources/views/maintenance/requests/partials/_timeline.blade.php): one dot style per status
-                                    $statusStyle = [
-                                        'pending'      => ['icon' => 'hourglass_empty', 'dot' => 'bg-amber-50 text-amber-600'],
-                                        'acknowledged' => ['icon' => 'visibility',      'dot' => 'bg-blue-50 text-blue-600'],
-                                        'accepted'     => ['icon' => 'thumb_up',        'dot' => 'bg-indigo-50 text-indigo-600'],
-                                        'in_progress'  => ['icon' => 'directions_run',  'dot' => 'bg-sky-50 text-sky-600'],
-                                        'on_hold'      => ['icon' => 'pause_circle',    'dot' => 'bg-rose-50 text-rose-600'],
-                                        'resolved'     => ['icon' => 'task_alt',        'dot' => 'bg-emerald-50 text-emerald-600'],
-                                        'closed'       => ['icon' => 'task',            'dot' => 'bg-emerald-600 text-white'],
-                                        'completed'    => ['icon' => 'task_alt',        'dot' => 'bg-emerald-50 text-emerald-600'],
-                                        'cancelled'    => ['icon' => 'cancel',          'dot' => 'bg-slate-100 text-slate-500'],
-                                        'rejected'     => ['icon' => 'block',           'dot' => 'bg-rose-50 text-rose-600'],
-                                    ];
-                                    $neutralStyle = ['icon' => 'info', 'dot' => 'bg-slate-100 text-slate-500'];
-                                    $statusTextClass = fn(?string $s) => match (strtolower((string) $s)) {
-                                        'acknowledged' => 'text-blue-700',
-                                        'pending' => 'text-amber-700',
-                                        'accepted' => 'text-emerald-700',
-                                        'in_progress' => 'text-sky-700',
-                                        'on_hold' => 'text-slate-600',
-                                        'resolved' => 'text-emerald-800',
-                                        'closed' => 'text-emerald-950',
-                                        'cancelled', 'rejected' => 'text-rose-700',
-                                        default => 'text-slate-700',
-                                    };
-                                    $recentRequests = $asset->maintenanceRequests->sortByDesc('created_at')->take(5)->values();
-                                @endphp
-
-                                {{-- Same dot / connecting-line / card skeleton as the "ประวัติการดำเนินงาน" timeline, only lighter:
-                                     each item here is a separate repair request, not one status change of a single job, so there
-                                     is no actor, no note, no "time spent in this state". --}}
-                                <ol class="space-y-5">
-                                    @foreach ($recentRequests as $mr)
-                                        @php
-                                            $mrStatus = strtolower((string) ($mr->status ?? ''));
-                                            $style = $statusStyle[$mrStatus] ?? $neutralStyle;
-                                        @endphp
-                                        <li class="relative pl-[52px]">
-                                            @unless ($loop->last)
-                                                <span class="absolute left-[17px] top-[18px] -bottom-5 w-0.5 bg-slate-200" aria-hidden="true"></span>
-                                            @endunless
-
-                                            <span class="absolute left-0 top-0 z-10 flex h-9 w-9 items-center justify-center rounded-full ring-4 ring-white {{ $style['dot'] }}">
-                                                <span class="material-symbols-outlined text-[20px]" aria-hidden="true">{{ $style['icon'] }}</span>
-                                            </span>
-
-                                            <div class="rounded-xl border border-slate-200 bg-white p-[16px]">
-                                                <div class="flex flex-wrap items-start justify-between gap-x-[12px] gap-y-1">
-                                                    <div class="min-w-0">
-                                                        <a href="{{ route('maintenance.requests.show', $mr) }}"
-                                                            class="text-[14px] font-semibold leading-snug text-slate-900 hover:underline">{{ $mr->title }}</a>
-                                                        <div class="mt-0.5 text-[12px] text-slate-500">
-                                                            {{ $mr->request_no ?: '#' . $mr->id }}
-                                                            - <span class="font-medium {{ $statusTextClass($mrStatus) }}">{{ $mr->statusLabel() }}</span>
-                                                        </div>
-                                                    </div>
-                                                    <time class="whitespace-nowrap text-[12px] text-slate-500">{{ \App\Support\ThaiDate::short($mr->created_at) }}</time>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    @endforeach
-                                </ol>
-
-                                <div class="mt-6 flex justify-start">
-                                    <x-ui.button :href="$mrListRoute">ดูประวัติการแจ้งซ่อมทั้งหมด</x-ui.button>
-                                </div>
-                            @else
-                                @php $isInRepair = $asset->status === \App\Models\Asset::STATUS_IN_REPAIR; @endphp
-                                <div class="text-sm text-slate-500 italic p-8 rounded-md bg-slate-50 border border-dashed border-slate-300 flex flex-col items-center justify-center text-center">
-                                    @if ($isInRepair)
-                                        <div class="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mb-3">
-                                            <span class="material-symbols-outlined text-[28px] text-amber-500" aria-hidden="true">build</span>
-                                        </div>
-                                        <p class="font-bold text-amber-700 text-base">กำลังซ่อม (แต่ไม่พบใบแจ้งซ่อม)</p>
-                                        <p class="text-[13px] text-slate-500 mt-1 max-w-md">สถานะครุภัณฑ์ถูกตั้งเป็น
-                                            "กำลังซ่อม" แต่ยังไม่ได้สร้างใบแจ้งซ่อมในระบบ</p>
-                                        <x-ui.button :href="$createMrUrl" variant="warning" icon="add" class="mt-4">สร้างใบแจ้งซ่อมทันที</x-ui.button>
-                                    @else
-                                        <x-ui.empty-state icon="history" hint="ประวัติการซ่อมบำรุงทั้งหมดจะถูกรวบรวมไว้ที่นี่">ยังไม่มีประวัติการแจ้งซ่อม</x-ui.empty-state>
-                                    @endif
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
         </form>
     @endsection
-
-    @push('scripts')
-        <script>
-            (function () {
-                'use strict';
-                const modal = document.getElementById('assetHistoryModal');
-                const openBtn = document.getElementById('openAssetHistoryModalBtn');
-                const closeBtn = document.getElementById('closeAssetHistoryModalBtn');
-                if (!modal || !openBtn) return;
-
-                const show = () => { modal.classList.remove('hidden'); modal.classList.add('flex'); document.body.style.overflow = 'hidden'; };
-                const hide = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); document.body.style.overflow = ''; };
-
-                openBtn.addEventListener('click', show);
-                closeBtn?.addEventListener('click', hide);
-                modal.addEventListener('click', (e) => { if (e.target === modal) hide(); });
-            })();
-        </script>
-    @endpush
