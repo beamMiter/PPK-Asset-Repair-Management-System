@@ -63,14 +63,14 @@
     $pads = ['md' => 'px-[16px]', 'sm' => 'px-[12px]', 'square' => '', 'icon' => '', 'icon-lg' => ''];
 
     $variants = [
-        'primary'        => 'bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-md focus:ring-emerald-200',
-        'secondary'      => 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:shadow-md focus:ring-slate-200',
-        'danger'         => 'bg-rose-600 text-white hover:bg-rose-700 hover:shadow-md focus:ring-rose-200',
-        'danger-outline' => 'border border-rose-200 bg-white text-rose-700 hover:bg-rose-50 hover:border-rose-300 hover:shadow-md focus:ring-rose-100',
-        'info'           => 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md focus:ring-blue-200',
-        'warning'        => 'bg-amber-600 text-white hover:bg-amber-700 hover:shadow-md focus:ring-amber-200',
-        'neutral'        => 'bg-slate-600 text-white hover:bg-slate-700 hover:shadow-md focus:ring-slate-200',
-        'brand'          => 'bg-[#0F2D5C] text-white hover:bg-[#1a3d75] hover:shadow-md focus:ring-[#0F2D5C]/30',
+        'primary'        => 'bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-inner focus:ring-emerald-200',
+        'secondary'      => 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:shadow-inner focus:ring-slate-200',
+        'danger'         => 'bg-rose-600 text-white hover:bg-rose-700 hover:shadow-inner focus:ring-rose-200',
+        'danger-outline' => 'border border-rose-200 bg-white text-rose-700 hover:bg-rose-50 hover:border-rose-300 hover:shadow-inner focus:ring-rose-100',
+        'info'           => 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-inner focus:ring-blue-200',
+        'warning'        => 'bg-amber-600 text-white hover:bg-amber-700 hover:shadow-inner focus:ring-amber-200',
+        'neutral'        => 'bg-slate-600 text-white hover:bg-slate-700 hover:shadow-inner focus:ring-slate-200',
+        'brand'          => 'bg-[#0F2D5C] text-white hover:bg-[#1a3d75] hover:shadow-inner focus:ring-[#0F2D5C]/30',
         'ghost'          => 'text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus:ring-slate-200',
         'ghost-danger'   => 'text-rose-500 hover:bg-rose-50 hover:text-rose-600 focus:ring-rose-100',
         'ghost-warning'  => 'text-amber-600 hover:bg-amber-50 hover:text-amber-700 focus:ring-amber-100',

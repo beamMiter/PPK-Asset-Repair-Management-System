@@ -548,11 +548,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- **Every `<x-ui.button>` shows a shadow on hover.** A button only darkened by a shade on hover, which is easy to miss; the request was that a button should
-  feel the way the status-change buttons on a job's page already do (รับเรื่อง, พักชั่วคราว, เสร็จสิ้น, ไม่รับเรื่อง, ยกเลิกการซ่อมบำรุง). Because every one of
-  those, and the "ดูรายละเอียด" / "แก้ไข" of a list row, the dialog confirm/cancel pair and most page actions already go through the shared component, adding
-  `hover:shadow-md` there reaches all of them at once. Left out on purpose: the `ghost*` variants (icon-only tools such as a dialog's × or the chat message's
-  ⋮) - they are meant to read as a bare icon that only lights up, and a shadow would put a box back around them.
+- **Every `<x-ui.button>` gets a shadow inside it on hover, on top of the colour change it already had.** A button only darkened by a shade on hover,
+  which was easy to miss; a first pass added `hover:shadow-md` (a shadow cast outward, lifting the button off the page), which was not what was wanted -
+  the shadow has to sit inside the button, the way the status-change buttons on a job's page (รับทราบ, รับเรื่อง, พักชั่วคราว, เสร็จสิ้น, ไม่รับเรื่อง,
+  ยกเลิกการซ่อมบำรุง) were the example of. `hover:shadow-inner` replaces it. Because every one of those buttons, and the "ดูรายละเอียด" / "แก้ไข" of a list
+  row, the dialog confirm/cancel pair and most page actions already go through the shared component, the change reaches all of them at once. Left out on
+  purpose: the `ghost*` variants (icon-only tools such as a dialog's × or the chat message's ⋮) - they are meant to read as a bare icon that only lights
+  up, and a shadow would put a box back around them.
 
 - **"ดูรายละเอียด" and "แก้ไข" in the requests list and the assets list are the standard grey button.** Both lists drew them by hand - view in indigo, edit in
   emerald, three slightly different sizes - while the Technician Rating page already used `<x-ui.button size="sm">` (white, grey border and text). The rows of
