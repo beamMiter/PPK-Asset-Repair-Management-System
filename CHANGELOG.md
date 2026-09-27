@@ -858,12 +858,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reordered; the hospital's own Thai name and the literal Thai menu label ("คู่มือการใช้งาน") are kept as-is since those are proper
   nouns / real UI text, not prose.
 
-- **"ประวัติการแจ้งซ่อมล่าสุด" on an asset's own page matches the requests list, not a one-off design of its own.** It was a hand-built
-  card with English labels ("Job ID", "Problem Description", "Technician", "View Details") beside Thai ones everywhere else, three
-  separate colour-map closures for one status badge, a hand-drawn crc32-hashed initials avatar, and `$mr->ticket_no` - not a real
-  column, so the request number shown was always just the row's plain id, never the real `request_no`. Rebuilt on the requests list's
-  own conventions: status is coloured text (the same `$statusTextClass` map), the technician avatar is the shared `avatar_thumb_url`,
-  the action is `<x-ui.button size="sm" icon="visibility">`, and the request number is the real one. `AssetRepairHistoryTest`.
+- **"ประวัติการแจ้งซ่อมล่าสุด" on an asset's own page matches the requests list, not a one-off design of its own, and fits the little it
+  says.** It was a hand-built card with English labels ("Job ID", "Problem Description", "Technician", "View Details") beside Thai
+  ones everywhere else, three separate colour-map closures for one status badge, a hand-drawn crc32-hashed initials avatar, and
+  `$mr->ticket_no` - not a real column, so the request number shown was always just the row's plain id, never the real `request_no`.
+  A first pass fixed all of that but kept the same padded, multi-row card shape, which was still far bigger than the handful of
+  facts it held; it is now one compact row - the number and status on one line, the title, then who reported it and who is
+  assigned on one line of small text - with `<x-ui.button size="sm" icon="visibility">` for the action. `AssetRepairHistoryTest`.
 
 ### Removed
 

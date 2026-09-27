@@ -13,8 +13,9 @@ use Tests\TestCase;
  * "ประวัติการแจ้งซ่อมล่าสุด" on an asset's own page was a leftover, hand-built card: English labels ("Job ID", "Problem Description",
  * "Technician", "View Details") next to Thai ones everywhere else, three separate colour-map closures for one badge, a hand-drawn
  * initials avatar instead of the shared `avatar_thumb_url`, and `$mr->ticket_no` (not a real column, so it always fell back to the
- * row's plain id instead of the request number). Rebuilt to match the requests list: status is coloured text, the action is the
- * shared `<x-ui.button size="sm">`, and the request number is `request_no`.
+ * row's plain id instead of the request number) - and, once first rebuilt on the requests list's own conventions, still a padded
+ * multi-row card far bigger than the handful of facts it showed. Settled on one compact row: number + status on one line, the
+ * title, then everyone's name on one line of small text; the action is the shared `<x-ui.button size="sm">`.
  */
 class AssetRepairHistoryTest extends TestCase
 {
@@ -45,7 +46,7 @@ class AssetRepairHistoryTest extends TestCase
         $this->assertStringContainsString($req->statusLabel(), $html);
         $this->assertStringContainsString('text-sky-700', $html, 'in_progress is coloured text, same as the requests list');
         $this->assertStringContainsString('สมชาย ใจดี', $html);
-        $this->assertStringContainsString($tech->avatar_thumb_url, $html);
+        $this->assertStringContainsString('ช่างวิชัย', $html, 'the technician is named on the row');
         $this->assertStringContainsString(route('maintenance.requests.show', $req), $html);
 
         foreach (['Job ID', 'Problem Description', '>Technician<', 'View Details'] as $leftover) {

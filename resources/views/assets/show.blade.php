@@ -318,51 +318,24 @@
                                             ->values();
                                     @endphp
 
-                                    <div class="rounded-md border border-slate-200 bg-white p-5">
-                                        <div class="flex flex-wrap items-start justify-between gap-3">
-                                            <div class="min-w-0">
+                                    <div class="rounded-md border border-slate-200 bg-white px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <div class="flex flex-wrap items-center gap-2">
                                                 <a href="{{ route('maintenance.requests.show', $mr) }}"
-                                                    class="font-mono text-[13px] font-semibold text-[#0F2D5C] hover:underline">#{{ $mr->request_no ?? $mr->id }}</a>
-                                                <h4 class="mt-1 text-[15px] font-semibold text-slate-900 break-words">
-                                                    <a href="{{ route('maintenance.requests.show', $mr) }}" class="hover:underline">{{ $mr->title }}</a>
-                                                </h4>
+                                                    class="font-mono text-[12px] font-semibold text-[#0F2D5C] hover:underline">#{{ $mr->request_no ?? $mr->id }}</a>
+                                                <span class="text-[12px] font-semibold {{ $statusTextClass($mrStatus) }}">{{ $mr->statusLabel() }}</span>
                                             </div>
-                                            <span class="shrink-0 text-[12px] font-semibold {{ $statusTextClass($mrStatus) }}">{{ $mr->statusLabel() }}</span>
-                                        </div>
-
-                                        <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-slate-500">
-                                            <span class="flex items-center gap-1">
-                                                <span class="material-symbols-outlined text-[14px]" aria-hidden="true">calendar_today</span>
-                                                {{ \App\Support\ThaiDate::short($mr->created_at) }}
-                                            </span>
-                                            <span class="flex items-center gap-1">
-                                                <span class="material-symbols-outlined text-[14px]" aria-hidden="true">person</span>
-                                                แจ้งโดย {{ $mr->reporter->name ?? 'ระบบ' }}
-                                            </span>
-                                        </div>
-
-                                        <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
-                                            @if ($techWorkers->isEmpty())
-                                                <span class="flex items-center gap-1 text-[12px] italic text-slate-400">
-                                                    <span class="material-symbols-outlined text-[14px]" aria-hidden="true">person</span>
-                                                    ยังไม่ได้มอบหมายเจ้าหน้าที่
+                                            <a href="{{ route('maintenance.requests.show', $mr) }}"
+                                                class="block text-[14px] font-semibold text-slate-900 truncate hover:underline">{{ $mr->title }}</a>
+                                            <div class="mt-0.5 flex flex-wrap items-center gap-x-3 text-[11.5px] text-slate-500">
+                                                <span>{{ \App\Support\ThaiDate::short($mr->created_at) }}</span>
+                                                <span>แจ้งโดย {{ $mr->reporter->name ?? 'ระบบ' }}</span>
+                                                <span class="{{ $techWorkers->isEmpty() ? 'italic text-slate-400' : '' }}">
+                                                    {{ $techWorkers->isEmpty() ? 'ยังไม่ได้มอบหมายเจ้าหน้าที่' : 'ช่าง ' . $techWorkers->pluck('name')->join(', ') }}
                                                 </span>
-                                            @else
-                                                <div class="flex items-center -space-x-2">
-                                                    @foreach ($techWorkers->take(3) as $i => $w)
-                                                        <div class="w-7 h-7 rounded-full border-2 border-white shrink-0 overflow-hidden" title="{{ $w->name }}">
-                                                            <img src="{{ $w->avatar_thumb_url }}" alt="{{ $w->name }}" class="w-full h-full object-cover">
-                                                        </div>
-                                                    @endforeach
-                                                    @if ($techWorkers->count() > 3)
-                                                        <div class="w-7 h-7 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center shrink-0">
-                                                            <span class="text-[10px] font-bold text-slate-600">+{{ $techWorkers->count() - 3 }}</span>
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                            @endif
-                                            <x-ui.button :href="route('maintenance.requests.show', $mr)" size="sm" icon="visibility">ดูรายละเอียด</x-ui.button>
+                                            </div>
                                         </div>
+                                        <x-ui.button :href="route('maintenance.requests.show', $mr)" size="sm" icon="visibility" class="shrink-0">ดูรายละเอียด</x-ui.button>
                                     </div>
                                 @endforeach
                             @else
