@@ -556,6 +556,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the change reaches all of them at once. Two false starts on the way here (an outward `shadow-md`, then an inset shadow) added a box-shadow nobody
   asked for; both are reverted - a plain, stronger colour change was the whole answer.
 
+- **The "ดูรายละเอียด" button on the repair jobs list (รายการงานซ่อม) presses like every other button, not just darkens.** It is a hand-drawn full-width
+  navy bar, not the shared `<x-ui.button>` (its own look was kept on purpose - see the "grey button" entry above), so it never had the
+  `active:scale-95` press animation or a `focus:ring-2` outline that every button built from the shared component gets for free; clicking it looked
+  and felt inert next to something like "รับทราบ". Adds the same `active:scale-95 focus:ring-2 focus:ring-[#0F2D5C]/30` to it, unrelated to its colour.
+
 - **"ดูรายละเอียด" and "แก้ไข" in the requests list and the assets list are the standard grey button.** Both lists drew them by hand - view in indigo, edit in
   emerald, three slightly different sizes - while the Technician Rating page already used `<x-ui.button size="sm">` (white, grey border and text). The rows of
   the requests list and the assets list (table and mobile cards) now use that same button, so a change to it reaches them all. Left as they were: the repair jobs
