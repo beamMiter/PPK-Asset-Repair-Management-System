@@ -72,12 +72,12 @@ class HistoryTimelineTest extends TestCase
         // code prefix (seeded / legacy) and Thai-label prefix (what the transition service writes)
         $html = $this->render([
             ['action' => 'start_request', 'note' => '[accepted -> in_progress] เริ่มดำเนินการซ่อมบำรุง'],
-            ['action' => 'transition', 'note' => '[รับทราบแล้ว -> รับเรื่องแล้ว] รับเรื่องเรียบร้อย • เจ้าหน้าที่: สมศรี'],
+            ['action' => 'transition', 'note' => '[รับทราบแล้ว -> รับเรื่องแล้ว] รับเรื่องเรียบร้อย - เจ้าหน้าที่: สมศรี'],
         ]);
 
         $this->assertSame(['thumb_up', 'directions_run'], $this->glyphs($html));
         $this->assertStringContainsString('เริ่มดำเนินการซ่อมบำรุง', $html);
-        $this->assertStringContainsString('รับเรื่องเรียบร้อย • เจ้าหน้าที่: สมศรี', $html);
+        $this->assertStringContainsString('รับเรื่องเรียบร้อย - เจ้าหน้าที่: สมศรี', $html);
         $this->assertStringNotContainsString('[accepted', $html, 'the bracket prefix must not leak into the card');
         $this->assertStringNotContainsString('[รับทราบแล้ว', $html);
         $this->assertStringNotContainsString('อัปเดตรายการ', $html);

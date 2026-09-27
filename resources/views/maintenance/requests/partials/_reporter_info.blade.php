@@ -19,7 +19,7 @@
             <div class="rounded-lg border {{ $line }} bg-white px-4 py-3 flex items-center gap-4">
                 @php
                     $reporter = $req->reporter;
-                    $avatar = $reporter ? $reporter->avatar_thumb_url : "https://ui-avatars.com/api/?name=" . urlencode($req->reporter_name ?? 'User') . "&background=random&color=fff";
+                    $avatar = $reporter ? $reporter->avatar_thumb_url : \App\Support\InitialsAvatar::url($req->reporter_name ?? 'User', 88);
                 @endphp
                 <div class="h-11 w-11 shrink-0 overflow-hidden rounded-full border {{ $line }} bg-slate-50">
                     <img src="{{ $avatar }}" alt="{{ $req->reporter?->name ?? ($req->reporter_name ?? 'User') }}" class="h-full w-full object-cover">

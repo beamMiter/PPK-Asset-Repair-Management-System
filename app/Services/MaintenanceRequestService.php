@@ -4,13 +4,12 @@ namespace App\Services;
 
 use App\Models\MaintenanceRequest as MR;
 use App\Models\Asset;
-use App\Models\File;
 use App\Models\User;
 use App\Events\MaintenanceRequestCreated;
+use App\Support\SafeBroadcast;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
-use Illuminate\Http\UploadedFile;
 
 class MaintenanceRequestService
 {
@@ -49,7 +48,7 @@ class MaintenanceRequestService
         }
 
         $req = DB::transaction(function () use ($data, $user, $departmentId, $actorId, $files, $captions) {
-            $newReq = MR::create([
+            $newReq = $this->createNumbered([
                 'title'          => $data['title'],
                 'description'    => $data['description'] ?? null,
                 'status'         => MR::STATUS_PENDING,
@@ -80,7 +79,7 @@ class MaintenanceRequestService
 
         if ($req) {
             DB::afterCommit(function () use ($req) {
-                broadcast(new MaintenanceRequestCreated([
+                SafeBroadcast::send(new MaintenanceRequestCreated([
                     'id'         => $req->id,
                     'request_no' => $req->request_no ?? null,
                     'title'      => $req->title,
@@ -91,6 +90,23 @@ class MaintenanceRequestService
         }
 
         return $req;
+    }
+
+    /**
+     * Create the request; when two requests made at the same moment were given the same number (it is worked out from the highest
+     * number in the table when the row is created, and the column is unique) the second one asks again instead of failing.
+     */
+    private function createNumbered(array $attributes): MR
+    {
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                return MR::create($attributes);
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                if ($attempt >= 3 || ! str_contains($e->getMessage(), 'request_no')) {
+                    throw $e;
+                }
+            }
+        }
     }
 
     /**
@@ -109,18 +125,17 @@ class MaintenanceRequestService
             $incomingUserIds = $data['user_ids'] ?? null;
             $forceUpdateTeam = array_key_exists('update_team_flag', $data) || array_key_exists('user_ids', $data);
 
+            if ($isTeam && $forceUpdateTeam && empty($incomingUserIds) && $req->needsTeam()) {
+                abort(422, 'งานนี้ดำเนินการอยู่ ต้องเลือกเจ้าหน้าที่อย่างน้อย 1 คน');
+            }
+
             if ($forceUpdateTeam && empty($incomingUserIds) && !array_key_exists('technician_id', $data)) {
                 $incomingTechId = 0;
             }
 
             if (!$isTeam) {
-                if (($data['status'] ?? null) === MR::STATUS_CANCELLED) {
-                    if (!in_array($req->status, [MR::STATUS_PENDING, MR::STATUS_ACCEPTED], true) || !empty($req->technician_id)) {
-                        unset($data['status']);
-                    }
-                } else {
-                    unset($data['status']);
-                }
+                // a reporter cancels with the cancel button (the policy for `moveTo` refuses it here), never with an edit
+                unset($data['status']);
 
                 if (array_key_exists('type_id', $data) && !($req->status === MR::STATUS_PENDING && empty($req->technician_id))) {
                     unset($data['type_id']);
@@ -129,6 +144,7 @@ class MaintenanceRequestService
                 unset(
                     $data['technician_id'],
                     $data['user_ids'],
+                    $data['request_date'], // the SLA clock starts here: only the team may correct it
                     $data['cost'],
                     $data['resolution_note'],
                     $data['operation_date'],
@@ -141,11 +157,26 @@ class MaintenanceRequestService
                 );
 
                 $incomingTechId = $originalTechId;
+
+                // `user_ids` was read above, before it was stripped from $data: without this a reporter could still
+                // add staff to — or, with an empty list, wipe the team of — their own request.
+                $incomingUserIds = null;
+                $forceUpdateTeam = false;
             }
+
+            // The status is never written by fill(): moving a job is a transition, and the state map, the times, the paused
+            // time and the history all live in applyTransition(). (It used to be saved here first, so by the time the service
+            // looked it saw "no change" and checked nothing.)
+            $targetStatus = $data['status'] ?? null;
+            $note         = $data['note'] ?? null;
+            unset($data['status'], $data['note']);
 
             $req->fill($data);
 
-            if ($isTeam && ($data['status'] ?? null) === MR::STATUS_ACCEPTED && empty($req->technician_id) && $actorId) {
+            // Whoever accepts is the person in charge — if they are a worker. An admin or supervisor accepting on someone's behalf
+            // is running the process, not doing the repair (the same rule as MaintenanceTransitionService::joinTeam).
+            if ($isTeam && $targetStatus === MR::STATUS_ACCEPTED && empty($req->technician_id) && $actorId
+                && in_array($user->role, User::workerRoles(), true)) {
                 $req->technician_id = $actorId;
                 $incomingTechId     = $actorId;
             }
@@ -153,17 +184,14 @@ class MaintenanceRequestService
             $req->save();
 
             $techChanged   = $isTeam && $originalTechId !== $incomingTechId;
-            $statusChanged = array_key_exists('status', $data) && $originalStatus !== $req->status;
+            $statusChanged = $targetStatus !== null && $targetStatus !== $originalStatus;
 
             // Handle transition logs & assignments if status or tech changed
             if ($statusChanged || $techChanged) {
-                $transitionData = ['status' => $req->status];
+                $transitionData = ['status' => $statusChanged ? $targetStatus : $originalStatus];
                 if ($techChanged) $transitionData['technician_id'] = $incomingTechId;
-                
-                // Rollback status temporally for TransitionService to detect the change properly
-                $req->status = $originalStatus;
-                $req->technician_id = $originalTechId;
-                
+                if (!empty($note)) $transitionData['note'] = $note;
+
                 $this->transitionService->applyTransition($req, $transitionData, $actorId);
             } elseif ($forceUpdateTeam) {
                 $this->transitionService->syncAssignments($req, $incomingUserIds ?: [], $actorId);
@@ -180,11 +208,15 @@ class MaintenanceRequestService
                 $this->attachmentService->attachFiles($req, $files, $captions, $actorId);
             }
 
-            // Operation log handling
-            $opKeys = ['operation_date', 'operation_method', 'property_code', 'remark', 'require_precheck', 'issue_software', 'issue_hardware'];
-            $hasOp  = !empty(array_intersect_key($data, array_flip($opKeys))) || $req->operationLog()->exists();
+            // Operation report. The edit form always sends its text fields (an empty one as null) and leaves an unticked box out, so
+            // "one of the text fields is here" means the form was submitted: the whole report is written from it. Anything else (an
+            // API call that only changes the title) must leave the report alone — it used to be rewritten from nothing, wiping what
+            // the technician had filed and putting the caller's name on it.
+            $textKeys = ['operation_date', 'operation_method', 'property_code', 'remark'];
+            $flagKeys = ['require_precheck', 'issue_software', 'issue_hardware'];
+            $flagsSent = array_intersect_key($data, array_flip($flagKeys));
 
-            if ($hasOp) {
+            if (! empty(array_intersect_key($data, array_flip($textKeys)))) {
                 $opDate = !empty($data['operation_date']) ? Carbon::parse($data['operation_date'])->toDateString() : null;
                 $req->operationLog()->updateOrCreate(
                     ['maintenance_request_id' => $req->id],
@@ -198,6 +230,12 @@ class MaintenanceRequestService
                         'issue_hardware'   => (bool) ($data['issue_hardware'] ?? false),
                         'user_id'          => $actorId,
                     ]
+                );
+            } elseif (! empty($flagsSent)) {
+                // only the flags were sent: change those, keep the rest of the report
+                $req->operationLog()->updateOrCreate(
+                    ['maintenance_request_id' => $req->id],
+                    array_map(fn ($flag) => (bool) $flag, $flagsSent) + ['user_id' => $actorId]
                 );
             }
         });

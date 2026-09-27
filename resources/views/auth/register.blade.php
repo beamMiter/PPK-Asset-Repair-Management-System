@@ -11,7 +11,7 @@
         <input id="name" type="text" name="name" value="{{ old('name') }}" required autofocus
                autocomplete="name"
                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2
-                      focus:border-[#0E2B51] focus:ring-[#0E2B51]">
+                      focus:border-[#0E2B51] focus:ring-[#0E2B51]" maxlength="255">
         @error('name')
             <p class="mt-1 text-sm text-rose-600">{{ $message }}</p>
         @enderror
@@ -35,7 +35,7 @@
         <input id="email" type="email" name="email" value="{{ old('email') }}"
                autocomplete="email"
                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2
-                      focus:border-[#0E2B51] focus:ring-[#0E2B51]">
+                      focus:border-[#0E2B51] focus:ring-[#0E2B51]" maxlength="255">
         @error('email')
             <p class="mt-1 text-sm text-rose-600">{{ $message }}</p>
         @enderror
@@ -48,6 +48,7 @@
                autocomplete="new-password"
                class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2
                       focus:border-[#0E2B51] focus:ring-[#0E2B51]">
+        <p class="mt-1 text-xs text-slate-500">อย่างน้อย 8 ตัวอักษร ต้องมีทั้งตัวอักษรและตัวเลข</p>
         @error('password')
             <p class="mt-1 text-sm text-rose-600">{{ $message }}</p>
         @enderror

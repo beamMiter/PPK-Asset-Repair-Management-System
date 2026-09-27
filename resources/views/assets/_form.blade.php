@@ -43,7 +43,7 @@
                             <div class="{{ $displayBox }} font-semibold">{{ $asset->name ?? '—' }}</div>
                         @else
                             <input type="text" id="name" name="name" value="{{ $v('name') }}"
-                                class="ui-input" placeholder="ระบุชื่อเรียกครุภัณฑ์" required>
+                                class="ui-input" placeholder="ระบุชื่อเรียกครุภัณฑ์" required maxlength="255">
                             @error('name')
                                 <p class="mt-1 text-[11px] text-rose-600 font-medium">{{ $message }}</p>
                             @enderror
@@ -59,7 +59,7 @@
                             <div class="{{ $displayBox }} font-semibold">{{ $asset->asset_code ?? '—' }}</div>
                         @else
                             <input type="text" id="asset_code" name="asset_code" value="{{ $v('asset_code') }}"
-                                class="ui-input" placeholder="รหัสภายในโรงพยาบาล" required>
+                                class="ui-input" placeholder="รหัสภายในโรงพยาบาล" required maxlength="100">
                             @error('asset_code')
                                 <p class="mt-1 text-[11px] text-rose-600 font-medium">{{ $message }}</p>
                             @enderror
@@ -72,7 +72,7 @@
                             <div class="{{ $displayBox }}">{{ $asset->type ?? '—' }}</div>
                         @else
                             <input id="type" type="text" name="type" value="{{ $v('type') }}"
-                                class="ui-input" placeholder="เช่น การแพทย์, เทคโนโลยีสารสนเทศ">
+                                class="ui-input" placeholder="เช่น การแพทย์, เทคโนโลยีสารสนเทศ" maxlength="100">
                         @endif
                     </div>
 
@@ -86,7 +86,7 @@
                             <div class="flex gap-2">
                                 <input type="text" id="his_asset_id" name="his_asset_id"
                                     value="{{ $v('his_asset_id') }}" class="ui-input flex-1"
-                                    placeholder="RPJ-XXXXXX">
+                                    placeholder="RPJ-XXXXXX" maxlength="100">
                                 <x-ui.button id="btn-fetch-his" variant="info" icon="cloud_download" class="mt-2">ดึงข้อมูล HIS</x-ui.button>
                             </div>
                         @endif
@@ -106,7 +106,7 @@
                                 <div class="{{ $displayBox }}">{{ $asset->brand ?? '—' }}</div>
                             @else
                                 <input id="brand" type="text" name="brand" value="{{ $v('brand') }}"
-                                    class="ui-input">
+                                    class="ui-input" maxlength="100">
                             @endif
                         </div>
                         <div>
@@ -115,7 +115,7 @@
                                 <div class="{{ $displayBox }}">{{ $asset->model ?? '—' }}</div>
                             @else
                                 <input id="model" type="text" name="model" value="{{ $v('model') }}"
-                                    class="ui-input">
+                                    class="ui-input" maxlength="100">
                             @endif
                         </div>
                     </div>
@@ -127,7 +127,7 @@
                             <div class="{{ $displayBox }} font-mono">{{ $asset->serial_number ?? '—' }}</div>
                         @else
                             <input id="serial_number" type="text" name="serial_number"
-                                value="{{ $v('serial_number') }}" class="ui-input">
+                                value="{{ $v('serial_number') }}" class="ui-input" maxlength="100">
                         @endif
                     </div>
 
@@ -149,7 +149,7 @@
                             <div class="{{ $displayBox }} text-emerald-700">{{ $asset->location ?? '—' }}</div>
                         @else
                             <input id="location" type="text" name="location" value="{{ $v('location') }}"
-                                class="ui-input" placeholder="ระบุตำแหน่งที่ตั้ง">
+                                class="ui-input" placeholder="ระบุตำแหน่งที่ตั้ง" maxlength="255">
                         @endif
                     </div>
                 </div>
@@ -166,7 +166,7 @@
                             <div class="{{ $displayBox }}">{{ $asset->vendor_name ?? '—' }}</div>
                         @else
                             <input id="vendor_name" type="text" name="vendor_name"
-                                value="{{ $v('vendor_name') }}" class="ui-input">
+                                value="{{ $v('vendor_name') }}" class="ui-input" maxlength="255">
                         @endif
                     </div>
 
@@ -177,7 +177,7 @@
                         @else
                             <input id="vendor_phone" type="text" name="vendor_phone"
                                 value="{{ $v('vendor_phone') }}" class="ui-input"
-                                placeholder="081-xxx-xxxx">
+                                placeholder="081-xxx-xxxx" maxlength="50">
                         @endif
                     </div>
 
@@ -307,25 +307,23 @@
 
             {{-- STEP 5: รูปครุภัณฑ์ --}}
             <section>
-                <x-ui.section-head no="5" title="ภาพประกอบครุภัณฑ์" subtitle="ภาพถ่ายหรือภาพประกอบหลัก" />
-
-                <div class="space-y-5 pt-1">
+                <x-ui.section-head no="5" title="ภาพประกอบครุภัณฑ์" subtitle="ภาพถ่ายหรือภาพประกอบหลัก">
                     @if (!$readonly)
-                        <label class="ui-label">เลือกรูปภาพครุภัณฑ์</label>
-                        <div class="flex items-center gap-2">
+                        {{-- the paperclip and camera: top right of the heading, on every page; the hidden inputs they open travel with them --}}
+                        <x-slot:actions>
                             <input id="hero_image_any" type="file" name="hero_image" accept="image/*"
                                 class="hidden">
                             <input id="hero_image_camera" type="file" name="hero_image" accept="image/*"
                                 capture="environment" class="hidden">
 
-                            <x-ui.button id="hero_image_any_btn" icon="attach_file">เลือกรูปภาพ</x-ui.button>
+                            <x-ui.attach-buttons any="hero_image_any_btn" camera="hero_image_camera_btn" any-label="เลือกรูปภาพ" />
+                        </x-slot:actions>
+                    @endif
+                </x-ui.section-head>
 
-                            <x-ui.button id="hero_image_camera_btn" size="square" icon="photo_camera" aria-label="ถ่ายรูป" title="ถ่ายรูป" />
-
-                            <x-ui.button id="hero_image_remove_btn" variant="danger-outline" class="hidden">ล้างรูปภาพ</x-ui.button>
-                        </div>
-
-                        <div class="mt-3 p-3 rounded-md bg-amber-50 border border-amber-200">
+                <div class="space-y-5 pt-1">
+                    @if (!$readonly)
+                        <div class="p-3 rounded-md bg-amber-50 border border-amber-200">
                             <div class="flex gap-2">
                                 <svg class="h-5 w-5 text-amber-600 shrink-0" viewBox="0 0 24 24" fill="none"
                                     stroke="currentColor" stroke-width="2">
@@ -385,24 +383,23 @@
 
             {{-- STEP 6: ไฟล์แนบ --}}
             <section>
-                <x-ui.section-head no="6" title="ไฟล์แนบ" subtitle="เอกสาร คู่มือ หรือรูปภาพเพิ่มเติม" />
-
-                <div class="space-y-5 pt-1">
+                <x-ui.section-head no="6" title="ไฟล์แนบ" subtitle="เอกสาร คู่มือ หรือรูปภาพเพิ่มเติม">
                     @if (!$readonly)
-                        <label class="ui-label">เลือกไฟล์เอกสารเพิ่มเติม</label>
-                        <div class="flex items-center gap-2">
+                        <x-slot:actions>
                             <input id="att_files_submit" type="file" name="files[]" multiple class="hidden">
                             <input id="att_files_any" type="file" multiple accept="image/*,application/pdf"
                                 class="hidden">
                             <input id="att_files_camera" type="file" accept="image/*" capture="environment"
                                 class="hidden">
 
-                            <x-ui.button id="att_files_any_btn" icon="attach_file">เลือกไฟล์แนบ</x-ui.button>
+                            <x-ui.attach-buttons any="att_files_any_btn" camera="att_files_camera_btn" any-label="เลือกไฟล์แนบ" />
+                        </x-slot:actions>
+                    @endif
+                </x-ui.section-head>
 
-                            <x-ui.button id="att_files_camera_btn" size="square" icon="photo_camera" aria-label="ถ่ายรูป" title="ถ่ายรูป" />
-                        </div>
-
-                        <div class="mt-3 p-3 rounded-md bg-amber-50 border border-amber-200">
+                <div class="space-y-5 pt-1">
+                    @if (!$readonly)
+                        <div class="p-3 rounded-md bg-amber-50 border border-amber-200">
                             <div class="flex gap-2">
                                 <svg class="h-5 w-5 text-amber-600 shrink-0" viewBox="0 0 24 24" fill="none"
                                     stroke="currentColor" stroke-width="2">
@@ -512,7 +509,7 @@
                         @else
                             <div
                                 class="mt-2 min-h-[140px] rounded-xl border border-dashed border-slate-300 bg-slate-50/50 flex flex-col items-center justify-center p-6 text-center">
-                                <span class="text-[13px] text-slate-400 font-medium italic">ยังไม่มีไฟล์แนบ</span>
+                                <x-ui.empty-state icon="attach_file">ยังไม่มีไฟล์แนบ</x-ui.empty-state>
                             </div>
                         @endif
                     @endif
@@ -680,10 +677,11 @@
                             'p-2.5 rounded-lg border border-slate-200 bg-white flex justify-between items-center ';
                         item.innerHTML =
                             `<div class="flex items-center gap-2 min-w-0 transition-all">
-                            <span class="truncate text-[12px] font-medium text-slate-700">${f.name}</span>
+                            <span data-file-name class="truncate text-[12px] font-medium text-slate-700"></span>
                             <span class="text-[10px] text-slate-400">${(f.size/1024).toFixed(1)}KB</span>
                         </div>
                         <button type="button" class="text-rose-600 hover:text-rose-700 text-[11px] font-semibold">ลบ</button>`;
+                        item.querySelector('[data-file-name]').textContent = f.name;   // a file name is text, never markup
                         item.querySelector('button').onclick = () => {
                             filesBag.splice(idx, 1);
                             sync();

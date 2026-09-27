@@ -52,20 +52,6 @@ class Toast
         return $instance;
     }
 
-    // เปลี่ยนประเภทเป็น Success
-    public function isSuccess(): self
-    {
-        $this->data['type'] = 'success';
-        return $this;
-    }
-
-    // เปลี่ยนประเภทเป็น Error
-    public function isError(): self
-    {
-        $this->data['type'] = 'error';
-        return $this;
-    }
-
     // เปลี่ยนตำแหน่งการแสดงผล (tc, tr, tl, bc, br, bl)
     public function position(string $position): self
     {

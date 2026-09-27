@@ -55,25 +55,13 @@
 @section('content')
     <div class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
 
-        {{-- Error Display --}}
-        @if ($errors->any())
-            <div class="mb-8 rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
-                <p class="font-medium">มีข้อผิดพลาดในการบันทึกข้อมูล:</p>
-                <ul class="mt-2 list-disc pl-5 text-sm">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
         {{-- Form Tag: Action ไปที่ Update, Method PUT --}}
         <form method="POST" action="{{ route('admin.users.update', $user) }}" class="maint-form space-y-8" novalidate
             autocomplete="off">
             @csrf
             @method('PUT')
 
-            {{-- Include Form: เรียกใช้ Input fields ชุดเดียวกับ Create --}}
+            {{-- Include Form: the input fields of a user --}}
             @include('admin.users._form', [
                 'user' => $user,
                 'roles' => $roles,
@@ -107,21 +95,19 @@
                 @if ($user->id !== auth()->id())
                     @if ($user->isSuspended())
                         <form action="{{ route('admin.users.reactivate', $user) }}" method="POST"
-                            onsubmit="return confirm(@js('เปิดใช้งานบัญชี ' . $user->name . ' อีกครั้ง?'));">
+                            onsubmit="return confirmSubmit(event, { title: 'ยืนยันการเปิดใช้งานบัญชี', message: @js('เปิดใช้งานบัญชี ' . $user->name . ' อีกครั้ง?'), variant: 'success', confirmText: 'เปิดใช้งาน' })">
                             @csrf
                             @method('PATCH')
                             <x-ui.button type="submit" variant="primary" icon="lock_open">เปิดใช้งานบัญชี</x-ui.button>
                         </form>
                     @else
                         <form action="{{ route('admin.users.suspend', $user) }}" method="POST"
-                            onsubmit="return confirm(@js('ระงับบัญชี ' . $user->name . ' ? ผู้ใช้จะเข้าสู่ระบบไม่ได้ แต่ประวัติทั้งหมดยังอยู่'));">
+                            onsubmit="return confirmSubmit(event, { title: 'ยืนยันการระงับบัญชี', message: @js('ระงับบัญชี ' . $user->name . ' ? ผู้ใช้จะเข้าสู่ระบบไม่ได้ แต่ประวัติทั้งหมดยังอยู่'), variant: 'warning', confirmText: 'ระงับ' })">
                             @csrf
                             @method('PATCH')
                             <x-ui.button type="submit" variant="warning" icon="block">ระงับบัญชี</x-ui.button>
                         </form>
                     @endif
-                @else
-                    <span class="text-[13px] text-amber-700">ไม่สามารถระงับบัญชีของตัวเองได้</span>
                 @endif
             </div>
         </div>

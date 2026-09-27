@@ -51,8 +51,18 @@
                 <select name="asset_id" class="ts-basic mt-2 w-full" data-placeholder="— เลือกทรัพย์สิน —">
                     <option value="">— ไม่ระบุ —</option>
                     @foreach ($assets as $a)
-                        @php $label = trim(($a->asset_code ? $a->asset_code.' - ' : '').($a->name ?? '')); @endphp
-                        <option value="{{ $a->id }}" @selected((string) $v('asset_id') === (string) $a->id)>
+                        @php
+                            $label = trim(($a->asset_code ? $a->asset_code.' - ' : '').($a->name ?? ''));
+                            // the HIS registry number (รหัสทะเบียน รพจ) is part of the option's text — that is what the picker
+                            // searches — unless it is the asset code itself (an asset registered from HIS takes it as its code)
+                            $showHis = $a->his_asset_id && (string) $a->his_asset_id !== (string) $a->asset_code;
+                            if ($showHis) {
+                                $label .= ' (รพจ. '.$a->his_asset_id.')';
+                            }
+                        @endphp
+                        {{-- data-his: the picker draws that part of the text in the table's colour (layout/widgets.js) --}}
+                        <option value="{{ $a->id }}" @if ($showHis) data-his="{{ $a->his_asset_id }}" @endif
+                            @selected((string) $v('asset_id') === (string) $a->id)>
                             {{ $label ?: '—' }}
                         </option>
                     @endforeach
@@ -74,7 +84,7 @@
 
                 <label class="block text-sm font-medium text-slate-700 mt-4">สถานที่ / ตำแหน่งงาน</label>
                 <input type="text" name="location_text" value="{{ $v('location_text') }}" autocomplete="off"
-                    class="ui-input">
+                    class="ui-input" maxlength="255">
             </section>
 
             <section>
@@ -96,10 +106,10 @@
                     หัวข้อ <span class="text-rose-600">*</span>
                 </label>
                 <input type="text" name="title" value="{{ $v('title') }}" autocomplete="off"
-                    class="ui-input" required>
+                    class="ui-input" required maxlength="255">
 
                 <label class="block text-sm font-medium text-slate-700 mt-4">รายละเอียด / อาการเสีย</label>
-                <textarea name="description" rows="6" class="ui-textarea">{{ $v('description') }}</textarea>
+                <textarea name="description" rows="6" class="ui-textarea" maxlength="5000" data-counter>{{ $v('description') }}</textarea>
             </section>
         </div>
 
@@ -125,31 +135,31 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-700">เบอร์โทร (ถ้ามี)</label>
                             <input type="text" name="reporter_phone" value="{{ $v('reporter_phone') }}"
-                                class="ui-input">
+                                class="ui-input" maxlength="30">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">อีเมล (ถ้ามี)</label>
                             <input type="email" name="reporter_email"
-                                value="{{ $v('reporter_email', $user->email) }}" class="ui-input">
+                                value="{{ $v('reporter_email', $user->email) }}" class="ui-input" maxlength="255">
                         </div>
                     @else
                         <div>
                             <label class="block text-sm font-medium text-slate-700">ชื่อผู้แจ้ง</label>
                             <input type="text" name="reporter_name" value="{{ $v('reporter_name') }}"
-                                class="ui-input">
+                                class="ui-input" maxlength="255">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">เบอร์โทร</label>
                             <input type="text" name="reporter_phone" value="{{ $v('reporter_phone') }}"
-                                class="ui-input">
+                                class="ui-input" maxlength="30">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">อีเมล</label>
                             <input type="email" name="reporter_email" value="{{ $v('reporter_email') }}"
-                                class="ui-input">
+                                class="ui-input" maxlength="255">
                         </div>
                     @endif
                 </div>
@@ -160,7 +170,12 @@
             </section>
 
             <section>
-                <x-ui.section-head no="4" title="ไฟล์แนบ" subtitle="แนบไฟล์ / ถ่ายรูปจากมือถือ" />
+                <x-ui.section-head no="4" title="ไฟล์แนบ" subtitle="แนบไฟล์ / ถ่ายรูปจากมือถือ">
+                    <x-slot:actions>
+                        <x-ui.attach-buttons any="mr_files_any_btn" camera="mr_files_camera_btn"
+                            any-label="แนบไฟล์เอกสาร" camera-label="ถ่ายรูปจากกล้อง" />
+                    </x-slot:actions>
+                </x-ui.section-head>
 
                 @php $attachments = is_iterable($attachments ?? null) ? $attachments : []; @endphp
 
@@ -255,20 +270,9 @@
                 <input id="mr_files_any" type="file" multiple accept="image/*,application/pdf" class="hidden">
                 <input id="mr_files_camera" type="file" accept="image/*" capture="environment" class="hidden">
 
-                <div class="space-y-3">
-                    <div class="flex items-center gap-3">
-                        {{-- ปุ่มแนบไฟล์ (Icon Only) --}}
-                        <x-ui.button id="mr_files_any_btn" size="square" icon="attach_file"
-                            aria-label="แนบไฟล์เอกสาร" title="แนบไฟล์เอกสาร" />
-
-                        {{-- ปุ่มกล้อง (Icon Only) --}}
-                        <x-ui.button id="mr_files_camera_btn" size="square" icon="photo_camera"
-                            aria-label="ถ่ายรูป" title="ถ่ายรูปจากกล้อง" />
-
-                        <div class="text-[11px] sm:text-[12px] text-slate-500 font-medium leading-tight">
-                            รองรับรูปภาพ / PDF <br class="sm:hidden"> (แนบไฟล์ หรือ ถ่ายรูป)
-                        </div>
-                    </div>
+                {{-- the paperclip and camera are in the heading, top right --}}
+                <div class="text-[11px] sm:text-[12px] text-slate-500 font-medium leading-tight">
+                    รองรับรูปภาพ / PDF (แนบไฟล์ หรือ ถ่ายรูป)
                 </div>
 
                 {{-- Preview list --}}
@@ -333,10 +337,11 @@
                                 card.className =
                                     'p-2.5 rounded-md border border-slate-200 bg-white flex justify-between items-center ';
                                 card.innerHTML = `<div class="flex items-center gap-2 min-w-0 transition-all">
-                    <span class="truncate text-[12px] font-medium text-slate-700">${f.name}</span>
+                    <span data-file-name class="truncate text-[12px] font-medium text-slate-700"></span>
                     <span class="text-[10px] text-slate-400">${(f.size/1024).toFixed(1)}KB</span>
                 </div>
                 <button type="button" class="text-rose-600 hover:text-rose-700 text-[11px] font-semibold">ลบ</button>`;
+                                card.querySelector('[data-file-name]').textContent = f.name;   // a file name is text, never markup
 
                                 card.querySelector('button').addEventListener('click', () => {
                                     filesBag.splice(idx, 1);
@@ -403,4 +408,4 @@
 
 <x-ui.form-actions :cancel-href="route('maintenance.requests.index')"
     :submit-label="$isEdit ? 'บันทึกการแก้ไข' : 'ส่งใบแจ้งซ่อมบำรุง'"
-    :submit-icon="$isEdit ? 'save' : 'send'" />
+    :submit-icon="$isEdit ? 'save' : 'check'" />

@@ -55,9 +55,8 @@
 
 <div>
     @if($logsChronological->isEmpty())
-        <div class="text-center py-10">
-            <span class="material-symbols-outlined text-[48px] text-slate-200">history_toggle_off</span>
-            <p class="mt-2 text-[14px] text-slate-400">ยังไม่มีบันทึกประวัติการดำเนินงาน</p>
+        <div class="py-10">
+            <x-ui.empty-state icon="history_toggle_off">ยังไม่มีบันทึกประวัติการดำเนินงาน</x-ui.empty-state>
         </div>
     @else
         {{-- Latest first. Each item draws the rail down to the next dot (rail centre = dot centre = 18px). --}}

@@ -51,7 +51,7 @@ class RatingEvaluatePageTest extends TestCase
         $this->assertStringNotContainsString('open_in_new', $html);
     }
 
-    public function test_rated_job_moves_to_the_history_with_a_view_button(): void
+    public function test_rated_job_moves_to_the_history_tab_with_a_view_button(): void
     {
         $member = User::factory()->create(['role' => 'member']);
         $tech = User::factory()->create(['role' => 'it_support']);
@@ -60,12 +60,16 @@ class RatingEvaluatePageTest extends TestCase
             'maintenance_request_id' => $req->id, 'rater_id' => $member->id, 'technician_id' => $tech->id, 'score' => 5, 'comment' => 'ดีมาก',
         ]);
 
-        $html = $this->actingAs($member)->get(route('maintenance.requests.rating.evaluate'))->assertOk()->getContent();
+        // the waiting list no longer has it …
+        $waiting = $this->actingAs($member)->get(route('maintenance.requests.rating.evaluate'))->assertOk()->getContent();
+        $this->assertStringNotContainsString('?rate=1', $waiting, 'a rated job must not be offered for rating again');
+        $this->assertStringContainsString('ไม่มีงานค้างประเมิน', $waiting);
 
-        $this->assertStringContainsString('ดีมาก', $html);
-        $this->assertStringContainsString('ดูรายการ', $html);
-        $this->assertStringNotContainsString('?rate=1', $html, 'a rated job must not be offered for rating again');
-        $this->assertStringContainsString('ไม่มีงานค้างประเมิน', $html);
+        // … the history tab does, with a way to look at it
+        $history = $this->actingAs($member)->get(route('maintenance.requests.rating.evaluate', ['tab' => 'rated']))->assertOk()->getContent();
+        $this->assertStringContainsString('ดีมาก', $history);
+        $this->assertStringContainsString('ดูรายการ', $history);
+        $this->assertStringNotContainsString('?rate=1', $history);
     }
 
     public function test_only_own_closed_jobs_are_listed(): void

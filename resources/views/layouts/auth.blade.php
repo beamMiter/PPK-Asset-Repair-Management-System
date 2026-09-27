@@ -6,9 +6,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@hasSection('title')@yield('title') • @endif{{ config('app.title_suffix') }}</title>
+    <meta name="turbo-prefetch" content="false">
+    <title>@hasSection('title')@yield('title') - @endif{{ config('app.title_suffix') }}</title>
     <link rel="icon" type="image/png" href="{{ asset('icon/maintenance.png') }}">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/css/toast.css', 'resources/js/app.js'])
 
     <!-- ===== Auth Loader (drop-in, no-conflict) ===== -->
     <script>
@@ -208,8 +209,6 @@
             });
         })();
     </script>
-
-    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js" defer></script>
 
     {{-- Carrier for the session toast, same as layouts/app. <x-toast /> only *consumes*
          session('toast') (it forgets it) — it never renders it — so without this a controller

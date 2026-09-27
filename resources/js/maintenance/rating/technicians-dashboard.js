@@ -1,5 +1,6 @@
 // resources/js/maintenance/rating/technicians-dashboard.js
 import Chart from 'chart.js/auto';
+import { initBoard } from './technician-board';
 
 const parseJSON = (str, def = []) => {
     try { return JSON.parse(str); } catch (e) { return def; }
@@ -150,9 +151,11 @@ function run() {
 } // run()
 
 document.addEventListener('turbo:load', run);
+document.addEventListener('turbo:load', () => initBoard());
 
 // Fallback: Turbo executes this lazy script AFTER turbo:load fires on first navigation.
 // Check for the chart canvas — if it's in DOM, run immediately.
 if (document.getElementById('techRatingChart')) {
     run();
 }
+initBoard(); // same reason; it binds each control once and does nothing on other pages

@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Auth;
+use App\Support\Like;
 
 class MaintenanceRequest extends Model
 {
@@ -103,6 +103,23 @@ class MaintenanceRequest extends Model
     // legacy
     public const STATUS_COMPLETED    = 'completed';
 
+    /** Still being worked on — the asset is not free while one of these exists. */
+    public const OPEN_STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_ACKNOWLEDGED,
+        self::STATUS_ACCEPTED,
+        self::STATUS_IN_PROGRESS,
+        self::STATUS_ON_HOLD,
+    ];
+
+    /** Somebody has taken the job and it is not over yet: it must never be left with nobody on it. */
+    public const TEAM_REQUIRED_STATUSES = [
+        self::STATUS_ACCEPTED,
+        self::STATUS_IN_PROGRESS,
+        self::STATUS_ON_HOLD,
+        self::STATUS_RESOLVED,
+    ];
+
     /**
      * Transition map: สถานะปัจจุบัน => สถานะที่อนุญาตให้เปลี่ยนไปได้
      */
@@ -125,11 +142,6 @@ class MaintenanceRequest extends Model
             'service_fee' => 'ค่าจ้างซ่อม/บริการ',
             'other'       => 'อื่น ๆ (ระบุในหมายเหตุ)',
         ];
-    }
-
-    public static function operationMethodLabels(): array
-    {
-        return self::operationLabels();
     }
 
     public static function statusLabels(): array
@@ -230,16 +242,6 @@ class MaintenanceRequest extends Model
             ->where('rater_id', $userId);
     }
 
-    /* ================= ACCESSOR ================= */
-
-    public function getNormalizedStatusAttribute(): string
-    {
-        if ($this->status === self::STATUS_COMPLETED && $this->resolved_at) {
-            return self::STATUS_RESOLVED;
-        }
-        return (string) $this->status;
-    }
-
     /* ================= REQUEST NO ================= */
 
     public static function generateLegacyRequestNo(): string
@@ -250,8 +252,10 @@ class MaintenanceRequest extends Model
         $type = '10'; // legacy fixed type
 
         // ใช้ MAX(request_no) แทน count() เพื่อป้องกัน race condition
-        $lastNo = static::query()
-            ->whereYear('created_at', now()->year)
+        // withTrashed(): a deleted request keeps its number in the table (unique key), so it must count — otherwise the
+        // next request is given the same number and fails. The prefix (Thai year + type) also starts a new run each year.
+        $lastNo = static::withTrashed()
+            ->where('request_no', 'like', $yy . $type . '%')
             ->lockForUpdate()
             ->max('request_no');
 
@@ -282,17 +286,14 @@ class MaintenanceRequest extends Model
             }
 
             // --- Auto-calculate SLA Targets from Type ---
-            if ($model->type_id) {
-                $type = \App\Models\MaintenanceRequestType::find($model->type_id);
-                if ($type) {
-                    $baseDate = $model->request_date ?? now();
-                    if ($type->default_response_minutes) {
-                        $model->response_due_date = $baseDate->copy()->addMinutes($type->default_response_minutes);
-                    }
-                    if ($type->default_resolution_minutes) {
-                        $model->sla_due_date = $baseDate->copy()->addMinutes($type->default_resolution_minutes);
-                    }
-                }
+            $model->applyTypeTargets();
+        });
+
+        // The type chosen (or changed) after the request was made: the deadlines follow it. A request made without a type
+        // used to keep no deadline for good, and one moved to another type kept the old type's. A job that is over is history.
+        static::updating(function (self $model) {
+            if ($model->isDirty('type_id') && in_array((string) $model->status, self::OPEN_STATUSES, true)) {
+                $model->applyTypeTargets();
             }
         });
 
@@ -303,12 +304,44 @@ class MaintenanceRequest extends Model
         static::updated(function (self $model) {
             if ($model->isDirty(['status', 'asset_id'])) {
                 $model->syncAssetStatus();
+
+                // moved to another asset: the one it left may have nothing open any more
+                if ($model->isDirty('asset_id') && $model->getOriginal('asset_id')) {
+                    static::releaseAssetIfIdle((int) $model->getOriginal('asset_id'));
+                }
             }
         });
 
+        // A deleted request no longer keeps its asset busy (syncAssetStatus would not free it: it reads the request's own,
+        // unchanged, status) — and a restored one does again.
         static::deleted(function (self $model) {
+            if ($model->asset_id) {
+                static::releaseAssetIfIdle((int) $model->asset_id);
+            }
+        });
+
+        static::restored(function (self $model) {
             $model->syncAssetStatus();
         });
+    }
+
+    /**
+     * Give an asset back ("in repair" → "active") when no open request is left on it. Requests in the trash do not count.
+     */
+    public static function releaseAssetIfIdle(int $assetId): void
+    {
+        $asset = Asset::find($assetId);
+        if (! $asset || $asset->status !== 'in_repair') {
+            return;
+        }
+
+        $busy = static::query()->where('asset_id', $assetId)->whereIn('status', self::OPEN_STATUSES)->exists();
+        if ($busy) {
+            return;
+        }
+
+        $asset->update(['status' => 'active']);
+        \Illuminate\Support\Facades\Log::info('[MaintenanceRequest::releaseAssetIfIdle] Asset restored to active', ['asset_id' => $assetId]);
     }
 
     public function scopeStatus($q, ?string $s)
@@ -323,6 +356,47 @@ class MaintenanceRequest extends Model
         return $q;
     }
 
+    /**
+     * Requests this user may list: staff (admin / supervisor / technician roles) see everything, anybody else only
+     * what they reported. No user, no rows.
+     */
+    public function scopeVisibleTo($query, ?User $user)
+    {
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($user->isAdmin() || $user->isSupervisor() || $user->isTechnician()) {
+            return $query;
+        }
+
+        return $query->where('maintenance_requests.reporter_id', $user->id);
+    }
+
+    /**
+     * List ordering. A blank `request_no` always sorts last, whatever the direction; every other column falls back to
+     * `id` as tie-breaker; an unknown column becomes `id`.
+     */
+    public function scopeOrderedForList($query, string $sortBy, string $dir)
+    {
+        $dir = strtolower($dir) === 'asc' ? 'asc' : 'desc';
+
+        if ($sortBy === 'request_no') {
+            return $query
+                ->orderByRaw("CASE WHEN maintenance_requests.request_no IS NULL OR maintenance_requests.request_no = '' THEN 1 ELSE 0 END ASC")
+                ->orderBy('maintenance_requests.request_no', $dir)
+                ->orderBy('maintenance_requests.id', $dir);
+        }
+
+        if (! in_array($sortBy, ['id', 'request_date', 'status', 'updated_at', 'created_at', 'title'], true)) {
+            $sortBy = 'id';
+        }
+
+        $query->orderBy('maintenance_requests.'.$sortBy, $dir);
+
+        return $sortBy === 'id' ? $query : $query->orderBy('maintenance_requests.id', $dir);
+    }
+
     public function scopeSearch($query, ?string $term)
     {
         $term = trim((string) $term);
@@ -330,13 +404,13 @@ class MaintenanceRequest extends Model
 
         return $query->where(function ($q) use ($term) {
             // 1. Basic Fields
-            $q->where('maintenance_requests.request_no', 'like', "%{$term}%")
-              ->orWhere('maintenance_requests.title', 'like', "%{$term}%")
-              ->orWhere('maintenance_requests.description', 'like', "%{$term}%")
-              ->orWhere('maintenance_requests.reporter_name', 'like', "%{$term}%")
-              ->orWhere('maintenance_requests.reporter_phone', 'like', "%{$term}%")
-              ->orWhere('maintenance_requests.reporter_email', 'like', "%{$term}%")
-              ->orWhere('maintenance_requests.location_text', 'like', "%{$term}%");
+            $q->where('maintenance_requests.request_no', 'like', Like::contains($term))
+              ->orWhere('maintenance_requests.title', 'like', Like::contains($term))
+              ->orWhere('maintenance_requests.description', 'like', Like::contains($term))
+              ->orWhere('maintenance_requests.reporter_name', 'like', Like::contains($term))
+              ->orWhere('maintenance_requests.reporter_phone', 'like', Like::contains($term))
+              ->orWhere('maintenance_requests.reporter_email', 'like', Like::contains($term))
+              ->orWhere('maintenance_requests.location_text', 'like', Like::contains($term));
 
             // 2. ID (Numeric)
             if (ctype_digit($term) || (str_starts_with($term, '#') && ctype_digit(substr($term, 1)))) {
@@ -346,28 +420,28 @@ class MaintenanceRequest extends Model
 
             // 3. Asset Relations
             $q->orWhereHas('asset', fn ($qa) =>
-                $qa->where('assets.name', 'like', "%{$term}%")
-                   ->orWhere('assets.asset_code', 'like', "%{$term}%")
-                   ->orWhere('assets.his_asset_id', 'like', "%{$term}%")
-                   ->orWhere('assets.serial_number', 'like', "%{$term}%")
+                $qa->where('assets.name', 'like', Like::contains($term))
+                   ->orWhere('assets.asset_code', 'like', Like::contains($term))
+                   ->orWhere('assets.his_asset_id', 'like', Like::contains($term))
+                   ->orWhere('assets.serial_number', 'like', Like::contains($term))
             );
 
             // 4. Reporter User Relation
             $q->orWhereHas('reporter', fn ($qr) =>
-                $qr->where('users.name', 'like', "%{$term}%")
-                   ->orWhere('users.email', 'like', "%{$term}%")
+                $qr->where('users.name', 'like', Like::contains($term))
+                   ->orWhere('users.email', 'like', Like::contains($term))
             );
 
             // 5. Department Relation
             $q->orWhereHas('department', fn ($qd) =>
-                $qd->where('departments.name_th', 'like', "%{$term}%")
-                   ->orWhere('departments.name_en', 'like', "%{$term}%")
-                   ->orWhere('departments.code', 'like', "%{$term}%")
+                $qd->where('departments.name_th', 'like', Like::contains($term))
+                   ->orWhere('departments.name_en', 'like', Like::contains($term))
+                   ->orWhere('departments.code', 'like', Like::contains($term))
             );
 
             // 6. Technician Relation
             $q->orWhereHas('technician', fn ($qt) =>
-                $qt->where('users.name', 'like', "%{$term}%")
+                $qt->where('users.name', 'like', Like::contains($term))
             );
         });
     }
@@ -377,6 +451,76 @@ class MaintenanceRequest extends Model
     public function hasStatus(string $status): bool
     {
         return (string) $this->status === $status;
+    }
+
+    public function needsTeam(): bool
+    {
+        return in_array((string) $this->status, self::TEAM_REQUIRED_STATUSES, true);
+    }
+
+    /**
+     * SLA deadlines from the type: resolution = request date + the type's minutes + the time already spent on hold; response
+     * = request date + the type's minutes (until the job is acknowledged — after that it is history). A type without minutes,
+     * or none, leaves what is there.
+     */
+    public function applyTypeTargets(): void
+    {
+        $type = $this->type_id ? MaintenanceRequestType::find($this->type_id) : null;
+        if (! $type) {
+            return;
+        }
+
+        $base = $this->request_date ?? now();
+
+        if ($type->default_response_minutes && ! $this->acknowledged_at) {
+            $this->response_due_date = $base->copy()->addMinutes($type->default_response_minutes);
+        }
+        if ($type->default_resolution_minutes) {
+            $this->sla_due_date = $base->copy()->addMinutes($type->default_resolution_minutes + (int) $this->paused_duration_minutes);
+        }
+    }
+
+    /**
+     * The resolution deadline as of $now. A job on hold has its clock stopped, so its deadline keeps moving out with the
+     * time it has been on hold (that time is added to `sla_due_date` for good when the job resumes) — it is late only if it
+     * was already late when it was put on hold.
+     */
+    public function slaDeadline(?\Carbon\Carbon $now = null): ?\Carbon\Carbon
+    {
+        if (! $this->sla_due_date) {
+            return null;
+        }
+
+        $due = $this->sla_due_date->copy();
+
+        if ((string) $this->status === self::STATUS_ON_HOLD && $this->on_hold_at) {
+            $now ??= now();
+            $due->addSeconds(max(0, $now->getTimestamp() - $this->on_hold_at->getTimestamp()));
+        }
+
+        return $due;
+    }
+
+    /**
+     * How far past its SLA deadline the job is at $now, as the SLA page words it: "+2 วัน 3 ชม." or, under a day, "+5 ชม. 12 น."
+     * (a job on hold has its clock stopped: see slaDeadline()). "-" for a job with no deadline.
+     */
+    public function overdueLabel(?\Carbon\Carbon $now = null): string
+    {
+        $now ??= now();
+        $deadline = $this->slaDeadline($now);
+
+        if (! $deadline) {
+            return '-';
+        }
+
+        $minutes = (int) $deadline->diffInMinutes($now);
+        $days = intdiv($minutes, 60 * 24);
+        $hours = intdiv($minutes % (60 * 24), 60);
+
+        return $days > 0
+            ? "+{$days} วัน {$hours} ชม."
+            : "+{$hours} ชม. " . ($minutes % 60) . ' น.';
     }
 
     public function type()

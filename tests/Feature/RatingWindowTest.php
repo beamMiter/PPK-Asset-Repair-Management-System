@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Api\MaintenanceRatingApiController;
-use App\Http\Controllers\MaintenanceRatingController;
+use App\Http\Controllers\Maintenance\MaintenanceRatingController;
 use App\Models\MaintenanceRequest;
 use ReflectionMethod;
 use Tests\TestCase;

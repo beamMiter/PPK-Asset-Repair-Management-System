@@ -14,6 +14,9 @@ use Tests\TestCase;
  * AT1: GET /attachments/{attachment} read path/disk/mime/size straight off
  * the Attachment (which has no such columns), so every private download
  * 404'd. They live on the linked File.
+ *
+ * These cases are about how the file is streamed, so they read it as an admin;
+ * who may read it at all is PrivateAttachmentAccessTest.
  */
 class PrivateAttachmentServeTest extends TestCase
 {
@@ -48,7 +51,7 @@ class PrivateAttachmentServeTest extends TestCase
     {
         $attachment = $this->privateAttachment('secret payload');
 
-        $resp = $this->actingAs(User::factory()->create())
+        $resp = $this->actingAs(User::factory()->create(['role' => 'admin']))
             ->get(route('attachments.show', $attachment));
 
         $resp->assertOk();
@@ -62,7 +65,7 @@ class PrivateAttachmentServeTest extends TestCase
     {
         $attachment = $this->privateAttachment();
 
-        $resp = $this->actingAs(User::factory()->create())
+        $resp = $this->actingAs(User::factory()->create(['role' => 'admin']))
             ->get(route('attachments.show', $attachment) . '?download=1');
 
         $resp->assertOk();
@@ -74,7 +77,7 @@ class PrivateAttachmentServeTest extends TestCase
         $attachment = $this->privateAttachment();
         $attachment->file->delete();
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs(User::factory()->create(['role' => 'admin']))
             ->get(route('attachments.show', $attachment))
             ->assertNotFound();
     }

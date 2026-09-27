@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\Queue;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -50,21 +49,6 @@ class HealthController extends Controller
         } catch (Throwable $e) {
             $overallOk = false;
             $checks['redis'] = [
-                'status' => 'error',
-                'error' => $e->getMessage(),
-            ];
-        }
-
-        try {
-            $driver = config('queue.default');
-            Queue::connection($driver);
-            $checks['queue'] = [
-                'status' => 'ok',
-                'driver' => $driver,
-            ];
-        } catch (Throwable $e) {
-            $overallOk = false;
-            $checks['queue'] = [
                 'status' => 'error',
                 'error' => $e->getMessage(),
             ];

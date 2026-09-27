@@ -88,7 +88,7 @@
                             aria-hidden="true">inventory_2</span>
                         <div class="flex flex-col min-w-0 gap-1">
                             <h1 class="text-[17px] font-semibold text-slate-900">Assets</h1>
-                            <p class="text-[13px] text-slate-600">ทะเบียนทรัพย์สิน / ครุภัณฑ์ • ค้นหา กรอง และจัดการรายการ</p>
+                            <p class="text-[13px] text-slate-600">ทะเบียนทรัพย์สิน / ครุภัณฑ์ - ค้นหา กรอง และจัดการรายการ</p>
                         </div>
                     </div>
 
@@ -296,21 +296,11 @@
 
                             <td class="p-3 text-center align-middle whitespace-nowrap">
                                 <div class="flex justify-center gap-2">
-                                    <a href="{{ route('assets.show', $a) }}"
-                                        class="inline-flex items-center gap-1.5 rounded-md border border-indigo-300 bg-white px-3 py-1.5 text-[12px] font-medium text-indigo-700 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                                        onclick="showLoader()">
-                                        <span
-                                            class="material-symbols-outlined ms text-[15px] leading-none text-indigo-600">visibility</span>
-                                        ดูรายละเอียด
-                                    </a>
+                                    <x-ui.button :href="route('assets.show', $a)" size="sm" icon="visibility"
+                                        onclick="showLoader()">ดูรายละเอียด</x-ui.button>
                                     @can('update', $a)
-                                        <a href="{{ route('assets.edit', $a) }}"
-                                            class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-3 py-1.5 text-[12px] font-medium text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                                            onclick="showLoader()">
-                                            <span
-                                                class="material-symbols-outlined ms text-[15px] leading-none text-emerald-600">edit</span>
-                                            แก้ไข
-                                        </a>
+                                        <x-ui.button :href="route('assets.edit', $a)" size="sm" icon="edit"
+                                            onclick="showLoader()">แก้ไข</x-ui.button>
                                     @endcan
                                 </div>
                             </td>
@@ -318,18 +308,11 @@
                     @empty
                         <tr>
                             <td colspan="7" class="py-16 text-center text-slate-600">
-                                <div class="flex flex-col items-center gap-2">
-                                    <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    @if ($hasFilter)
-                                        <p class="text-[13px]">ไม่พบข้อมูลทรัพย์สินตามเงื่อนไขที่เลือก</p>
-                                    @else
-                                        <p class="text-[13px]">ตอนนี้ยังไม่มีข้อมูลทรัพย์สินในระบบ</p>
-                                    @endif
-                                </div>
+                                @if ($hasFilter)
+                                    <x-ui.empty-state>ไม่พบข้อมูลทรัพย์สินตามเงื่อนไขที่เลือก</x-ui.empty-state>
+                                @else
+                                    <x-ui.empty-state>ตอนนี้ยังไม่มีข้อมูลทรัพย์สินในระบบ</x-ui.empty-state>
+                                @endif
                             </td>
                         </tr>
                     @endforelse
@@ -374,25 +357,20 @@
                     </div>
 
                     <div class="mt-3 flex justify-end gap-2">
-                        <a href="{{ route('assets.show', $a) }}"
-                            class="inline-flex items-center gap-1.5 rounded-md border border-indigo-300 bg-white px-3 py-2 text-[12px] font-medium text-indigo-700 hover:bg-indigo-50"
-                            onclick="showLoader()">ดูรายละเอียด</a>
+                        <x-ui.button :href="route('assets.show', $a)" size="sm" icon="visibility"
+                            onclick="showLoader()">ดูรายละเอียด</x-ui.button>
                         @can('update', $a)
-                            <a href="{{ route('assets.edit', $a) }}"
-                                class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-white px-3 py-2 text-[12px] font-medium text-emerald-700 hover:bg-emerald-50"
-                                onclick="showLoader()">
-                                <span class="material-symbols-outlined ms text-[16px] leading-none">edit</span>
-                                แก้ไข
-                            </a>
+                            <x-ui.button :href="route('assets.edit', $a)" size="sm" icon="edit"
+                                onclick="showLoader()">แก้ไข</x-ui.button>
                         @endcan
                     </div>
                 </div>
             @empty
-                <div class="rounded-md border border-slate-200 bg-white p-8 text-center text-slate-600 text-[13px]">
+                <div class="rounded-md border border-slate-200 bg-white p-8">
                     @if ($hasFilter)
-                        ไม่พบข้อมูลทรัพย์สินตามเงื่อนไขที่เลือก
+                        <x-ui.empty-state>ไม่พบข้อมูลทรัพย์สินตามเงื่อนไขที่เลือก</x-ui.empty-state>
                     @else
-                        ตอนนี้ยังไม่มีข้อมูลทรัพย์สินในระบบ
+                        <x-ui.empty-state>ตอนนี้ยังไม่มีข้อมูลทรัพย์สินในระบบ</x-ui.empty-state>
                     @endif
                 </div>
             @endforelse

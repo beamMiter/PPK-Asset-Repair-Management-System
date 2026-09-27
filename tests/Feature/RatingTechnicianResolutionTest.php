@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\MaintenanceRatingController;
+use App\Http\Controllers\Maintenance\MaintenanceRatingController;
 use App\Models\MaintenanceAssignment;
 use App\Models\MaintenanceRequest;
 use App\Models\User;

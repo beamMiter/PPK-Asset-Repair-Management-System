@@ -21,7 +21,7 @@ class MaintenanceRatingApiController extends Controller
     /**
      * ดึง “งานที่รอการให้คะแนน” ของ user ปัจจุบัน
      *
-     * GET /api/repair-requests/pending-evaluations
+     * GET /api/repair-requests/pending/evaluations
      */
     public function pendingEvaluations(): JsonResponse
     {

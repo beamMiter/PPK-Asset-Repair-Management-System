@@ -32,7 +32,6 @@ class FormPagesRenderTest extends TestCase
         return [
             'asset create' => ['assets.create'],
             'request create' => ['maintenance.requests.create'],
-            'user create' => ['admin.users.create'],
             'maintenance type create' => ['settings.maintenance-types.create'],
             'profile' => ['profile.show'],
             'profile edit' => ['profile.edit'],

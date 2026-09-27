@@ -58,12 +58,138 @@
                 </div>
 
                 {{-- RIGHT --}}
-                <div class="flex flex-wrap items-center justify-start sm:justify-end gap-2">
+                <div class="flex flex-wrap items-center justify-start sm:justify-end gap-2" x-data="{ showHistory: false }">
                     <x-ui.button variant="primary" :href="$createMrUrl" icon="add">สร้างคำขอซ่อมใหม่</x-ui.button>
                     @if ($canUpdate)
                         <x-ui.button :href="route('assets.edit', $asset)" icon="edit">แก้ไข</x-ui.button>
                     @endif
+
+                    {{-- Same trigger as the job page's own "ประวัติการดำเนินงาน" - an icon button with a count, top-right -
+                         opening the same dot / connecting-line timeline, one item per repair request instead of per status
+                         change. This header sits in "sticky-under-topbar" (layouts/app.blade.php), which sets its own
+                         z-index and so establishes a stacking context: a modal merely nested inside it can never paint above
+                         the topbar no matter what z-index the modal itself asks for. `x-teleport="body"` sidesteps that
+                         entirely by moving the modal's real DOM node out to <body> at runtime - the same fix already used for
+                         the SLA page's print dialog, triggered from this same kind of sticky header
+                         (maintenance/sla/index.blade.php). --}}
+                    <x-ui.button icon="history" @click="showHistory = true">
+                        ประวัติการแจ้งซ่อม
+                        <span class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">{{ $asset->maintenanceRequests->count() }}</span>
+                    </x-ui.button>
+
                     <x-ui.back-button :fallback="route('assets.index')" />
+
+                    <template x-teleport="body">
+                        <div x-show="showHistory" style="display: none"
+                            class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
+                            x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
+                            x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
+                            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                            <div @click.away="showHistory = false"
+                                class="relative w-full max-w-2xl rounded-md border {{ $line }} bg-white overflow-hidden">
+                                <div class="flex items-center justify-between border-b {{ $line }} px-6 py-4">
+                                    <div class="flex items-start gap-3 min-w-0">
+                                        <span class="mt-0.5 inline-flex h-10 w-10 items-center justify-center text-slate-800">
+                                            <span class="material-symbols-outlined text-[36px]" aria-hidden="true">history</span>
+                                        </span>
+                                        <div class="min-w-0">
+                                            <div class="text-[16px] font-semibold text-slate-900 leading-tight">ประวัติการแจ้งซ่อม</div>
+                                            <p class="text-[13px] text-slate-500">รายการซ่อมล่าสุดของครุภัณฑ์ชิ้นนี้</p>
+                                        </div>
+                                    </div>
+                                    <x-ui.button @click="showHistory = false" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
+                                </div>
+
+                                <div class="px-6 py-6 max-h-[60vh] overflow-y-auto bg-white">
+                                    @if ($asset->maintenanceRequests && $asset->maintenanceRequests->count() > 0)
+                                        @php
+                                            // same mapping as the job page's own "ประวัติการดำเนินงาน" timeline
+                                            // (resources/views/maintenance/requests/partials/_timeline.blade.php): one dot style per status
+                                            $statusStyle = [
+                                                'pending'      => ['icon' => 'hourglass_empty', 'dot' => 'bg-amber-50 text-amber-600'],
+                                                'acknowledged' => ['icon' => 'visibility',      'dot' => 'bg-blue-50 text-blue-600'],
+                                                'accepted'     => ['icon' => 'thumb_up',        'dot' => 'bg-indigo-50 text-indigo-600'],
+                                                'in_progress'  => ['icon' => 'directions_run',  'dot' => 'bg-sky-50 text-sky-600'],
+                                                'on_hold'      => ['icon' => 'pause_circle',    'dot' => 'bg-rose-50 text-rose-600'],
+                                                'resolved'     => ['icon' => 'task_alt',        'dot' => 'bg-emerald-50 text-emerald-600'],
+                                                'closed'       => ['icon' => 'task',            'dot' => 'bg-emerald-600 text-white'],
+                                                'completed'    => ['icon' => 'task_alt',        'dot' => 'bg-emerald-50 text-emerald-600'],
+                                                'cancelled'    => ['icon' => 'cancel',          'dot' => 'bg-slate-100 text-slate-500'],
+                                                'rejected'     => ['icon' => 'block',           'dot' => 'bg-rose-50 text-rose-600'],
+                                            ];
+                                            $neutralStyle = ['icon' => 'info', 'dot' => 'bg-slate-100 text-slate-500'];
+                                            $statusTextClass = fn(?string $s) => match (strtolower((string) $s)) {
+                                                'acknowledged' => 'text-blue-700',
+                                                'pending' => 'text-amber-700',
+                                                'accepted' => 'text-emerald-700',
+                                                'in_progress' => 'text-sky-700',
+                                                'on_hold' => 'text-slate-600',
+                                                'resolved' => 'text-emerald-800',
+                                                'closed' => 'text-emerald-950',
+                                                'cancelled', 'rejected' => 'text-rose-700',
+                                                default => 'text-slate-700',
+                                            };
+                                            $recentRequests = $asset->maintenanceRequests->sortByDesc('created_at')->take(5)->values();
+                                        @endphp
+
+                                        {{-- Same dot / connecting-line / card skeleton as the "ประวัติการดำเนินงาน" timeline, only
+                                             lighter: each item here is a separate repair request, not one status change of a single
+                                             job, so there is no actor, no note, no "time spent in this state". --}}
+                                        <ol class="space-y-5">
+                                            @foreach ($recentRequests as $mr)
+                                                @php
+                                                    $mrStatus = strtolower((string) ($mr->status ?? ''));
+                                                    $style = $statusStyle[$mrStatus] ?? $neutralStyle;
+                                                @endphp
+                                                <li class="relative pl-[52px]">
+                                                    @unless ($loop->last)
+                                                        <span class="absolute left-[17px] top-[18px] -bottom-5 w-0.5 bg-slate-200" aria-hidden="true"></span>
+                                                    @endunless
+
+                                                    <span class="absolute left-0 top-0 z-10 flex h-9 w-9 items-center justify-center rounded-full ring-4 ring-white {{ $style['dot'] }}">
+                                                        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">{{ $style['icon'] }}</span>
+                                                    </span>
+
+                                                    <div class="rounded-xl border border-slate-200 bg-white p-[16px]">
+                                                        <div class="flex flex-wrap items-start justify-between gap-x-[12px] gap-y-1">
+                                                            <div class="min-w-0">
+                                                                <a href="{{ route('maintenance.requests.show', $mr) }}"
+                                                                    class="text-[14px] font-semibold leading-snug text-slate-900 hover:underline">{{ $mr->title }}</a>
+                                                                <div class="mt-0.5 text-[12px] text-slate-500">
+                                                                    {{ $mr->request_no ?: '#' . $mr->id }}
+                                                                    - <span class="font-medium {{ $statusTextClass($mrStatus) }}">{{ $mr->statusLabel() }}</span>
+                                                                </div>
+                                                            </div>
+                                                            <time class="whitespace-nowrap text-[12px] text-slate-500">{{ \App\Support\ThaiDate::short($mr->created_at) }}</time>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            @endforeach
+                                        </ol>
+
+                                        <div class="mt-6 flex justify-start">
+                                            <x-ui.button :href="$mrListRoute">ดูประวัติการแจ้งซ่อมทั้งหมด</x-ui.button>
+                                        </div>
+                                    @else
+                                        @php $isInRepair = $asset->status === \App\Models\Asset::STATUS_IN_REPAIR; @endphp
+                                        <div class="text-sm text-slate-500 italic p-8 rounded-md bg-slate-50 border border-dashed border-slate-300 flex flex-col items-center justify-center text-center">
+                                            @if ($isInRepair)
+                                                <div class="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mb-3">
+                                                    <span class="material-symbols-outlined text-[28px] text-amber-500" aria-hidden="true">build</span>
+                                                </div>
+                                                <p class="font-bold text-amber-700 text-base">กำลังซ่อม (แต่ไม่พบใบแจ้งซ่อม)</p>
+                                                <p class="text-[13px] text-slate-500 mt-1 max-w-md">สถานะครุภัณฑ์ถูกตั้งเป็น
+                                                    "กำลังซ่อม" แต่ยังไม่ได้สร้างใบแจ้งซ่อมในระบบ</p>
+                                                <x-ui.button :href="$createMrUrl" variant="warning" icon="add" class="mt-4">สร้างใบแจ้งซ่อมทันที</x-ui.button>
+                                            @else
+                                                <x-ui.empty-state icon="history" hint="ประวัติการซ่อมบำรุงทั้งหมดจะถูกรวบรวมไว้ที่นี่">ยังไม่มีประวัติการแจ้งซ่อม</x-ui.empty-state>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
             </form>
@@ -277,7 +403,7 @@
                                 @else
                                     <div
                                         class="mt-2 min-h-[140px] rounded-md border border-dashed border-slate-300 bg-slate-50/50 flex flex-col items-center justify-center p-6 text-center">
-                                        <span class="text-[13px] text-slate-400 font-medium italic">ยังไม่มีไฟล์แนบ</span>
+                                        <x-ui.empty-state icon="attach_file">ยังไม่มีไฟล์แนบ</x-ui.empty-state>
                                     </div>
                                 @endif
                             </div>
@@ -285,264 +411,6 @@
 
                     </div>
 
-                    {{-- STEP 7: ประวัติการแจ้งซ่อมล่าสุด --}}
-                    <section class="mt-12 pt-12 border-t {{ $line }}">
-                        <x-ui.section-head no="7" title="ประวัติการแจ้งซ่อมล่าสุด" subtitle="รายการซ่อมล่าสุดของครุภัณฑ์ชิ้นนี้" />
-
-                        <div class="mt-6">
-                            @if ($asset->maintenanceRequests && $asset->maintenanceRequests->count() > 0)
-                                <div class="space-y-3">
-                                    @php
-                                        $statusDot = fn(?string $s) => match (strtolower((string) $s)) {
-                                            'pending' => 'bg-amber-500',
-                                            'acknowledged' => 'bg-sky-500',
-                                            'accepted' => 'bg-indigo-500',
-                                            'in_progress' => 'bg-sky-500',
-                                            'on_hold' => 'bg-slate-400',
-                                            'resolved' => 'bg-emerald-500',
-                                            'closed' => 'bg-emerald-700',
-                                            'cancelled' => 'bg-rose-500',
-                                            'rejected' => 'bg-rose-600',
-                                            default => 'bg-slate-400',
-                                        };
-                                        $statusAccentColor = fn(?string $s) => match (strtolower((string) $s)) {
-                                            'pending' => '#f59e0b',
-                                            'acknowledged' => '#38bdf8',
-                                            'accepted' => '#6366f1',
-                                            'in_progress' => '#3b82f6',
-                                            'on_hold' => '#94a3b8',
-                                            'resolved' => '#10b981',
-                                            'closed' => '#065f46',
-                                            'cancelled' => '#ef4444',
-                                            'rejected' => '#e11d48',
-                                            default => '#cbd5e1',
-                                        };
-                                        $statusBadge = fn(?string $s) => match (strtolower((string) $s)) {
-                                            'pending' => 'bg-amber-50 text-amber-700 border-amber-200',
-                                            'acknowledged' => 'bg-sky-50 text-sky-700 border-sky-200',
-                                            'accepted' => 'bg-indigo-50 text-indigo-700 border-indigo-200',
-                                            'in_progress' => 'bg-sky-50 text-sky-700 border-sky-200',
-                                            'on_hold' => 'bg-slate-100 text-slate-600 border-slate-200',
-                                            'resolved' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                                            'closed' => 'bg-emerald-50 text-emerald-800 border-emerald-200',
-                                            'cancelled' => 'bg-rose-50 text-rose-700 border-rose-200',
-                                            'rejected' => 'bg-rose-50 text-rose-700 border-rose-200',
-                                            default => 'bg-slate-100 text-slate-500 border-slate-200',
-                                        };
-
-                                        $avatarColors = [
-                                            'bg-indigo-500',
-                                            'bg-emerald-500',
-                                            'bg-amber-500',
-                                            'bg-rose-500',
-                                            'bg-sky-500',
-                                            'bg-violet-500',
-                                            'bg-teal-500',
-                                        ];
-                                    @endphp
-
-                                    @foreach ($asset->maintenanceRequests->sortByDesc('created_at')->take(1) as $mr)
-                                        @php
-                                            $mrStatus = strtolower((string) ($mr->status ?? ''));
-                                            $mrStatusText = $mr->statusLabel();
-                                            $ticketNo = $mr->ticket_no ?? $mr->id;
-                                            $createdAtText = $mr->created_at->format('d/m/Y H:i');
-                                            $reporterName = $mr->reporter->name ?? 'ระบบ';
-
-                                            // Get assigned technicians
-                                            $techWorkers = ($mr->assignments ?? collect())
-                                                ->filter(
-                                                    fn($a) => strtolower((string) ($a->status ?? '')) !== 'cancelled',
-                                                )
-                                                ->map(fn($a) => $a->user)
-                                                ->filter()
-                                                ->unique('id')
-                                                ->values();
-                                        @endphp
-
-                                        <div
-                                            class="bg-white border border-slate-200 rounded-md overflow-hidden flex group">
-                                            {{-- Status accent bar --}}
-                                            <div class="w-1.5 shrink-0"
-                                                style="background-color: {{ $statusAccentColor($mrStatus) }}"></div>
-
-                                            <div class="flex-1 min-w-0">
-                                                <div
-                                                    class="grid grid-cols-1 md:grid-cols-12 items-center divide-x divide-slate-100">
-
-                                                    {{-- Col 1: Job ID + Status --}}
-                                                    <div class="md:col-span-3 px-5 py-4">
-                                                        <div
-                                                            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                                                            Job ID</div>
-                                                        <div class="text-[15px] font-bold text-[#0F2D5C] font-mono">
-                                                            #{{ $ticketNo }}</div>
-
-                                                        <div class="mt-2 flex flex-wrap gap-1.5">
-                                                            <span
-                                                                class="inline-flex items-center px-2 py-0.5 text-[10px] font-bold border rounded {{ $statusBadge($mrStatus) }}">
-                                                                <span
-                                                                    class="w-1.5 h-1.5 rounded-full mr-1.5 {{ $statusDot($mrStatus) }}"></span>
-                                                                {{ $mrStatusText }}
-                                                            </span>
-
-                                                        </div>
-                                                    </div>
-
-                                                    {{-- Col 2: Problem Description --}}
-                                                    <div class="md:col-span-6 px-5 py-4">
-                                                        <div
-                                                            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                                                            Problem Description</div>
-                                                        <h4
-                                                            class="text-[14px] font-bold text-slate-900 leading-tight mb-1 truncate">
-                                                            <a href="{{ route('maintenance.requests.show', $mr) }}"
-                                                                class="hover:text-emerald-700 transition-colors">
-                                                                {{ $mr->title }}
-                                                            </a>
-                                                        </h4>
-                                                        <div class="flex items-center gap-3 text-[11px] text-slate-500">
-                                                            <span class="flex items-center gap-1">
-                                                                <svg class="w-3.5 h-3.5" fill="none"
-                                                                    viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                                        stroke-width="2"
-                                                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                                </svg>
-                                                                {{ $createdAtText }}
-                                                            </span>
-                                                            <span class="flex items-center gap-1">
-                                                                <svg class="w-3.5 h-3.5" fill="none"
-                                                                    viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                                        stroke-width="2"
-                                                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                                </svg>
-                                                                โดย {{ $reporterName }}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {{-- Col 3: Technician + Action --}}
-                                                    <div
-                                                        class="md:col-span-3 px-5 py-4 flex flex-col justify-between h-full bg-slate-50/30">
-                                                        <div class="mb-3">
-                                                            <div
-                                                                class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-                                                                Technician</div>
-                                                            @if ($techWorkers->isEmpty())
-                                                                <div
-                                                                    class="flex items-center gap-1.5 italic text-slate-400 text-[11px]">
-                                                                    <svg class="w-3.5 h-3.5" fill="none"
-                                                                        viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path stroke-linecap="round"
-                                                                            stroke-linejoin="round" stroke-width="2"
-                                                                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                                    </svg>
-                                                                    ยังไม่มอบหมาย
-                                                                </div>
-                                                            @else
-                                                                <div class="flex items-center -space-x-2">
-                                                                    @foreach ($techWorkers->take(3) as $i => $w)
-                                                                        @php
-                                                                            $ci =
-                                                                                abs(crc32($w->name ?? '')) %
-                                                                                count($avatarColors);
-                                                                            $wAvatar = $w->avatar_thumb_url ?? null;
-                                                                        @endphp
-                                                                        <div class="w-7 h-7 rounded-full border-2 border-white overflow-hidden "
-                                                                            title="{{ $w->name }}">
-                                                                            @if ($wAvatar)
-                                                                                <img src="{{ $wAvatar }}"
-                                                                                    class="w-full h-full object-cover">
-                                                                            @else
-                                                                                <div
-                                                                                    class="w-full h-full {{ $avatarColors[$ci] }} flex items-center justify-center text-white text-[9px] font-bold">
-                                                                                    {{ mb_strtoupper(mb_substr($w->name ?? '?', 0, 2)) }}
-                                                                                </div>
-                                                                            @endif
-                                                                        </div>
-                                                                    @endforeach
-                                                                    @if ($techWorkers->count() > 3)
-                                                                        <div
-                                                                            class="w-7 h-7 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[9px] font-bold text-slate-600 ">
-                                                                            +{{ $techWorkers->count() - 3 }}
-                                                                        </div>
-                                                                    @endif
-                                                                </div>
-                                                            @endif
-                                                        </div>
-
-                                                        <a href="{{ route('maintenance.requests.show', $mr) }}"
-                                                            class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-[11px] font-bold rounded hover:bg-emerald-700 transition-colors">
-                                                            <span>View Details</span>
-                                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
-                                                                stroke="currentColor">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2" d="M9 5l7 7-7 7" />
-                                                            </svg>
-                                                        </a>
-                                                    </div>
-
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @else
-                                @php
-                                    $isInRepair = $asset->status === \App\Models\Asset::STATUS_IN_REPAIR;
-                                @endphp
-                                <div
-                                    class="text-sm text-slate-500 italic p-8 rounded-md bg-slate-50 border border-dashed border-slate-300 flex flex-col items-center justify-center text-center">
-                                    @if ($isInRepair)
-                                        <div
-                                            class="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mb-3">
-                                            <svg class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                            </svg>
-                                        </div>
-                                        <p class="font-bold text-amber-700 text-base">กำลังซ่อม (แต่ไม่พบใบแจ้งซ่อม)</p>
-                                        <p class="text-[13px] text-slate-500 mt-1 max-w-md">สถานะครุภัณฑ์ถูกตั้งเป็น
-                                            "กำลังซ่อม" แต่ยังไม่ได้สร้างใบแจ้งซ่อมในระบบ</p>
-                                        <a href="{{ $createMrUrl }}"
-                                            class="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-bold rounded-md hover:bg-amber-700 transition-all ">
-                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor" stroke-width="2.5">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                                            </svg>
-                                            สร้างใบแจ้งซ่อมทันที
-                                        </a>
-                                    @else
-                                        <div
-                                            class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                                            <svg class="h-6 w-6 text-slate-300" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                        </div>
-                                        <p class="font-medium text-slate-600">ยังไม่มีประวัติการแจ้งซ่อม</p>
-                                        <p class="text-[12px] text-slate-400 mt-1">
-                                            ประวัติการซ่อมบำรุงทั้งหมดจะถูกรวบรวมไว้ที่นี่</p>
-                                    @endif
-                                </div>
-                            @endif
-                        </div>
-
-                        <div class="mt-8 flex justify-start">
-                            <a href="{{ $mrListRoute }}"
-                                class="inline-flex items-center justify-center h-10 px-5 rounded-md bg-emerald-50 border border-emerald-100 text-sm font-medium text-emerald-700 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-colors ">
-                                ดูประวัติการแจ้งซ่อมทั้งหมด
-                                <svg class="h-4 w-4 ml-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                </svg>
-                            </a>
-                        </div>
-                    </section>
                 </div>
         </form>
     @endsection

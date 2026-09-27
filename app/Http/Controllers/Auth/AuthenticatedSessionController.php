@@ -7,15 +7,9 @@ use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
-use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
-    public function create(): View
-    {
-        return view('auth.login');
-    }
-
     public function store(LoginRequest $request)
     {
         try {
@@ -24,13 +18,13 @@ class AuthenticatedSessionController extends Controller
 
             session()->put('toast', [
                 'type'     => 'success',
-                'message'  => 'Login successful',
+                'message'  => 'เข้าสู่ระบบสำเร็จ',
                 'position' => 'br',
                 'timeout'  => 2800,
             ]);
 
-            // ถ้าเป็น API / testing → ตอบ 204 เหมือนเดิม
-            if ($request->expectsJson() || app()->environment('testing')) {
+            // API clients get 204; a browser is redirected below
+            if ($request->expectsJson()) {
                 return response()->noContent();
             }
 
@@ -65,13 +59,13 @@ class AuthenticatedSessionController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        if ($request->expectsJson() || app()->environment('testing')) {
+        if ($request->expectsJson()) {
             return response()->noContent();
         }
 
         return redirect('/')->with('toast', [
             'type'     => 'info',
-            'message'  => 'Logout successful',
+            'message'  => 'ออกจากระบบเรียบร้อยแล้ว',
             'position' => 'tr',
             'timeout'  => 2400,
         ]);

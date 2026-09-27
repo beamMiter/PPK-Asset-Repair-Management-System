@@ -94,14 +94,6 @@ class HisAssetSyncService
     }
 
     /**
-     * Find an asset by its HIS ID.
-     */
-    public function findByHisId(string $hisId): ?Asset
-    {
-        return Asset::where('his_asset_id', $hisId)->first();
-    }
-
-    /**
      * Sync an asset from HIS payload. Creates if not exists, updates if exists.
      */
     public function syncFromHis(array $hisPayload): Asset

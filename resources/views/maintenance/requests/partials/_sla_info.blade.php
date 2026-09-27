@@ -59,10 +59,12 @@
         }
     }
 
+    // slaDeadline(): a job on hold has its clock stopped; a job that is over (finished, cancelled, not taken) is not "overdue"
+    $slaDeadline = $req->slaDeadline();
     $isOverdue =
-        $req->sla_due_date &&
-        now()->gt($req->sla_due_date) &&
-        !in_array($req->status, [MR::STATUS_RESOLVED, MR::STATUS_CLOSED]);
+        $slaDeadline &&
+        now()->gt($slaDeadline) &&
+        !in_array($req->status, [MR::STATUS_RESOLVED, MR::STATUS_CLOSED, MR::STATUS_CANCELLED, MR::STATUS_REJECTED]);
 @endphp
 
 <section>

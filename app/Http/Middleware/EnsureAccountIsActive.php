@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -24,7 +25,17 @@ class EnsureAccountIsActive
         }
 
         if ($request->expectsJson() || $request->is('api/*')) {
-            $user->currentAccessToken()?->delete();
+            $token = $user->currentAccessToken();
+
+            if ($token instanceof PersonalAccessToken) {
+                $token->delete();                           // a bearer token: that token ends
+            } elseif ($request->hasSession()) {
+                // Signed in by the browser's own session (a fetch from a page - the chat widget's poll, the channel auth): there is
+                // no token to delete. It used to be `->delete()` on a TransientToken, which has no such method, so this answered 500.
+                Auth::guard('web')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+            }
 
             return response()->json(['message' => self::MESSAGE, 'code' => 'account_suspended'], Response::HTTP_FORBIDDEN);
         }

@@ -3,23 +3,11 @@
 <html lang="th">
 <head>
     <meta charset="utf-8">
-    <title>Asset Sheet {{ $asset->asset_code }} • {{ config('app.title_suffix') }}</title>
+    <title>Asset Sheet {{ $asset->asset_code }} - {{ config('app.title_suffix') }}</title>
 
     <style>
-        /* ====== FONT: SARABUN (จาก public/fonts) ====== */
-        @font-face {
-            font-family: "Sarabun";
-            font-style: normal;
-            font-weight: normal;
-            src: url("{{ public_path('fonts/Sarabun-Regular.ttf') }}") format("truetype");
-        }
-
-        @font-face {
-            font-family: "Sarabun";
-            font-style: normal;
-            font-weight: bold;
-            src: url("{{ public_path('fonts/Sarabun-Bold.ttf') }}") format("truetype");
-        }
+        /* Sarabun comes from the family registered in public/images/fonts/installed-fonts.json (config/dompdf.php):
+           no @font-face here — the ones that used to be, pointed at public/fonts, which no longer exists. */
 
         html, body, * {
             font-family: "Sarabun", DejaVu Sans, sans-serif;

@@ -16,6 +16,7 @@ class ChatMessage extends Model
         'chat_thread_id',
         'user_id',
         'body',
+        'client_uuid',
     ];
 
     protected $touches = ['thread'];
@@ -25,6 +26,7 @@ class ChatMessage extends Model
         'user_id'        => 'integer',
         'created_at'     => 'datetime',
         'updated_at'     => 'datetime',
+        'edited_at'      => 'datetime',
     ];
 
     public function thread(): BelongsTo
@@ -50,5 +52,31 @@ class ChatMessage extends Model
     public function scopeAfterId(Builder $q, int $afterId): Builder
     {
         return $q->where('id', '>', $afterId);
+    }
+
+    /**
+     * What a page draws a message from (an older batch, a reply): a deleted message carries no words, only that it is deleted.
+     *
+     * @return array{id:int,chat_thread_id:int,user_id:?int,body:?string,deleted:bool,edited:bool,edited_at:?string,created_at:?string,user:?array{id:int,name:string,avatar_thumb_url:?string}}
+     */
+    public function toChatArray(): array
+    {
+        $deleted = $this->trashed();
+
+        return [
+            'id' => (int) $this->id,
+            'chat_thread_id' => (int) $this->chat_thread_id,
+            'user_id' => $this->user_id ? (int) $this->user_id : null,
+            'body' => $deleted ? null : $this->body,
+            'deleted' => $deleted,
+            'edited' => ! $deleted && $this->edited_at !== null,   // its author changed the words after sending
+            'edited_at' => $deleted ? null : $this->edited_at?->toISOString(),
+            'created_at' => $this->created_at?->toISOString(),
+            'user' => $this->user ? [
+                'id' => (int) $this->user->id,
+                'name' => $this->user->name,
+                'avatar_thumb_url' => $this->user->avatar_thumb_url,
+            ] : null,
+        ];
     }
 }

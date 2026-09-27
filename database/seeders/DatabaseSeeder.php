@@ -4,25 +4,29 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 
+/**
+ * `php artisan migrate:fresh --seed` gives a working demo: reference data, 20 people (see UserSeeder for the logins), 35
+ * assets, ~85 repair requests in every status, and the Livechat board.
+ *
+ * Production only ever gets the reference data — never demo accounts with well-known passwords. The demo seeders create
+ * rows rather than look for existing ones: run them on an empty database (`migrate:fresh --seed`).
+ */
 class DatabaseSeeder extends Seeder
 {
-    // ฟังก์ชันหลักที่รัน Seeder ทั้งหมด
     public function run(): void
     {
+        $this->call(ReferenceDataSeeder::class);
+
+        if (app()->isProduction()) {
+            $this->command?->warn('Production: seeded the reference data only (no demo users, assets, requests or chat).');
+
+            return;
+        }
+
         $this->call([
-            // 1. ข้อมูลพื้นฐานที่จำเป็น (Essential Metadata)
-            RoleSeeder::class,               // สร้างสิทธิ์การใช้งาน (Admin, User, etc.)
-            MaintenanceRequestTypeSeeder::class, // สร้างประเภทการซ่อม (Hardware, Software, etc.)
-            MockUsersSeeder::class,          // สร้างผู้ใช้งานจำลองสำหรับการทดสอบ
-
-            // 2. ข้อมูลจำลองหลัก (Master Demo Data)
-            DemoDataSeeder::class,           // สร้างข้อมูลครุภัณฑ์และรายการซ่อมจำลอง
-
-            // 3. ข้อมูลเสริมเพื่อความสมบูรณ์ (Optional Enrichment)
-            ChatSeeder::class,               // ข้อความแชทคุยกันในใบซ่อม
-            DemoRatingSeeder::class,         // ข้อมูลการประเมินความพึงพอใจ
-            // EvaluationTestDataSeeder::class, // (ปิดไว้) ข้อมูลทดสอบประสิทธิภาพ
-            AdminEvaluationSeeder::class,    // ข้อมูลการประเมินสำหรับแอดมิน
+            UserSeeder::class,
+            DemoDataSeeder::class,
+            ChatSeeder::class,
         ]);
     }
 }

@@ -1,5 +1,5 @@
 <section class="flex flex-col">
-    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 {{ $headCls }}">
+    <div class="flex items-start justify-between gap-4 {{ $headCls }}">
         <div class="flex items-start gap-3 min-w-0">
             <div class="{{ $noCls }}">5</div>
             <div class="{{ $accentWrap }}">
@@ -9,10 +9,10 @@
             </div>
         </div>
 
+        {{-- a bare icon, like the paperclip and camera of section 4 (-mt-1 puts the 40px icon's centre on the centre of the number circle) --}}
         @can('assign', $req)
-            <x-ui.button id="openAssignModalBtn" icon="group_add" class="shrink-0">
-                มอบหมายทีมเจ้าหน้าที่
-            </x-ui.button>
+            <x-ui.button id="openAssignModalBtn" variant="ghost" size="icon-lg" icon="group_add" class="-mt-1"
+                aria-label="มอบหมายทีมเจ้าหน้าที่" title="มอบหมายทีมเจ้าหน้าที่" />
         @endcan
     </div>
 
@@ -26,7 +26,9 @@
             <div
                 class="rounded-lg border {{ $line }} bg-white overflow-y-auto divide-y divide-slate-200 min-h-[76px] lg:max-h-72">
                 @if ($workers->isEmpty())
-                    <div class="px-4 py-3 text-[13px] text-slate-500">ยังไม่ได้มอบหมายงานให้ทีมเจ้าหน้าที่</div>
+                    <div class="px-4 py-6">
+                        <x-ui.empty-state icon="group_off">ยังไม่ได้มอบหมายงานให้ทีมเจ้าหน้าที่</x-ui.empty-state>
+                    </div>
                 @else
                     @foreach ($workers as $index => $worker)
                         @php

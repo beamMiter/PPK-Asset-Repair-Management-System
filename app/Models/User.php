@@ -2,16 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\Department;
-use App\Models\MaintenanceLog;
-use App\Models\MaintenanceRequest;
-use App\Models\MaintenanceRating;
-use App\Models\MaintenanceAssignment;
-use App\Models\Role;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
+use App\Support\InitialsAvatar;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -57,6 +52,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'suspended_at'      => 'datetime',
+            'must_change_password' => 'boolean',
             'password'          => 'hashed',
         ];
     }
@@ -86,10 +82,21 @@ class User extends Authenticatable
                     ->withTimestamps();
     }
 
-    // Alias สำหรับเรียกใช้โค้ดเดิม
-    public function assignedRequests()
+    /**
+     * URL of the alert sound this user plays for a new request: their pick from the sound library
+     * (`public/sounds`), or the default when they never chose, the file has been removed from the library since, or the
+     * column holds something that is not a bare file name.
+     */
+    public function notificationSoundUrl(): string
     {
-        return $this->assignedMaintenanceRequests();
+        $default = 'new-request.mp3';
+        $file = basename(trim((string) $this->notification_sound));
+
+        if ($file === '' || $file !== trim((string) $this->notification_sound) || ! is_file(public_path('sounds/'.$file))) {
+            $file = $default;
+        }
+
+        return asset('sounds/'.rawurlencode($file));
     }
 
     public function isAdmin(): bool
@@ -274,21 +281,6 @@ class User extends Authenticatable
         return $this->hasMany(MaintenanceRating::class, 'rater_id');
     }
 
-    // คะแนนเฉลี่ยที่เจ้าหน้าที่ได้รับ
-    public function getRatingAverageAttribute(): ?float
-    {
-        if (!$this->technicianRatings()->exists()) {
-            return null;
-        }
-        return round((float) $this->technicianRatings()->avg('score'), 2);
-    }
-
-    // จำนวนครั้งที่ถูกให้คะแนน
-    public function getRatingCountAttribute(): int
-    {
-        return (int) $this->technicianRatings()->count();
-    }
-
     public function getAvatarUrlAttribute(): string
     {
         $path = $this->profile_photo_path;
@@ -340,15 +332,10 @@ class User extends Authenticatable
         return $this->uiAvatarUrl(128);
     }
 
-    // สร้างรูปโปรไฟล์จำลองกรณีไม่มีการอัปโหลดรูป
+    // รูปโปรไฟล์จำลองกรณีไม่มีการอัปโหลดรูป: ตัวอักษรย่อของชื่อบนพื้นสี เป็น SVG ในตัว src เอง (ไม่ต้องขอไปที่เว็บอื่น)
     private function uiAvatarUrl(int $size = 256): string
     {
-        $name = urlencode($this->clean_name ?: 'User');
-        $palette = ['0D8ABC','0E2B51','16A34A','7C3AED','EA580C','DB2777','374151'];
-        $idx = crc32(strtolower($this->name ?? 'user')) % count($palette);
-        $bg  = $palette[$idx];
-
-        return "https://ui-avatars.com/api/?name={$name}&background={$bg}&color=fff&size={$size}&bold=true";
+        return InitialsAvatar::url($this->clean_name ?: 'User', $size, InitialsAvatar::colorFor($this->name ?? 'user'));
     }
 
     // คะแนนที่ User คนนี้ได้รับในฐานะเจ้าหน้าที่
