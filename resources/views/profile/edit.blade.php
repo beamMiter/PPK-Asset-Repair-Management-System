@@ -208,8 +208,10 @@
         </div>
     </div>
 
-    {{-- Modal Cropper (คงเดิม) --}}
-    <div id="cropper-modal" class="fixed inset-0 z-[100] hidden overflow-y-auto">
+    {{-- Modal Cropper - the sidebar (position: fixed, z-index: 1040) and topbar (z-index: 1030) sit in the page's root
+         stacking context; a fixed modal here compares its z-index against them directly regardless of DOM nesting, so
+         z-[100] painted underneath both. Raised to z-[9999], same as the asset page's own history modal. --}}
+    <div id="cropper-modal" class="fixed inset-0 z-[9999] hidden overflow-y-auto">
         <div class="flex min-h-screen items-center justify-center p-4">
             <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"></div>
             <div class="relative w-full max-w-xl rounded-md bg-white overflow-hidden">
