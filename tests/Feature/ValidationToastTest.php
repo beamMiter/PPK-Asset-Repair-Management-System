@@ -77,6 +77,27 @@ class ValidationToastTest extends TestCase
             ->assertSessionHas('toast', fn ($t) => $t['type'] === 'error' && $t['message'] === 'กรุณากรอกชื่อ');
     }
 
+    /**
+     * admin/users/edit used to print every $errors->all() again in a hand-drawn red box under the heading
+     * "มีข้อผิดพลาดในการบันทึกข้อมูล:" - on top of the toast the controller already flashes. Same message, twice.
+     */
+    public function test_the_admin_user_edit_page_shows_the_refusal_once_not_in_a_second_box_too(): void
+    {
+        $admin = $this->admin();
+        $target = User::factory()->create(['role' => 'member']);
+        $editUrl = route('admin.users.edit', $target);
+
+        $this->actingAs($admin)->from($editUrl)
+            ->put(route('admin.users.update', $target), ['name' => $target->name, 'citizen_id' => $target->citizen_id])
+            ->assertRedirect($editUrl)
+            ->assertSessionHasErrors('role')
+            ->assertSessionHas('toast', fn ($t) => $t['type'] === 'error' && $t['message'] === 'อัพเดตข้อมูลผู้ใช้ไม่สำเร็จ: กรุณาเลือกบทบาทผู้ใช้');
+
+        // the page $errors redirects back to still has the same $errors (session flash) - it must not print them a second time
+        $page = $this->get($editUrl)->getContent();
+        $this->assertStringNotContainsString('มีข้อผิดพลาดในการบันทึกข้อมูล', $page);
+    }
+
     public function test_a_json_request_still_gets_its_422_and_no_toast_is_flashed(): void
     {
         $admin = $this->admin();

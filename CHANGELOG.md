@@ -841,6 +841,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `resources/js/layout/confirm-submit.js`); the alerts now go through the shared toast (`window.showToast`). `NativeDialogsReplacedTest`,
   `confirm-submit.test.mjs`.
 
+- **A refused edit on the admin users page says why once, not twice.** The controller already flashes a toast on a validation failure
+  (`อัพเดตข้อมูลผู้ใช้ไม่สำเร็จ: <the first error>`); the page also drew every error again in its own red box under "มีข้อผิดพลาดในการบันทึกข้อมูล:" -
+  the same message, twice, in two different styles. The box is removed; the toast was already the whole answer.
+  `ValidationToastTest`.
+
 ### Removed
 
 - **Creating a user on the admin pages.** Accounts are made by people signing themselves up, and an admin then sets the role, department and

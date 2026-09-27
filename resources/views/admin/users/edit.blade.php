@@ -55,18 +55,6 @@
 @section('content')
     <div class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
 
-        {{-- Error Display --}}
-        @if ($errors->any())
-            <div class="mb-8 rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
-                <p class="font-medium">มีข้อผิดพลาดในการบันทึกข้อมูล:</p>
-                <ul class="mt-2 list-disc pl-5 text-sm">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
         {{-- Form Tag: Action ไปที่ Update, Method PUT --}}
         <form method="POST" action="{{ route('admin.users.update', $user) }}" class="maint-form space-y-8" novalidate
             autocomplete="off">
