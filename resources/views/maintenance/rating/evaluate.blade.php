@@ -204,10 +204,10 @@
                 <table class="min-w-full text-[13px]">
                     <thead class="bg-white">
                         <tr class="text-slate-600 border-b border-slate-200">
-                            <th class="p-3 text-left font-semibold whitespace-nowrap">เลขที่ใบงาน</th>
-                            <th class="p-3 text-left font-semibold">เรื่อง / สถานที่</th>
-                            <th class="p-3 text-left font-semibold whitespace-nowrap hidden lg:table-cell">ผู้ดำเนินการ</th>
-                            <th class="p-3 text-left font-semibold whitespace-nowrap hidden lg:table-cell">ปิดงานเมื่อ</th>
+                            <th class="p-3 text-center font-semibold whitespace-nowrap">เลขที่ใบงาน</th>
+                            <th class="p-3 text-center font-semibold">เรื่อง / สถานที่</th>
+                            <th class="p-3 text-center font-semibold whitespace-nowrap hidden lg:table-cell">ผู้ดำเนินการ</th>
+                            <th class="p-3 text-center font-semibold whitespace-nowrap hidden lg:table-cell">ปิดงานเมื่อ</th>
                             <th class="p-3 text-center font-semibold whitespace-nowrap">ประเมินได้อีก</th>
                             <th class="p-3 text-center font-semibold whitespace-nowrap">การดำเนินการ</th>
                         </tr>
@@ -219,19 +219,19 @@
                                 $closedOn = $req->closed_at ?? $req->resolved_at ?? $req->completed_date;
                             @endphp
                             <tr class="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
-                                <td class="p-3 align-middle whitespace-nowrap">
+                                <td class="p-3 align-middle text-center whitespace-nowrap">
                                     <a href="{{ route('maintenance.requests.show', $req) }}"
                                         class="font-semibold text-[#0F2D5C] hover:underline">#{{ $req->request_no }}</a>
                                 </td>
-                                <td class="p-3 align-middle min-w-[220px]">
+                                <td class="p-3 align-middle text-center min-w-[220px]">
                                     <div class="font-medium text-slate-900 break-words line-clamp-2">{{ $req->title ?? 'ไม่ระบุหัวข้อ' }}</div>
                                     <div class="mt-0.5 flex items-center gap-1 text-[12px] text-slate-500">
                                         <span class="material-symbols-outlined text-[14px] opacity-60" aria-hidden="true">location_on</span>
                                         <span class="break-words min-w-0">{{ $req->location_text ?: '-' }}</span>
                                     </div>
                                 </td>
-                                <td class="p-3 align-middle text-slate-700 hidden lg:table-cell">{{ $req->technician?->name ?? '-' }}</td>
-                                <td class="p-3 align-middle text-slate-700 whitespace-nowrap hidden lg:table-cell">
+                                <td class="p-3 align-middle text-center text-slate-700 hidden lg:table-cell">{{ $req->technician?->name ?? '-' }}</td>
+                                <td class="p-3 align-middle text-center text-slate-700 whitespace-nowrap hidden lg:table-cell">
                                     {{ $closedOn ? \App\Support\ThaiDate::short($closedOn) : '-' }}</td>
                                 <td class="p-3 align-middle text-center whitespace-nowrap">
                                     <span class="text-[12px] font-semibold {{ $daysTone }}">{{ $daysText }}</span>
@@ -286,11 +286,11 @@
                 <table class="min-w-full text-[13px]">
                     <thead class="bg-white">
                         <tr class="text-slate-600 border-b border-slate-200">
-                            <th class="p-3 text-left font-semibold whitespace-nowrap">เลขที่ใบงาน</th>
-                            <th class="p-3 text-left font-semibold">เรื่อง / ความคิดเห็น</th>
-                            <th class="p-3 text-left font-semibold whitespace-nowrap hidden lg:table-cell">ผู้ดำเนินการ</th>
+                            <th class="p-3 text-center font-semibold whitespace-nowrap">เลขที่ใบงาน</th>
+                            <th class="p-3 text-center font-semibold">เรื่อง / ความคิดเห็น</th>
+                            <th class="p-3 text-center font-semibold whitespace-nowrap hidden lg:table-cell">ผู้ดำเนินการ</th>
                             <th class="p-3 text-center font-semibold whitespace-nowrap">คะแนน</th>
-                            <th class="p-3 text-left font-semibold whitespace-nowrap hidden lg:table-cell">ประเมินเมื่อ</th>
+                            <th class="p-3 text-center font-semibold whitespace-nowrap hidden lg:table-cell">ประเมินเมื่อ</th>
                             <th class="p-3 text-center font-semibold whitespace-nowrap">การดำเนินการ</th>
                         </tr>
                     </thead>
@@ -298,24 +298,24 @@
                         @foreach ($requests as $req)
                             @php $score = (int) $req->rating->score; @endphp
                             <tr class="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
-                                <td class="p-3 align-middle whitespace-nowrap">
+                                <td class="p-3 align-middle text-center whitespace-nowrap">
                                     <a href="{{ route('maintenance.requests.show', $req) }}"
                                         class="font-semibold text-[#0F2D5C] hover:underline">#{{ $req->request_no }}</a>
                                 </td>
-                                <td class="p-3 align-middle min-w-[220px]">
+                                <td class="p-3 align-middle text-center min-w-[220px]">
                                     <div class="font-medium text-slate-900 break-words line-clamp-2">{{ $req->title }}</div>
                                     @if ($req->rating->comment)
                                         <div class="mt-1 text-[12px] italic text-slate-500 break-words line-clamp-2">“{{ $req->rating->comment }}”</div>
                                     @endif
                                 </td>
-                                <td class="p-3 align-middle text-slate-700 hidden lg:table-cell">{{ $req->technician?->name ?? '-' }}</td>
+                                <td class="p-3 align-middle text-center text-slate-700 hidden lg:table-cell">{{ $req->technician?->name ?? '-' }}</td>
                                 <td class="p-3 align-middle text-center">
                                     <div class="flex flex-col items-center gap-[4px]">
                                         <x-rating.stars :score="$score" size="xs" />
                                         <span class="text-[12px] font-semibold {{ $scoreTone($score) }}">{{ number_format($score, 1) }} - {{ \App\Support\RatingLevel::scoreLabel($score) }}</span>
                                     </div>
                                 </td>
-                                <td class="p-3 align-middle text-slate-700 whitespace-nowrap hidden lg:table-cell">
+                                <td class="p-3 align-middle text-center text-slate-700 whitespace-nowrap hidden lg:table-cell">
                                     {{ \App\Support\ThaiDate::short($req->rating->created_at) }}</td>
                                 <td class="p-3 align-middle text-center">
                                     <x-ui.button :href="route('maintenance.requests.show', $req)" size="sm"

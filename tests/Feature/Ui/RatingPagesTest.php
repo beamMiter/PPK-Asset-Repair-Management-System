@@ -210,6 +210,23 @@ class RatingPagesTest extends TestCase
         }
     }
 
+    /**
+     * The requests and assets lists centre every column ("✅ Center" in their own source); this page's two tables had drifted to
+     * text-left on most columns while only the numeric/action ones were centred.
+     */
+    public function test_every_table_column_is_centred_like_the_other_list_pages(): void
+    {
+        $this->rate($this->closedDaysAgo(9), 5);
+        $this->closedDaysAgo(3);
+
+        foreach (['pending', 'rated'] as $tab) {
+            $html = $this->evaluate(['tab' => $tab])->getContent();
+
+            $this->assertStringNotContainsString('<th class="p-3 text-left', $html, "$tab: a left-aligned header");
+            $this->assertGreaterThanOrEqual(4, substr_count($html, '<th class="p-3 text-center'), "$tab: every header is centred");
+        }
+    }
+
     public function test_a_state_is_coloured_text_not_a_boxed_label(): void
     {
         $this->closedDaysAgo(3);

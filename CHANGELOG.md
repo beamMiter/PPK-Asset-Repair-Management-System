@@ -846,6 +846,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the same message, twice, in two different styles. The box is removed; the toast was already the whole answer.
   `ValidationToastTest`.
 
+- **"ประเมินความพึงพอใจ" centres every table column, like the requests and assets lists already do.** Those two lists mark every header
+  and cell "✅ Center" in their own source; this page's two tables (รอประเมิน / ประเมินแล้ว) had drifted to `text-left` on most columns,
+  centring only the numeric and action ones. All `<th>`/`<td>` are now `text-center`, matching the pattern exactly.
+  `RatingPagesTest`.
+
 ### Removed
 
 - **Creating a user on the admin pages.** Accounts are made by people signing themselves up, and an admin then sets the role, department and
