@@ -548,6 +548,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Every `<x-ui.button>` shows a shadow on hover.** A button only darkened by a shade on hover, which is easy to miss; the request was that a button should
+  feel the way the status-change buttons on a job's page already do (รับเรื่อง, พักชั่วคราว, เสร็จสิ้น, ไม่รับเรื่อง, ยกเลิกการซ่อมบำรุง). Because every one of
+  those, and the "ดูรายละเอียด" / "แก้ไข" of a list row, the dialog confirm/cancel pair and most page actions already go through the shared component, adding
+  `hover:shadow-md` there reaches all of them at once. Left out on purpose: the `ghost*` variants (icon-only tools such as a dialog's × or the chat message's
+  ⋮) - they are meant to read as a bare icon that only lights up, and a shadow would put a box back around them.
+
 - **"ดูรายละเอียด" and "แก้ไข" in the requests list and the assets list are the standard grey button.** Both lists drew them by hand - view in indigo, edit in
   emerald, three slightly different sizes - while the Technician Rating page already used `<x-ui.button size="sm">` (white, grey border and text). The rows of
   the requests list and the assets list (table and mobile cards) now use that same button, so a change to it reaches them all. Left as they were: the repair jobs
