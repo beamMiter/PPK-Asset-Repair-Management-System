@@ -552,8 +552,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   which was easy to miss; a first pass added `hover:shadow-md` (a shadow cast outward, lifting the button off the page), which was not what was wanted -
   the shadow has to sit inside the button, the way the status-change buttons on a job's page (รับทราบ, รับเรื่อง, พักชั่วคราว, เสร็จสิ้น, ไม่รับเรื่อง,
   ยกเลิกการซ่อมบำรุง) were the example of. That became `hover:shadow-inner`, but on the white "secondary" button ("ดูรายละเอียด" / "แก้ไข") Tailwind's
-  built-in 5%-opacity version barely showed; a project `shadow-press` token (35%-opacity inset shadow, alongside a darker `hover:bg-slate-100` /
-  `hover:border-slate-300`) replaces it so the effect reads on a white button as clearly as it does on a solid-colour one. Because every one of those
+  built-in 5%-opacity version barely showed; the shadow is now a 35%-opacity inset (`hover:shadow-[inset_0_2px_6px_rgba(0,0,0,.35)]`, written inline
+  so it needs no `tailwind.config.js` change and always follows a normal Blade edit), alongside a darker `hover:bg-slate-100` / `hover:border-slate-300`
+  on the secondary button, so the colour change and the shadow both read clearly on a white button, not just a coloured one. Because every one of those
   buttons, and the "ดูรายละเอียด" / "แก้ไข" of a list row, the dialog confirm/cancel pair and most page actions already go through the shared component,
   the change reaches all of them at once. Left out on
   purpose: the `ghost*` variants (icon-only tools such as a dialog's × or the chat message's ⋮) - they are meant to read as a bare icon that only lights
