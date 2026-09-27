@@ -867,8 +867,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   to the button. It is now one line with the request number, the title (the only column that stretches, so it is also the only
   one that can leave space unused), the status, the date, the reporter and the technician each in their own column - closer to
   what an actual table row does - with the least essential columns (date, reporter, technician) hidden below their own breakpoint
-  and shown as a second small-text line on a phone instead, and `<x-ui.button size="sm" icon="visibility">` for the action.
-  `AssetRepairHistoryTest`.
+  and shown as a second small-text line on a phone instead, and `<x-ui.button size="sm" icon="visibility">` for the action. That
+  column spread gave the status a fixed 110px width, which wrapped "หยุดการซ่อมบำรุงชั่วคราว" (the longest label, 23 characters) onto
+  two lines and made that one row taller than the rest; the status, date, reporter and technician columns no longer force a width -
+  each is only ever as wide as its own content, and the reporter / technician columns truncate with the full name in a `title`
+  instead. `AssetRepairHistoryTest`.
 
 ### Removed
 

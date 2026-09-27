@@ -325,13 +325,15 @@
                                         <a href="{{ route('maintenance.requests.show', $mr) }}"
                                             class="min-w-0 flex-1 truncate text-[14px] font-semibold text-slate-900 hover:underline">{{ $mr->title }}</a>
 
-                                        <span class="hidden sm:block shrink-0 w-[110px] text-[12px] font-semibold {{ $statusTextClass($mrStatus) }}">{{ $mr->statusLabel() }}</span>
+                                        <span class="hidden sm:block shrink-0 whitespace-nowrap text-[12px] font-semibold {{ $statusTextClass($mrStatus) }}">{{ $mr->statusLabel() }}</span>
 
-                                        <span class="hidden md:block shrink-0 w-[90px] text-[12px] text-slate-500">{{ \App\Support\ThaiDate::short($mr->created_at) }}</span>
+                                        <span class="hidden md:block shrink-0 whitespace-nowrap text-[12px] text-slate-500">{{ \App\Support\ThaiDate::short($mr->created_at) }}</span>
 
-                                        <span class="hidden lg:block shrink-0 w-[150px] truncate text-[12px] text-slate-500">แจ้งโดย {{ $mr->reporter->name ?? 'ระบบ' }}</span>
+                                        <span class="hidden lg:block shrink-0 max-w-[150px] truncate whitespace-nowrap text-[12px] text-slate-500"
+                                            title="แจ้งโดย {{ $mr->reporter->name ?? 'ระบบ' }}">แจ้งโดย {{ $mr->reporter->name ?? 'ระบบ' }}</span>
 
-                                        <span class="hidden lg:block shrink-0 w-[170px] truncate text-[12px] {{ $techWorkers->isEmpty() ? 'italic text-slate-400' : 'text-slate-500' }}">
+                                        <span class="hidden lg:block shrink-0 max-w-[170px] truncate whitespace-nowrap text-[12px] {{ $techWorkers->isEmpty() ? 'italic text-slate-400' : 'text-slate-500' }}"
+                                            title="{{ $techWorkers->isEmpty() ? '' : 'ช่าง ' . $techWorkers->pluck('name')->join(', ') }}">
                                             {{ $techWorkers->isEmpty() ? 'ยังไม่ได้มอบหมายเจ้าหน้าที่' : 'ช่าง ' . $techWorkers->pluck('name')->join(', ') }}
                                         </span>
 

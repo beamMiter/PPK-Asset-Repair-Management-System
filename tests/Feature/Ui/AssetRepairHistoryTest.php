@@ -56,6 +56,26 @@ class AssetRepairHistoryTest extends TestCase
         $this->assertStringNotContainsString('crc32', $html);
     }
 
+    /**
+     * A screenshot after the row was first spread into columns showed สถานะ "หยุดการซ่อมบำรุงชั่วคราว" (the longest label, 23
+     * characters - see MaintenanceRequest::statusLabels()) wrapping onto two lines inside a 110px column, taller than the rest of
+     * the row. The status column is no longer given a fixed width - it never wraps, whatever the label.
+     */
+    public function test_the_longest_status_label_never_wraps(): void
+    {
+        $asset = Asset::factory()->create();
+        MaintenanceRequest::factory()->create(['asset_id' => $asset->id, 'status' => MaintenanceRequest::STATUS_ON_HOLD]);
+
+        $html = $this->actingAs($this->admin())->get(route('assets.show', $asset))->assertOk()->getContent();
+
+        $this->assertStringContainsString('หยุดการซ่อมบำรุงชั่วคราว', $html);
+        $this->assertMatchesRegularExpression(
+            '/class="hidden sm:block shrink-0 whitespace-nowrap text-\[12px\] font-semibold [^"]*">หยุดการซ่อมบำรุงชั่วคราว/u',
+            $html,
+            'the status column has no fixed width to wrap inside of'
+        );
+    }
+
     public function test_an_unassigned_request_says_so_instead_of_showing_nobody(): void
     {
         $asset = Asset::factory()->create();
