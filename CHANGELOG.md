@@ -852,6 +852,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   line under a job's title (a pin icon beside the place, its own flex row) gets `justify-center` too, or `text-center` on the `<td>`
   only centres the title above it and the icon row stays pinned to the left underneath it. `RatingPagesTest`.
 
+- **README.md is English-first.** Roughly half its sections (project overview, key features, design standards, access, technical stack)
+  were Thai with an English gloss in parentheses on the heading; the other half (authentication, Docker, settings, tests, where things
+  live) was already plain English from an earlier pass. Translated the Thai sections to match - same content, no section renamed or
+  reordered; the hospital's own Thai name and the literal Thai menu label ("คู่มือการใช้งาน") are kept as-is since those are proper
+  nouns / real UI text, not prose.
+
 ### Removed
 
 - **Creating a user on the admin pages.** Accounts are made by people signing themselves up, and an admin then sets the role, department and
