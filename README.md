@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/images/logoppk.png" width="200" alt="PPK Logo">
+  <img src="public/images/logoppk2.png" width="200" alt="PPK Logo">
 </p>
 
 # PPK Asset & Repair Management System

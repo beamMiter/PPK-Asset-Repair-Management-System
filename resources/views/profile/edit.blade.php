@@ -226,7 +226,7 @@
                 </div>
                 <div class="px-6 py-4 bg-slate-50 flex items-center justify-end gap-3">
                     <x-ui.button id="cropper-cancel">ยกเลิก</x-ui.button>
-                    <x-ui.button id="cropper-apply" variant="primary">ตกลง</x-ui.button>
+                    <x-ui.button id="cropper-apply" variant="primary" icon="check_circle" split>ตกลง</x-ui.button>
                 </div>
             </div>
         </div>
