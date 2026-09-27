@@ -307,49 +307,63 @@
                                     };
                                 @endphp
 
-                                @foreach ($asset->maintenanceRequests->sortByDesc('created_at')->take(1) as $mr)
-                                    @php
-                                        $mrStatus = strtolower((string) ($mr->status ?? ''));
-                                        $techWorkers = ($mr->assignments ?? collect())
-                                            ->filter(fn($a) => strtolower((string) ($a->status ?? '')) !== 'cancelled')
-                                            ->map(fn($a) => $a->user)
-                                            ->filter()
-                                            ->unique('id')
-                                            ->values();
-                                    @endphp
-
-                                    <div class="rounded-md border border-slate-200 bg-white px-4 py-3 flex items-center gap-4">
-                                        <a href="{{ route('maintenance.requests.show', $mr) }}"
-                                            class="shrink-0 font-mono text-[12px] font-semibold text-[#0F2D5C] hover:underline">#{{ $mr->request_no ?? $mr->id }}</a>
-
-                                        <a href="{{ route('maintenance.requests.show', $mr) }}"
-                                            class="min-w-0 flex-1 truncate text-[14px] font-semibold text-slate-900 hover:underline">{{ $mr->title }}</a>
-
-                                        <span class="hidden sm:block shrink-0 whitespace-nowrap text-[12px] font-semibold {{ $statusTextClass($mrStatus) }}">{{ $mr->statusLabel() }}</span>
-
-                                        <span class="hidden md:block shrink-0 whitespace-nowrap text-[12px] text-slate-500">{{ \App\Support\ThaiDate::short($mr->created_at) }}</span>
-
-                                        <span class="hidden lg:block shrink-0 max-w-[150px] truncate whitespace-nowrap text-[12px] text-slate-500"
-                                            title="แจ้งโดย {{ $mr->reporter->name ?? 'ระบบ' }}">แจ้งโดย {{ $mr->reporter->name ?? 'ระบบ' }}</span>
-
-                                        <span class="hidden lg:block shrink-0 max-w-[170px] truncate whitespace-nowrap text-[12px] {{ $techWorkers->isEmpty() ? 'italic text-slate-400' : 'text-slate-500' }}"
-                                            title="{{ $techWorkers->isEmpty() ? '' : 'ช่าง ' . $techWorkers->pluck('name')->join(', ') }}">
-                                            {{ $techWorkers->isEmpty() ? 'ยังไม่ได้มอบหมายเจ้าหน้าที่' : 'ช่าง ' . $techWorkers->pluck('name')->join(', ') }}
-                                        </span>
-
-                                        <x-ui.button :href="route('maintenance.requests.show', $mr)" size="sm" icon="visibility" class="shrink-0">ดูรายละเอียด</x-ui.button>
-                                    </div>
-
-                                    {{-- the columns hidden above (sm/md/lg) so the row above never wraps: shown as a second, small line instead --}}
-                                    <div class="sm:hidden mt-1.5 flex flex-wrap items-center gap-x-3 px-4 text-[11.5px] text-slate-500">
-                                        <span class="font-semibold {{ $statusTextClass($mrStatus) }}">{{ $mr->statusLabel() }}</span>
-                                        <span>{{ \App\Support\ThaiDate::short($mr->created_at) }}</span>
-                                        <span>แจ้งโดย {{ $mr->reporter->name ?? 'ระบบ' }}</span>
-                                        <span class="{{ $techWorkers->isEmpty() ? 'italic text-slate-400' : '' }}">
-                                            {{ $techWorkers->isEmpty() ? 'ยังไม่ได้มอบหมายเจ้าหน้าที่' : 'ช่าง ' . $techWorkers->pluck('name')->join(', ') }}
-                                        </span>
-                                    </div>
-                                @endforeach
+                                {{-- The exact table the requests list (maintenance/requests/index.blade.php) uses: same columns, same
+                                     classes, same "✅ Center" convention, so this reads as the same page's own list, not a design
+                                     of its own. --}}
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full text-[13px]">
+                                        <thead class="bg-white">
+                                            <tr class="text-slate-600">
+                                                <th class="p-3 text-center font-semibold w-[10%] whitespace-nowrap border-b border-slate-200">เลขใบงาน</th>
+                                                <th class="p-3 text-center font-semibold w-[30%] border-b border-slate-200">เรื่อง/ปัญหา</th>
+                                                <th class="p-3 text-center font-semibold w-[12%] border-b border-slate-200">ประเภทงาน</th>
+                                                <th class="p-3 text-center font-semibold w-[18%] border-b border-slate-200">ผู้แจ้ง</th>
+                                                <th class="p-3 text-center font-semibold w-[10%] whitespace-nowrap border-b border-slate-200">สถานะ</th>
+                                                <th class="p-3 text-center font-semibold whitespace-nowrap min-w-[120px] border-b border-slate-200">การจัดการ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white">
+                                            @foreach ($asset->maintenanceRequests->sortByDesc('created_at')->take(1) as $mr)
+                                                @php $mrStatus = strtolower((string) ($mr->status ?? '')); @endphp
+                                                <tr class="align-top border-b border-slate-100 hover:bg-slate-50/60">
+                                                    <td class="p-3 align-middle whitespace-nowrap text-center font-semibold text-slate-900">
+                                                        {{ $mr->request_no ?: '#' . $mr->id }}
+                                                    </td>
+                                                    <td class="p-3 align-middle text-center">
+                                                        <a href="{{ route('maintenance.requests.show', $mr) }}"
+                                                            class="block max-w-full truncate font-semibold text-slate-900 hover:underline">
+                                                            {{ Str::limit($mr->title, 90) }}
+                                                        </a>
+                                                        @if ($mr->description)
+                                                            <p class="mt-1 text-[12px] leading-relaxed text-slate-600">{{ Str::limit($mr->description, 140) }}</p>
+                                                        @endif
+                                                    </td>
+                                                    <td class="p-3 align-middle text-center">
+                                                        @if ($mr->type)
+                                                            <span class="text-[12px] font-semibold text-slate-700">{{ $mr->type->name }}</span>
+                                                        @else
+                                                            <span class="text-[12px] text-slate-400">ยังไม่ระบุ</span>
+                                                        @endif
+                                                    </td>
+                                                    <td class="p-3 align-middle text-center">
+                                                        <div class="text-[13px] font-semibold text-slate-900">{{ $mr->reporter->name ?? '—' }}</div>
+                                                    </td>
+                                                    <td class="p-3 align-middle whitespace-nowrap text-center">
+                                                        <span class="text-[12px] font-semibold {{ $statusTextClass($mrStatus) }}">{{ $mr->statusLabel() }}</span>
+                                                    </td>
+                                                    <td class="p-3 text-center whitespace-nowrap align-middle">
+                                                        <div class="h-full flex justify-center items-center gap-2">
+                                                            <x-ui.button :href="route('maintenance.requests.show', $mr)" size="sm" icon="visibility">ดูรายละเอียด</x-ui.button>
+                                                            @can('update', $mr)
+                                                                <x-ui.button :href="route('maintenance.requests.edit', $mr)" size="sm" icon="edit">แก้ไข</x-ui.button>
+                                                            @endcan
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
                             @else
                                 @php
                                     $isInRepair = $asset->status === \App\Models\Asset::STATUS_IN_REPAIR;

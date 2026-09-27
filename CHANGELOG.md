@@ -858,20 +858,15 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reordered; the hospital's own Thai name and the literal Thai menu label ("คู่มือการใช้งาน") are kept as-is since those are proper
   nouns / real UI text, not prose.
 
-- **"ประวัติการแจ้งซ่อมล่าสุด" on an asset's own page matches the requests list, not a one-off design of its own, and fits the little it
-  says.** It was a hand-built card with English labels ("Job ID", "Problem Description", "Technician", "View Details") beside Thai
-  ones everywhere else, three separate colour-map closures for one status badge, a hand-drawn crc32-hashed initials avatar, and
-  `$mr->ticket_no` - not a real column, so the request number shown was always just the row's plain id, never the real `request_no`.
-  A first pass fixed all of that but kept the same padded, multi-row card shape, which was still far bigger than the handful of
-  facts it held; a second compacted it to three stacked lines, which fixed the height but left most of the row's width empty next
-  to the button. It is now one line with the request number, the title (the only column that stretches, so it is also the only
-  one that can leave space unused), the status, the date, the reporter and the technician each in their own column - closer to
-  what an actual table row does - with the least essential columns (date, reporter, technician) hidden below their own breakpoint
-  and shown as a second small-text line on a phone instead, and `<x-ui.button size="sm" icon="visibility">` for the action. That
-  column spread gave the status a fixed 110px width, which wrapped "หยุดการซ่อมบำรุงชั่วคราว" (the longest label, 23 characters) onto
-  two lines and made that one row taller than the rest; the status, date, reporter and technician columns no longer force a width -
-  each is only ever as wide as its own content, and the reporter / technician columns truncate with the full name in a `title`
-  instead. `AssetRepairHistoryTest`.
+- **"ประวัติการแจ้งซ่อมล่าสุด" on an asset's own page is a row of the exact table the requests list uses, not a design of its own.** It
+  was a hand-built card: English labels ("Job ID", "Problem Description", "Technician", "View Details") beside Thai ones everywhere
+  else, three separate colour-map closures for one status badge, a hand-drawn crc32-hashed initials avatar, and `$mr->ticket_no` -
+  not a real column, so the request number shown was always just the row's plain id, never the real `request_no`. Two rebuilds of
+  its own (a compact row, then one spread into fixed-width columns - which wrapped "หยุดการซ่อมบำรุงชั่วคราว", the longest status
+  label, onto two lines) were still a look of their own. It is now the same `<table>` `maintenance/requests/index.blade.php` uses -
+  same columns (all but "หน่วยงาน", which would just repeat the one department this page is already about), same classes, same
+  "✅ Center" convention, the same `<x-ui.button size="sm">` actions (view, and edit for whoever may) - so it reads as that page's
+  own list. `AssetRepairHistoryTest`.
 
 ### Removed
 
