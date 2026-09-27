@@ -848,8 +848,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **"ประเมินความพึงพอใจ" centres every table column, like the requests and assets lists already do.** Those two lists mark every header
   and cell "✅ Center" in their own source; this page's two tables (รอประเมิน / ประเมินแล้ว) had drifted to `text-left` on most columns,
-  centring only the numeric and action ones. All `<th>`/`<td>` are now `text-center`, matching the pattern exactly.
-  `RatingPagesTest`.
+  centring only the numeric and action ones. All `<th>`/`<td>` are now `text-center`, matching the pattern exactly - and the location
+  line under a job's title (a pin icon beside the place, its own flex row) gets `justify-center` too, or `text-center` on the `<td>`
+  only centres the title above it and the icon row stays pinned to the left underneath it. `RatingPagesTest`.
 
 ### Removed
 

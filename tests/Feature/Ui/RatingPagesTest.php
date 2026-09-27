@@ -217,7 +217,7 @@ class RatingPagesTest extends TestCase
     public function test_every_table_column_is_centred_like_the_other_list_pages(): void
     {
         $this->rate($this->closedDaysAgo(9), 5);
-        $this->closedDaysAgo(3);
+        $this->closedDaysAgo(3, ['location_text' => 'ห้องทดสอบ']);
 
         foreach (['pending', 'rated'] as $tab) {
             $html = $this->evaluate(['tab' => $tab])->getContent();
@@ -225,6 +225,10 @@ class RatingPagesTest extends TestCase
             $this->assertStringNotContainsString('<th class="p-3 text-left', $html, "$tab: a left-aligned header");
             $this->assertGreaterThanOrEqual(4, substr_count($html, '<th class="p-3 text-center'), "$tab: every header is centred");
         }
+
+        // text-center on the <td> only centres the title line above it; the location row is its own flex box (an icon beside
+        // the text) and needs justify-center too, or it stays pinned to the left under a centred title
+        $this->assertStringContainsString('flex items-center justify-center gap-1', $this->evaluate()->getContent(), 'the location row centres as a unit');
     }
 
     public function test_a_state_is_coloured_text_not_a_boxed_label(): void

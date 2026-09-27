@@ -225,7 +225,7 @@
                                 </td>
                                 <td class="p-3 align-middle text-center min-w-[220px]">
                                     <div class="font-medium text-slate-900 break-words line-clamp-2">{{ $req->title ?? 'ไม่ระบุหัวข้อ' }}</div>
-                                    <div class="mt-0.5 flex items-center gap-1 text-[12px] text-slate-500">
+                                    <div class="mt-0.5 flex items-center justify-center gap-1 text-[12px] text-slate-500">
                                         <span class="material-symbols-outlined text-[14px] opacity-60" aria-hidden="true">location_on</span>
                                         <span class="break-words min-w-0">{{ $req->location_text ?: '-' }}</span>
                                     </div>
