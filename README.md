@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/images/logoppk.png" width="200" alt="PPK Logo">
+</p>
+
 # PPK Asset & Repair Management System
 
 Asset and repair-management system for Phra Pokklao Hospital (โรงพยาบาลพระปกเกล้า).
