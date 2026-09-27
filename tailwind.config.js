@@ -25,6 +25,9 @@ export default {
       },
       boxShadow: {
         'card': '0 6px 24px rgba(0,0,0,.06)',
+        // <x-ui.button> hover: a shadow pressed INTO the button (not cast outward) - strong enough to read on a solid
+        // colour fill as well as on the white/grey "secondary" button (ดูรายละเอียด / แก้ไข)
+        'press': 'inset 0 2px 6px 0 rgba(0,0,0,.35)',
       },
     },
   },
