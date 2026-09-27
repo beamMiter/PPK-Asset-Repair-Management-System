@@ -48,6 +48,7 @@ class AssetRepairHistoryTest extends TestCase
         $this->assertStringContainsString('สมชาย ใจดี', $html);
         $this->assertStringContainsString('ช่างวิชัย', $html, 'the technician is named on the row');
         $this->assertStringContainsString(route('maintenance.requests.show', $req), $html);
+        $this->assertStringContainsString('min-w-0 flex-1 truncate', $html, 'the title fills the row instead of leaving it half-empty');
 
         foreach (['Job ID', 'Problem Description', '>Technician<', 'View Details'] as $leftover) {
             $this->assertStringNotContainsString($leftover, $html, "\"{$leftover}\": old hand-built card left over");

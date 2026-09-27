@@ -318,24 +318,34 @@
                                             ->values();
                                     @endphp
 
-                                    <div class="rounded-md border border-slate-200 bg-white px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-                                        <div class="min-w-0">
-                                            <div class="flex flex-wrap items-center gap-2">
-                                                <a href="{{ route('maintenance.requests.show', $mr) }}"
-                                                    class="font-mono text-[12px] font-semibold text-[#0F2D5C] hover:underline">#{{ $mr->request_no ?? $mr->id }}</a>
-                                                <span class="text-[12px] font-semibold {{ $statusTextClass($mrStatus) }}">{{ $mr->statusLabel() }}</span>
-                                            </div>
-                                            <a href="{{ route('maintenance.requests.show', $mr) }}"
-                                                class="block text-[14px] font-semibold text-slate-900 truncate hover:underline">{{ $mr->title }}</a>
-                                            <div class="mt-0.5 flex flex-wrap items-center gap-x-3 text-[11.5px] text-slate-500">
-                                                <span>{{ \App\Support\ThaiDate::short($mr->created_at) }}</span>
-                                                <span>แจ้งโดย {{ $mr->reporter->name ?? 'ระบบ' }}</span>
-                                                <span class="{{ $techWorkers->isEmpty() ? 'italic text-slate-400' : '' }}">
-                                                    {{ $techWorkers->isEmpty() ? 'ยังไม่ได้มอบหมายเจ้าหน้าที่' : 'ช่าง ' . $techWorkers->pluck('name')->join(', ') }}
-                                                </span>
-                                            </div>
-                                        </div>
+                                    <div class="rounded-md border border-slate-200 bg-white px-4 py-3 flex items-center gap-4">
+                                        <a href="{{ route('maintenance.requests.show', $mr) }}"
+                                            class="shrink-0 font-mono text-[12px] font-semibold text-[#0F2D5C] hover:underline">#{{ $mr->request_no ?? $mr->id }}</a>
+
+                                        <a href="{{ route('maintenance.requests.show', $mr) }}"
+                                            class="min-w-0 flex-1 truncate text-[14px] font-semibold text-slate-900 hover:underline">{{ $mr->title }}</a>
+
+                                        <span class="hidden sm:block shrink-0 w-[110px] text-[12px] font-semibold {{ $statusTextClass($mrStatus) }}">{{ $mr->statusLabel() }}</span>
+
+                                        <span class="hidden md:block shrink-0 w-[90px] text-[12px] text-slate-500">{{ \App\Support\ThaiDate::short($mr->created_at) }}</span>
+
+                                        <span class="hidden lg:block shrink-0 w-[150px] truncate text-[12px] text-slate-500">แจ้งโดย {{ $mr->reporter->name ?? 'ระบบ' }}</span>
+
+                                        <span class="hidden lg:block shrink-0 w-[170px] truncate text-[12px] {{ $techWorkers->isEmpty() ? 'italic text-slate-400' : 'text-slate-500' }}">
+                                            {{ $techWorkers->isEmpty() ? 'ยังไม่ได้มอบหมายเจ้าหน้าที่' : 'ช่าง ' . $techWorkers->pluck('name')->join(', ') }}
+                                        </span>
+
                                         <x-ui.button :href="route('maintenance.requests.show', $mr)" size="sm" icon="visibility" class="shrink-0">ดูรายละเอียด</x-ui.button>
+                                    </div>
+
+                                    {{-- the columns hidden above (sm/md/lg) so the row above never wraps: shown as a second, small line instead --}}
+                                    <div class="sm:hidden mt-1.5 flex flex-wrap items-center gap-x-3 px-4 text-[11.5px] text-slate-500">
+                                        <span class="font-semibold {{ $statusTextClass($mrStatus) }}">{{ $mr->statusLabel() }}</span>
+                                        <span>{{ \App\Support\ThaiDate::short($mr->created_at) }}</span>
+                                        <span>แจ้งโดย {{ $mr->reporter->name ?? 'ระบบ' }}</span>
+                                        <span class="{{ $techWorkers->isEmpty() ? 'italic text-slate-400' : '' }}">
+                                            {{ $techWorkers->isEmpty() ? 'ยังไม่ได้มอบหมายเจ้าหน้าที่' : 'ช่าง ' . $techWorkers->pluck('name')->join(', ') }}
+                                        </span>
                                     </div>
                                 @endforeach
                             @else

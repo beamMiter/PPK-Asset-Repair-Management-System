@@ -863,8 +863,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   ones everywhere else, three separate colour-map closures for one status badge, a hand-drawn crc32-hashed initials avatar, and
   `$mr->ticket_no` - not a real column, so the request number shown was always just the row's plain id, never the real `request_no`.
   A first pass fixed all of that but kept the same padded, multi-row card shape, which was still far bigger than the handful of
-  facts it held; it is now one compact row - the number and status on one line, the title, then who reported it and who is
-  assigned on one line of small text - with `<x-ui.button size="sm" icon="visibility">` for the action. `AssetRepairHistoryTest`.
+  facts it held; a second compacted it to three stacked lines, which fixed the height but left most of the row's width empty next
+  to the button. It is now one line with the request number, the title (the only column that stretches, so it is also the only
+  one that can leave space unused), the status, the date, the reporter and the technician each in their own column - closer to
+  what an actual table row does - with the least essential columns (date, reporter, technician) hidden below their own breakpoint
+  and shown as a second small-text line on a phone instead, and `<x-ui.button size="sm" icon="visibility">` for the action.
+  `AssetRepairHistoryTest`.
 
 ### Removed
 
