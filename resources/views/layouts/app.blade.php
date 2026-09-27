@@ -150,7 +150,8 @@
 
     <x-toast />
 
-    @includeWhen(Auth::check(), 'partials.chat-fab')
+    {{-- Not on the Livechat page itself: its fixed bottom-right circle sat on top of that page's own send button --}}
+    @includeWhen(Auth::check() && ! request()->routeIs('chat.index'), 'partials.chat-fab')
     <x-confirm-dialog />
 </body>
 

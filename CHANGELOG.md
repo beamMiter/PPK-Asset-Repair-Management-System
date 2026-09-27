@@ -829,6 +829,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   The most overdue / the soonest due are the rows kept. The badges, the KPI counts and the PDF report keep the full list — the
   cap is applied to the screen only (a test fails if the shared list is cut).
 
+- **The floating chat widget is not drawn on the Livechat page itself.** Its round launcher sits fixed at the bottom-right of every page so a
+  thread can be reached while doing something else; on `/chat` that same corner is where the open thread's own send button lives, so the widget
+  sat on top of it and the button could not be clicked. The widget is now skipped on `route('chat.index')` only - nothing on that page used its
+  elements anyway. `ChatPageMarkupTest`.
+
 ### Removed
 
 - **Creating a user on the admin pages.** Accounts are made by people signing themselves up, and an admin then sets the role, department and

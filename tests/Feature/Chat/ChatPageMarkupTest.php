@@ -72,11 +72,13 @@ class ChatPageMarkupTest extends TestCase
     }
 
     /**
-     * The floating widget is on every page, /chat included. The page's message list and the widget's drawer list were both `id="chatList"`, and the
-     * widget's script looks its list up by id: on /chat it found the page's list first and drew its rows (thread titles, "sender: text", a hide
-     * button on each) inside the messages of the open thread - "the chat shows nothing", and two hide buttons.
+     * The floating widget used to be on every page, /chat included. Its drawer list and the page's own message list were both `id="chatList"`, and
+     * the widget's script looks its list up by id: on /chat it found the page's list first and drew its rows (thread titles, "sender: text", a hide
+     * button on each) inside the messages of the open thread - "the chat shows nothing", and two hide buttons. The widget's list now has its own id
+     * (`chatWidgetList`, checked below on a page that still carries the widget) - but the real fix is that the widget is not on /chat at all any
+     * more: its fixed bottom-right circle sat on top of that page's own send button.
      */
-    public function test_no_id_on_the_chat_page_is_used_twice_and_the_widget_has_its_own_list(): void
+    public function test_no_id_on_the_chat_page_is_used_twice_and_the_widget_is_not_on_it(): void
     {
         $author = User::factory()->create(['role' => 'member']);
         $thread = ChatThread::create(['title' => 'เปิด', 'author_id' => $author->id, 'is_locked' => false]);
@@ -92,7 +94,17 @@ class ChatPageMarkupTest extends TestCase
 
         $this->assertSame([], $twice, 'an id used twice: a script that looks it up by id gets the first one');
         $this->assertNotNull($dom->getElementById('chatList'), 'the page\'s message list');
-        $this->assertNotNull($dom->getElementById('chatWidgetList'), 'the widget\'s own list');
-        $this->assertNull((new \DOMXPath($dom))->query('//*[@id="chatWidgetList"]//*[@id="chatBox"]')->item(0));
+        $this->assertNull($dom->getElementById('chatWidgetRoot'), 'the floating widget is not drawn on the page that is itself the chat');
+        $this->assertNull($dom->getElementById('chatWidgetList'), 'nor is its drawer list');
+    }
+
+    public function test_the_widget_still_has_its_own_list_id_elsewhere(): void
+    {
+        $html = $this->actingAs(User::factory()->create(['role' => 'admin']))->get(route('repair.dashboard'))->assertOk()->getContent();
+        $dom = $this->dom($html);
+
+        $this->assertNotNull($dom->getElementById('chatWidgetRoot'), 'the widget is on an ordinary page');
+        $this->assertNotNull($dom->getElementById('chatWidgetList'), 'with its own list id');
+        $this->assertNull($dom->getElementById('chatList'), 'this page is not the chat page, so it has no chatList to collide with');
     }
 }
