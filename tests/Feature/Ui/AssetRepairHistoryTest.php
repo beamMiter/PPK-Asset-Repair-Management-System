@@ -4,21 +4,18 @@ namespace Tests\Feature\Ui;
 
 use App\Models\Asset;
 use App\Models\MaintenanceRequest;
-use App\Models\MaintenanceRequestType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * "ประวัติการแจ้งซ่อมล่าสุด" on an asset's own page was a leftover, hand-built card: English labels ("Job ID", "Problem Description",
- * "Technician", "View Details") next to Thai ones everywhere else, three separate colour-map closures for one status badge, a
- * hand-drawn crc32-hashed initials avatar, and `$mr->ticket_no` (not a real column, so it always fell back to the row's plain id
- * instead of the request number). Two rebuilds of its own (a compact row, then one spread into columns - the second still wrapped
- * "หยุดการซ่อมบำรุงชั่วคราว", the longest status label, because a fixed-width flex column cannot do what a table column already does)
- * were both still a design of their own. Settled on the one the user actually asked for: the exact `<table>` the requests list
- * (`maintenance/requests/index.blade.php`) uses - same columns (except "หน่วยงาน", which would repeat the one department this
- * page is already about), same classes, same "✅ Center" convention, same shared `<x-ui.button size="sm">` actions - so this reads
- * as that page's own list, not a look-alike.
+ * "ประวัติการแจ้งซ่อมล่าสุด" on an asset's own page was a leftover, hand-built card, inline in the page body: English labels
+ * ("Job ID", "Problem Description", "Technician", "View Details") next to Thai ones everywhere else, three separate colour-map
+ * closures for one status badge, a hand-drawn crc32-hashed initials avatar, and `$mr->ticket_no` (not a real column, so it always
+ * fell back to the row's plain id instead of the request number). After three inline redesigns of its own, it moved to match the
+ * job page exactly: a "ประวัติการแจ้งซ่อม" icon button with a count, top-right of the header, opening the same dot / connecting-line
+ * timeline behind that page's own "history" icon (`partials/_timeline.blade.php`) - one item per request instead of per status
+ * change, the 5 most recent, with "ดูประวัติการแจ้งซ่อมทั้งหมด" for the rest.
  */
 class AssetRepairHistoryTest extends TestCase
 {
@@ -29,35 +26,58 @@ class AssetRepairHistoryTest extends TestCase
         return User::factory()->create(['role' => 'admin']);
     }
 
-    public function test_the_latest_request_is_a_row_of_the_same_table_the_requests_list_uses(): void
+    public function test_the_header_carries_the_history_button_with_a_count(): void
     {
-        $reporter = User::factory()->create(['name' => 'สมชาย ใจดี']);
         $asset = Asset::factory()->create();
-        $type = MaintenanceRequestType::create(['name' => 'เครื่องมือแพทย์', 'is_active' => true, 'sort_order' => 1]);
+        MaintenanceRequest::factory()->count(3)->create(['asset_id' => $asset->id]);
+
+        $html = $this->actingAs($this->admin())->get(route('assets.show', $asset))->assertOk()->getContent();
+
+        $this->assertStringContainsString('ประวัติการแจ้งซ่อม', $html);
+        $this->assertMatchesRegularExpression('/ประวัติการแจ้งซ่อม\s*<span[^>]*>3<\/span>/u', $html, 'the count badge, like the job page\'s own history button');
+        $this->assertStringContainsString('showHistory = true', $html, 'the button opens the modal');
+    }
+
+    public function test_the_timeline_shows_the_five_most_recent_requests_newest_first(): void
+    {
+        $asset = Asset::factory()->create();
+        $requests = collect(range(1, 6))->map(fn ($i) => MaintenanceRequest::factory()->create([
+            'asset_id' => $asset->id,
+            'title' => "งานทดสอบเลขที่{$i}",
+            'created_at' => now()->subDays(6 - $i),
+        ]));
+        $oldest = $requests->first();   // งานทดสอบเลขที่1, created 5 days ago: the 6th most recent, dropped
+        $newest = $requests->last();    // งานทดสอบเลขที่6, created today: the most recent, shown first
+
+        $html = $this->actingAs($this->admin())->get(route('assets.show', $asset))->assertOk()->getContent();
+
+        $this->assertSame(5, substr_count($html, 'งานทดสอบเลขที่'), 'only the 5 most recent, not all 6');
+        $this->assertStringNotContainsString($oldest->title, $html);
+        $this->assertStringContainsString($newest->title, $html);
+
+        $positions = $requests->skip(1)->map(fn ($r) => strpos($html, $r->title));
+        $this->assertSame($positions->sortDesc()->values()->all(), $positions->values()->all(), 'newest first: request 6 before 5 before ... before 2');
+    }
+
+    public function test_an_item_names_its_request_number_status_and_date(): void
+    {
+        $asset = Asset::factory()->create();
         $req = MaintenanceRequest::factory()->create([
             'asset_id' => $asset->id,
-            'reporter_id' => $reporter->id,
-            'type_id' => $type->id,
             'status' => MaintenanceRequest::STATUS_ON_HOLD,   // the longest status label - see MaintenanceRequest::statusLabels()
             'title' => 'เครื่องเอกซเรย์จอแสดงผลเสีย',
         ]);
 
         $html = $this->actingAs($this->admin())->get(route('assets.show', $asset))->assertOk()->getContent();
 
-        $this->assertStringContainsString((string) $req->request_no, $html, 'the real request number, not the row id');
         $this->assertStringContainsString('เครื่องเอกซเรย์จอแสดงผลเสีย', $html);
-        $this->assertStringContainsString('เครื่องมือแพทย์', $html, 'the request type');
-        $this->assertStringContainsString('สมชาย ใจดี', $html);
+        $this->assertStringContainsString((string) $req->request_no, $html, 'the real request number, not the row id');
         $this->assertStringContainsString('หยุดการซ่อมบำรุงชั่วคราว', $html);
-        $this->assertStringContainsString('text-slate-600">หยุดการซ่อมบำรุงชั่วคราว', $html, 'on_hold is coloured text, same as the requests list');
+        $this->assertStringContainsString('text-slate-600">หยุดการซ่อมบำรุงชั่วคราว', $html, 'on_hold is coloured text, same as elsewhere');
+        $this->assertStringContainsString(\App\Support\ThaiDate::short($req->created_at), $html);
         $this->assertStringContainsString(route('maintenance.requests.show', $req), $html);
-        $this->assertStringContainsString(route('maintenance.requests.edit', $req), $html, 'an admin may also edit it, like on the requests list');
-
-        // the same table shell the requests list uses, not a card or a flex row of its own
-        $this->assertStringContainsString('<table class="min-w-full text-[13px]">', $html);
-        foreach (['เลขใบงาน', 'เรื่อง/ปัญหา', 'ประเภทงาน', 'ผู้แจ้ง', 'สถานะ', 'การจัดการ'] as $header) {
-            $this->assertStringContainsString('>' . $header . '<', $html, "column header \"{$header}\"");
-        }
+        $this->assertStringContainsString('pause_circle', $html, 'the on_hold dot icon, same as the job page timeline');
+        $this->assertStringContainsString(route('maintenance.requests.index', ['asset_id' => $asset->id]), $html, '"ดูประวัติการแจ้งซ่อมทั้งหมด" points at the real list');
 
         foreach (['Job ID', 'Problem Description', '>Technician<', 'View Details'] as $leftover) {
             $this->assertStringNotContainsString($leftover, $html, "\"{$leftover}\": old hand-built card left over");
@@ -65,23 +85,18 @@ class AssetRepairHistoryTest extends TestCase
         $this->assertStringNotContainsString('crc32', $html);
     }
 
-    public function test_a_member_does_not_see_the_edit_action(): void
+    public function test_no_line_in_the_page_separates_text_with_a_middle_dot(): void
     {
-        $member = User::factory()->create(['role' => 'member']);
+        // NoDotSeparatorsTest already checks every view app-wide; this pins the one line this feature added
         $asset = Asset::factory()->create();
-        $req = MaintenanceRequest::factory()->create([
-            'asset_id' => $asset->id,
-            'reporter_id' => User::factory()->create()->id,   // someone other than $member: the factory's own default
-            'status' => MaintenanceRequest::STATUS_IN_PROGRESS, // random-picks any existing user, which would be $member alone here
-        ]);
+        MaintenanceRequest::factory()->create(['asset_id' => $asset->id]);
 
-        $html = $this->actingAs($member)->get(route('assets.show', $asset))->assertOk()->getContent();
+        $html = $this->actingAs($this->admin())->get(route('assets.show', $asset))->assertOk()->getContent();
 
-        $this->assertStringContainsString('ดูรายละเอียด', $html);
-        $this->assertStringNotContainsString(route('maintenance.requests.edit', $req), $html);
+        $this->assertStringNotContainsString('·', $html);
     }
 
-    public function test_an_asset_with_no_request_at_all_shows_the_empty_state(): void
+    public function test_an_asset_with_no_request_at_all_shows_the_empty_state_in_the_modal(): void
     {
         $asset = Asset::factory()->create(['status' => Asset::STATUS_ACTIVE]);
 

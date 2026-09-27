@@ -858,15 +858,17 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reordered; the hospital's own Thai name and the literal Thai menu label ("คู่มือการใช้งาน") are kept as-is since those are proper
   nouns / real UI text, not prose.
 
-- **"ประวัติการแจ้งซ่อมล่าสุด" on an asset's own page is a row of the exact table the requests list uses, not a design of its own.** It
-  was a hand-built card: English labels ("Job ID", "Problem Description", "Technician", "View Details") beside Thai ones everywhere
-  else, three separate colour-map closures for one status badge, a hand-drawn crc32-hashed initials avatar, and `$mr->ticket_no` -
-  not a real column, so the request number shown was always just the row's plain id, never the real `request_no`. Two rebuilds of
-  its own (a compact row, then one spread into fixed-width columns - which wrapped "หยุดการซ่อมบำรุงชั่วคราว", the longest status
-  label, onto two lines) were still a look of their own. It is now the same `<table>` `maintenance/requests/index.blade.php` uses -
-  same columns (all but "หน่วยงาน", which would just repeat the one department this page is already about), same classes, same
-  "✅ Center" convention, the same `<x-ui.button size="sm">` actions (view, and edit for whoever may) - so it reads as that page's
-  own list. `AssetRepairHistoryTest`.
+- **"ประวัติการแจ้งซ่อม" on an asset's own page moved to an icon button with a count, top-right of the header - opening the same
+  timeline the job page's own "history" icon does.** It used to be an inline section, a hand-built card: English labels ("Job ID",
+  "Problem Description", "Technician", "View Details") beside Thai ones everywhere else, three separate colour-map closures for one
+  status badge, a hand-drawn crc32-hashed initials avatar, and `$mr->ticket_no` - not a real column, so the request number shown
+  was always just the row's plain id, never the real `request_no`. Three inline redesigns of its own (a compact row, one spread
+  into fixed-width columns, then the requests list's own `<table>`) were each still a design of their own, in the wrong place on
+  the page. It is now `<x-ui.button icon="history">ประวัติการแจ้งซ่อม<span>{count}</span></x-ui.button>` beside "แก้ไข" and "กลับ",
+  opening a dialog built exactly like `_modal_history.blade.php`'s, whose body is the same dot / connecting-line / card skeleton as
+  `partials/_timeline.blade.php` - one item per repair request instead of per status change, no actor or note or duration, since
+  none of those apply to a whole separate request. The 5 most recent, newest first; "ดูประวัติการแจ้งซ่อมทั้งหมด" for the rest.
+  `AssetRepairHistoryTest`.
 
 ### Removed
 
