@@ -221,7 +221,7 @@
     // Off → on. Also the case "on" was restored after a reload but the browser has not allowed audio yet:
     // this click is the gesture that unlocks it — it must not switch the sound off.
     if (!(await tryUnlock())) {
-      alert("เบราว์เซอร์บล็อกเสียงอัตโนมัติ: ลองคลิกในหน้า 1 ครั้ง แล้วกดกระดิ่งอีกครั้ง");
+      window.showToast({ type: 'warning', message: "เบราว์เซอร์บล็อกเสียงอัตโนมัติ: ลองคลิกในหน้า 1 ครั้ง แล้วกดกระดิ่งอีกครั้ง" });
       return;
     }
 
@@ -335,19 +335,13 @@
         }
 
         // Show toast
-        if (typeof window.showToast === 'function' && result.toast) {
-          window.showToast(result.toast);
-        } else if (result.toast) {
-          alert(result.toast.message || 'อัปเดตประเภทงานเรียบร้อยแล้ว');
-        } else {
-          alert('อัปเดตประเภทงานเรียบร้อยแล้ว');
-        }
+        window.showToast(result.toast || { type: 'success', message: 'อัปเดตประเภทงานเรียบร้อยแล้ว' });
       } else {
         throw new Error(result.message || result.errors?.type_id?.[0] || 'เกิดข้อผิดพลาดในการอัปเดตประเภทงาน');
       }
     } catch (error) {
       console.error('Update type error:', error);
-      alert(error.message);
+      window.showToast({ type: 'error', message: error.message });
       restoreJobType(select, oldTypeId);
     } finally {
       hideLoader();

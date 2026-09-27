@@ -169,7 +169,7 @@
                                     </a>
 
                                     <form method="POST" action="{{ route('settings.maintenance-types.destroy', $t->id) }}"
-                                        class="inline" onsubmit="return confirm('ยืนยันปิดใช้งานประเภทนี้?');">
+                                        class="inline" onsubmit="return confirmSubmit(event, { title: 'ยืนยันการปิดใช้งาน', message: 'ยืนยันปิดใช้งานประเภทนี้?', variant: 'warning', confirmText: 'ปิดใช้งาน' })">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit"

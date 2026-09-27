@@ -233,7 +233,7 @@
                                 @can('deleteAttachment', $req)
                                     @if ($deleteUrl)
                                         <form method="POST" action="{{ $deleteUrl }}"
-                                            onsubmit="return confirm('ยืนยันลบไฟล์แนบนี้?');">
+                                            onsubmit="return confirmSubmit(event, { title: 'ยืนยันการลบไฟล์แนบ', message: 'ยืนยันลบไฟล์แนบนี้?', variant: 'danger', confirmText: 'ลบไฟล์แนบ' })">
                                             @csrf
                                             @method('DELETE')
                                             <x-ui.button type="submit" variant="danger-outline" size="icon" icon="delete" aria-label="ลบไฟล์แนบ" />

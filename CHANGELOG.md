@@ -834,6 +834,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   sat on top of it and the button could not be clicked. The widget is now skipped on `route('chat.index')` only - nothing on that page used its
   elements anyway. `ChatPageMarkupTest`.
 
+- **The last native browser popups are the app's own dialog and toast.** A form's `onsubmit="return confirm('...')"` (admin/users suspend and
+  reactivate, a maintenance type's "ปิดใช้งาน", an attachment's delete) blocked the page until answered and looked nothing like the rest of the
+  app; a plain `alert(...)` did the same for an empty chat-thread title, a browser refusing the notification sound, and a job-type-change error on
+  the repair jobs page. The confirms now go through the shared dialog (`window.confirmSubmit(event, options)`, a small new module,
+  `resources/js/layout/confirm-submit.js`); the alerts now go through the shared toast (`window.showToast`). `NativeDialogsReplacedTest`,
+  `confirm-submit.test.mjs`.
+
 ### Removed
 
 - **Creating a user on the admin pages.** Accounts are made by people signing themselves up, and an admin then sets the role, department and

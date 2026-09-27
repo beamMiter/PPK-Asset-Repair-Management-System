@@ -218,7 +218,7 @@
                                     @if ($u->id !== auth()->id())
                                         @if ($u->isSuspended())
                                             <form method="POST" action="{{ route('admin.users.reactivate', $u) }}" class="inline"
-                                                onsubmit="return confirm(@js('เปิดใช้งานบัญชี '.$u->name.' อีกครั้ง?'));">
+                                                onsubmit="return confirmSubmit(event, { title: 'ยืนยันการเปิดใช้งานบัญชี', message: @js('เปิดใช้งานบัญชี '.$u->name.' อีกครั้ง?'), variant: 'success', confirmText: 'เปิดใช้งาน' })">
                                                 @csrf
                                                 @method('PATCH')
                                                 <button type="submit"
@@ -229,7 +229,7 @@
                                             </form>
                                         @else
                                             <form method="POST" action="{{ route('admin.users.suspend', $u) }}" class="inline"
-                                                onsubmit="return confirm(@js('ระงับบัญชี '.$u->name.' ? ผู้ใช้จะเข้าสู่ระบบไม่ได้ แต่ประวัติทั้งหมดยังอยู่ และเปิดใช้งานกลับได้'));">
+                                                onsubmit="return confirmSubmit(event, { title: 'ยืนยันการระงับบัญชี', message: @js('ระงับบัญชี '.$u->name.' ? ผู้ใช้จะเข้าสู่ระบบไม่ได้ แต่ประวัติทั้งหมดยังอยู่ และเปิดใช้งานกลับได้'), variant: 'warning', confirmText: 'ระงับ' })">
                                                 @csrf
                                                 @method('PATCH')
                                                 <button type="submit"
@@ -304,7 +304,7 @@
                         @if ($u->id !== auth()->id())
                             @if ($u->isSuspended())
                                 <form method="POST" action="{{ route('admin.users.reactivate', $u) }}" class="inline"
-                                    onsubmit="return confirm(@js('เปิดใช้งานบัญชี '.$u->name.' อีกครั้ง?'));">
+                                    onsubmit="return confirmSubmit(event, { title: 'ยืนยันการเปิดใช้งานบัญชี', message: @js('เปิดใช้งานบัญชี '.$u->name.' อีกครั้ง?'), variant: 'success', confirmText: 'เปิดใช้งาน' })">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit"
@@ -315,7 +315,7 @@
                                 </form>
                             @else
                                 <form method="POST" action="{{ route('admin.users.suspend', $u) }}" class="inline"
-                                    onsubmit="return confirm(@js('ระงับบัญชี '.$u->name.' ? ผู้ใช้จะเข้าสู่ระบบไม่ได้ แต่ประวัติทั้งหมดยังอยู่ และเปิดใช้งานกลับได้'));">
+                                    onsubmit="return confirmSubmit(event, { title: 'ยืนยันการระงับบัญชี', message: @js('ระงับบัญชี '.$u->name.' ? ผู้ใช้จะเข้าสู่ระบบไม่ได้ แต่ประวัติทั้งหมดยังอยู่ และเปิดใช้งานกลับได้'), variant: 'warning', confirmText: 'ระงับ' })">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit"

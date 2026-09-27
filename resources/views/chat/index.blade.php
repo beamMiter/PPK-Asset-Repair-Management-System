@@ -25,7 +25,7 @@
         showDeleteModal: false,
         submitThread() {
             if (!this.newThreadTitle.trim()) {
-                alert('กรุณากรอกหัวข้อกระทู้');
+                window.showToast({ type: 'warning', message: 'กรุณากรอกหัวข้อกระทู้' });
                 return;
             }
             document.getElementById('final-thread-title').value = this.newThreadTitle.trim();

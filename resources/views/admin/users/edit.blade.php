@@ -107,14 +107,14 @@
                 @if ($user->id !== auth()->id())
                     @if ($user->isSuspended())
                         <form action="{{ route('admin.users.reactivate', $user) }}" method="POST"
-                            onsubmit="return confirm(@js('เปิดใช้งานบัญชี ' . $user->name . ' อีกครั้ง?'));">
+                            onsubmit="return confirmSubmit(event, { title: 'ยืนยันการเปิดใช้งานบัญชี', message: @js('เปิดใช้งานบัญชี ' . $user->name . ' อีกครั้ง?'), variant: 'success', confirmText: 'เปิดใช้งาน' })">
                             @csrf
                             @method('PATCH')
                             <x-ui.button type="submit" variant="primary" icon="lock_open">เปิดใช้งานบัญชี</x-ui.button>
                         </form>
                     @else
                         <form action="{{ route('admin.users.suspend', $user) }}" method="POST"
-                            onsubmit="return confirm(@js('ระงับบัญชี ' . $user->name . ' ? ผู้ใช้จะเข้าสู่ระบบไม่ได้ แต่ประวัติทั้งหมดยังอยู่'));">
+                            onsubmit="return confirmSubmit(event, { title: 'ยืนยันการระงับบัญชี', message: @js('ระงับบัญชี ' . $user->name . ' ? ผู้ใช้จะเข้าสู่ระบบไม่ได้ แต่ประวัติทั้งหมดยังอยู่'), variant: 'warning', confirmText: 'ระงับ' })">
                             @csrf
                             @method('PATCH')
                             <x-ui.button type="submit" variant="warning" icon="block">ระงับบัญชี</x-ui.button>

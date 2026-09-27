@@ -16,7 +16,7 @@ const code = (await build({ entryPoints: [SRC], bundle: true, format: 'iife', wr
 const LS_KEY = 'myjobs.notify.sound.enabled';
 
 function makeWorld({ stored = null, echo = true } = {}) {
-  const world = { activated: false, plays: [], subs: [], handlers: {}, alerts: [], registry: {}, docListeners: {}, winListeners: {}, storage: {} };
+  const world = { activated: false, plays: [], subs: [], handlers: {}, toasts: [], registry: {}, docListeners: {}, winListeners: {}, storage: {} };
   if (stored !== null) world.storage[LS_KEY] = stored;
 
   class El {
@@ -67,7 +67,7 @@ function makeWorld({ stored = null, echo = true } = {}) {
 
   const sandbox = {
     console: { log() {}, warn() {}, error() {} }, setTimeout, clearTimeout, Promise, JSON, Math, Number, Object, Array, parseFloat,
-    document, alert: (m) => world.alerts.push(m), addEventListener: (t, f) => (world.winListeners[t] ||= []).push(f),
+    document, showToast: (o) => world.toasts.push(o), addEventListener: (t, f) => (world.winListeners[t] ||= []).push(f),
     localStorage: { getItem: (k) => world.storage[k] ?? null, setItem: (k, v) => { world.storage[k] = String(v); } },
     IntersectionObserver: class { observe() {} disconnect() {} },
   };
@@ -161,7 +161,7 @@ test('clicking the bell while the saved "on" is still locked unlocks it — it d
   assert.equal(w.storage[LS_KEY], '1', 'still on');
   assert.equal(iconOf(page), 'bi bi-bell-fill');
   assert.equal(w.plays.length, 1, 'the beep that was waiting plays exactly once');
-  assert.deepEqual(w.alerts, []);
+  assert.deepEqual(w.toasts, []);
 });
 
 test('the browser refusing audio is reported, and the sound stays off', async () => {
@@ -170,7 +170,8 @@ test('the browser refusing audio is reported, and the sound stays off', async ()
   const audio = page.notifySound;
   audio.play = () => Promise.reject(new Error('NotAllowedError'));
   await w.click(page.notifyToggleBtn);
-  assert.equal(w.alerts.length, 1);
+  assert.equal(w.toasts.length, 1);
+  assert.equal(w.toasts[0].type, 'warning');
   assert.notEqual(w.storage[LS_KEY], '1');
 });
 
