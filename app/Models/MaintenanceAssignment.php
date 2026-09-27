@@ -9,9 +9,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MaintenanceAssignment extends Model
 {
     protected $table = 'maintenance_assignments';
+
+    // status (งานระดับ assignment)
+    public const STATUS_ASSIGNED    = 'assigned';
     public const STATUS_IN_PROGRESS = 'in_progress';
     public const STATUS_DONE        = 'done';
     public const STATUS_CANCELLED   = 'cancelled';
+
+    // response_status (การตอบรับงาน)
     public const RESP_PENDING       = 'pending';
     public const RESP_ACCEPTED      = 'accepted';
     public const RESP_REJECTED      = 'rejected';
@@ -26,16 +31,17 @@ class MaintenanceAssignment extends Model
 
         'response_status',
         'responded_at',
+        'remark',
 
         'status',
     ];
 
     protected $casts = [
-        'assigned_at'      => 'datetime',
-        'responded_at'     => 'datetime',
-        'is_lead'          => 'boolean',
-        'status'           => 'string',
-        'response_status'  => 'string',
+        'assigned_at'     => 'datetime',
+        'responded_at'    => 'datetime',
+        'is_lead'         => 'boolean',
+        'status'          => 'string',
+        'response_status' => 'string',
     ];
 
     public function maintenanceRequest(): BelongsTo
@@ -48,10 +54,6 @@ class MaintenanceAssignment extends Model
         return $this->belongsTo(User::class);
     }
 
-    // -----------------------
-    // Scopes (MyJob)
-    // -----------------------
-
     public function scopeForUser(Builder $q, int $userId): Builder
     {
         return $q->where('user_id', $userId);
@@ -59,9 +61,7 @@ class MaintenanceAssignment extends Model
 
     public function scopeActive(Builder $q): Builder
     {
-        return $q->whereIn('status', [
-            self::STATUS_IN_PROGRESS,
-        ]);
+        return $q->whereIn('status', [self::STATUS_IN_PROGRESS]);
     }
 
     public function scopeInProgress(Builder $q): Builder
@@ -87,40 +87,5 @@ class MaintenanceAssignment extends Model
     public function scopeAcknowledged(Builder $q): Builder
     {
         return $q->where('response_status', self::RESP_ACKNOWLEDGED);
-    }
-
-    public function markAccepted(): bool
-    {
-        return $this->forceFill([
-            'response_status' => self::RESP_ACCEPTED,
-            'responded_at'    => now(),
-        ])->save();
-    }
-
-    public function markRejected(): bool
-    {
-        return $this->forceFill([
-            'response_status' => self::RESP_REJECTED,
-            'responded_at'    => now(),
-        ])->save();
-    }
-
-    public function markAcknowledged(): bool
-    {
-        return $this->forceFill([
-            'response_status' => self::RESP_ACKNOWLEDGED,
-            'responded_at'    => now(),
-        ])->save();
-    }
-
-    public function responseLabelTH(): string
-    {
-        return match ($this->response_status) {
-            self::RESP_PENDING      => 'รอรับเรื่อง',
-            self::RESP_ACCEPTED     => 'รับเรื่อง',
-            self::RESP_REJECTED     => 'ไม่รับเรื่อง',
-            self::RESP_ACKNOWLEDGED => 'รับทราบ',
-            default                => 'ไม่ทราบสถานะ',
-        };
     }
 }

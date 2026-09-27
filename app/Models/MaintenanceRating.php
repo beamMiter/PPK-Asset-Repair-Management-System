@@ -25,8 +25,6 @@ class MaintenanceRating extends Model
         'score' => 'integer',
     ];
 
-    /* ================= RELATIONSHIPS ================= */
-
     public function request(): BelongsTo
     {
         return $this->belongsTo(MaintenanceRequest::class, 'maintenance_request_id');
@@ -42,7 +40,6 @@ class MaintenanceRating extends Model
         return $this->belongsTo(User::class, 'technician_id');
     }
 
-    /* ================= SCOPES ================= */
 
     public function scopeForTechnician(Builder $query, int $technicianId): Builder
     {
@@ -53,8 +50,6 @@ class MaintenanceRating extends Model
     {
         return $query->where('maintenance_request_id', $requestId);
     }
-
-    /* ================= HELPERS ================= */
 
     public static function hasRated(int $requestId, int $raterId): bool
     {

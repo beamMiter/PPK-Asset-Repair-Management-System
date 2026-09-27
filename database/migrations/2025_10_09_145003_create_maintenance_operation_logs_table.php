@@ -11,50 +11,49 @@ return new class extends Migration
         Schema::create('maintenance_operation_logs', function (Blueprint $table) {
             $table->id();
 
-            $table->index('user_id');
-
-            // ผูกกับใบงาน (ใช้ชื่อให้เข้ากับ maintenance_assignments)
+            // เชื่อมโยงกับใบงานแจ้งซ่อม (1 ใบงานต่อ 1 รายงานการปฏิบัติงาน)
             $table->foreignId('maintenance_request_id')
                 ->constrained('maintenance_requests')
                 ->cascadeOnUpdate()
                 ->cascadeOnDelete();
 
-            // คนที่บันทึก (ช่าง / แอดมิน)
+            // ผู้ที่บันทึกรายงานการปฏิบัติงาน (ปกติคือช่าง)
             $table->foreignId('user_id')
                 ->nullable()
                 ->constrained('users')
                 ->cascadeOnUpdate()
                 ->nullOnDelete();
 
-            // วันที่ปฏิบัติงาน / วันที่ลงรายงาน
+            // วันที่ทำการปฏิบัติงานจริง
             $table->date('operation_date')->nullable();
 
-            // วิธีการปฏิบัติ : ตามใบเบิก / ค่าบริการ / อื่น ๆ
+            // วิธีการดำเนินการ (requisition = เบิกอะไหล่, service_fee = ส่งซ่อมภายนอก/เสียค่าบริการ, other = อื่น ๆ)
             $table->enum('operation_method', ['requisition', 'service_fee', 'other'])
                 ->nullable();
 
-            // รพจ. = รหัสครุภัณฑ์ (Property Code) เช่น 68101068718
-            $table->string('property_code', 100)
-                ->nullable()
-                ->comment('รหัสครุภัณฑ์ (รพจ.)');
+            // หมายเลขครุภัณฑ์ (รพจ.) สำหรับตรวจสอบความถูกต้องหน้างาน
+            $table->string('property_code', 100)->nullable();
 
-            // ยืนยันว่าได้แจ้ง/ขออนุญาตผู้ใช้งาน/หน่วยงานก่อนปฏิบัติงาน/ปิดเครื่อง
+            // บังคับให้มีการขออนุญาต/ตรวจสอบก่อนปฏิบัติงาน (เช่น การปิดเครื่องมือแพทย์)
             $table->boolean('require_precheck')->default(false);
 
-            // หมายเหตุ/รายละเอียดเพิ่มเติมในการปฏิบัติงาน
+            // รายละเอียดหรือหมายเหตุเพิ่มเติมในการปฏิบัติงาน
             $table->text('remark')->nullable();
 
-            // ประเภทปัญหา
+            // เป็นปัญหาที่เกี่ยวข้องกับ Software หรือไม่
             $table->boolean('issue_software')->default(false);
+
+            // เป็นปัญหาที่เกี่ยวข้องกับ Hardware หรือไม่
             $table->boolean('issue_hardware')->default(false);
 
             $table->timestamps();
 
-            // บังคับ 1 ใบงาน → มีได้ 1 รายงานการปฏิบัติงาน
+            // Index/Unique ให้ตรง schema dump
             $table->unique('maintenance_request_id', 'uniq_operation_log_request');
 
-            $table->index(['operation_date']);
-            $table->index(['property_code']);
+            $table->index('user_id');               // maintenance_operation_logs_user_id_index
+            $table->index('operation_date');        // maintenance_operation_logs_operation_date_index
+            $table->index('property_code');         // maintenance_operation_logs_property_code_index
         });
     }
 

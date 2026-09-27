@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Support\Like;
 
 class Department extends Model
 {
@@ -44,14 +45,7 @@ class Department extends Model
 
     public function getDisplayNameAttribute(): string
     {
-        $th = trim((string) $this->name_th);
-        $en = trim((string) $this->name_en);
-
-        if ($th && $en) {
-            return "{$th} ({$en})";
-        }
-
-        return $th ?: $en;
+        return trim((string) $this->name_th) ?: trim((string) $this->name_en);
     }
 
     protected $appends = [
@@ -65,24 +59,14 @@ class Department extends Model
         return $code ? $q->where('code', $code) : $q;
     }
 
-    public function scopeNameLike($q, ?string $name)
-    {
-        if (!$name) return $q;
-
-        return $q->where(function ($qq) use ($name) {
-            $qq->where('name_th', 'like', "%{$name}%")
-               ->orWhere('name_en', 'like', "%{$name}%");
-        });
-    }
-
     public function scopeSearch($q, ?string $term)
     {
         if (!$term) return $q;
 
         return $q->where(function ($qq) use ($term) {
-            $qq->where('code', 'like', "%{$term}%")
-               ->orWhere('name_th', 'like', "%{$term}%")
-               ->orWhere('name_en', 'like', "%{$term}%");
+            $qq->where('code', 'like', Like::contains($term))
+               ->orWhere('name_th', 'like', Like::contains($term))
+               ->orWhere('name_en', 'like', Like::contains($term));
         });
     }
 }

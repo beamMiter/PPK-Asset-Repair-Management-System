@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use Illuminate\Support\Str;
 
 class Breadcrumb
 {
@@ -50,8 +49,19 @@ class Breadcrumb
             // ---------------------------------------------------
 
             if (is_numeric($segment)) {
-                // ถ้าเป็นตัวเลข ให้ใส่ # นำหน้า
                 $label = '#' . $segment;
+
+                // NEW: If we are on a maintenance request route, try to use formal request_no
+                $route = request()->route();
+                if ($route) {
+                    // MaintenanceRequest can be bound to 'req' or 'maintenanceRequest' parameters
+                    $reqObj = $route->parameter('req') ?? $route->parameter('maintenanceRequest');
+
+                    // If the segment matches the ID of the bound request, use its formal number
+                    if ($reqObj instanceof \App\Models\MaintenanceRequest && (string) $reqObj->id === (string) $segment) {
+                        $label = '#' . ($reqObj->request_no ?? $segment);
+                    }
+                }
             } else {
                 // ถ้าไม่ใช่ตัวเลข ให้แปลงชื่อตามกฎที่เราตั้ง
                 $label = self::getLabel($segment);
@@ -90,7 +100,6 @@ class Breadcrumb
             'evaluate' => 'Evaluate Ratings',
 
             // อื่นๆ
-            'queue'       => 'Repair Queue',
             'users'       => 'User Management',
             'create'      => 'Create',
             'edit'        => 'Edit',

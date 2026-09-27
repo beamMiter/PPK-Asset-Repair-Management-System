@@ -7,7 +7,7 @@ return [
     'convert_entities' => true,
 
     'options' => [
-        'font_dir'   => public_path('fonts'),   // ใช้ public/fonts
+        'font_dir'   => public_path('images/fonts'),   // ใช้ public/images/fonts
         'font_cache' => storage_path('fonts'),  // cache จะเก็บใน storage ก็ได้
         'temp_dir'   => sys_get_temp_dir(),
         'chroot'     => realpath(base_path()),
@@ -39,15 +39,15 @@ return [
 
     // *** ตรงนี้คือส่วนที่เมื่อก่อนนายใส่ผิดที่ ***
     // ต้องอยู่นอก options แบบนี้
-    'font_dir'   => public_path('fonts'),
+    'font_dir'   => public_path('images/fonts'),
     'font_cache' => storage_path('fonts'),
 
     'fonts' => [
         'sarabun' => [
-            'normal'      => public_path('fonts/Sarabun-Regular.ttf'),
-            'bold'        => public_path('fonts/Sarabun-Bold.ttf'),
-            'italic'      => public_path('fonts/Sarabun-Regular.ttf'),
-            'bold_italic' => public_path('fonts/Sarabun-Bold.ttf'),
+            'normal'      => public_path('images/fonts/Sarabun-Regular.ttf'),
+            'bold'        => public_path('images/fonts/Sarabun-Bold.ttf'),
+            'italic'      => public_path('images/fonts/Sarabun-Regular.ttf'),
+            'bold_italic' => public_path('images/fonts/Sarabun-Bold.ttf'),
         ],
     ],
 

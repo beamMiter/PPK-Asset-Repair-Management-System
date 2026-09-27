@@ -29,6 +29,9 @@ class Attachment extends Model
 {
     use SoftDeletes;
 
+    const HERO_ORDER = -1;
+
+
     protected $fillable = [
         // polymorphic target
         'attachable_type',
@@ -126,11 +129,6 @@ class Attachment extends Model
     public function getIsImageAttribute(): bool
     {
         return (bool) (optional($this->file)->isImage());
-    }
-
-    public function deleteSafely(): bool
-    {
-        return (bool) $this->delete();
     }
 
     /**

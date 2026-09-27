@@ -13,8 +13,9 @@ class ApiAuthTest extends TestCase
 
     public function test_login_fails_with_invalid_credentials(): void
     {
+        // Well-formed but unknown citizen_id → credential check, not validation.
         $resp = $this->postJson('/api/auth/login', [
-            'email' => 'no@example.com',
+            'citizen_id' => '1111111111111',
             'password' => 'wrongpass',
         ]);
         $resp->assertStatus(401);
@@ -28,7 +29,7 @@ class ApiAuthTest extends TestCase
         ]);
 
         $resp = $this->postJson('/api/auth/login', [
-            'email' => $user->email,
+            'citizen_id' => $user->citizen_id,
             'password' => 'secret1234',
             'device_name' => 'test',
         ]);
@@ -36,11 +37,10 @@ class ApiAuthTest extends TestCase
         $token = $resp->json('token');
         $this->assertIsString($token);
 
-        // Use Sanctum actingAs for /auth/me
         Sanctum::actingAs($user);
         $me = $this->getJson('/api/auth/me');
         $me->assertOk()->assertJsonStructure([
-            'id','name','email','role','abilities'
+            'id', 'name', 'email', 'role', 'abilities',
         ]);
     }
 }

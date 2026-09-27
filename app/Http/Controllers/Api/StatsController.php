@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Department;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Carbon;
 
 class StatsController extends Controller
 {
@@ -14,22 +14,16 @@ class StatsController extends Controller
         $key = 'stats:summary:v1';
         $payload = Cache::remember($key, 60, function () {
             $assetTotal = DB::table('assets')->count();
+            // Open / closed sets must match the model's canonical split
+            // (MaintenanceRequest::syncAssetStatus): 'acknowledged' is open,
+            // 'rejected' is terminal — both were missing here.
             $openRequests = DB::table('maintenance_requests')->whereIn('status', [
-                'pending','accepted','in_progress','on_hold'
+                'pending','acknowledged','accepted','in_progress','on_hold'
             ])->count();
             $closedRequests = DB::table('maintenance_requests')->whereIn('status', [
-                'resolved','closed','cancelled'
+                'resolved','closed','cancelled','rejected'
             ])->count();
 
-            $priorityRaw = DB::table('maintenance_requests')
-                ->selectRaw('priority, COUNT(*) as c')
-                ->groupBy('priority')
-                ->pluck('c','priority')
-                ->all();
-            $priorities = [];
-            foreach (['low','medium','high','urgent'] as $p) {
-                $priorities[$p] = (int) ($priorityRaw[$p] ?? 0);
-            }
 
             $recent = DB::table('maintenance_requests')
                 ->selectRaw('DATE(created_at) as d, COUNT(*) as c')
@@ -48,7 +42,6 @@ class StatsController extends Controller
                 'assets_total'    => $assetTotal,
                 'requests_open'   => $openRequests,
                 'requests_closed' => $closedRequests,
-                'priority_counts' => $priorities,
                 'recent_daily'    => $recentSeries,
             ];
         });
@@ -73,8 +66,8 @@ class StatsController extends Controller
         $rows = Cache::remember('stats:technician_summary:v1', 60, function () {
             return DB::table('maintenance_requests')
             ->selectRaw('technician_id as id,
-                SUM(CASE WHEN status IN (\'pending\',\'accepted\',\'in_progress\',\'on_hold\') THEN 1 ELSE 0 END) as open_count,
-                SUM(CASE WHEN status IN (\'resolved\',\'closed\',\'cancelled\') THEN 1 ELSE 0 END) as closed_count,
+                SUM(CASE WHEN status IN (\'pending\',\'acknowledged\',\'accepted\',\'in_progress\',\'on_hold\') THEN 1 ELSE 0 END) as open_count,
+                SUM(CASE WHEN status IN (\'resolved\',\'closed\',\'cancelled\',\'rejected\') THEN 1 ELSE 0 END) as closed_count,
                 COUNT(*) as total_count,
                 AVG(CASE WHEN resolved_at IS NOT NULL AND started_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, started_at, resolved_at) END) as avg_hours
             ')
@@ -111,7 +104,8 @@ class StatsController extends Controller
             ->get();
         });
         $ids = $rows->pluck('id')->all();
-        $deptNames = $ids ? DB::table('departments')->whereIn('id',$ids)->pluck('name','id')->all() : [];
+        // departments have name_th / name_en, not `name` — this endpoint answered 500 every time
+        $deptNames = $ids ? Department::whereIn('id', $ids)->get()->pluck('display_name', 'id')->all() : [];
         $mapped = $rows->map(fn($r) => [
             'id'    => $r->id,
             'name'  => $deptNames[$r->id] ?? null,

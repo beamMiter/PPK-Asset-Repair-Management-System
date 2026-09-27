@@ -8,36 +8,48 @@ use App\Models\User;
 use App\Policies\UserPolicy;
 use App\Models\MaintenanceRequest as MR;
 use App\Policies\MaintenanceRequestPolicy;
+use App\Models\MaintenanceRequestType;
+use App\Policies\MaintenanceRequestTypePolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
     protected $policies = [
         User::class => UserPolicy::class,
-        MR::class   => MaintenanceRequestPolicy::class,
+        MR::class => MaintenanceRequestPolicy::class,
+        MaintenanceRequestType::class => MaintenanceRequestTypePolicy::class,
+        \App\Models\Asset::class => \App\Policies\AssetPolicy::class,
     ];
 
     public function boot(): void
     {
         $this->registerPolicies();
 
-        // จัดการผู้ใช้: admin หรือหัวหน้า (supervisor)
+        // manage users — admin only (was: admin + supervisor + every worker role,
+        // which let any IT worker open /admin/users and read the full staff list)
         Gate::define('manage-users', function (User $user): bool {
-            return $user->role === User::ROLE_ADMIN || $user->isSupervisor();
+            return $user->isAdmin();
         });
 
-        // Dashboard งานซ่อม: admin, หัวหน้า + ทีมปฏิบัติการ (worker)
+        // repair dashboard
         Gate::define('view-repair-dashboard', function (User $user): bool {
             return $user->role === User::ROLE_ADMIN || $user->isSupervisor() || $user->isWorker();
         });
 
-        // หน้างานของฉัน: admin, หัวหน้า, หรือทีมปฏิบัติการ (worker)
+        // my jobs
         Gate::define('view-my-jobs', function (User $user): bool {
             return $user->role === User::ROLE_ADMIN || $user->isSupervisor() || $user->isWorker();
         });
 
-        // ใช้ในบาง Blade: admin, หัวหน้า, หรือช่าง
-        Gate::define('tech-only', function (User $user): bool {
-            return $user->role === User::ROLE_ADMIN || $user->isSupervisor() || $user->isWorker();
+        // System management (sidebar "การจัดการระบบ"): maintenance types, notification sounds, users.
+        // Admin only. Kept separate from `maintenance-type-manage`, which also opens the SLA dashboard and the
+        // technician rating board for supervisors / workers.
+        Gate::define('manage-system', function (User $user): bool {
+            return $user->isAdmin();
+        });
+
+        // SLA dashboard + technician rating board
+        Gate::define('maintenance-type-manage', function (User $user): bool {
+            return $user->isAdmin() || $user->isSupervisor() || $user->isTechnician();
         });
     }
 }

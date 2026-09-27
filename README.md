@@ -1,156 +1,111 @@
 <p align="center">
-  <img src="imagesREADME/PPK.png" width="200" alt="PPK Logo">
+  <img src="public/images/logoppk2.png" width="400" alt="PPK Logo">
 </p>
 
-## Run with Docker (local)
+# PPK Asset & Repair Management System
 
-Quick start:
+Asset and repair-management system for Phra Pokklao Hospital (โรงพยาบาลพระปกเกล้า).
 
-1) Copy env and set app key (inside container after up)
+## Project Overview
 
-2) Start stack
+Built to raise the standard of asset and equipment repair management within the organization, with an emphasis on data
+transparency, service speed (SLA), and accurate statistics — working toward preventive maintenance planning down the line.
 
-3) Generate key and migrate
+## Key Features
 
-4) Open app and Vite
+- **Repair requests & status tracking**: report an issue through the system with photo attachments, and track its status in real time
+- **Asset Registry**: links equipment records, repair history and usage status together automatically
+- **SLA Dashboard**: tracks response and resolution speed against their targets
+- **Technician Leaderboard**: rates and ranks technicians by their work and the satisfaction scores they receive
+- **Live Chat**: an organization-wide message board (threads), messages in real time, a moderator can lock/delete a thread, and a thread nobody uses is automatically locked and later deleted after a set period (not tied to any particular job)
+- **User manual**: the "คู่มือการใช้งาน" menu (`resources/views/help/manual.blade.php`) is kept in step with whatever feature changes — `ManualIsCurrentTest` checks that every button, menu name and number it cites still matches the system
 
-Commands (PowerShell):
+## Design & UI Standards
 
-```powershell
-# 0) Prepare env (first time)
-Copy-Item .env.docker.example .env -Force
+To keep the system professional and easy to use (user-centric design), it follows these standards:
 
-# 1) Start containers
-docker compose up -d
+- **Typography**: Inter as the primary typeface
+    - Titles: font-semibold (600)
+    - Body: font-medium (500) or font-normal (400)
+    - Black (900) weight is avoided, for a cleaner look
+- **Flat UI**: a minimal, flat visual style
+    - Fewer shadows on cards and buttons
+    - Sections are separated with background colour and light borders instead
+- **Data integrity**: an asset's status and its repair requests stay in sync at all times
 
-# 2) App key and DB migrations (first time)
-docker compose exec app php artisan key:generate
-docker compose exec app php artisan migrate --seed
+## Access
 
-# Optional: run tests
-docker compose exec app php artisan test -q
+- **Application URL**: [http://localhost:8000](http://localhost:8000)
 
-#Request Me if you want .env.docker.example 
-```
+### Authentication (trial system)
 
-URLs:
-- App: http://localhost:8080
-- Vite Dev (hot reload): http://localhost:5173 (exposed to LAN if host machine IP reachable)
-- DB: host=localhost port=3307 db=arm user=arm pass=arm
+Sign-in here is a **trial setup for local / internal testing**, not the final login. People register themselves on `/register` (13-digit
+citizen ID, name, password) and get a plain member account; an admin then sets their role and department. Nothing checks that the
+citizen ID belongs to the person who typed it, and that is deliberate for now.
 
-Services:
-- app (php-fpm), web (nginx), node (vite), db (mariadb), redis
+The real login will be built on the hospital's own personnel database, once this system is connected to it and the staff records can be
+pulled from there. Until then, treat every account as unverified, and do not put this instance where the public can reach it. The HIS
+asset lookup is in the same state: `HisAssetSyncService::getMockHisData()` is a mock that answers for any number, to be replaced by the
+hospital's API (the field mapping is in `mapHisPayload()`, in one place).
 
-Notes:
-- Change ports in `docker-compose.yml` if they conflict locally.
-- For production build, run `npm run build` in the node container or GitHub Actions and serve `public/build`.
- - A root `Dockerfile` is provided for building a production PHP-FPM image (multi-stage). The compose stack uses `./.docker/Dockerfile` for local dev.
- - If you see CORS / `net::ERR_FAILED` when loading `http://localhost:5173` scripts from a different host/IP, remove the file `public/hot` (created by Vite dev) OR configure HMR host below.
+### Development notes
 
-### Vite Dev over LAN
+- **Vite dev server**: starts on port **5173** (set via `VITE_PORT`) and moves itself to the next free port if another project is
+  already using it — the port actually used is written to `public/hot`
+- If the port setup changes, check `vite.config.js` and `docker-compose.yml`
 
-To use hot reload from another device (phone/tablet) on the same network:
+## Technical Stack
 
-1. Ensure the dev machine firewall allows inbound port 5173.
-2. Add to `.env` (optional override):
-  ```env
-  VITE_HMR_HOST=192.168.x.y   # your machine LAN IP
-  VITE_HMR_PORT=5173
-  VITE_HMR_PROTOCOL=http
-  ```
-3. Run `npm run dev` (or inside container `docker compose exec node npm run dev`).
-4. Access the app via its LAN address (e.g. `http://192.168.x.y:8080`). The Vite config now exposes HMR on `0.0.0.0` and will serve bundles correctly.
+- **Backend**: Laravel 13 (PHP 8.3+; the image runs 8.4)
+- **Frontend**: Tailwind CSS 3.4, Alpine.js, Turbo, Blade templates, Vite 7
+- **Database**: MySQL / MariaDB
+- **Real-time**: Laravel Broadcasting over Pusher (private channels) — without a connection the chat page polls every 5 seconds
+  (once connected, that drops to a 15-second safety-net poll), and the floating chat widget checks every 30 seconds
+- **Queue / Cache**: Redis (optional)
 
-If you switch back to production (no HMR):
+## Running it
+
 ```bash
-rm -f public/hot
-npm run build
-```
-Then reload the app; it will use `public/build` manifest.
-
-Troubleshooting:
-- Stale `public/hot` while not running dev server ⇒ remove it.
-- Multiple “already been used with custom-element” warnings ⇒ harmless (duplicate registration) but ensure only one lottie-player script tag globally.
-- Dropdowns not responding ⇒ confirm `app-*.js` from `public/build` or dev server appears in Network tab and `window.initSearchSelects` is a function.
-## Run locally without Redis (Windows/macOS/Linux)
-
-Redis is optional. The default `.env` already uses database + file drivers so the app runs even if the PHP Redis extension is missing.
-
-Minimal `.env` (excerpt) for a Redis-free setup:
-
-```env
-CACHE_STORE=database        # database cache + rate limiter
-SESSION_DRIVER=file         # file-based sessions
-QUEUE_CONNECTION=database   # uses jobs table (run migrations) OR set sync
-# QUEUE_CONNECTION=sync
-
-# These can be commented out if you prefer (unused unless you switch drivers)
-# REDIS_CLIENT=phpredis
-# REDIS_HOST=127.0.0.1
-# REDIS_PORT=6379
+docker compose up -d --build        # app (php-fpm), web (nginx :8000), db, redis, worker, scheduler, node (vite :5173)
+docker compose exec app php artisan migrate:fresh --seed    # a fresh dev database with demo data (never on real data)
 ```
 
-Details:
-- Health endpoint skips Redis when the extension/class isn’t present.
-- Rate limiting (login, etc.) uses the configured cache store; with `database` it writes to the `cache` table.
-- To enable Redis later: install server + PHP extension, then set `CACHE_STORE=redis` and (optionally) `QUEUE_CONNECTION=redis`.
-- If you keep `QUEUE_CONNECTION=database`, run a worker: `php artisan queue:work`.
+| Service | What it does |
+|---|---|
+| `app` | PHP-FPM; the only container that runs migrations (`RUN_MIGRATIONS`) |
+| `web` | nginx on `:8000`: static files, `/build` (cached for a year, gzip), `/storage` uploads (served sandboxed, with `nosniff`) |
+| `worker` | `queue:work` |
+| `scheduler` | `schedule:work` — **required**: it runs `chat:expire-idle` (03:00 Thai time), `chat:purge-deleted` (03:10) and `sanctum:prune-expired`; without it nothing scheduled ever runs |
+| `db`, `redis`, `node` | MariaDB, Redis, the Vite dev server |
 
+PHP limits live in `.docker/php.ini` (uploads 12 MB a file, 40 MB a request, `memory_limit` 512M, opcache); nginx's `client_max_body_size`
+(`.docker/nginx.conf`) is kept equal to `post_max_size`. In a production deployment set `PHP_OPCACHE_VALIDATE_TIMESTAMPS=0` so PHP stops
+re-reading files that never change.
 
-## About Laravel
+## Settings worth knowing (`.env`)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Key | What it is for | If unset |
+|---|---|---|
+| `TRUSTED_PROXIES` | The proxy / load balancer address(es) in front of nginx (comma separated, CIDR allowed; `*` only if the app is reachable through the proxy alone) | nobody is a proxy — right for a machine with none in front. **Behind one, set it**: otherwise every user shares the proxy's address (the sign-in limit locks everybody together, records name the proxy) and https is not detected |
+| `APP_TRUSTED_HOSTS` | Host names besides `APP_URL`'s that the app may be reached by in production | any other Host header gets a 400 |
+| `BROADCAST_CONNECTION`, `PUSHER_APP_*` | Real-time chat and notifications | the chat page polls every 5 s instead of receiving pushes |
+| `CHAT_*` (see `config/chat.php`) | Flood limits, threads per day (5), messages loaded per page (30), and how long a conversation lives: idle → locked after 90 days (`CHAT_LOCK_IDLE_AFTER_DAYS`), locked → deleted after 90 more (`CHAT_DELETE_LOCKED_AFTER_DAYS`), deleted → erased after 30 (`CHAT_PURGE_DELETED_AFTER_DAYS`); `0` turns a rule off | the defaults in that file |
+| `SANCTUM_TOKEN_EXPIRATION_MINUTES` | API token lifetime | 30 days |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Tests
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```bash
+php artisan test        # PHP - uses its own MySQL database (see phpunit.xml), never the dev one
+npm run test:js         # the browser-side logic (Node's test runner, a fake DOM)
+```
 
-## Learning Laravel
+## Where things live
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+`app/Http/Controllers` (web, and `Api/` for the token API), `app/Services` (logic that reads or writes the database),
+`app/Support` (small helpers with no database), `app/Events/Chat` (chat broadcast events), `app/Console` (artisan commands),
+`resources/js/<page>/` (one bundle per page, listed in `vite.config.js`), `tests/Feature` (grouped by area: `Chat/`, `Infra/`, `Ui/`, `Auth/`),
+`openapi.yaml` (the API), `CHANGELOG.md` (what changed, `[Unreleased]` first).
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-## Laravel Sponsors
-
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
-
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Developed for PPK Hospital. All rights reserved.

@@ -18,12 +18,22 @@
         </include>
     </source>
     <php>
+        <!-- The whole suite runs in one process and the PDF tests each build a full dompdf document: 128M (the CLI default) was
+             already close before the report layout tests, and ran out in the last third of the run. -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
+        <!-- Never the developer's real push service: whatever BROADCAST_CONNECTION the .env holds, a test that posts a chat message would
+             announce it to the real Pusher app with the real keys. A test that needs Pusher configures it itself (a dead port, or dummy keys). -->
+        <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <!-- <env name="DB_CONNECTION" value="sqlite"/> -->
-        <!-- <env name="DB_DATABASE" value=":memory:"/> -->
+        <!-- A separate MySQL database on the same server, not the dev one: RefreshDatabase runs migrate:fresh against
+             whatever DB_DATABASE resolves to, and the dev DB (the one the app itself, and anyone logged in, uses) was
+             it — every test run reset every password to the seeder's and signed everyone out, since migrate:fresh
+             also drops the sessions table. Same host/port/user, so no other config changes. -->
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_DATABASE" value="ppk_asset_repair_dataAsset_Repair_Management_testing"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

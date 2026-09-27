@@ -1,0 +1,48 @@
+/* Styles of the sidebar (components/sidebar.blade.php): the hidden scrollbar, the press effect on the phone close button, and the
+   full-height drawer the sidebar becomes on a phone. Linked from the app layout's <head> right after topbar.css: its <style> sat
+   inside <aside>, after the top bar's at the top of <body> and before any style a page body brings. */
+
+/* ซ่อน Scrollbar แต่ยังเลื่อนได้ */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* เอฟเฟกต์ตอนกดปุ่มในมือถือ */
+.btn-close-trigger:active {
+    transform: scale(0.9);
+    transition: 0.1s;
+}
+
+/* Mobile: จัดการให้เต็มจอ ทับ Navbar และไม่กระทบส่วนอื่น */
+@media (max-width: 1024px) {
+    .mobile-sidebar-container {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        height: 100dvh !important;
+        width: 280px !important;
+        /* กำหนดความกว้างตายตัวให้ออกมาสวยงาม */
+        max-width: 85vw !important;
+        z-index: 9999 !important;
+        /* ทับทุกสิ่งบนจอ */
+        background-color: white !important;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08) !important;
+        /* ใส่เงาเบาๆ แทนการทำพื้นหลังจาง */
+    }
+
+    .sidebar .menu-item,
+    .mobile-sidebar-container .menu-item {
+        min-height: 48px;
+    }
+
+    .mobile-sidebar-container .sidebar-nav {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+}

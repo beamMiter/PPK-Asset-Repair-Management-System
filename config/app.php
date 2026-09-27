@@ -17,6 +17,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Browser-tab title suffix
+    |--------------------------------------------------------------------------
+    | Every page's <title> is "<Page name> • <this>" — the page names are English, set per view with
+    | @section('title', 'Assets'). Change the product name here, not in each layout.
+    */
+    'title_suffix' => 'PPK Asset Repair',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application Version
+    |--------------------------------------------------------------------------
+    |
+    | Kept in step with the git tag, package.json and CHANGELOG.md. Bump all
+    | four together when cutting a release.
+    |
+    */
+
+    'version' => '2.0.0',
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
@@ -54,6 +75,13 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Optional separate front end (SPA). Empty = the Blade app serves the password-reset page itself.
+    'frontend_url' => env('APP_FRONTEND_URL'),
+
+    // Host names, besides APP_URL's own, this app may be reached by in production (comma separated: "ppk.example.go.th,10.0.0.5").
+    // Any other Host header is refused with a 400 — see App\Http\Middleware\TrustProductionHosts.
+    'trusted_hosts' => array_values(array_filter(array_map('trim', explode(',', (string) env('APP_TRUSTED_HOSTS', ''))))),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
@@ -78,7 +106,10 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    // Thai, always: the staff are Thai, the messages a form gives back (lang/th) and the dates (Carbon) follow this.
+    // Not read from .env any more: a checkout's .env carrying APP_LOCALE=en (the framework's stock value) silently made every validation
+    // toast English, and a test run depend on the machine it ran on.
+    'locale' => 'th',
 
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 

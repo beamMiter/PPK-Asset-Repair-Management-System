@@ -1,0 +1,337 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\MaintenanceRequest as MR;
+use App\Models\MaintenanceAssignment;
+use App\Models\MaintenanceLog;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+
+class MaintenanceTransitionService
+{
+    /**
+     * ดำเนินการอัปเดตสถานะหลักของใบงานซ่อม
+     * พร้อมอัปเดต Timestamps ที่เกี่ยวข้อง จัดการเจ้าหน้าที่ และเก็บประวัติ Log
+     */
+    public function applyTransition(MR $req, array $data, ?int $actorId = null): MR
+    {
+        return DB::transaction(function () use ($req, $data, $actorId) {
+            $locked = MR::query()
+                ->whereKey($req->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $originalStatus = (string) $locked->status;
+            $originalTechId = (int) ($locked->technician_id ?? 0);
+
+            $targetStatus = strtolower((string) ($data['status'] ?? ''));
+            if ($targetStatus === '') {
+                abort(409, 'สถานะไม่ถูกต้อง');
+            }
+
+            $from = strtolower((string) $originalStatus);
+            $allowedNext = MR::ALLOWED_TRANSITIONS;
+            $isStatusChange = ($from !== $targetStatus);
+
+            // The same status again — a double click that got past the gate, a client that repeats itself: nothing to do, and
+            // no "X → X" row in the history. (A payload with `technician_id` is the edit path saying who is in charge.)
+            if (! $isStatusChange && ! array_key_exists('technician_id', $data)) {
+                abort(409, 'ใบงานนี้อยู่ในสถานะนี้แล้ว');
+            }
+
+            if ($isStatusChange) {
+                $nexts = $allowedNext[$from] ?? [];
+                if (!in_array($targetStatus, $nexts, true)) {
+                    abort(409, 'สถานะไม่ถูกต้อง');
+                }
+
+                // บังคับระบุเหตุผลเมื่อหยุดการซ่อมบำรุงชั่วคราว
+                if ($targetStatus === MR::STATUS_ON_HOLD && empty(trim($data['note'] ?? ''))) {
+                    abort(409, 'ต้องระบุเหตุผลในการหยุดการซ่อมบำรุงชั่วคราว');
+                }
+
+                // คำนวณเวลาหยุดการซ่อมบำรุงชั่วคราวเมื่อออกจากการหยุดชั่วคราว
+                if ($from === MR::STATUS_ON_HOLD && $locked->on_hold_at) {
+                    $onHoldAt = Carbon::parse($locked->on_hold_at);
+                    // Carbon 3: diffInSeconds() is signed and returns a float —
+                    // force an absolute int so clock skew / bad data can't push
+                    // paused_duration_minutes and the due dates backwards.
+                    $pausedSecs = (int) $onHoldAt->diffInSeconds(now(), true);
+
+                    // อัปเกรดเป็นวินาทีเพื่อความเป๊ะ (Pe-Pa)
+                    $locked->paused_duration_minutes = (int) $locked->paused_duration_minutes + (int) ceil($pausedSecs / 60);
+                    
+                    if ($locked->sla_due_date) {
+                        $locked->sla_due_date = Carbon::parse($locked->sla_due_date)->addSeconds($pausedSecs);
+                    }
+                    if ($locked->response_due_date && !$locked->acknowledged_at) {
+                        $locked->response_due_date = Carbon::parse($locked->response_due_date)->addSeconds($pausedSecs);
+                    }
+
+                    // Leaving ON_HOLD: clear the marker so on_hold_at set means
+                    // "currently on hold". Every reader already guards by status,
+                    // and the next hold re-stamps it below.
+                    $locked->on_hold_at = null;
+                }
+
+                $locked->status = $targetStatus;
+            }
+
+            $canChangeTech = in_array($locked->status, [MR::STATUS_ACKNOWLEDGED, MR::STATUS_ACCEPTED], true);
+
+            if (
+                $canChangeTech &&
+                array_key_exists('technician_id', $data) &&
+                !empty($data['technician_id']) &&
+                (int) $locked->technician_id !== (int) $data['technician_id']
+            ) {
+                $locked->technician_id = (int) $data['technician_id'];
+            }
+
+            // A job with nobody in charge gets its lead when work starts: whoever presses start, if they are a worker; if it is
+            // an admin or supervisor (who run the process, not the repair — joinTeam keeps them out of the team for the same
+            // reason) the first worker of the team. It used to be whoever pressed the button: an admin became the technician, and
+            // the reporter's rating was credited to a person the technician board never lists.
+            if ($locked->status === MR::STATUS_IN_PROGRESS && empty($locked->technician_id)) {
+                $locked->technician_id = $this->leadForStart($locked, $actorId);
+            }
+
+            $now = now();
+
+            switch ($locked->status) {
+                case MR::STATUS_ACKNOWLEDGED:
+                    $locked->acknowledged_at ??= $now;
+                    break;
+                case MR::STATUS_ACCEPTED:
+                    if (!$locked->accepted_at) {
+                        $locked->accepted_at = $now;
+                        $locked->assigned_date ??= $now;
+                        
+                        // SLA calculations are now handled in the model creating hook
+                        // using the MaintenanceRequestType defaults.
+                    }
+                    break;
+                case MR::STATUS_IN_PROGRESS:
+                    $locked->started_at ??= $now;
+                    break;
+                case MR::STATUS_ON_HOLD:
+                    $locked->on_hold_at = $now;
+                    break;
+                case MR::STATUS_RESOLVED:
+                    $locked->resolved_at ??= $now;
+                    break;
+                case MR::STATUS_CLOSED:
+                    $locked->closed_at      ??= $now;
+                    $locked->completed_date ??= $now;
+                    break;
+            }
+
+            if ($isStatusChange) {
+                $locked->status_updated_at = $now;
+                $locked->status_updated_by = $actorId;
+            }
+
+            $locked->save();
+
+            // Finishing / cancelling settles the team rows whether or not somebody is "in charge": only jobs with a
+            // technician_id used to (the assign dialog leaves it empty), so the others kept "in progress" rows for good.
+            if ($isStatusChange) {
+                $this->settleTeam($locked);
+            }
+
+            $newTechId   = (int) ($locked->technician_id ?? 0);
+            $techChanged = ($originalTechId !== $newTechId);
+
+            if (($techChanged || $isStatusChange) && $newTechId > 0) {
+                $currentTeamIds = $locked->assignments()
+                    ->where('status', '!=', MaintenanceAssignment::STATUS_CANCELLED)
+                    ->pluck('user_id')
+                    ->toArray();
+                    
+                $currentTeamIds = array_filter($currentTeamIds, fn($id) => $id != $newTechId);
+                array_unshift($currentTeamIds, $newTechId);
+                
+                $this->syncAssignments($locked, array_values($currentTeamIds), $actorId);
+            }
+
+            // "รับเรื่อง" makes the technician who pressed it part of the job. Nothing else did: he was not on the team, so the
+            // job page (where he goes next) and every later step were closed to him — and to every other technician.
+            if ($isStatusChange && $locked->status === MR::STATUS_ACCEPTED && $actorId) {
+                $this->joinTeam($locked, $actorId);
+            }
+
+            if ($techChanged) {
+                $locked->loadMissing('technician:id,name');
+            }
+
+            $labels = MR::statusLabels();
+            $fromLabel = $labels[$originalStatus] ?? $originalStatus;
+            $toLabel = $labels[$locked->status] ?? $locked->status;
+
+            $defaultNote = $data['note'] ?? $this->defaultNoteForStatus($locked->status, $actorId, $locked);
+            $finalNote = trim("[{$fromLabel} -> {$toLabel}] " . $defaultNote);
+
+            if ($techChanged && $locked->technician) {
+                $finalNote = trim($finalNote . ' - เจ้าหน้าที่: ' . $locked->technician->name);
+            }
+
+            MaintenanceLog::create([
+                'request_id'  => $locked->id,
+                'action'      => MaintenanceLog::ACTION_TRANSITION,
+                'note'        => $finalNote ?: null,
+                'user_id'     => $actorId,
+                'from_status' => $originalStatus,
+                'to_status'   => $locked->status,
+            ]);
+
+            return $locked;
+        });
+    }
+
+    /**
+     * ดำเนินการอัปเดตทีมงาน (Assignment) ตามข้อมูลล่าสุดของใบงาน
+     */
+    public function syncAssignments(MR $req, array $userIds, ?int $actorId = null): void
+    {
+        if (empty($userIds)) {
+            MaintenanceAssignment::where('maintenance_request_id', $req->id)->update([
+                'status'          => MaintenanceAssignment::STATUS_CANCELLED,
+                'is_lead'         => false,
+                'response_status' => MaintenanceAssignment::RESP_PENDING,
+                'responded_at'    => null,
+                'updated_at'      => now(),
+            ]);
+            Log::info('[MaintenanceTransitionService] All workers marked as cancelled', ['mr_id' => $req->id]);
+            return;
+        }
+
+        MaintenanceAssignment::where('maintenance_request_id', $req->id)
+            ->whereNotIn('user_id', $userIds)
+            ->update([
+                'status'          => MaintenanceAssignment::STATUS_CANCELLED,
+                'is_lead'         => false,
+                'response_status' => MaintenanceAssignment::RESP_PENDING,
+                'responded_at'    => null,
+                'updated_at'      => now(),
+            ]);
+
+        $status = match ($req->status) {
+            MR::STATUS_RESOLVED,
+            MR::STATUS_CLOSED     => MaintenanceAssignment::STATUS_DONE,
+            MR::STATUS_CANCELLED,
+            MR::STATUS_REJECTED   => MaintenanceAssignment::STATUS_CANCELLED,
+            default              => MaintenanceAssignment::STATUS_IN_PROGRESS,
+        };
+
+        foreach ($userIds as $index => $userId) {
+            $workerRole = User::query()->whereKey($userId)->value('role') ?? 'technician';
+            $isLead     = ($index === 0);
+
+            $as = MaintenanceAssignment::updateOrCreate(
+                [
+                    'maintenance_request_id' => $req->id,
+                    'user_id'                => $userId,
+                ],
+                [
+                    'role'    => $workerRole,
+                    'is_lead' => $isLead,
+                    'status'  => $status,
+                ]
+            );
+
+            if (empty($as->assigned_at)) {
+                $as->assigned_at = now();
+                $as->save();
+            }
+        }
+    }
+
+    /**
+     * Who is in charge of a job that is starting with nobody in charge.
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException 409 when there is no worker to put in charge
+     */
+    protected function leadForStart(MR $req, ?int $actorId): int
+    {
+        if ($actorId && in_array(User::query()->whereKey($actorId)->value('role'), User::workerRoles(), true)) {
+            return $actorId;
+        }
+
+        $lead = MaintenanceAssignment::where('maintenance_request_id', $req->id)
+            ->where('status', '!=', MaintenanceAssignment::STATUS_CANCELLED)
+            ->whereHas('user', fn ($user) => $user->whereIn('role', User::workerRoles())->whereNull('suspended_at'))
+            ->orderByDesc('is_lead')->orderBy('assigned_at')->orderBy('id')
+            ->value('user_id');
+
+        if (! $lead) {
+            abort(409, 'ต้องมอบหมายเจ้าหน้าที่ซ่อมบำรุงให้ใบงานนี้ก่อนเริ่มดำเนินการ');
+        }
+
+        return (int) $lead;
+    }
+
+    /** resolved / closed → the team's part is done; cancelled / rejected → their rows are cancelled. Anything else: untouched. */
+    protected function settleTeam(MR $req): void
+    {
+        $to = match ($req->status) {
+            MR::STATUS_RESOLVED, MR::STATUS_CLOSED     => MaintenanceAssignment::STATUS_DONE,
+            MR::STATUS_CANCELLED, MR::STATUS_REJECTED  => MaintenanceAssignment::STATUS_CANCELLED,
+            default                                    => null,
+        };
+
+        if ($to === null) {
+            return;
+        }
+
+        MaintenanceAssignment::where('maintenance_request_id', $req->id)
+            ->where('status', '!=', MaintenanceAssignment::STATUS_CANCELLED)
+            ->update(['status' => $to, 'updated_at' => now()]);
+    }
+
+    /**
+     * Put a technician on the job (no lead: the person in charge is whoever starts it). Admins and supervisors who accept on
+     * someone's behalf stay supervisors — they can already do everything — and do not become the worker.
+     */
+    protected function joinTeam(MR $req, int $userId): void
+    {
+        $role = User::query()->whereKey($userId)->value('role');
+        if (! in_array($role, User::workerRoles(), true)) {
+            return;
+        }
+
+        $assignment = MaintenanceAssignment::where('maintenance_request_id', $req->id)->where('user_id', $userId)->first();
+        if ($assignment && $assignment->status !== MaintenanceAssignment::STATUS_CANCELLED) {
+            return;
+        }
+
+        MaintenanceAssignment::updateOrCreate(
+            ['maintenance_request_id' => $req->id, 'user_id' => $userId],
+            [
+                'role'            => $role,
+                'is_lead'         => false,
+                'status'          => MaintenanceAssignment::STATUS_IN_PROGRESS,
+                'assigned_at'     => $assignment?->assigned_at ?? now(),
+                'response_status' => MaintenanceAssignment::RESP_ACCEPTED,
+                'responded_at'    => now(),
+            ]
+        );
+    }
+
+    protected function defaultNoteForStatus(string $status, ?int $actorId, MR $req): string
+    {
+        return match ($status) {
+            MR::STATUS_ACKNOWLEDGED => 'รับทราบแล้ว',
+            MR::STATUS_ACCEPTED     => 'รับเรื่องแล้ว',
+            MR::STATUS_IN_PROGRESS  => 'กำลังดำเนินการ',
+            MR::STATUS_ON_HOLD      => 'หยุดการซ่อมบำรุงชั่วคราว/รออะไหล่',
+            MR::STATUS_RESOLVED     => 'ซ่อมเสร็จแล้ว',
+            MR::STATUS_CLOSED       => 'อนุมัติผลการซ่อมบำรุง',
+            MR::STATUS_CANCELLED    => 'ยกเลิก',
+            MR::STATUS_REJECTED     => 'ไม่รับเรื่อง',
+            default                 => 'อัปเดตสถานะ',
+        };
+    }
+}

@@ -1,188 +1,770 @@
 @extends('layouts.app')
-@section('title', 'Community Chat | ระบบแลกเปลี่ยนเรียนรู้')
+@section('title', 'Livechat')
 
 @section('content')
-@php
-    /* ประกาศ Class แค่นี้พอครับ ตัวแดงจะหายไป */
-    use Illuminate\Support\Str;
-    $q = request('q');
-@endphp
+    @php
+        $q = request('q');
+        $activeThreadId = request('thread_id');
+        // We only highlight if the thread_id is explicitly in the request to prevent "permanent" first item color
+        $defaultThreadId = $activeThreadId;
+        // which list is open: every thread, or only those I started or wrote in ("mine") - carried by every link that stays in the chat
+        $scope = $scope ?? 'all';
+        $scopeQuery = $scope !== 'all' ? ['scope' => $scope] : [];
+        $tabs = ['all' => ['ทั้งหมด', $counts['all'] ?? 0], 'mine' => ['กระทู้ที่มีส่วนร่วม', $counts['mine'] ?? 0]];
+        // "ซ่อนไว้": only when there is something hidden (or the list is open, so its way back is there)
+        if (($counts['hidden'] ?? 0) > 0 || $scope === 'hidden') {
+            $tabs['hidden'] = ['ซ่อนไว้', $counts['hidden'] ?? 0];
+        }
+    @endphp
 
-<style>
-    /* คุมโทนจากหน้าทรัพย์สิน */
-    .sticky-chat-header {
-        position: -webkit-sticky;
-        position: sticky;
-        top: 6rem;
-        z-index: 20;
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(8px);
-        border-bottom: 1px solid #E2E8F0;
-    }
-</style>
+    {{-- Main Container: Unified Pane --}}
+    <div id="chat-pane" x-data="{
+        showCreateModal: false,
+        newThreadTitle: '',
+        showLockModal: false,
+        showDeleteModal: false,
+        submitThread() {
+            if (!this.newThreadTitle.trim()) {
+                window.showToast({ type: 'warning', message: 'กรุณากรอกหัวข้อกระทู้' });
+                return;
+            }
+            document.getElementById('final-thread-title').value = this.newThreadTitle.trim();
+            window.Loader?.show();
+            document.getElementById('hidden-create-thread').submit();
+        },
+        locked: @js((bool) ($activeThread->is_locked ?? false)),
+        lockUrl: @js(isset($activeThread) ? route('chat.lock', $activeThread) : ''),
+        unlockUrl: @js(isset($activeThread) ? route('chat.unlock', $activeThread) : ''),
+        // Lock or unlock without leaving the page. The state flips at once; the broadcast that follows says the same thing
+        // (so nobody, this person included, is told twice), and a failure puts it back.
+        async submitLock() {
+            this.showLockModal = false;
+            const wasLocked = this.locked;
+            this.locked = !wasLocked;
+            try {
+                const r = await fetch(wasLocked ? this.unlockUrl : this.lockUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+                    },
+                });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                const j = await r.json();
+                this.locked = !!j.is_locked;
+                window.showToast?.({ type: 'success', message: j.message, title: j.title });
+            } catch (e) {
+                this.locked = wasLocked;
+                window.showToast?.({ type: 'error', message: 'ไม่สามารถเปลี่ยนสถานะการล็อกกระทู้ได้ กรุณาลองใหม่อีกครั้ง' });
+            }
+        },
+        // Set once the lock flips while the page is open (by hand, by a moderator, live): the deletion date below was worked out for the state the
+        // page was drawn in, so from then on the notice speaks of the rule (N days) instead of a date that may no longer be right.
+        // (No double quote in a comment here: this is the value of an HTML attribute, and one would end it - the script would print on the page.)
+        lockChanged: false,
+        init() { this.$watch('locked', () => { this.lockChanged = true; }); },
+        deleting: false,
+        submitDelete() {
+            this.deleting = true; // this page is on its way to the list, so the broadcast that the thread was deleted has nothing to tell it
+            window.Loader?.show();
+            document.getElementById('hidden-delete-thread').submit();
+        },
+        chatStatus: 'connecting', // 'connecting', 'online', 'offline'
+        showEmojiPicker: false,
+        curatedEmojis: {
+            'Smileys': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😋', '😛', '😜', '🧐', '😎', '🥳', '😡', '😭', '😱', '🤔', '🤫'],
+            'Hands & Hearts': ['👍', '👎', '👌', '✌️', '🤞', '🤟', '👏', '🙌', '🙏', '🤝', '💪', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '✨', '🔥', '💯'],
+            'Tasks & Objects': ['✅', '❌', '⚠️', '💡', '📝', '📌', '📎', '📂', '📅', '⏰', '💻', '📱', '🔋', '⚙️', '🛠', '🔧', '🔨', '📦', '📧', '🔔', '🚀', '🏁', '🔒', '🔓']
+        },
+        insertEmoji(emoji) {
+            const el = document.getElementById('msgInput');
+            if (!el) return;
+            const start = el.selectionStart;
+            const end = el.selectionEnd;
+            const val = el.value;
+            el.value = val.substring(0, start) + emoji + val.substring(end);
+            el.selectionStart = el.selectionEnd = start + emoji.length;
+            el.focus();
+            // Trigger input to resize/re-evaluate textarea
+            el.dispatchEvent(new Event('input'));
+    
+            // Close the picker immediately after choosing
+            this.showEmojiPicker = false;
+        }
+    }"
+        @keydown.escape.window="showCreateModal = false; showLockModal = false; showEmojiPicker = false"
+        class="flex flex-col lg:flex-row flex-1 w-full min-h-0 bg-white border-t-0">
 
-<div class="pt-6 md:pt-8 lg:pt-10"></div>
+        {{-- LEFT PANEL: Thread List (Hidden on mobile if a thread is active) --}}
+        <div
+            class="w-full lg:w-[420px] flex-shrink-0 flex flex-col border-r border-slate-200 bg-white h-full relative z-10 {{ request('thread_id') ? 'hidden lg:flex' : '' }}">
+            {{-- Header & Search --}}
+            <div class="p-4 border-b border-slate-200 bg-white flex-shrink-0 z-10 relative">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div class="flex items-start gap-3 min-w-0">
+                        {{-- Header glyph — same style as My Jobs / users / settings pages --}}
+                        <span class="material-symbols-outlined text-[32px] text-[#0F2D5C] mt-0.5"
+                            aria-hidden="true">forum</span>
+                        <div>
+                            <h1 class="text-[17px] font-semibold text-slate-900">กระดานสนทนา</h1>
+                            <p class="text-[12px] text-slate-500 mt-0.5">พื้นที่แลกเปลี่ยนข้อมูลองค์กร</p>
+                        </div>
+                    </div>
 
-<div class="w-full flex flex-col">
-
-    {{-- ✅ ส่วนที่ 1: Header (ลอกขนาดและโครงสร้างหน้าทรัพย์สิน) --}}
-    <div class="sticky-chat-header">
-        <div class="px-4 md:px-6 lg:px-8 py-4">
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                    <h1 class="text-[17px] font-semibold text-slate-900">Community Chat</h1>
-                    <p class="text-[13px] text-slate-500">พื้นที่แลกเปลี่ยนและสอบถามข้อมูลภายในองค์กร</p>
-                </div>
-
-                <button type="submit" form="main-chat-form"
-                        class="inline-flex items-center gap-2 rounded-md bg-[#0F2D5C] px-4 py-2 text-[13px] font-medium text-white hover:bg-[#1e3a6d] shadow-sm transition-all">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    สร้างกระทู้ใหม่
-                </button>
-            </div>
-
-            {{-- Search Grid 12 ช่อง ตามหน้าทรัพย์สิน --}}
-            <form method="GET" id="main-chat-form" action="{{ route('chat.index') }}"
-                  class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end">
-
-                <div class="md:col-span-10">
-                    <label class="mb-1 block text-[12px] font-semibold text-slate-600">ค้นหาหัวข้อ / เริ่มตั้งหัวข้อใหม่</label>
-                    <div class="relative">
-                        <input name="q" value="{{ $q }}" id="chat-input"
-                               class="w-full rounded-md border border-slate-200 bg-white pl-10 pr-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/20 transition-all"
-                               placeholder="พิมพ์หัวข้อที่ต้องการค้นหา หรือพิมพ์ที่นี่แล้วกดปุ่มสร้างกระทู้ด้านบน...">
-                        <span class="absolute inset-y-0 left-0 flex items-center justify-center pl-3 text-slate-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                        </span>
+                    @php
+                        $quota = $threadQuota ?? ['unlimited' => true, 'remaining' => null, 'limit' => 0];
+                        $noneLeft = ! $quota['unlimited'] && $quota['remaining'] === 0;
+                    @endphp
+                    <div class="flex flex-col items-end">
+                    <button type="button" @click="showCreateModal = true" @disabled($noneLeft)
+                        class="inline-flex items-center gap-2 rounded-md bg-[#0F2D5C] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#0F2D5C]/90 transition-all focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/40 active:scale-95"
+                        title="{{ $noneLeft ? \App\Services\ChatQuota::refusal() : 'สร้างกระทู้ใหม่' }}">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                        สร้างกระทู้
+                    </button>
                     </div>
                 </div>
 
-                <div class="md:col-span-2 flex items-end justify-end gap-2">
-                    <a href="{{ route('chat.index') }}" onclick="showLoader()"
-                       class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-all"
-                       title="ล้างค่า">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" /></svg>
-                    </a>
-                    <button type="submit" class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#0F2D5C] text-white hover:bg-[#1e3a6d] shadow-md transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {{-- ✅ ส่วนที่ 2: แถบสถานะย่อย --}}
-    <div class="px-4 md:px-6 lg:px-8 py-2.5 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-        <h3 class="text-[11px] font-bold text-slate-500 uppercase tracking-[0.16em]">รายการกระทู้ล่าสุด</h3>
-        <span class="text-[11px] font-semibold text-slate-400 uppercase">จำนวน {{ $threads->total() }} รายการ</span>
-    </div>
-
-    {{-- ✅ ส่วนที่ 3: รายการกระทู้ (สไตล์ List คมๆ) --}}
-    <div class="divide-y divide-slate-100 bg-white">
-        @forelse($threads as $th)
-            <div class="group relative hover:bg-slate-50/50 transition-colors">
-                <a href="{{ route('chat.show', $th) }}" class="block px-4 md:px-6 lg:px-8 py-4" onclick="showLoader()">
-                    <div class="flex flex-col md:flex-row md:items-center gap-4">
-
-                        {{-- Status & Replies --}}
-                        <div class="flex items-center gap-3 md:w-32 shrink-0">
-                            @if($th->is_locked)
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200">ปิดกระทู้</span>
-                            @else
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 uppercase">Active</span>
+                {{-- How many threads I may still start today: a quiet line, the fraction in bold (same size as the words) and one dot per thread (filled = still mine) --}}
+                @php
+                    $quotaLow = ! $quota['unlimited'] && $quota['remaining'] === 1;
+                    $quotaTone = $noneLeft ? 'text-rose-600' : ($quotaLow ? 'text-amber-600' : 'text-[#0F2D5C]');
+                    $quotaDot = $noneLeft ? 'bg-rose-500' : ($quotaLow ? 'bg-amber-500' : 'bg-[#0F2D5C]');
+                @endphp
+                <div id="threadQuotaNote" role="status" title="นับใหม่ทุกวันตั้งแต่ 00:00 น. ตามเวลาไทย" class="mt-[14px] text-[12.5px]">
+                    <div class="flex items-center justify-between gap-[12px] text-slate-500">
+                        <span class="flex min-w-0 items-center gap-[6px]">
+                            <span class="material-symbols-outlined text-[16px] text-slate-400" aria-hidden="true">edit_note</span>
+                            <span>จำนวนการตั้งกระทู้ของคุณวันนี้คงเหลือ</span>
+                        </span>
+                        <span class="flex shrink-0 items-center gap-[10px]">
+                            @if (! $quota['unlimited'] && $quota['limit'] > 0 && $quota['limit'] <= 10)
+                                <span class="flex items-center gap-[3px]" aria-hidden="true">
+                                    @for ($i = 1; $i <= $quota['limit']; $i++)
+                                        <span class="h-[6px] w-[6px] rounded-full {{ $i <= $quota['remaining'] ? $quotaDot : 'bg-slate-200' }}"></span>
+                                    @endfor
+                                </span>
                             @endif
-                            <div class="flex items-center gap-1 text-slate-400 text-[11px] font-bold">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                                {{ $th->messages_count ?? 0 }}
+                            <span id="threadQuotaCount" class="font-bold tabular-nums {{ $quotaTone }}">{{ $quota['unlimited'] ? 'ไม่จำกัด' : $quota['remaining'] . '/' . $quota['limit'] }}</span>
+                        </span>
+                    </div>
+                    @if ($noneLeft)
+                        <p class="mt-[4px] pl-[22px] text-rose-600">ตั้งกระทู้ใหม่ได้ตั้งแต่ 00:00 น. ของพรุ่งนี้</p>
+                    @endif
+                </div>
+
+                <div class="mt-4">
+                    <form method="GET" action="{{ route('chat.index') }}" class="flex items-center gap-2">
+                        @if ($scopeQuery)
+                            <input type="hidden" name="scope" value="{{ $scope }}">
+                        @endif
+                        <div class="flex-1">
+                            <div class="relative">
+                                <input name="q" value="{{ $q }}"
+                                    class="w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 py-2 text-[13px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35 transition-all "
+                                    placeholder="ค้นหากระทู้...">
+                                <span
+                                    class="pointer-events-none absolute inset-y-0 left-0 flex w-9 items-center justify-center text-slate-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M21 21l-4.3-4.3M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </span>
                             </div>
                         </div>
 
-                        {{-- Title & Preview Content --}}
-                        <div class="flex-1 min-w-0">
-                            <h2 class="text-[14px] font-bold text-slate-800 group-hover:text-[#0F2D5C] transition-colors line-clamp-1">
-                                {{ $th->title }}
-                            </h2>
-                            @php $last = $th->latestMessage; @endphp
-                            <div class="text-[12px] text-slate-500 line-clamp-1 mt-0.5">
-                                @if($last)
-                                    <span class="font-bold text-slate-700">{{ $last->user->name ?? 'สมาชิก' }}:</span>
-                                    {{ Str::limit(strip_tags($last->body), 100) }}
-                                @else
-                                    <span class="italic text-slate-300">ยังไม่มีการตอบกลับ...</span>
+                        <button type="submit"
+                            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0F2D5C] text-white hover:bg-[#0F2D5C]/90 transition-all focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/45 active:scale-95"
+                            title="ค้นหา" aria-label="ค้นหา">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M21 21l-4.3-4.3M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {{-- Every thread, or only the ones I have a part in (the widget's "กระทู้ที่มีส่วนร่วม" is the same set, capped at the latest few) --}}
+            <nav class="px-[16px] flex gap-[24px] border-b border-slate-200 bg-white flex-shrink-0" aria-label="กรองรายการกระทู้">
+                @foreach ($tabs as $key => [$name, $count])
+                    @php $on = $scope === $key; @endphp
+                    <a href="{{ route('chat.index', $key === 'all' ? [] : ['scope' => $key]) }}"
+                        @if ($on) aria-current="page" @endif
+                        class="-mb-px border-b-2 pt-[10px] pb-[10px] text-[13px] font-semibold whitespace-nowrap transition-colors {{ $on ? 'border-[#0F2D5C] text-[#0F2D5C]' : 'border-transparent text-slate-500 hover:text-slate-800' }}">
+                        {{ $name }}
+                        <span class="ml-1 font-medium {{ $on ? 'text-[#0F2D5C]/70' : 'text-slate-400' }}">{{ number_format($count) }}</span>
+                    </a>
+                @endforeach
+            </nav>
+
+            <div class="px-4 py-2 border-b border-slate-100 bg-slate-50 flex items-center justify-between flex-shrink-0">
+                <span class="text-[11px] font-bold text-slate-600 uppercase tracking-widest">รายการอัปเดต</span>
+                <span class="text-[11px] font-semibold text-slate-400">
+                    {{ number_format($threads->total()) }} รายการ
+                </span>
+            </div>
+
+            {{-- List --}}
+            <div class="flex-1 overflow-y-auto bg-white divide-y divide-slate-100">
+                @forelse($threads as $th)
+                    @php
+                        $isActive = $defaultThreadId == $th->id;
+                    @endphp
+                    <div
+                        class="group relative transition-colors chat-item {{ $isActive ? 'bg-[#F4F7FB]' : 'hover:bg-slate-50' }}">
+                        @if ($isActive)
+                            <div class="absolute inset-y-0 left-0 w-1 bg-[#0F2D5C] z-20"></div>
+                        @endif
+                        <a href="{{ route('chat.index', ['thread_id' => $th->id, 'page' => $threads->currentPage()] + $scopeQuery) }}"
+                            class="block px-4 py-3.5 chat-thread-link">
+
+                            <div class="flex flex-col gap-1.5">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="flex flex-wrap gap-1.5 items-center">
+                                        @if ($isActive)
+                                            <span x-show="locked" @if (!$th->is_locked) style="display: none;" @endif
+                                                class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-600 border border-amber-200 uppercase tracking-wide">Locked</span>
+                                        @elseif ($th->is_locked)
+                                            <span
+                                                class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-600 border border-amber-200 uppercase tracking-wide">Locked</span>
+                                        @endif
+                                        <h3
+                                            class="truncate text-[14px] font-medium text-slate-800 {{ $isActive ? 'text-[#0F2D5C] font-semibold' : 'group-hover:text-[#0F2D5C]' }}">
+                                            {{ $th->title }}
+                                        </h3>
+                                    </div>
+                                    <div
+                                        class="flex items-center gap-1 text-slate-400 text-[10px] bg-slate-50 px-1.5 py-0.5 rounded-full shrink-0">
+                                        <span class="material-symbols-outlined text-[12px]">chat_bubble</span>
+                                        <span id="thread-count-{{ $th->id }}"
+                                            class="font-bold">{{ $th->messages_count ?? 0 }}</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-x-2 text-[11px] text-slate-500">
+                                    <span
+                                        class="font-medium text-slate-600 truncate max-w-[120px]">{{ $th->author->name ?? 'ไม่ทราบผู้ใช้งาน' }}</span>
+                                    <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                                    <span>{{ $th->updated_at->diffForHumans() }}</span>
+                                    @if (($unread[$th->id] ?? 0) > 0 && ! $isActive)
+                                        <span class="ml-auto shrink-0 text-[11px] font-semibold text-blue-600">ใหม่ {{ $unread[$th->id] > 99 ? '99+' : $unread[$th->id] }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                @empty
+                    <div class="py-16 bg-white">
+                        <x-ui.empty-state icon="forum">{{ blank($q) && $scope === 'mine' ? 'คุณยังไม่ได้ตั้งหรือตอบกระทู้ใดเลย' : (blank($q) && $scope === 'hidden' ? 'ไม่มีกระทู้ที่ซ่อนไว้' : 'ไม่พบข้อมูลกระทู้') }}</x-ui.empty-state>
+                    </div>
+                @endforelse
+
+                @if ($threads->hasPages())
+                    <div
+                        class="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0 -[0_-2px_6px_-2px_rgba(0,0,0,0.03)] z-10">
+                        <a href="{{ $threads->previousPageUrl() ?? '#' }}"
+                            class="inline-flex items-center justify-center h-8 px-3 rounded-md text-[11.5px] font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors {{ $threads->onFirstPage() ? 'opacity-40 pointer-events-none' : '' }}">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15 18l-6-6 6-6" />
+                            </svg>
+                            ก่อนหน้า
+                        </a>
+                        <span class="text-[11px] text-slate-400 font-semibold tracking-wide">หน้าที่
+                            {{ $threads->currentPage() }} / {{ $threads->lastPage() }}</span>
+                        <a href="{{ $threads->nextPageUrl() ?? '#' }}"
+                            class="inline-flex items-center justify-center h-8 px-3 rounded-md text-[11.5px] font-medium bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors {{ !$threads->hasMorePages() ? 'opacity-40 pointer-events-none' : '' }}">
+                            ถัดไป
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 ml-1" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 18l6-6-6-6" />
+                            </svg>
+                        </a>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        {{-- RIGHT PANEL: Chat Container --}}
+        <div class="hidden lg:flex flex-1 flex-col bg-slate-50 relative h-full {{ request('thread_id') ? '!flex' : '' }}">
+            {{-- Localized Loader for Right Panel (SPA transitions) --}}
+            <div id="panelLoader"
+                class="hidden absolute inset-0 z-[60] bg-slate-50/60 backdrop-blur-sm items-center justify-center">
+                <div class="loader-spinner"></div>
+            </div>
+            @if ($activeThread)
+                @php $thread = $activeThread; @endphp
+                {{-- UNTITLED UI HEADER LAYOUT --}}
+                <header class="shrink-0 w-full bg-white border-b border-gray-200 z-20">
+                    <div
+                        class="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-4 sm:px-6 sm:py-5 gap-2 sm:gap-3">
+                        <div class="flex items-start sm:items-center gap-3 w-full sm:flex-1 min-w-0">
+                            <div
+                                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 border border-gray-200 overflow-hidden mt-0.5 sm:mt-0">
+                                <img src="{{ $thread->author?->avatar_thumb_url ?? \App\Support\InitialsAvatar::url($thread->author?->name ?? '?', 96) }}"
+                                    class="h-full w-full object-cover" alt="ผู้สร้างกระทู้">
+                            </div>
+                            <div class="flex flex-col min-w-0 flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h1 class="text-[15px] sm:text-lg font-bold text-gray-900 leading-tight">
+                                        {{ $thread->title }}
+                                    </h1>
+                                    <span x-show="locked" @if (!$thread->is_locked) style="display: none;" @endif
+                                        class="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-800 uppercase shrink-0">Locked</span>
+                                </div>
+                                <div
+                                    class="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-[12px] text-gray-500 mt-0.5">
+                                    <span class="truncate"><span class="hidden sm:inline">ผู้ตั้งกระทู้: </span><span
+                                            class="font-medium text-gray-700">{{ $thread->author?->name ?? 'ไม่ทราบผู้ใช้งาน' }}</span></span>
+                                    <span class="w-1 h-1 rounded-full bg-gray-300 shrink-0"></span>
+                                    <span class="shrink-0">{{ number_format($totalMessages) }} ข้อความ</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            class="flex items-center justify-end gap-1.5 sm:gap-3 w-full sm:w-auto shrink-0 pl-[60px] sm:pl-0 mt-1 sm:mt-0">
+
+                            {{-- Header tools: icon only, no button background (the words live in title / aria-label) --}}
+                            @if ($canManageLock)
+                                <x-ui.button variant="ghost-warning" size="icon-lg" icon="lock" x-show="!locked"
+                                    :style="$thread->is_locked ? 'display: none;' : null"
+                                    @click="showLockModal = true" class="hidden sm:inline-flex" title="ล็อกกระทู้"
+                                    aria-label="ล็อกกระทู้" />
+                                <x-ui.button variant="ghost-warning" size="icon-lg" icon="lock_open" x-show="locked"
+                                    :style="$thread->is_locked ? null : 'display: none;'"
+                                    @click="showLockModal = true" class="hidden sm:inline-flex" title="ปลดล็อกกระทู้"
+                                    aria-label="ปลดล็อกกระทู้" />
+                            @endif
+
+                            {{-- Out of my "กระทู้ที่มีส่วนร่วม" (the tab and the widget) and back in; nothing is deleted, for me or for anyone --}}
+                            @if ($canHide ?? false)
+                                <form method="POST" action="{{ route('chat.hide', $thread) }}" class="inline-flex">
+                                    @csrf
+                                    <x-ui.button type="submit" variant="ghost" size="icon-lg" icon="visibility_off"
+                                        title="ซ่อนจากกระทู้ที่มีส่วนร่วม" aria-label="ซ่อนจากกระทู้ที่มีส่วนร่วม" />
+                                </form>
+                            @elseif ($hiddenByMe ?? false)
+                                <form method="POST" action="{{ route('chat.unhide', $thread) }}" class="inline-flex">
+                                    @csrf
+                                    @method('DELETE')
+                                    <x-ui.button type="submit" variant="ghost" size="icon-lg" icon="visibility"
+                                        title="แสดงในกระทู้ที่มีส่วนร่วมอีกครั้ง" aria-label="แสดงในกระทู้ที่มีส่วนร่วมอีกครั้ง" />
+                                </form>
+                            @endif
+
+                            @if ($canDelete ?? false)
+                                <x-ui.button variant="ghost-danger" size="icon-lg" icon="delete"
+                                    @click="showDeleteModal = true" title="ลบกระทู้" aria-label="ลบกระทู้" />
+                            @endif
+
+                            <x-ui.button id="btnHeaderRefresh" variant="ghost" size="icon-lg" icon="refresh"
+                                @click="if(typeof window.forceChatPoll === 'function') window.forceChatPoll()"
+                                class="hidden sm:inline-flex" title="รีเฟรช" aria-label="รีเฟรช" />
+
+                            <a href="{{ route('chat.index', $scopeQuery) }}"
+                                class="lg:hidden inline-flex items-center justify-center h-9 gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 sm:px-4 text-[13px] font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                <span class="hidden sm:inline">กลับ</span>
+                            </a>
+                        </div>
+                    </div>
+                </header>
+
+                {{-- Floating Go-To-Bottom Button --}}
+                <div class="relative w-full h-0 z-20">
+                    <button id="btnScrollBottom" type="button"
+                        class="hidden absolute top-4 right-4 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 transition-all">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            class="w-3.5 h-3.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                        </svg>
+                        ท้ายแชท
+                    </button>
+                </div>
+
+                {{-- CHAT SCROLL AREA --}}
+                <div id="chatBox" data-thread-id="{{ $activeThread->id }}" data-my-id="{{ $me->id ?? 0 }}"
+                    data-last-id="{{ $messages->last()?->id ?? 0 }}" data-first-id="{{ $messages->first()?->id ?? 0 }}" data-has-more="{{ ($hasEarlier ?? false) ? 1 : 0 }}"
+                    role="log" aria-live="polite" aria-relevant="additions text" aria-label="ข้อความในกระทู้"
+                    data-last-user-id="{{ $messages->last()?->user_id ?? 0 }}"
+                    data-chat-url="{{ route('chat.messages', $activeThread) }}" data-list-url="{{ route('chat.index') }}" data-can-moderate="{{ ($canManageLock ?? false) ? 1 : 0 }}"
+                    class="flex-1 overflow-y-auto w-full px-4 pt-3 pb-4 md:px-6 md:pt-5 md:pb-6 bg-slate-50 min-h-0 relative">
+                    @if ($messages->isEmpty())
+                        {{-- Empty State --}}
+                        <div class="flex h-full items-center justify-center" id="emptyStateMsg">
+                            <x-ui.empty-state icon="forum" hint="ส่งข้อความเพื่อเริ่มการสนทนา">เริ่มการสนทนา</x-ui.empty-state>
+                        </div>
+                    @else
+                        {{-- Older messages: loaded when the top is reached (page.js), and by this button for a keyboard --}}
+                        <div id="loadEarlierWrap" class="flex justify-center pb-3 {{ ($hasEarlier ?? false) ? '' : 'hidden' }}">
+                            <button id="btnLoadEarlier" type="button"
+                                class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/30">
+                                โหลดข้อความก่อนหน้า
+                            </button>
+                        </div>
+                        {{-- Message List (Untitled UI Design) --}}
+                        <div id="chatList" class="pb-2 flex flex-col">
+                            @php $lastUserId = null; @endphp
+                            @foreach ($messages as $m)
+                                @php
+                                    $isMe = $me && $m->user_id === $me->id;
+                                    $isConsecutive = $lastUserId === $m->user_id;
+                                    $lastUserId = $m->user_id;
+                                @endphp
+
+                                @include('chat._message', [
+                                    'm' => $m, 'isMe' => $isMe, 'isConsecutive' => $isConsecutive, 'first' => $loop->first,
+                                    'canDelete' => $activeThread->canDeleteMessage($m, $me),
+                                    'canEdit' => $activeThread->canEditMessage($m, $me),
+                                    'canModerate' => $canManageLock,
+                                ])
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
+                {{-- BOTTOM INPUT FORM --}}
+                <div class="shrink-0 w-full bg-white px-4 py-4 sm:px-6 border-t border-gray-100">
+                    <div class="mx-auto w-full max-w-screen-lg" x-show="!locked" @if ($thread->is_locked) style="display: none;" @endif>
+                        @if ($autoLockOn = $thread->autoLockWarningOn())
+                            {{-- taken away by resources/js/chat/page.js as soon as a message is added: the silence it warns of is over --}}
+                            <p id="idleLockWarning" role="status" class="mb-2 flex items-center gap-1.5 text-[12px] text-amber-700">
+                                <span class="material-symbols-outlined text-[16px]" aria-hidden="true">schedule</span>
+                                กระทู้นี้ไม่มีการตอบมานาน จะถูกล็อกอัตโนมัติในวันที่ {{ \App\Support\ThaiDate::long($autoLockOn) }} หากยังไม่มีข้อความใหม่
+                            </p>
+                        @endif
+                            <form method="POST" action="{{ route('chat.messages.store', $thread) }}" id="chatForm">
+                                @csrf
+                                <div
+                                    class="relative rounded-2xl border border-gray-200 bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all flex flex-col">
+                                    <label for="msgInput" class="sr-only">พิมพ์ข้อความ</label>
+                                    <textarea id="msgInput" name="body" required maxlength="3000" placeholder="พิมพ์ข้อความ..." rows="1"
+                                        class="block w-full resize-none border-0 bg-transparent py-3.5 px-4 text-[14.5px] text-gray-900 placeholder:text-gray-400 focus:ring-0 min-h-[52px] max-h-[160px] scrollbar-thin scrollbar-thumb-gray-200"></textarea>
+
+                                    <div
+                                        class="flex items-center justify-between px-3 pb-2 pt-1 border-t border-transparent">
+                                        <div class="flex items-center gap-1">
+                                            <div class="relative" @click.away="showEmojiPicker = false">
+                                                <button type="button" @click="showEmojiPicker = !showEmojiPicker"
+                                                    class="rounded-full p-2 text-gray-400 hover:bg-gray-50 hover:text-gray-500 transition-colors"
+                                                    title="Emoji">
+                                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                                        stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </button>
+
+                                                {{-- Emoji Picker Popover --}}
+                                                <div x-show="showEmojiPicker"
+                                                    x-transition:enter="transition ease-out duration-200"
+                                                    x-transition:enter-start="opacity-0 translate-y-2 scale-95"
+                                                    x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                                                    x-transition:leave="transition ease-in duration-100"
+                                                    x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                                                    x-transition:leave-end="opacity-0 translate-y-2 scale-95"
+                                                    class="absolute bottom-full left-0 mb-3 w-[280px] sm:w-[320px] bg-white rounded-xl -[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-slate-200 z-[100] overflow-hidden"
+                                                    x-cloak style="display: none;">
+
+                                                    <div
+                                                        class="p-3 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                                                        <template x-for="(list, category) in curatedEmojis"
+                                                            :key="category">
+                                                            <div class="mb-4 last:mb-0">
+                                                                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1"
+                                                                    x-text="category"></h4>
+                                                                <div class="grid grid-cols-7 sm:grid-cols-8 gap-1">
+                                                                    <template x-for="emoji in list" :key="emoji">
+                                                                        <button type="button" @click="insertEmoji(emoji)"
+                                                                            class="flex items-center justify-center p-1.5 text-xl hover:bg-slate-100 rounded-lg transition-colors transform hover:scale-110 active:scale-90">
+                                                                            <span x-text="emoji"></span>
+                                                                        </button>
+                                                                    </template>
+                                                                </div>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="submit"
+                                            class="inline-flex items-center justify-center rounded-full bg-blue-600 p-2.5 text-white hover:bg-blue-500 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 active:scale-95"
+                                            title="ส่งข้อความ">
+                                            <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current"
+                                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="w-full py-3 px-4 text-center text-gray-500 bg-gray-50 rounded-xl flex items-center justify-center gap-2 border border-gray-100"
+                            id="lockedNotice" role="status" x-show="locked" @if (!$thread->is_locked) style="display: none;" @endif>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                class="w-4 h-4 shrink-0">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                            </svg>
+                            <div>
+                                <span class="block text-[13px] font-medium">กระทู้นี้ถูกล็อก ไม่สามารถส่งข้อความใหม่ได้</span>
+                                @php($deleteAfter = (int) config('chat.delete_locked_after_days'))
+                                @if ($deleteAfter > 0)
+                                    @if ($autoDeleteOn = $thread->autoDeletesOn())
+                                        <span class="block text-[12px] text-amber-700 mt-0.5" id="autoDeleteDate" x-show="!lockChanged">
+                                            หากไม่มีการปลดล็อก กระทู้นี้จะถูกลบอัตโนมัติในวันที่ {{ \App\Support\ThaiDate::long($autoDeleteOn) }}</span>
+                                    @endif
+                                    <span class="block text-[12px] text-amber-700 mt-0.5" x-show="lockChanged" style="display: none;">
+                                        หากไม่มีการปลดล็อกภายใน {{ $deleteAfter }} วัน กระทู้นี้จะถูกลบอัตโนมัติ</span>
                                 @endif
                             </div>
                         </div>
+                </div>
+            @else
+                <div class="absolute inset-0 flex items-center justify-center bg-slate-50">
+                    <x-ui.empty-state icon="forum" hint="คลิกเลือกหัวข้อทางด้านซ้ายเพื่อเปิดอ่าน หรือสร้างกระทู้ใหม่">ยินดีต้อนรับสู่กระดานสนทนา</x-ui.empty-state>
+                </div>
+            @endif
+        </div>
 
-                        {{-- Author & Time (ภาษาไทย) --}}
-                        <div class="md:text-right shrink-0">
-                            <div class="text-[12px] font-bold text-slate-700">{{ $th->author->name ?? 'User' }}</div>
-                            <div class="text-[11px] text-slate-400 font-bold uppercase tracking-tighter">
-                                {{ $th->updated_at?->diffForHumans() }}
-                            </div>
-                        </div>
+        {{-- Form for actually submitting the new thread --}}
+        <form id="hidden-create-thread" method="POST" action="{{ route('chat.store') }}" class="hidden">
+            @csrf
+            <input type="hidden" name="title" id="final-thread-title">
+        </form>
 
-                        <div class="hidden md:block text-slate-200 group-hover:text-[#0F2D5C] transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
+        @if (isset($activeThread))
+            @if ($canDelete ?? false)
+                {{-- Form for deleting the thread --}}
+                <form id="hidden-delete-thread" method="POST" action="{{ route('chat.destroy', $activeThread) }}"
+                    class="hidden">
+                    @csrf
+                    @method('DELETE')
+                </form>
+            @endif
+        @endif
+
+        {{-- Create Thread Modal --}}
+        <template x-teleport="body">
+            <div x-show="showCreateModal"
+                class="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+                x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak style="display: none;">
+
+                <div class="bg-white rounded-md w-full max-w-md overflow-hidden border border-slate-200"
+                    @click.away="showCreateModal = false">
+
+                    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <h3 class="text-lg font-semibold text-slate-900 font-manrope">สร้างกระทู้ใหม่</h3>
+                        <x-ui.button @click="showCreateModal = false" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
+                    </div>
+
+                    <div class="p-6">
+                        <div class="mb-4">
+                            <label for="modal-thread-title"
+                                class="block text-[13px] font-medium text-slate-700 mb-2">หัวข้อกระทู้</label>
+                            <input type="text" id="modal-thread-title" x-model="newThreadTitle" x-ref="titleInput"
+                                @keydown.enter="submitThread()" x-init="$watch('showCreateModal', value => { if (value) { $nextTick(() => $refs.titleInput.focus()); } })"
+                                placeholder="กรุณากรอกหัวข้อกระทู้..."
+                                class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35 transition-all" maxlength="180">
+                            <p class="mt-2 text-[11px] text-slate-500 italic">*
+                                หัวข้อนี้จะปรากฏให้ผู้ใช้อื่นเห็นในรายการกระทู้</p>
+                            @unless (($threadQuota ?? ['unlimited' => true])['unlimited'])
+                                <p class="mt-1 text-[11px] text-slate-500">* วันนี้ตั้งกระทู้ได้อีก {{ $threadQuota['remaining'] }} จาก {{ $threadQuota['limit'] }} ครั้ง
+                                    (นับใหม่ตั้งแต่ 00:00 น. ตามเวลาไทย)</p>
+                            @endunless
+                            @if ($lifecycle = \App\Models\ChatThread::lifecycleNotice())
+                                <p class="mt-1 text-[11px] text-slate-500">* {{ $lifecycle }}</p>
+                            @endif
                         </div>
                     </div>
-                </a>
+
+                    <div class="px-6 py-4 bg-slate-50 flex justify-end gap-3 border-t border-slate-100">
+                        <button @click="showCreateModal = false"
+                            class="px-4 py-2 text-[13px] font-bold text-slate-600 hover:text-slate-800 transition-colors">ยกเลิก</button>
+                        <button @click="submitThread()"
+                            class="px-6 py-2 bg-[#0F2D5C] text-white rounded-md text-[13px] font-bold hover:bg-[#0F2D5C]/90 transition-all active:scale-95">สร้างกระทู้</button>
+                    </div>
+                </div>
             </div>
-        @empty
-            <div class="py-24 text-center text-slate-400 text-[13px] bg-white">
-                ไม่พบข้อมูลกระทู้ในขณะนี้
-            </div>
-        @endforelse
+        </template>
+
+        @if (isset($activeThread))
+            {{-- Lock/Unlock Thread Modal --}}
+            <template x-teleport="body">
+                <div x-show="showLockModal"
+                    class="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+                    x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+                    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak
+                    style="display: none;">
+
+                    <div class="bg-white rounded-md w-full max-w-sm overflow-hidden border border-slate-200"
+                        @click.away="showLockModal = false">
+
+                        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <h3 class="text-[15px] font-semibold text-amber-700 font-manrope">ยืนยันการดำเนินการ</h3>
+                            <x-ui.button @click="showLockModal = false" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
+                        </div>
+
+                        <div class="p-5 text-center">
+                            <div
+                                class="w-14 h-14 rounded-full bg-amber-50 text-amber-600 ring-1 ring-amber-200 flex items-center justify-center mx-auto mb-3">
+                                <span class="material-symbols-outlined text-3xl"
+                                    x-text="locked ? 'lock_open' : 'lock'">{{ $activeThread->is_locked ? 'lock_open' : 'lock' }}</span>
+                            </div>
+                            <p class="text-[14px] text-slate-700">
+                                คุณต้องการ <strong x-text="locked ? 'ปลดล็อก' : 'ล็อก'">{{ $activeThread->is_locked ? 'ปลดล็อก' : 'ล็อก' }}</strong>
+                                กระทู้นี้ใช่หรือไม่?
+                            </p>
+                            <p class="text-[14px] text-slate-500 mt-2" x-show="!locked"
+                                @if ($activeThread->is_locked) style="display: none;" @endif>เมื่อล็อกแล้ว
+                                ผู้ใช้อื่นจะไม่สามารถส่งข้อความใหม่ได้</p>
+                        </div>
+
+                        <div class="px-5 py-3 bg-slate-50 flex justify-center gap-2 border-t border-slate-100">
+                            <button @click="showLockModal = false"
+                                class="flex-1 px-4 py-2 text-[13px] font-semibold text-slate-600 hover:bg-slate-200 bg-slate-100 border border-slate-200 rounded-md transition-colors">ยกเลิก</button>
+                            <button @click="submitLock()"
+                                class="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-[13px] font-semibold transition-all focus:outline-none active:scale-95">ยืนยัน</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            @if ($canDelete ?? false)
+                {{-- Delete Thread Modal --}}
+                <template x-teleport="body">
+                    <div x-show="showDeleteModal"
+                        class="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+                        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+                        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak
+                        style="display: none;">
+
+                        <div class="bg-white rounded-md w-full max-w-sm overflow-hidden border border-slate-200"
+                            @click.away="showDeleteModal = false">
+
+                            <div
+                                class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                <h3 class="text-[15px] font-semibold text-red-600 font-manrope">ยืนยันการลบกระทู้</h3>
+                                <x-ui.button @click="showDeleteModal = false" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
+                            </div>
+
+                            <div class="p-5 text-center">
+                                <div
+                                    class="w-14 h-14 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-3">
+                                    <span class="material-symbols-outlined text-3xl">delete_forever</span>
+                                </div>
+                                <p class="text-[14px] text-slate-700">
+                                    คุณต้องการ <strong>ลบ</strong> กระทู้นี้ออกจากระบบใช่หรือไม่?
+                                </p>
+                                <p class="text-[13px] text-red-500 mt-2 font-medium">กระทู้และข้อความทั้งหมดจะถูกซ่อนทันที
+                                </p>
+                            </div>
+
+                            <div class="px-5 py-3 bg-slate-50 flex justify-center gap-2 border-t border-slate-100">
+                                <button @click="showDeleteModal = false"
+                                    class="flex-1 px-4 py-2 text-[13px] font-semibold text-slate-600 hover:bg-slate-200 bg-slate-100 border border-slate-200 rounded-md transition-colors">ยกเลิก</button>
+                                <button @click="submitDelete()"
+                                    class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-[13px] font-semibold transition-all focus:outline-none active:scale-95">ลบทิ้ง</button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            @endif
+        @endif
     </div>
+@endsection
 
-    {{-- Pagination --}}
-    @if($threads->hasPages())
-        <div class="px-4 md:px-6 lg:px-8 mt-6 mb-12">
-            {{ $threads->withQueryString()->links() }}
-        </div>
-    @endif
-</div>
-
-{{-- Hidden Form สำหรับสร้างกระทู้ --}}
-<form id="hidden-create-thread" method="POST" action="{{ route('chat.store') }}" style="display:none;">
-    @csrf
-    <input type="hidden" name="title" id="final-thread-title">
-</form>
-
-<script>
-    // ดักปุ่ม "สร้างกระทู้ใหม่"
-    document.querySelector('button[form="main-chat-form"]').addEventListener('click', function(e) {
-        e.preventDefault();
-        const inputVal = document.getElementById('chat-input').value;
-        if(!inputVal.trim()) {
-            alert('กรุณากรอกหัวข้อกระทู้ที่ต้องการสร้าง');
-            return;
-        }
-        document.getElementById('final-thread-title').value = inputVal;
-        showLoader();
-        document.getElementById('hidden-create-thread').submit();
-    });
-</script>
+@section('scripts')
+    @vite(['resources/js/chat/boot.js'])
 @endsection
 
 @section('after-content')
-<div id="loaderOverlay" class="loader-overlay">
-    <div class="loader-spinner"></div>
-</div>
-<style>
-    .loader-overlay{position:fixed;inset:0;background:rgba(255,255,255,.6);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:99999;visibility:hidden;opacity:0;transition:all .2s}
-    .loader-overlay.show{visibility:visible;opacity:1}
-    .loader-spinner{width:36px;height:36px;border:3.5px solid #0F2D5C;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-</style>
-<script>
-    function showLoader(){document.getElementById('loaderOverlay')?.classList.add('show')}
-    function hideLoader(){document.getElementById('loaderOverlay')?.classList.remove('show')}
-    document.addEventListener('DOMContentLoaded', hideLoader);
-</script>
+    <div id="loaderOverlay" class="loader-overlay">
+        <div class="loader-spinner"></div>
+    </div>
+
+    <style>
+        .loader-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, .6);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity .2s, visibility .2s
+        }
+
+        .loader-overlay.show {
+            visibility: visible;
+            opacity: 1
+        }
+
+        .loader-spinner {
+            width: 36px;
+            height: 36px;
+            border: 3.5px solid #0F2D5C;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin .7s linear infinite
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        .animate-bubble-in {
+            transition: all 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Send Button Hover Animation - Scoped to avoid affecting sidebar */
+        #chatForm .group:hover svg {
+            animation: plane-ready 1.5s ease-in-out infinite;
+        }
+
+        @keyframes plane-ready {
+
+            0%,
+            100% {
+                transform: translate(2px, -2px) rotate(12deg);
+            }
+
+            50% {
+                transform: translate(3px, -3px) rotate(15deg);
+            }
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden !important;
+        }
+
+        #main.content {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            padding: 0 !important;
+            padding-top: var(--topbar-h) !important;
+        }
+    </style>
 @endsection

@@ -21,10 +21,11 @@ class UserFactory extends Factory
      *
      * @return array<string, mixed>
      */
+    // กำหนดค่าเริ่มต้นให้กับ Model User
     public function definition(): array
     {
-        // รัน citizen_id ให้ไม่ซ้ำกันใน factory
-        static $citizenRunning = 2000000000000; // 13 หลัก
+        // รันหมายเลขบัตรประชาชน (citizen_id) ให้ไม่ซ้ำกันใน Factory
+        static $citizenRunning = 2000000000000; // เริ่มต้นที่ 13 หลัก
         $citizenRunning++;
 
         return [
@@ -34,9 +35,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password'          => static::$password ??= Hash::make('password'),
             'remember_token'    => Str::random(10),
-            // ใส่ default เพิ่มได้ถ้าอยาก เช่น role / department
-            // 'role'           => 'member',
-            // 'department'     => null,
+            // สามารถกำหนดค่าเริ่มต้นเพิ่มเติมได้ เช่นบทบาท หรือแผนก
         ];
     }
 

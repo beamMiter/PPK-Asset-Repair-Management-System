@@ -1,548 +1,659 @@
-{{-- resources/views/repairs/my_jobs.blade.php --}}
 @extends('layouts.app')
-@section('title','My Jobs')
+@section('title', 'My Jobs')
 
 @section('content')
-@php
-  use Illuminate\Support\Str;
+    @php
+        use Illuminate\Support\Str;
 
-  $q      = $q ?? request('q');
-  $status = $status ?? request('status');
-  $filter = $filter ?? (request('filter') ?: 'all');
-  $tech   = $tech ?? request('tech');
+        $q = $q ?? request('q');
+        $status = $status ?? request('status');
+        $filter = $filter ?? (request('filter') ?: 'all');
+        $tech = $tech ?? request('tech');
+        $resp = $resp ?? request('resp');
 
-  $filterLabels = [
-    'my'        => 'งานของฉัน',
-    'available' => 'งานว่าง',
-    'all'       => 'ทั้งหมด',
-  ];
+        $myJobsRoute = 'repairs.my_jobs';
 
-  $statusLabel = fn(?string $s) => [
-    'pending'     => 'รอรับเรื่อง',
-    'accepted'    => 'รับเรื่องแล้ว',
-    'in_progress' => 'กำลังดำเนินการ',
-    'on_hold'     => 'พักไว้ชั่วคราว',
-    'resolved'    => 'แก้ไขเสร็จสิ้น',
-    'closed'      => 'ปิดงาน',
-    'cancelled'   => 'ยกเลิกซ่อม',
-  ][strtolower((string)$s)] ?? Str::of((string)$s)->replace('_',' ')->title();
+        $filterLabels = [
+            'my' => 'งานของฉัน',
+            'available' => 'งานว่าง',
+            'all' => 'ทั้งหมด',
+        ];
 
-  $priorityLabel = fn(?string $p) => [
-    'low'    => 'ต่ำ',
-    'medium' => 'ปานกลาง',
-    'high'   => 'สูง',
-    'urgent' => 'เร่งด่วน',
-  ][strtolower((string)$p)] ?? '-';
+        $statusLabel = fn(?string $s) => [
+            'pending' => 'รอดำเนินการ',
+            'acknowledged' => 'รับทราบแล้ว',
+            'accepted' => 'รับเรื่องแล้ว',
+            'in_progress' => 'กำลังดำเนินการ',
+            'on_hold' => 'พักไว้ชั่วคราว',
+            'resolved' => 'ซ่อมบำรุงเสร็จสิ้น',
+            'closed' => 'อนุมัติผลการซ่อมบำรุง',
+            'cancelled' => 'ยกเลิกการซ่อมบำรุง',
+            'rejected' => 'ไม่รับเรื่อง',
+        ][strtolower((string) $s)] ?? 'ไม่ระบุ';
 
-  $statusDot = fn(?string $s) => match(strtolower((string)$s)) {
-    'pending'     => 'bg-amber-500',
-    'accepted'    => 'bg-indigo-500',
-    'in_progress' => 'bg-sky-500',
-    'on_hold'     => 'bg-slate-400',
-    'resolved'    => 'bg-emerald-500',
-    'closed'      => 'bg-zinc-400',
-    'cancelled'   => 'bg-rose-500',
-    default       => 'bg-slate-400',
-  };
+        $respLabel = fn(?string $s) => [
+            'pending' => 'ยังไม่ตอบรับ',
+            'accepted' => 'รับเรื่อง',
+            'rejected' => 'ไม่รับเรื่อง',
+            'acknowledged' => 'รับทราบแล้ว',
+        ][strtolower((string) $s)] ?? 'ไม่ระบุ';
 
-  $priorityClass = fn(?string $p) => match(strtolower((string)$p)) {
-    'urgent' => 'text-rose-700 bg-rose-50 border-rose-200',
-    'high'   => 'text-amber-700 bg-amber-50 border-amber-200',
-    'medium' => 'text-blue-700 bg-blue-50 border-blue-200',
-    'low'    => 'text-slate-600 bg-slate-50 border-slate-200',
-    default  => 'text-gray-500 bg-gray-50 border-gray-200',
-  };
+        $statusDot = fn(?string $s) => match (strtolower((string) $s)) {
+            'pending' => 'bg-amber-500',
+            'acknowledged' => 'bg-sky-500',
+            'accepted' => 'bg-emerald-500',
+            'in_progress' => 'bg-blue-500',
+            'on_hold' => 'bg-slate-400',
+            'resolved' => 'bg-emerald-600',
+            'closed' => 'bg-emerald-700',
+            'cancelled' => 'bg-rose-500',
+            'rejected' => 'bg-rose-600',
+            default => 'bg-slate-400',
+        };
 
-  $hasActiveFilter =
-    (($q ?? '') !== '') ||
-    (($status ?? '') !== '') ||
-    (($tech ?? '') !== '') ||
-    (($filter ?? 'all') !== 'all');
+        $statusAccentColor = fn(?string $s) => match (strtolower((string) $s)) {
+            'pending' => '#f59e0b',
+            'acknowledged' => '#38bdf8',
+            'accepted' => '#10b981',
+            'in_progress' => '#3b82f6',
+            'on_hold' => '#94a3b8',
+            'resolved' => '#059669',
+            'closed' => '#065f46',
+            'cancelled' => '#ef4444',
+            'rejected' => '#e11d48',
+            default => '#cbd5e1',
+        };
 
-  $activeTech = isset($tech) && isset($team) ? $team->firstWhere('id', (int)$tech) : null;
+        $hasActiveFilter =
+            ($q ?? '') !== '' ||
+            ($status ?? '') !== '' ||
+            ($tech ?? '') !== '' ||
+            ($filter ?? 'all') !== 'all' ||
+            ($resp ?? '') !== '';
 
-  // Stats numbers
-  $statPending    = (int)($stats['pending'] ?? 0);
-  $statInProgress = (int)($stats['in_progress'] ?? 0);
-  $statCompleted  = (int)($stats['completed'] ?? 0);
-  $statMyActive   = (int)($stats['my_active'] ?? 0);
+        $activeTech = isset($tech) && isset($team) ? $team->firstWhere('id', (int) $tech) : null;
 
-  $getIp = fn($r) => $r->client_ip ?? $r->ip_address ?? $r->ip ?? null;
-  $getDept = fn($r) => $r->department->name ?? ($r->department->name_th ?? ($r->department->title ?? null));
+        $statusIcon = fn(?string $s) => match (strtolower((string) $s)) {
+            'pending' => 'hourglass_empty',
+            'acknowledged' => 'visibility',
+            'accepted' => 'thumb_up',
+            'in_progress' => 'autorenew',
+            'on_hold' => 'pause_circle',
+            'resolved' => 'task_alt',
+            'closed' => 'task',
+            'cancelled' => 'cancel',
+            'rejected' => 'error',
+            default => 'info',
+        };
 
-  $getWorkOrderNo = function($r) {
-    return $r->work_order_no
-        ?? ($r->workOrder->order_no ?? null)
-        ?? ($r->job_no ?? null)
-        ?? null;
-  };
+        $statusBadge = fn(?string $s) => match (strtolower((string) $s)) {
+            'pending' => 'text-amber-600',
+            'acknowledged' => 'text-sky-600',
+            'accepted' => 'text-emerald-600',
+            'in_progress' => 'text-blue-600',
+            'on_hold' => 'text-slate-500',
+            'resolved' => 'text-emerald-700',
+            'closed' => 'text-emerald-700',
+            'cancelled' => 'text-rose-600',
+            'rejected' => 'text-rose-700',
+            default => 'text-slate-500',
+        };
 
-  $acceptBaseUrl = url('/maintenance/requests');
-  $teamUsers = $team ?? collect();
-@endphp
+        $statPending = (int) ($stats['pending'] ?? 0);
+        $statAcknowledged = (int) ($stats['acknowledged'] ?? 0);
+        $statAccepted = (int) ($stats['accepted'] ?? 0);
+        $statInProgress = (int) ($stats['in_progress'] ?? 0);
+        $statOnHold = (int) ($stats['on_hold'] ?? 0);
+        $statResolved = (int) ($stats['resolved'] ?? 0);
+        $statClosed = (int) ($stats['closed'] ?? 0);
 
-{{-- SPACER --}}
-<div class="pt-6 md:pt-8 lg:pt-10"></div>
+        // Active work for donut (Accepted + Progress + Resolved + Closed)
+        $totalCompleted = $statResolved + $statClosed;
+        $totalWorkload =
+            $statPending + $statAcknowledged + $statAccepted + $statInProgress + $statOnHold + $totalCompleted;
+        $pct = $totalWorkload > 0 ? round(($totalCompleted / $totalWorkload) * 100) : 0;
 
-<div class="w-full flex flex-col pb-14 font-sans text-slate-900">
+        $total = $totalWorkload;
+        $p1 = $total > 0 ? ($statPending / $total) * 360 : 0;
+        $p2 = $p1 + ($total > 0 ? ($statAcknowledged / $total) * 360 : 0);
+        $p3 = $p2 + ($total > 0 ? ($statAccepted / $total) * 360 : 0);
+        $p4 = $p3 + ($total > 0 ? ($statInProgress / $total) * 360 : 0);
+        $p5 = $p4 + ($total > 0 ? ($statOnHold / $total) * 360 : 0);
+        $p6 = $p5 + ($total > 0 ? ($statResolved / $total) * 360 : 0);
+        $p7 = $p6 + ($total > 0 ? ($statClosed / $total) * 360 : 0);
 
-  {{-- STICKY HEADER --}}
-  <div class="sticky top-[6rem] z-20 bg-white/90 backdrop-blur border-b border-slate-200 transition-all">
-    <div class="px-4 md:px-6 lg:px-8 py-4">
+        $getIp = fn($r) => $r->client_ip ?? ($r->ip_address ?? ($r->ip ?? null));
+        $getDept = fn($r) => $r->department->name ?? ($r->department->name_th ?? ($r->department->title ?? null));
 
-      {{-- Row 1: Title & Stats --}}
-      <div class="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 class="text-[17px] font-semibold text-slate-900">My Jobs</h1>
-          <p class="text-[13px] text-slate-600">
-            รายการงานซ่อมบำรุงที่ต้องจัดการ
-            @if($activeTech)
-              <span class="text-slate-500">• ของ {{ $activeTech->name }}</span>
-            @endif
-          </p>
-        </div>
+        $getWorkOrderNo = function ($r) {
+            return $r->work_order_no ?? ($r->workOrder->order_no ?? (null ?? ($r->job_no ?? null)));
+        };
 
-        {{-- [EDIT] Stats Area: ลบพื้นหลังออก และเพิ่มกราฟวงกลมกลับมา --}}
-        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px]">
-           <div class="flex items-center gap-2">
-             <span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span>
-             <span class="text-slate-600">รอรับ:</span>
-             <span id="stat-pending" class="font-bold text-slate-900">{{ $statPending }}</span>
-           </div>
-           <div class="flex items-center gap-2">
-             <span class="h-2.5 w-2.5 rounded-full bg-sky-500"></span>
-             <span class="text-slate-600">กำลังทำ:</span>
-             <span id="stat-in-progress" class="font-bold text-slate-900">{{ $statInProgress }}</span>
-           </div>
-           <div class="flex items-center gap-2">
-             <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-             <span class="text-slate-600">เสร็จ:</span>
-             <span id="stat-completed" class="font-bold text-slate-900">{{ $statCompleted }}</span>
-           </div>
+        $avatarColors = [
+            'bg-indigo-500',
+            'bg-emerald-500',
+            'bg-amber-500',
+            'bg-rose-500',
+            'bg-sky-500',
+            'bg-violet-500',
+            'bg-teal-500',
+        ];
 
-           {{-- [RESTORED] Donut Chart --}}
-           <div class="flex items-center gap-2 pl-3 border-l border-slate-200 ml-1">
-             <div class="relative w-8 h-8">
-               <div id="donut" class="w-full h-full rounded-full" style="background: conic-gradient(#e2e8f0 0deg 360deg);"></div>
-               <div class="absolute inset-0 m-auto w-5 h-5 rounded-full bg-white"></div>
-             </div>
-             <span id="donutPct" class="font-bold text-[11px] text-slate-700">0%</span>
-           </div>
-        </div>
-      </div>
+        $u = auth()->user();
+        $uRole = strtolower((string) ($u?->role ?? ''));
+        $isAdmin =
+            (bool) ($u?->is_admin ?? false) ||
+            in_array($uRole, ['admin', 'developer'], true) ||
+            (method_exists($u, 'hasRole') && ($u->hasRole('admin') || $u->hasRole('developer')));
+    @endphp
 
-      {{-- Row 2: Filters Form --}}
-      <form method="GET"
-            action="{{ route('repairs.my_jobs') }}"
-            class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-12 md:items-end"
-            onsubmit="showLoader()">
+    <style>
+        /* ป้องกัน Dropdown ในบัตรงานโดนกล่องอื่นทับ */
+        .job-card { position: relative !important; transition: z-index 0.1s step-end; }
+        .job-card:focus-within, .job-card:hover { z-index: 50 !important; }
+        .ts-dropdown { z-index: 1000 !important; }
+    </style>
+    
+    <div class="w-full flex flex-col pb-6 md:pb-8 font-sans text-slate-900" id="myJobsRealtime">
 
-        {{-- Search Input --}}
-        <div class="md:col-span-5 min-w-0">
-          <label for="q" class="mb-1 block text-[12px] text-slate-600">คำค้นหา</label>
-          <div class="relative">
-            <input id="q" type="text" name="q" value="{{ $q }}"
-                   placeholder="ค้นหาเลขใบงาน, เรื่อง, หรือสถานที่..."
-                   class="w-full rounded-md border border-slate-200 bg-white pl-10 pr-3 py-2 text-[13px] placeholder:text-slate-400
-                          focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35">
-            <span class="pointer-events-none absolute inset-y-0 left-0 flex w-9 items-center justify-center text-slate-400">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M21 21l-4.3-4.3M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
-              </svg>
-            </span>
-          </div>
-        </div>
+        {{-- Sticky Header --}}
+        <div class="sticky top-16 z-20 bg-white border-b border-slate-200" x-data="{ showStats: window.innerWidth >= 1024, showFilters: window.innerWidth >= 1024 }">
+            <div class="px-4 md:px-6 lg:px-8 py-4">
+                <div class="flex flex-col gap-4">
+                    <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                        <div class="flex flex-col gap-3">
+                            <div class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-[32px] text-[#0F2D5C] mt-0.5"
+                                    aria-hidden="true">engineering</span>
+                                <div>
+                                    <h1 class="text-[17px] font-semibold text-slate-900">
+                                        @if ($activeTech && $activeTech->id !== auth()->id())
+                                            งานของ {{ $activeTech->name }}
+                                        @else
+                                            งานของฉัน
+                                        @endif
+                                    </h1>
+                                    <p class="text-[13px] text-slate-600">
+                                        รายการงานซ่อมบำรุงที่ต้องจัดการ
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
 
-        {{-- Filter Select --}}
-        <div class="md:col-span-2">
-          <label for="filter" class="mb-1 block text-[12px] text-slate-600">ช่วงงาน</label>
-          <select id="filter" name="filter"
-                  class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800
-                         focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35 cursor-pointer">
-            @foreach($filterLabels as $key => $label)
-              <option value="{{ $key }}" @selected($filter===$key)>{{ $label }}</option>
-            @endforeach
-          </select>
-        </div>
+                        {{-- Mobile Toggle Buttons --}}
+                        <div class="flex lg:hidden gap-2" x-cloak>
+                            <button type="button" @click="showStats = !showStats"
+                                class="flex-1 inline-flex justify-center items-center gap-1.5 h-9 rounded-md border text-[13px] font-medium transition-colors"
+                                :class="showStats ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'">
+                                <span class="material-symbols-outlined text-[16px]">pie_chart</span>
+                                <span x-text="showStats ? 'ซ่อนสถิติ' : 'ดูสถิติ'"></span>
+                            </button>
+                            <button type="button" @click="showFilters = !showFilters"
+                                class="flex-1 inline-flex justify-center items-center gap-1.5 h-9 rounded-md border text-[13px] font-medium transition-colors"
+                                :class="showFilters ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'">
+                                <span class="material-symbols-outlined text-[16px]">filter_list</span>
+                                <span x-text="showFilters ? 'ซ่อนตัวกรอง' : 'ตัวกรอง'"></span>
+                            </button>
+                        </div>
+                    </div>
 
-        {{-- Status Select --}}
-        <div class="md:col-span-3">
-          <label for="status" class="mb-1 block text-[12px] text-slate-600">สถานะ</label>
-          <select id="status" name="status"
-                  class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800
-                         focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35 cursor-pointer">
-            <option value="">ทุกสถานะ</option>
-            @foreach(['pending','accepted','in_progress','on_hold','resolved','closed','cancelled'] as $s)
-              <option value="{{ $s }}" @selected($status===$s)>{{ $statusLabel($s) }}</option>
-            @endforeach
-          </select>
-        </div>
-
-        {{-- Buttons --}}
-        <div class="md:col-span-2 flex items-end justify-end gap-2">
-          @if($hasActiveFilter)
-            <a href="{{ route('repairs.my_jobs') }}"
-               onclick="showLoader()"
-               class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600
-                      hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/30 focus:ring-offset-1 transition-transform hover:scale-105"
-               title="ล้างตัวกรอง" aria-label="ล้างตัวกรอง">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </a>
-          @endif
-
-          <button type="submit"
-                  class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#0F2D5C] text-white
-                         hover:bg-[#0F2D5C]/90 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/45 focus:ring-offset-1 transition-transform hover:scale-105 active:scale-95"
-                  title="ค้นหา" aria-label="ค้นหา">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.3-4.3M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-          </button>
-        </div>
-
-        @if($tech)
-          <input type="hidden" name="tech" value="{{ $tech }}">
-        @endif
-      </form>
-    </div>
-  </div>
-
-  {{-- INFO ROW --}}
-  <div class="px-4 md:px-6 lg:px-8 py-2 border-b border-slate-200 bg-slate-50/30">
-    <div class="flex items-center justify-between">
-      <div class="text-[13px] font-semibold text-slate-800">
-        รายการงาน
-      </div>
-      <div class="text-[12px] text-slate-500">
-        ทั้งหมด {{ $list->total() }} รายการ
-      </div>
-    </div>
-  </div>
-
-  {{-- LIST CONTENT --}}
-  <div class="w-full px-4 md:px-6 lg:px-8 relative z-0 mt-6">
-    <div class="mj-container mx-auto space-y-4">
-
-      @forelse($list as $r)
-        @php
-          $isOpen   = empty($r->technician_id) && (($r->status ?? '') === 'pending');
-          $ticketNo = $r->request_no ?? $r->job_no ?? $r->id;
-          $workOrderNo = $getWorkOrderNo($r);
-          $assetName = $r->asset->name ?? null;
-          $assetCode = $r->asset->asset_code ?? null;
-          $deptName = $getDept($r);
-          $location = $r->location_text ?? null;
-          $reporterName  = $r->reporter_name ?? $r->reporter?->name ?? '-';
-          $reporterPhone = $r->reporter_phone ?? null;
-          $ip = $getIp($r);
-          $createdAtText = optional($r->created_at)->format('d/m/Y H:i');
-          $statusText   = $statusLabel($r->status ?? null);
-          $priorityText = $priorityLabel($r->priority ?? null);
-        @endphp
-
-        <div class="mj-card group">
-          {{-- Card Header --}}
-          <div class="mj-card__header">
-            <div class="flex items-center gap-3 overflow-hidden min-w-0">
-              <span class="mj-ticket-plain">#{{ $ticketNo }}</span>
-              @if($workOrderNo)
-                <span class="mj-wo">WO# {{ $workOrderNo }}</span>
-              @endif
-              <h3 class="mj-title truncate" title="{{ $r->title }}">
-                {{ $r->title }}
-              </h3>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <span class="mj-pill">
-                <span class="relative inline-flex h-3 w-3">
-                  @if(strtolower((string)$r->status) === 'pending')
-                    <span class="mj-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-60"></span>
-                  @endif
-                  <span class="relative inline-flex h-3 w-3 rounded-full {{ $statusDot($r->status) }}"></span>
-                </span>
-                {{ $statusText }}
-              </span>
-              <span class="mj-pill border {{ $priorityClass($r->priority) }} font-bold uppercase">
-                {{ $priorityText }}
-              </span>
-            </div>
-          </div>
-
-          {{-- Sub Info --}}
-          <div class="mj-card__sub">
-            <div class="mj-sub-item">
-              <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-              <span class="font-bold">วันแจ้ง:</span> {{ $createdAtText }}
-            </div>
-            <div class="mj-sub-item border-l border-slate-200 pl-4">
-              <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-              </svg>
-              <span class="font-bold">หน่วยงาน:</span> {{ $deptName ?? '-' }}
-            </div>
-          </div>
-
-          {{-- Problem Detail --}}
-          <div class="mj-problem-wrap">
-            <h4 class="mj-cell__head mj-problem-head text-rose-700">รายละเอียดปัญหา</h4>
-            @if($r->description)
-              <div class="mj-problem" title="{{ $r->description }}">
-                {{ $r->description }}
-              </div>
-            @else
-              <div class="mj-problem mj-problem--empty">- ไม่มีรายละเอียด -</div>
-            @endif
-          </div>
-
-          {{-- Grid Info --}}
-          <div class="mj-card__grid">
-            <div class="mj-cell">
-              <h4 class="mj-cell__head text-slate-400">สถานที่ / ทรัพย์สิน</h4>
-              <div class="mj-kv">
-                <div class="truncate"><span class="mj-k">สถานที่:</span> <span class="mj-v" title="{{ $location }}">{{ $location ?? '-' }}</span></div>
-                <div class="truncate mt-1">
-                  <span class="mj-k">ทรัพย์สิน:</span>
-                  <span class="mj-v">
-                    @if($assetCode)
-                      <span class="font-mono text-xs font-bold text-[#0F2D5C]">{{ $assetCode }}</span> <span class="text-slate-300">—</span>
-                    @endif
-                    {{ $assetName ?? '-' }}
-                  </span>
+                    <div x-show="showStats" x-transition.opacity.duration.200ms class="flex flex-wrap items-center gap-x-5 gap-y-3 text-[13px] mt-1 lg:mt-0 pb-1 border-b lg:border-none border-slate-100" style="display: none;">
+                        <div class="flex items-center gap-1.5">
+                            <span class="h-2 w-2 rounded-full bg-amber-500 ring-2 ring-amber-100"></span>
+                            <span class="text-slate-600">รอดำเนินการ:</span>
+                            <span id="stat-pending" class="font-bold text-slate-900">{{ $statPending }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="h-2 w-2 rounded-full bg-blue-500 ring-2 ring-blue-100"></span>
+                            <span class="text-slate-600">รับทราบแล้ว:</span>
+                            <span id="stat-acknowledged" class="font-bold text-slate-900">{{ $statAcknowledged }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="h-2.5 w-2.5 rounded-full bg-indigo-500"></span>
+                            <span class="text-slate-600">รับเรื่องแล้ว:</span>
+                            <span id="stat-accepted" class="font-bold text-slate-900">{{ $statAccepted }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="h-2.5 w-2.5 rounded-full bg-sky-500"></span>
+                            <span class="text-slate-600">กำลังดำเนินการ:</span>
+                            <span id="stat-in-progress" class="font-bold text-slate-900">{{ $statInProgress }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="h-2.5 w-2.5 rounded-full bg-slate-400"></span>
+                            <span class="text-slate-600">พักไว้ชั่วคราว:</span>
+                            <span id="stat-on-hold" class="font-bold text-rose-500">{{ $statOnHold }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+                            <span class="text-slate-600">ซ่อมบำรุงเสร็จสิ้น:</span>
+                            <span id="stat-resolved" class="font-bold text-slate-900">{{ $statResolved }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="h-2.5 w-2.5 rounded-full bg-emerald-600"></span>
+                            <span class="text-slate-600">อนุมัติผลการซ่อมบำรุง:</span>
+                            <span id="stat-closed" class="font-bold text-emerald-600">{{ $statClosed }}</span>
+                        </div>
+                        <div class="flex items-center gap-2 pl-3 border-l border-slate-200 ml-1">
+                            <div class="relative w-8 h-8">
+                                <div id="donut" class="w-full h-full rounded-full"
+                                    style="background: conic-gradient(
+                                        #f59e0b 0deg {{ $p1 }}deg,
+                                        #38bdf8 {{ $p1 }}deg {{ $p2 }}deg,
+                                        #6366f1 {{ $p2 }}deg {{ $p3 }}deg,
+                                        #3b82f6 {{ $p3 }}deg {{ $p4 }}deg,
+                                        #94a3b8 {{ $p4 }}deg {{ $p5 }}deg,
+                                        #10b981 {{ $p5 }}deg {{ $p6 }}deg,
+                                        #065f46 {{ $p6 }}deg {{ $p7 }}deg,
+                                        #e2e8f0 {{ $p7 }}deg 360deg
+                                    );">
+                                </div>
+                                <div class="absolute inset-0 m-auto w-5 h-5 rounded-full bg-white"></div>
+                            </div>
+                            <span id="donutPct" class="font-bold text-[11px] text-slate-700">{{ $pct }}%</span>
+                        </div>
+                    </div>
                 </div>
-              </div>
-            </div>
-            <div class="mj-cell">
-              <h4 class="mj-cell__head text-slate-400">ผู้แจ้ง / ติดต่อ</h4>
-              <div class="mj-kv">
-                <div class="truncate"><span class="mj-k">ชื่อ:</span> <span class="mj-v">{{ $reporterName }}</span></div>
-                <div class="truncate mt-1"><span class="mj-k">โทร:</span> <span class="mj-v">{{ $reporterPhone ?? '-' }}</span></div>
-                <div class="truncate mt-2 text-[10px] text-slate-400 font-mono">IP: {{ $ip ?? '-' }}</div>
-              </div>
-            </div>
-          </div>
 
-          {{-- Footer --}}
-          <div class="mj-card__footer">
-            <div class="mj-footer-left">
-              @if($isOpen)
-                @can('accept', $r)
-                  <button type="button" class="mj-accept-btn"
-                          onclick="openAcceptModal('{{ $r->id }}', '{{ $ticketNo }}')"
-                          title="รับเรื่อง">
-                    <span class="mj-accept-ic" aria-hidden="true">
-                      {{-- Check Circle Icon --}}
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </span>
-                    <span class="mj-accept-text">รับเรื่อง</span>
-                  </button>
-                @endcan
-              @else
-                <div class="mj-footer-status" title="{{ $statusText }}">
-                  <span class="h-2.5 w-2.5 rounded-full {{ $statusDot($r->status) }}"></span>
-                  <span class="font-bold text-slate-700 text-[13px]">{{ $statusText }}</span>
+                <div x-show="showFilters" x-transition.opacity.duration.200ms style="display: none;">
+                    <form method="GET" action="{{ route($myJobsRoute) }}"
+                        class="mt-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end" onsubmit="showLoader()">
+
+                        {{-- lg:2, not 3: freed a column for สถานะใบงาน below, whose longest label needed it more than
+                             a placeholder hint does (a clipped placeholder loses nothing already chosen). --}}
+                        <div class="md:col-span-12 lg:col-span-2 min-w-0">
+                            <label for="q" class="mb-1 block text-[12px] text-slate-600">คำค้นหา</label>
+                            <div class="relative">
+                                <input id="q" type="text" name="q" value="{{ $q }}"
+                                    placeholder="ค้นหาเลขใบงาน, เรื่อง, หรือสถานที่..."
+                                    class="w-full rounded-md border border-slate-200 bg-white pl-10 pr-3 py-2 text-[13px] placeholder:text-slate-400
+                                           focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35">
+                                <span
+                                    class="pointer-events-none absolute inset-y-0 left-0 flex w-9 items-center justify-center text-slate-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"
+                                            d="M21 21l-4.3-4.3M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-3 lg:col-span-2">
+                            <label for="filter" class="mb-1 block text-[12px] text-slate-600">ช่วงงาน</label>
+                            <select id="filter" name="filter"
+                                class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800
+                                       focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35 cursor-pointer"
+                                onchange="this.form.submit()">
+                                @foreach ($filterLabels as $key => $label)
+                                    <option value="{{ $key }}" @selected($filter === $key)>{{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- lg:3, not 2: its longest label ("อนุมัติผลการซ่อมบำรุง") barely fit a 2-column box (คำค้นหา
+                             gave up the column that used to leave it that tight). --}}
+                        <div class="md:col-span-3 lg:col-span-3">
+                            <label for="status" class="mb-1 block text-[12px] text-slate-600">สถานะใบงาน</label>
+                            <select id="status" name="status"
+                                class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800
+                                       focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35 cursor-pointer"
+                                onchange="this.form.submit()">
+                                <option value="">ทุกสถานะ</option>
+                                @foreach (['pending', 'acknowledged', 'accepted', 'in_progress', 'on_hold', 'resolved', 'closed', 'cancelled', 'rejected'] as $s)
+                                    <option value="{{ $s }}" @selected($status === $s)>{{ $statusLabel($s) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="md:col-span-3 lg:col-span-2">
+                            <label for="type" class="mb-1 block text-[12px] text-slate-600">ประเภทงาน</label>
+                            <select id="type" name="type"
+                                class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800
+                                       focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35 cursor-pointer"
+                                onchange="this.form.submit()">
+                                <option value="">ทุกประเภท</option>
+                                @foreach ($types as $t)
+                                    <option value="{{ $t->id }}" @selected((int) $typeId === (int) $t->id)>{{ $t->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="md:col-span-3 lg:col-span-2">
+                            <label for="resp" class="mb-1 block text-[12px] text-slate-600">การตอบรับของฉัน</label>
+                            <select id="resp" name="resp"
+                                class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-800
+                                       focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35 cursor-pointer"
+                                onchange="this.form.submit()">
+                                <option value="">ทั้งหมด</option>
+                                @foreach (['pending', 'accepted', 'acknowledged', 'rejected'] as $s)
+                                    <option value="{{ $s }}" @selected(($resp ?? '') === $s)>{{ $respLabel($s) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="md:col-span-12 lg:col-span-1 flex items-end justify-end gap-2 mt-2 lg:mt-0">
+                            @if ($hasActiveFilter)
+                                <a href="{{ route($myJobsRoute) }}" onclick="showLoader()"
+                                    class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600
+                                           hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/30 transition-transform hover:scale-105"
+                                    title="ล้างตัวกรอง">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </a>
+                            @endif
+                            <button type="submit"
+                                class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#0F2D5C] text-white
+                                       hover:bg-[#0F2D5C]/90 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/45 transition-transform hover:scale-105 active:scale-95"
+                                title="ค้นหา">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M21 21l-4.3-4.3M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <input type="hidden" name="filter" value="{{ $filter }}">
+                        @if ($tech)
+                            <input type="hidden" name="tech" value="{{ $tech }}">
+                        @endif
+                    </form>
                 </div>
-              @endif
             </div>
-            <div class="mj-footer-right">
-              <a href="{{ route('maintenance.requests.show', $r) }}" onclick="showLoader()" class="mj-detail-btn" title="ดูรายละเอียด">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                <span class="hidden md:inline">รายละเอียด</span>
-              </a>
-            </div>
-          </div>
         </div>
-      @empty
-        {{-- Empty State --}}
-        <div class="bg-white border border-slate-200 rounded-md p-12 text-center">
-          <svg class="mx-auto h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-          <p class="mt-4 text-sm text-slate-500">ไม่พบรายการงานตามเงื่อนไขที่เลือก</p>
-        </div>
-      @endforelse
 
+        {{-- List Header --}}
+        <div class="px-4 md:px-6 lg:px-8 py-2 border-b border-slate-200 bg-slate-50/30">
+            <div class="flex items-center justify-between">
+                <div class="text-[13px] font-semibold text-slate-800">รายการงาน</div>
+                <div class="text-[12px] text-slate-500">ทั้งหมด {{ $list->total() }} รายการ</div>
+            </div>
+        </div>
+
+        {{-- Job Cards --}}
+        <div class="w-full px-4 md:px-6 lg:px-8 relative z-0 mt-4">
+            <div class="mx-auto space-y-3 max-w-[1400px]">
+
+                @forelse($list as $r)
+                    @php
+                        $ticketNo = $r->request_no ?? ($r->job_no ?? $r->id);
+                        $workOrderNo = $getWorkOrderNo($r);
+                        $assetName = $r->asset->name ?? null;
+                        $assetCode = $r->asset->asset_code ?? null;
+                        $deptName = $getDept($r);
+                        $location = $r->location_text ?? null;
+                        $reporterName = $r->reporter_name ?? ($r->reporter?->name ?? '-');
+                        $reporterPhone = $r->reporter_phone ?? null;
+                        $createdAtText = optional($r->created_at)->format('d/m/Y H:i');
+                        $mrStatus = strtolower((string) ($r->status ?? ''));
+                        $mrStatusText = $statusLabel($mrStatus);
+
+                        // ดึงทีมเจ้าหน้าที่จาก assignments
+                        $techWorkers = ($r->assignments ?? collect())
+                            ->filter(fn($a) => strtolower((string) ($a->status ?? '')) !== 'cancelled')
+                            ->map(fn($a) => $a->user)
+                            ->filter()
+                            ->unique('id')
+                            ->values();
+                    @endphp
+
+                    <div
+                        class="job-card bg-white border border-slate-200 hover: transition- rounded-md flex relative">
+                        {{-- Status accent bar --}}
+                        <div class="w-1.5 shrink-0 rounded-l-md" style="background-color: {{ $statusAccentColor($mrStatus) }}"></div>
+                        <div class="flex-1 min-w-0">
+
+                            {{-- Main Row --}}
+                            <div
+                                class="flex flex-col lg:grid lg:grid-cols-12 items-stretch divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+
+                                {{-- Col 1: Job ID + Status --}}
+                                <div class="col-span-1 lg:col-span-3 px-6 py-5">
+                                    <div class="text-[14px] font-bold text-slate-500 mb-2">
+                                        รหัสงาน
+                                    </div>
+                                    <div class="text-[20px] font-bold text-[#0F2D5C] font-mono">#{{ $ticketNo }}</div>
+                                    @if ($workOrderNo)
+                                        <div class="text-[13px] text-slate-400 font-mono mt-0.5">WO# {{ $workOrderNo }}
+                                        </div>
+                                    @endif
+
+                                    <div class="mt-2.5">
+                                        <div class="text-[13px] font-bold text-slate-500 mb-1.5">สถานะงาน</div>
+                                        <div class="flex items-center gap-1.5 {{ $statusBadge($mrStatus) }}">
+                                            <span
+                                                class="material-symbols-outlined text-[18px] {{ $mrStatus === 'pending' ? 'animate-pulse' : '' }}">
+                                                {{ $statusIcon($mrStatus) }}
+                                            </span>
+                                            <span class="text-[13px] font-bold">
+                                                {{ $mrStatusText }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <div class="text-[13px] font-bold text-slate-500 mb-1.5">ประเภทงาน</div>
+                                        @can('setType', $r)
+                                            <select class="ts-basic job-type-select w-full"
+                                                data-placeholder="— ประเภทงาน —"
+                                                data-old-type-id="{{ $r->type_id }}"
+                                                data-id="{{ $r->id }}">
+                                                <option value="">- เลือกประเภทงาน -</option>
+                                                @foreach ($types as $type)
+                                                    <option value="{{ $type->id }}" @selected($r->type_id == $type->id)>
+                                                        {{ $type->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        @else
+                                            <div
+                                                class="inline-flex items-center px-2.5 py-1 text-[13px] font-bold border rounded-md {{ $r->type_id ? 'bg-sky-50 text-sky-700 border-sky-100' : 'bg-slate-50 text-slate-500 border-slate-100' }}">
+                                                {{ $r->type?->name ?? 'ไม่ระบุประเภท' }}
+                                            </div>
+                                        @endcan
+                                    </div>
+                                </div>
+
+                                {{-- Col 2: Problem Description --}}
+                                <div class="col-span-1 lg:col-span-4 px-6 py-5">
+                                    <div class="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                                        รายละเอียดปัญหา</div>
+                                    <div class="text-[17px] font-semibold text-slate-800 leading-tight mb-2">
+                                        {{ $r->title }}</div>
+                                    @if ($r->description)
+                                        <p class="text-[14px] text-slate-600 leading-relaxed">{{ $r->description }}</p>
+                                    @else
+                                        <p class="text-[14px] text-slate-400 italic">- ไม่มีรายละเอียด -</p>
+                                    @endif
+                                    <div class="mt-2 flex items-center gap-3 text-[14px] text-slate-500">
+                                        <span class="flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[16px]">calendar_month</span>
+                                            {{ $createdAtText }}
+                                        </span>
+                                        @if ($deptName)
+                                            <span class="flex items-center gap-1">
+                                                <span class="material-symbols-outlined text-[16px]">domain</span>
+                                                {{ $deptName }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                {{-- Col 3: Asset Details --}}
+                                <div class="col-span-1 lg:col-span-3 px-6 py-5">
+                                    <div class="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                                        รายละเอียดทรัพย์สิน</div>
+                                    @if ($assetName || $assetCode)
+                                        <div class="flex items-start gap-2">
+                                            <span
+                                                class="material-symbols-outlined text-[17px] text-[#0F2D5C] mt-0.5 shrink-0">inventory_2</span>
+                                            <div>
+                                                <div class="text-[16px] font-semibold text-slate-800">
+                                                    {{ $assetName ?? '-' }}</div>
+                                                @if ($assetCode)
+                                                    <div class="text-[13px] font-mono text-[#0F2D5C]">{{ $assetCode }}
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="text-[13px] text-slate-400 italic">- ไม่ระบุ -</div>
+                                    @endif
+                                    <div class="mt-3 text-[15px] text-slate-600">
+                                        <span class="font-semibold text-slate-900">สถานที่:</span> {{ $location ?? '-' }}
+                                    </div>
+                                    <div class="mt-2 text-[15px] text-slate-600 space-y-1">
+                                        <div><span class="font-semibold text-slate-900">ผู้แจ้ง:</span>
+                                            {{ $reporterName }}</div>
+                                        @if ($reporterPhone)
+                                            <div><span class="font-semibold text-slate-900">โทร:</span>
+                                                {{ $reporterPhone }}</div>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                {{-- Col 4: Technician + View Details --}}
+                                <div
+                                    class="col-span-1 lg:col-span-2 px-6 py-5 flex flex-col justify-between bg-slate-50/30 lg:bg-transparent">
+                                    <div>
+                                        <div class="text-[13px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+                                            เจ้าหน้าที่ผู้รับผิดชอบ</div>
+
+                                        @if ($techWorkers->isEmpty())
+                                            <div class="flex items-center gap-2">
+                                                <div
+                                                    class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                                                    <span
+                                                        class="material-symbols-outlined text-[15px] text-slate-400">person</span>
+                                                </div>
+                                                <span class="text-[11px] text-slate-400 italic">ยังไม่ได้มอบหมาย</span>
+                                            </div>
+                                        @else
+                                            {{-- Avatar Stack --}}
+                                            <div class="flex items-center">
+                                                @foreach ($techWorkers->take(3) as $i => $w)
+                                                    @php
+                                                        $wAvatar = $w->avatar_thumb_url ?? null;
+                                                        $ci = abs(crc32($w->name ?? '')) % count($avatarColors);
+                                                    @endphp
+                                                    <div class="w-8 h-8 rounded-full border-2 border-white shrink-0 overflow-hidden {{ $i > 0 ? '-ml-2' : '' }}"
+                                                        title="{{ $w->name }}">
+                                                        @if ($wAvatar)
+                                                            <img src="{{ $wAvatar }}" alt="{{ $w->name }}"
+                                                                class="w-full h-full object-cover">
+                                                        @else
+                                                            <div
+                                                                class="w-full h-full {{ $avatarColors[$ci] }} flex items-center justify-center text-white text-[10px] font-bold">
+                                                                {{ mb_strtoupper(mb_substr($w->name ?? '?', 0, 2)) }}
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                @endforeach
+
+                                                @if ($techWorkers->count() > 3)
+                                                    <div
+                                                        class="w-8 h-8 rounded-full border-2 border-white bg-slate-200 -ml-2 flex items-center justify-center shrink-0">
+                                                        <span
+                                                            class="text-[10px] font-bold text-slate-600">+{{ $techWorkers->count() - 3 }}</span>
+                                                    </div>
+                                                @endif
+                                            </div>
+
+                                            {{-- รายชื่อเจ้าหน้าที่ทั้งหมด --}}
+                                            <div class="mt-1.5 space-y-0.5">
+                                                @foreach ($techWorkers as $w)
+                                                    <div class="text-[13px] font-semibold text-slate-700 leading-tight">
+                                                        {{ $w->name }}
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    {{-- View Details --}}
+                                    <div class="mt-4">
+                                        <a href="{{ route('maintenance.requests.show', $r) }}" onclick="showLoader()"
+                                            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0F2D5C] text-white text-[13px] font-semibold rounded-sm hover:bg-[#0a2045] active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/30 transition-all whitespace-nowrap">
+                                            <span class="material-symbols-outlined text-[16px] shrink-0">visibility</span>
+                                            <span>ดูรายละเอียด</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Action Bar --}}
+                            @php $hasActions = false; @endphp
+                            @can('acknowledge', $r)
+                                @if ($mrStatus === 'pending')
+                                    @php $hasActions = true; @endphp
+                                @endif
+                            @endcan
+                            @can('accept', $r)
+                                @if ($mrStatus === 'acknowledged')
+                                    @php $hasActions = true; @endphp
+                                @endif
+                            @endcan
+                            @can('reject', $r)
+                                @if ($mrStatus === 'acknowledged')
+                                    @php $hasActions = true; @endphp
+                                @endif
+                            @endcan
+
+                            @if ($hasActions)
+                                <div class="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
+                                    @can('acknowledge', $r)
+                                        @if ($mrStatus === 'pending')
+                                            <x-ui.button variant="brand" icon="approval_delegation" onclick="submitAcknowledge('{{ $r->id }}', '{{ $ticketNo }}')">รับทราบ</x-ui.button>
+                                        @endif
+                                    @endcan
+                                    @can('accept', $r)
+                                        @if ($mrStatus === 'acknowledged')
+                                            <x-ui.button variant="brand" icon="check" onclick="submitAccept('{{ $r->id }}', '{{ $ticketNo }}')">รับเรื่อง</x-ui.button>
+                                        @endif
+                                    @endcan
+                                    @can('reject', $r)
+                                        @if (in_array($mrStatus, ['pending', 'acknowledged']))
+                                            <x-ui.button variant="danger" icon="block" onclick="submitReject('{{ $r->id }}', '{{ $ticketNo }}')">ไม่รับเรื่อง</x-ui.button>
+                                        @endif
+                                    @endcan
+                                </div>
+                            @endif
+
+                            {{-- Hidden Forms --}}
+                            <form id="ackForm-{{ $r->id }}" method="POST"
+                                action="{{ route('maintenance.requests.acknowledge', $r) }}" class="hidden">@csrf</form>
+                            <form id="acceptForm-{{ $r->id }}" method="POST"
+                                action="{{ route('maintenance.requests.accept', $r) }}" class="hidden">@csrf</form>
+                            <form id="rejectForm-{{ $r->id }}" method="POST"
+                                action="{{ route('maintenance.requests.reject', $r) }}" class="hidden">
+                                @csrf
+                                <input type="hidden" name="remark" id="rejectRemark-{{ $r->id }}"
+                                    value="">
+                            </form>
+
+                        </div> {{-- end flex-1 --}}
+                    </div> {{-- end card --}}
+
+                @empty
+                    <div class="bg-white border border-slate-200 rounded-md p-8">
+                        <x-ui.empty-state icon="assignment">ไม่พบรายการงานตามเงื่อนไขที่เลือก</x-ui.empty-state>
+                    </div>
+                @endforelse
+
+            </div>
+
+            @if ($list->hasPages())
+                <div class="mt-6 mb-12">
+                    {{ $list->withQueryString()->links() }}
+                </div>
+            @endif
+        </div>
     </div>
 
-    {{-- Pagination --}}
-    @if($list->hasPages())
-      <div class="mt-8 mb-10">
-        {{ $list->withQueryString()->links() }}
-      </div>
-    @endif
-  </div>
-</div>
 
-{{-- MODAL --}}
-<div id="acceptModal" class="fixed inset-0 z-[60] hidden bg-slate-900/60 flex items-center justify-center backdrop-blur-sm px-4">
-  <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg overflow-hidden border-t-4 border-emerald-600 animate-in fade-in zoom-in-95 duration-200">
-    <div class="bg-white border-b border-slate-100 px-6 py-4 flex justify-between items-center">
-      <h3 class="text-lg font-bold text-emerald-700 flex items-center gap-2">
-        <span id="acceptModalTitle">รับเรื่อง</span>
-      </h3>
-      <button type="button" onclick="closeAcceptModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
-        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <form id="acceptForm" method="POST" action="">
-      @csrf
-      <input type="hidden" name="decision" id="acceptDecision" value="accepted">
-      <div class="p-6 space-y-4">
-        <p class="text-sm text-slate-600 leading-relaxed">เลือก “รับเรื่อง” เพื่อนำงานเข้าคิว หรือ “กำลังดำเนินการ” หากต้องการเริ่มงานทันที</p>
-        <div class="flex flex-col gap-2">
-           <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-md cursor-pointer hover:bg-slate-50 transition-colors has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50/50">
-             <input type="radio" name="decision_radio" value="accepted" checked onchange="handleDecisionChange(this.value)" class="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-slate-300">
-             <div class="text-sm"><span class="font-bold text-slate-900">รับเรื่อง</span> <span class="text-xs text-slate-500 block">รับเข้าคิวงานของฉัน</span></div>
-           </label>
-           <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-md cursor-pointer hover:bg-slate-50 transition-colors has-[:checked]:border-sky-500 has-[:checked]:bg-sky-50/50">
-             <input type="radio" name="decision_radio" value="in_progress" onchange="handleDecisionChange(this.value)" class="h-4 w-4 text-sky-600 focus:ring-sky-500 border-slate-300">
-             <div class="text-sm"><span class="font-bold text-slate-900">กำลังดำเนินการ</span> <span class="text-xs text-slate-500 block">เริ่มงานและระบุช่าง</span></div>
-           </label>
-        </div>
-        <div id="assignBox" class="border border-slate-200 rounded-md p-4 bg-slate-50 hidden">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-sm font-bold text-slate-700 mb-1">ตำแหน่ง</label>
-              <select id="positionSelect" class="w-full border-slate-300 rounded-md p-2 bg-white text-sm"><option value="">-- เลือก --</option><option value="IT Support">IT Support</option><option value="Network">Network</option><option value="ช่างทั่วไป">ช่างทั่วไป</option></select>
-            </div>
-            <div>
-              <label class="block text-sm font-bold text-slate-700 mb-1">ช่าง <span class="text-rose-500">*</span></label>
-              <select name="technician_id" id="techSelect" class="w-full border-slate-300 rounded-md p-2 bg-white text-sm"><option value="">-- เลือกช่าง --</option>@foreach($teamUsers as $u)<option value="{{ $u->id }}" data-role="{{ $u->role ?? '' }}">{{ $u->name }}</option>@endforeach</select>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-        <button type="button" onclick="closeAcceptModal()" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-bold rounded-md hover:bg-slate-100">ยกเลิก</button>
-        <button type="submit" class="px-4 py-2 bg-emerald-600 text-white text-sm font-bold rounded-md hover:bg-emerald-700">บันทึก</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-{{-- Loader --}}
-<div id="loaderOverlay" class="loader-overlay"><div class="loader-spinner"></div></div>
 @endsection
-
-@section('after-content')
-@endsection
-
-@push('styles')
-<style>
-  .loader-overlay{position:fixed;inset:0;background:rgba(255,255,255,.65);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:99999;visibility:hidden;opacity:0;transition:opacity .2s,visibility .2s}
-  .loader-overlay.show{visibility:visible;opacity:1}
-  .loader-spinner{width:48px;height:48px;border:5px solid #0F2D5C;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-
-  .mj-container{max-width: 1200px;}
-  @media (max-width:1280px){.mj-container{max-width: 1080px;}}
-  @media (max-width:1024px){.mj-container{max-width: 100%;}}
-
-  .mj-card{background:#fff; border:1px solid #e2e8f0; border-radius: 12px; overflow:hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: box-shadow .15s ease, transform .15s ease;}
-  .mj-card:hover{box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08); transform: translateY(-2px);}
-  .mj-card__header{padding: 10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px; border-bottom:1px solid #f1f5f9;}
-  .mj-card__sub{padding: 8px 14px; display:flex; flex-wrap:wrap; gap: 12px; border-bottom:1px solid #f8fafc; color:#475569; font-size: 13px; background: #fcfcfd;}
-  .mj-sub-item{display:flex;align-items:center;gap:6px}
-  .mj-title{font-weight:800;font-size:15px;color:#1e293b}
-  .mj-ticket-plain{font-family: ui-monospace, SFMono-Regular, monospace; font-weight: 900; font-size: 13px; color:#334155; white-space: nowrap;}
-  .mj-wo{background:#f1f5f9; border:1px solid #e2e8f0; color:#475569; padding:1px 8px; font-size:11px; font-family: ui-monospace, monospace; font-weight:700; border-radius:6px; white-space:nowrap;}
-  .mj-pill{height: 28px; padding: 0 10px; border-radius: 9999px; display:inline-flex; align-items:center; gap:6px; border:1px solid #e2e8f0; background:#fff; font-size: 12px; font-weight: 800; color:#334155; box-shadow: 0 2px 4px rgba(0,0,0,.03); white-space: nowrap;}
-  @keyframes mjPing {0%{transform:scale(1);opacity:.6}80%{transform:scale(2.5);opacity:0}100%{transform:scale(2.5);opacity:0}}
-  .mj-ping{animation:mjPing 1.5s cubic-bezier(0, 0, 0.2, 1) infinite}
-  .mj-detail-btn{height: 34px; padding: 0 12px; border-radius: 8px; display:inline-flex; align-items:center; gap: 6px; border: 1px solid #cbd5e1; background:#fff; color:#475569; font-weight: 700; font-size: 13px; transition: all .15s ease; box-shadow: 0 2px 4px rgba(0,0,0,.03); text-decoration:none;}
-  .mj-detail-btn:hover{background: #f8fafc; border-color:#94a3b8; color:#1e293b; transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,.05);}
-  .mj-detail-btn:active{transform: translateY(0); box-shadow: none; background: #f1f5f9;}
-  .mj-problem-wrap{ padding: 10px 14px 8px 14px; }
-  .mj-problem-head{ margin-bottom:4px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; }
-  .mj-problem{border:1px solid #fda4af; border-left: 4px solid #e11d48; background: #fff1f2; padding: 8px 10px; border-radius:8px; color:#9f1239; font-size:13px; line-height:1.4; display:-webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow:hidden;}
-  .mj-problem--empty{color:#9f1239;font-style: italic;background: #fff1f2; padding: 6px 10px; border-radius:8px; font-size:12px;}
-  .mj-card__grid{display:grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #f1f5f9;}
-  @media (max-width:1024px){.mj-card__grid{grid-template-columns:1fr}}
-  .mj-cell{padding: 10px 14px; border-right:1px solid #f1f5f9}
-  .mj-cell:last-child{border-right:none}
-  @media (max-width:1024px){.mj-cell{border-right:none;border-top:1px solid #f1f5f9}.mj-cell:first-child{border-top:none}}
-  .mj-cell__head{font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;margin-bottom:4px; color:#64748b;}
-  .mj-kv{font-size:13px;color:#1e293b}.mj-k{color:#64748b;font-size:12px;font-weight:700;margin-right:4px}.mj-v{font-weight:700}
-  .mj-card__footer{padding: 10px 14px; border-top: 1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; gap: 10px; background: #fcfcfd;}
-  .mj-footer-left{display:flex;align-items:center;gap:10px;min-width:0}
-  .mj-footer-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
-  .mj-footer-status{display:inline-flex;align-items:center;gap:6px; padding: 4px 10px; background: #f1f5f9; border-radius: 9999px;}
-  .mj-accept-btn{height: 34px; padding: 0 12px; border-radius: 8px; display:inline-flex; align-items:center; gap: 8px; font-weight: 800; font-size: 13px; color: #ffffff; background: #16a34a; border: 1px solid #15803d; box-shadow: 0 2px 4px rgba(0,0,0,.05); transition: all .2s ease;}
-  .mj-accept-btn:hover{background: #15803d; border-color:#14532d; box-shadow: 0 4px 8px rgba(22, 163, 74, 0.25); transform: translateY(-1px);}
-  .mj-accept-btn:active{ transform: translateY(0); background: #14532d; box-shadow: none;}
-  .mj-accept-ic{width: 20px; height: 20px; display:inline-flex; align-items:center; justify-content:center; transition: transform .2s ease;}
-  .mj-accept-ic svg{ width:18px; height:18px; stroke-width: 2.5; }
-  .mj-accept-btn:hover .mj-accept-ic{transform: scale(1.15);}
-</style>
-@endpush
-
-@push('scripts')
-<script>
-  function showLoader(){ document.getElementById('loaderOverlay')?.classList.add('show') }
-  function hideLoader(){ document.getElementById('loaderOverlay')?.classList.remove('show') }
-
-  function openAcceptModal(id, ticketNo) {
-    const modal = document.getElementById('acceptModal');
-    const form  = document.getElementById('acceptForm');
-    form.action = `{{ $acceptBaseUrl }}/${id}/accept`;
-    document.getElementById('acceptModalTitle').textContent = `รับเรื่อง #${ticketNo}`;
-    document.getElementById('acceptDecision').value = 'accepted';
-    const radioAccepted = document.querySelector('input[name="decision_radio"][value="accepted"]');
-    if (radioAccepted) radioAccepted.checked = true;
-    const pos = document.getElementById('positionSelect');
-    const tech = document.getElementById('techSelect');
-    if (pos) pos.value = '';
-    if (tech) { tech.value = ''; Array.from(tech.options).forEach(opt => opt.hidden = false); }
-    handleDecisionChange('accepted');
-    modal.classList.remove('hidden');
-  }
-
-  function closeAcceptModal() { document.getElementById('acceptModal')?.classList.add('hidden'); }
-  document.getElementById('acceptModal')?.addEventListener('click', function(e) { if (e.target === this) closeAcceptModal(); });
-
-  function handleDecisionChange(value) {
-    const assignBox = document.getElementById('assignBox');
-    const decision  = document.getElementById('acceptDecision');
-    const tech      = document.getElementById('techSelect');
-    if (!decision) return; decision.value = value;
-    if (value === 'in_progress') { assignBox?.classList.remove('hidden'); tech?.setAttribute('required', 'required'); }
-    else { assignBox?.classList.add('hidden'); tech?.removeAttribute('required'); }
-  }
-
-  document.getElementById('positionSelect')?.addEventListener('change', function() {
-    const role = (this.value || '').trim();
-    const tech = document.getElementById('techSelect');
-    if (!tech) return;
-    Array.from(tech.options).forEach(opt => {
-      if (!opt.value) return;
-      const r = (opt.getAttribute('data-role') || '').trim();
-      opt.hidden = (r && role) ? (r !== role) : false;
-    });
-    if (tech.selectedOptions[0]?.hidden) tech.value = '';
-  });
-
-  function renderDonut(){
-    const pending = parseInt((document.getElementById('stat-pending')?.textContent||'0').trim(), 10) || 0;
-    const inprog  = parseInt((document.getElementById('stat-in-progress')?.textContent||'0').trim(), 10) || 0;
-    const comp    = parseInt((document.getElementById('stat-completed')?.textContent||'0').trim(), 10) || 0;
-    const total = pending + inprog + comp;
-    const donut = document.getElementById('donut');
-    const pctEl = document.getElementById('donutPct');
-    if(!donut || !pctEl) return;
-    const completedPct = total > 0 ? Math.round((comp / total) * 100) : 0;
-    pctEl.textContent = `${completedPct}%`;
-    const degPending = total > 0 ? (pending / total) * 360 : 0;
-    const degInprog  = total > 0 ? (inprog  / total) * 360 : 0;
-    const degComp    = total > 0 ? (comp    / total) * 360 : 0;
-    const a0 = 0;
-    const a1 = a0 + degPending;
-    const a2 = a1 + degInprog;
-    const a3 = a2 + degComp;
-    donut.style.background = `conic-gradient(#f59e0b ${a0}deg ${a1}deg,#0ea5e9 ${a1}deg ${a2}deg,#10b981 ${a2}deg ${a3}deg,#e2e8f0 ${a3}deg 360deg)`;
-  }
-  document.addEventListener('DOMContentLoaded', () => { hideLoader(); renderDonut(); });
-</script>
-@endpush

@@ -10,32 +10,41 @@ return new class extends Migration {
         Schema::create('attachments', function (Blueprint $table) {
             $table->id();
 
-            // ชี้ไปยังไฟล์จริง (ต้องมีตาราง files ก่อน)
+            // เชื่อมโยงไปยังไฟล์จริงในตาราง files
             $table->foreignId('file_id')
                   ->constrained('files')
                   ->cascadeOnDelete();
 
-            // เป้าหมายแบบ polymorphic: แนบได้ทุกโมดูล
-            $table->morphs('attachable'); // attachable_type + attachable_id + index
+            // ความสัมพันธ์แบบ Polymorphic (เป้าหมายที่ไฟล์นี้ไปแนบอยู่ เช่น MaintenanceRequest, User)
+            $table->morphs('attachable');
 
-            // ชื่อไฟล์ตอนอัปโหลด (เพื่อแสดงผลเท่านั้น)
+            // ชื่อไฟล์ดั้งเดิมตอนที่ผู้ใช้อัปโหลด
             $table->string('original_name', 255);
+
+            // นามสกุลของไฟล์ (เช่น jpg, pdf, docx)
             $table->string('extension', 16)->nullable();
 
-            // การแสดงผล / ลำดับ
+            // คำอธิบายรูปภาพหรือไฟล์เบื้องต้น
             $table->string('caption', 512)->nullable();
-            $table->string('alt_text', 512)->nullable();
-            $table->unsignedInteger('order_column')->default(0);
 
-            // ความเป็นส่วนตัว
+            // ข้อความ Alternative Text สำหรับคนพิการหรือกรณีรูปไม่โหลด
+            $table->string('alt_text', 512)->nullable();
+
+            // ลำดับการแสดงผลของไฟล์ (กรณีมีหลายไฟล์แนบในเป้าหมายเดียวกัน)
+            // signed: hero image ใช้ค่า sentinel Attachment::HERO_ORDER (-1) เพื่อให้ sort มาก่อน gallery
+            $table->integer('order_column')->default(0);
+
+            // กำหนดความละเอียดอ่อนของไฟล์ (true = เฉพาะผู้เกี่ยวข้องเห็น, false = สาธารณะ)
             $table->boolean('is_private')->default(false);
 
-            // ผู้ใช้ที่อัปโหลด + ช่องทาง
+            // ผู้ใช้งานที่เป็นคนอัปโหลดไฟล์นี้
             $table->foreignId('uploaded_by')->nullable()
                   ->constrained('users')->nullOnDelete();
-            $table->string('source', 32)->default('web'); // web|api|import|job|seed ...
 
-            // นโยบายเก็บรักษา
+            // แหล่งที่มาของไฟล์ (เช่น web = อัปโหลดผ่านเว็บ, api = ผ่านแอป)
+            $table->string('source', 32)->default('web'); 
+
+            // วันที่และเวลาที่ไฟล์นี้จะหมดอายุ (ถ้ามีการกำหนดนโยบายการจัดเก็บ)
             $table->timestamp('expires_at')->nullable();
 
             $table->timestamps();

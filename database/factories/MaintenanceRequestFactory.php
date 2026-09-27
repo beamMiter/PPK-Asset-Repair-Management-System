@@ -12,8 +12,10 @@ class MaintenanceRequestFactory extends Factory
 {
     protected $model = MaintenanceRequest::class;
 
+    // กำหนดค่าเริ่มต้นให้กับ Model MaintenanceRequest
     public function definition(): array
     {
+        // สุ่มสถานะของใบแจ้งซ่อม
         $status = $this->faker->randomElement([
             MaintenanceRequest::STATUS_PENDING,
             MaintenanceRequest::STATUS_ACCEPTED,
@@ -22,19 +24,18 @@ class MaintenanceRequestFactory extends Factory
             MaintenanceRequest::STATUS_CLOSED,
         ]);
 
-        $priority = $this->faker->randomElement([
-            MaintenanceRequest::PRIORITY_LOW,
-            MaintenanceRequest::PRIORITY_MEDIUM,
-            MaintenanceRequest::PRIORITY_HIGH,
-            MaintenanceRequest::PRIORITY_URGENT,
-        ]);
-
+        // สุ่มวันที่แจ้งซ่อมย้อนหลังไม่เกิน 11 เดือน
         $requestDate = Carbon::instance(
             $this->faker->dateTimeBetween('-11 months', 'now')
         );
 
+        // คำนวณลำดับเวลา (Timestamp Waterfall) ตามสถานะของงาน
+        $acknowledgedAt = in_array($status, ['accepted','in_progress','resolved','closed'], true)
+            ? $requestDate->copy()->addHours(rand(1, 12))
+            : null;
+
         $acceptedAt = in_array($status, ['accepted','in_progress','resolved','closed'], true)
-            ? $requestDate->copy()->addHours(rand(1, 48))
+            ? optional($acknowledgedAt)->copy()->addHours(rand(1, 24))
             : null;
 
         $startedAt = in_array($status, ['in_progress','resolved','closed'], true)
@@ -62,18 +63,21 @@ class MaintenanceRequestFactory extends Factory
             'title'         => 'แจ้งซ่อม: '.$this->faker->words(3, true),
             'description'   => $this->faker->sentence(12),
 
-            'priority'      => $priority,
             'status'        => $status,
 
             'technician_id' => $technicianId,
 
             'request_date'  => $requestDate,
             'assigned_date' => $acceptedAt,
+            'acknowledged_at' => $acknowledgedAt,
             'accepted_at'   => $acceptedAt,
             'started_at'    => $startedAt,
             'resolved_at'   => $resolvedAt,
             'closed_at'     => $closedAt,
             'completed_date'=> $closedAt,
+            
+            'sla_due_date'  => $requestDate->copy()->addDays(7),
+            'paused_duration_minutes' => 0,
 
             'cost'          => in_array($status, ['resolved','closed'], true)
                 ? $this->faker->randomFloat(2, 200, 15000)
@@ -83,5 +87,19 @@ class MaintenanceRequestFactory extends Factory
                 ? $this->faker->sentence(10)
                 : null,
         ];
+    }
+    public function configure()
+    {
+        return $this->afterCreating(function (MaintenanceRequest $mr) {
+            if (in_array($mr->status, [
+                MaintenanceRequest::STATUS_PENDING,
+                MaintenanceRequest::STATUS_ACKNOWLEDGED,
+                MaintenanceRequest::STATUS_ACCEPTED,
+                MaintenanceRequest::STATUS_IN_PROGRESS,
+                MaintenanceRequest::STATUS_ON_HOLD
+            ], true)) {
+                $mr->asset()->update(['status' => \App\Models\Asset::STATUS_IN_REPAIR]);
+            }
+        });
     }
 }

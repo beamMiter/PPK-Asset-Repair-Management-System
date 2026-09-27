@@ -59,6 +59,7 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class, 'email')->ignore($userId),
             ],
+            // แก้จาก integer/exists:id เป็น string/exists:code เพื่อให้ตรงกับ Model ที่พี่ใช้
             'department' => ['nullable', 'string', 'exists:departments,code'],
         ];
     }
@@ -81,9 +82,9 @@ class ProfileUpdateRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'name'       => 'ชื่อ',
-            'email'      => 'อีเมล',
-            'department' => 'แผนก',
+            'name'        => 'ชื่อ',
+            'email'       => 'อีเมล',
+            'department'  => 'แผนก',
         ];
     }
 
@@ -94,7 +95,7 @@ class ProfileUpdateRequest extends FormRequest
             'name.max'          => 'ชื่อต้องไม่เกิน :max ตัวอักษร',
             'email.required'    => 'กรุณากรอกอีเมล',
             'email.email'       => 'รูปแบบอีเมลไม่ถูกต้อง',
-            'email.max'         => 'อีเมลต้องไม่เกิน :max ตัวอักษร',
+            'email.max'          => 'อีเมลต้องไม่เกิน :max ตัวอักษร',
             'email.unique'      => 'อีเมลนี้ถูกใช้ไปแล้ว',
             'department.exists' => 'แผนกที่เลือกไม่ถูกต้อง',
         ];

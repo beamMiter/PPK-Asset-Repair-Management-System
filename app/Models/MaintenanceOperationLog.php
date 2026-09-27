@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class MaintenanceOperationLog extends Model
 {
     use HasFactory;
+
     protected $table = 'maintenance_operation_logs';
 
     protected $fillable = [
@@ -30,16 +31,17 @@ class MaintenanceOperationLog extends Model
         'issue_hardware'   => 'boolean',
     ];
 
-    // ใบงานที่รายงานนี้สังกัดอยู่
+    public const METHOD_REQUISITION = 'requisition';
+    public const METHOD_SERVICE_FEE = 'service_fee';
+    public const METHOD_OTHER       = 'other';
+
     public function request(): BelongsTo
     {
         return $this->belongsTo(MaintenanceRequest::class, 'maintenance_request_id');
     }
 
-    // คนที่บันทึก (ช่าง/แอดมิน)
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
-
 }

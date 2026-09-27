@@ -1,4 +1,4 @@
-<x-guest-layout>
+<x-guest-layout title="Reset password">
     <form method="POST" action="{{ route('password.store') }}">
         @csrf
 
@@ -28,6 +28,7 @@
                           name="password"
                           required
                           autocomplete="new-password" />
+            <p class="mt-1 text-xs text-slate-500">อย่างน้อย 8 ตัวอักษร ต้องมีทั้งตัวอักษรและตัวเลข</p>
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 

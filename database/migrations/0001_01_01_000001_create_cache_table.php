@@ -12,14 +12,24 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('cache', function (Blueprint $table) {
+            // คีย์สำหรับเก็บข้อมูล Cache
             $table->string('key')->primary();
+
+            // ค่าข้อมูลที่เก็บไว้ใน Cache
             $table->mediumText('value');
+
+            // เวลาหมดอายุ (Timestamp)
             $table->integer('expiration');
         });
 
         Schema::create('cache_locks', function (Blueprint $table) {
+            // คีย์สำหรับการล็อค (Atomic Lock)
             $table->string('key')->primary();
+
+            // ผู้ที่เป็นเจ้าของ Lock
             $table->string('owner');
+
+            // เวลาหมดอายุการล็อค
             $table->integer('expiration');
         });
     }

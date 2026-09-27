@@ -13,11 +13,23 @@ return new class extends Migration
     {
         Schema::create('jobs', function (Blueprint $table) {
             $table->id();
+
+            // ชื่อคิว (Queue Name)
             $table->string('queue')->index();
+
+            // ข้อมูลงานที่ต้องประมวลผล (Serialized Job)
             $table->longText('payload');
+
+            // จำนวนครั้งที่พยายามทำงานนี้แล้ว
             $table->unsignedTinyInteger('attempts');
+
+            // เวลาที่งานถูกจองเพื่อประมวลผล
             $table->unsignedInteger('reserved_at')->nullable();
+
+            // เวลาที่งานสามารถเริ่มประมวลผลได้
             $table->unsignedInteger('available_at');
+
+            // เวลาที่งานถูกสร้างขึ้น
             $table->unsignedInteger('created_at');
         });
 
@@ -36,11 +48,23 @@ return new class extends Migration
 
         Schema::create('failed_jobs', function (Blueprint $table) {
             $table->id();
+
+            // ID เฉพาะของงานที่ล้มเหลว
             $table->string('uuid')->unique();
+
+            // ชื่อการเชื่อมต่อ (Connection)
             $table->text('connection');
+
+            // ชื่อคิว
             $table->text('queue');
+
+            // ข้อมูลงานที่ล้มเหลว
             $table->longText('payload');
+
+            // รายละเอียดความผิดพลาด (Exception)
             $table->longText('exception');
+
+            // วันที่และเวลาที่งานล้มเหลว
             $table->timestamp('failed_at')->useCurrent();
         });
     }

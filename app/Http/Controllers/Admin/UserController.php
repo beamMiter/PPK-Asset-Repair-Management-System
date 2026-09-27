@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
+use App\Support\Toast;
+use App\Support\Like;
 
 class UserController extends Controller
 {
@@ -55,10 +57,10 @@ class UserController extends Controller
         if ($search !== '') {
             $needle = mb_strtolower($search);
             $q->where(function ($qq) use ($needle) {
-                $qq->whereRaw('LOWER(name) LIKE ?', ["%{$needle}%"])
-                   ->orWhereRaw('LOWER(email) LIKE ?', ["%{$needle}%"])
-                   ->orWhereRaw('LOWER(citizen_id) LIKE ?', ["%{$needle}%"])
-                   ->orWhereRaw('LOWER(COALESCE(department, \'\')) LIKE ?', ["%{$needle}%"]);
+                $qq->whereRaw('LOWER(name) LIKE ?', [Like::contains($needle)])
+                   ->orWhereRaw('LOWER(email) LIKE ?', [Like::contains($needle)])
+                   ->orWhereRaw('LOWER(citizen_id) LIKE ?', [Like::contains($needle)])
+                   ->orWhereRaw('LOWER(COALESCE(department, \'\')) LIKE ?', [Like::contains($needle)]);
             });
         }
 
@@ -76,7 +78,7 @@ class UserController extends Controller
 
         $list = $q
             ->orderBy('name')
-            ->paginate(20)
+            ->paginate(15)
             ->withQueryString();
 
         // dropdown หน่วยงาน
@@ -101,145 +103,24 @@ class UserController extends Controller
     }
 
     /**
-     * ฟอร์มสร้างผู้ใช้ใหม่
-     */
-    public function create()
-    {
-        $roleCodes   = User::availableRoles();
-        $roleLabels  = User::roleLabels();
-
-        $departments = Department::orderBy('code')->get([
-            'id',
-            'code',
-            'name_th',
-            'name_en',
-        ]);
-
-        return view('admin.users.create', [
-            'roles'       => $roleCodes,
-            'roleLabels'  => $roleLabels,
-            'departments' => $departments,
-        ]);
-    }
-
-    /**
-     * บันทึกผู้ใช้ใหม่
-     */
-    public function store(Request $request)
-    {
-        $availableRoles = User::availableRoles();
-
-        $validator = Validator::make(
-            $request->all(),
-            [
-                'name'        => ['required', 'string', 'max:255'],
-                'citizen_id'  => [
-                    'required',
-                    'digits:13',
-                    'unique:users,citizen_id',
-                ],
-                'email'       => [
-                    'nullable',
-                    'email',
-                    'max:255',
-                    'unique:users,email',
-                ],
-                'password'    => ['required', 'string', 'min:8', 'confirmed'],
-                'role'        => [
-                    'required',
-                    'string',
-                    Rule::in($availableRoles),
-                ],
-                'department'  => [
-                    'nullable',
-                    'string',
-                    'max:255',
-                    Rule::exists('departments', 'code'),
-                ],
-            ],
-            [
-                'name.required'         => 'กรุณากรอกชื่อผู้ใช้',
-                'name.max'              => 'ชื่อผู้ใช้ต้องไม่เกิน :max ตัวอักษร',
-                'citizen_id.required'   => 'กรุณากรอกเลขบัตรประชาชน',
-                'citizen_id.digits'     => 'เลขบัตรประชาชนต้องมี 13 หลัก',
-                'citizen_id.unique'     => 'เลขบัตรประชาชนนี้ถูกใช้ไปแล้ว',
-                'email.email'           => 'รูปแบบอีเมลไม่ถูกต้อง',
-                'email.max'             => 'อีเมลต้องไม่เกิน :max ตัวอักษร',
-                'email.unique'          => 'อีเมลนี้ถูกใช้ไปแล้ว',
-                'password.required'     => 'กรุณากรอกรหัสผ่าน',
-                'password.min'          => 'รหัสผ่านต้องมีอย่างน้อย :min ตัวอักษร',
-                'password.confirmed'    => 'รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน',
-                'role.required'         => 'กรุณาเลือกบทบาทผู้ใช้',
-                'role.in'               => 'บทบาทที่เลือกไม่ถูกต้อง',
-                'department.max'        => 'ชื่อหน่วยงานต้องไม่เกิน :max ตัวอักษร',
-                'department.exists'     => 'หน่วยงานที่เลือกไม่ถูกต้อง',
-            ]
-        );
-
-        if ($validator->fails()) {
-            return back()
-                ->withInput()
-                ->withErrors($validator)
-                ->with('toast', [
-                    'type'     => 'error',
-                    'message'  => 'บันทึกผู้ใช้ไม่สำเร็จ',
-                    'position' => 'br',
-                    'timeout'  => 3200,
-                    'details'  => $validator->errors()->first() ?? null,
-                ]);
-        }
-
-        $data = $validator->validated();
-
-        try {
-            DB::beginTransaction();
-
-            $user              = new User();
-            $user->name        = $data['name'];
-            $user->citizen_id  = $data['citizen_id'];
-            $user->email       = $data['email'] ?? null;
-            $user->password    = Hash::make($data['password']);
-            $user->role        = $data['role'];
-            $user->department  = $data['department'] ?? null;
-
-            if (Schema::hasColumn('users', 'created_by')) {
-                $user->created_by = Auth::id();
-            }
-
-            $user->save();
-
-            DB::commit();
-
-            return redirect()
-                ->route('admin.users.index')
-                ->with('toast', [
-                    'type'     => 'success',
-                    'message'  => 'สร้างผู้ใช้ใหม่เรียบร้อยแล้ว',
-                    'position' => 'br',
-                    'timeout'  => 2800,
-                ]);
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            report($e);
-
-            return back()
-                ->withInput()
-                ->with('toast', [
-                    'type'     => 'error',
-                    'message'  => 'เกิดข้อผิดพลาดระหว่างบันทึกข้อมูลผู้ใช้',
-                    'position' => 'br',
-                    'timeout'  => 4000,
-                ]);
-        }
-    }
-
-    /**
      * ฟอร์มแก้ไขผู้ใช้
      */
     public function edit(User $user)
     {
+        $currentUser = Auth::user();
+        if ($currentUser->isTechnician() && !$currentUser->isAdmin() && !$currentUser->isSupervisor() && $user->id !== $currentUser->id) {
+            abort(403, 'เจ้าหน้าที่สามารถแก้ไขได้เฉพาะประวัติส่วนตัวของตนเองเท่านั้น');
+        }
+
         $roleCodes   = User::availableRoles();
         $roleLabels  = User::roleLabels();
+
+        // ป้องกันไม่ให้ใครที่ไม่ได้เป็น Admin มาแก้ไข Admin/Supervisor
+        if (in_array($user->role, [User::ROLE_ADMIN, User::ROLE_SUPERVISOR])) {
+            if (!Auth::user()->isAdmin() && Auth::id() !== $user->id) {
+                return back()->with('toast', Toast::error('คุณไม่มีสิทธิ์แก้ไขข้อมูลของผู้ดูแลระบบหรือหัวหน้างานท่านอื่น', 4000));
+            }
+        }
 
         $departments = Department::orderBy('code')->get([
             'id',
@@ -261,6 +142,11 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
+        $currentUser = Auth::user();
+        if ($currentUser->isTechnician() && !$currentUser->isAdmin() && !$currentUser->isSupervisor() && $user->id !== $currentUser->id) {
+            abort(403, 'เจ้าหน้าที่สามารถแก้ไขได้เฉพาะประวัติส่วนตัวของตนเองเท่านั้น');
+        }
+
         $availableRoles = User::availableRoles();
 
         $validator = Validator::make(
@@ -313,16 +199,22 @@ class UserController extends Controller
             return back()
                 ->withInput()
                 ->withErrors($validator)
-                ->with('toast', [
-                    'type'     => 'error',
-                    'message'  => 'อัพเดตข้อมูลผู้ใช้ไม่สำเร็จ',
-                    'position' => 'br',
-                    'timeout'  => 3200,
-                    'details'  => $validator->errors()->first() ?? null,
-                ]);
+                ->with('toast', Toast::error('อัพเดตข้อมูลผู้ใช้ไม่สำเร็จ: ' . $validator->errors()->first(), 3200));
         }
 
         $data = $validator->validated();
+
+        // ป้องกันสิทธิ์การอัพเดต Role เปลี่ยนผู้ใช้เป็น Admin/Supervisor
+        if (in_array($data['role'], [User::ROLE_ADMIN, User::ROLE_SUPERVISOR])) {
+            if (!Auth::user()->isAdmin() && !(Auth::id() === $user->id && $user->role === $data['role'])) {
+                return back()->withInput()->with('toast', Toast::error('เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถตั้งค่าผู้ใช้เป็นแอดมินหรือหัวหน้างานได้', 4000));
+            }
+        }
+
+        // ป้องกันการแก้ไข Admin/Supervisor ท่านอื่น ถ้าคนแก้ไม่ใช่ Admin 
+        if (in_array($user->role, [User::ROLE_ADMIN, User::ROLE_SUPERVISOR]) && !Auth::user()->isAdmin() && Auth::id() !== $user->id) {
+            return back()->withInput()->with('toast', Toast::error('คุณไม่มีสิทธิ์อัพเดตข้อมูลของผู้ดูแลระบบหรือหัวหน้างานท่านอื่น', 4000));
+        }
 
         try {
             DB::beginTransaction();
@@ -335,6 +227,8 @@ class UserController extends Controller
 
             if (!empty($data['password'])) {
                 $user->password = Hash::make($data['password']);
+                // somebody else's password, chosen by an admin: they replace it (an admin changing their own is not asked to)
+                $user->must_change_password = $user->id !== Auth::id();
             }
 
             $user->save();
@@ -343,67 +237,57 @@ class UserController extends Controller
 
             return redirect()
                 ->route('admin.users.index')
-                ->with('toast', [
-                    'type'     => 'success',
-                    'message'  => 'อัพเดตข้อมูลผู้ใช้เรียบร้อยแล้ว',
-                    'position' => 'br',
-                    'timeout'  => 2800,
-                ]);
+                ->with('toast', Toast::success('อัพเดตข้อมูลผู้ใช้เรียบร้อยแล้ว', 2800));
         } catch (\Throwable $e) {
             DB::rollBack();
             report($e);
 
             return back()
                 ->withInput()
-                ->with('toast', [
-                    'type'     => 'error',
-                    'message'  => 'เกิดข้อผิดพลาดระหว่างอัพเดตข้อมูลผู้ใช้',
-                    'position' => 'br',
-                    'timeout'  => 4000,
-                ]);
+                ->with('toast', Toast::error('เกิดข้อผิดพลาดระหว่างอัพเดตข้อมูลผู้ใช้', 4000));
         }
     }
 
     /**
-     * ลบผู้ใช้
+     * ระงับบัญชี — แทนการลบ: ประวัติ (ใบแจ้งซ่อม, แชท, คะแนน, การมอบหมาย) อยู่ครบ
+     * แต่เข้าสู่ระบบไม่ได้และถูกมอบหมายงานใหม่ไม่ได้ เปิดใช้งานกลับได้ภายหลัง
      */
-    public function destroy(User $user)
+    public function suspend(User $user)
     {
-        // กันลบตัวเอง
         if ($user->id === Auth::id()) {
-            return back()->with('toast', [
-                'type'     => 'error',
-                'message'  => 'ไม่สามารถลบบัญชีของตัวเองได้',
-                'position' => 'br',
-                'timeout'  => 3200,
-            ]);
+            return back()->with('toast', Toast::error('ไม่สามารถระงับบัญชีของตัวเองได้', 3200));
         }
 
-        try {
-            DB::beginTransaction();
-
-            $user->delete();
-
-            DB::commit();
-
-            return redirect()
-                ->route('admin.users.index')
-                ->with('toast', [
-                    'type'     => 'success',
-                    'message'  => 'ลบผู้ใช้เรียบร้อยแล้ว',
-                    'position' => 'br',
-                    'timeout'  => 2800,
-                ]);
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            report($e);
-
-            return back()->with('toast', [
-                'type'     => 'error',
-                'message'  => 'เกิดข้อผิดพลาดระหว่างลบผู้ใช้',
-                'position' => 'br',
-                'timeout'  => 4000,
-            ]);
+        if ($user->isSuspended()) {
+            return back()->with('toast', Toast::warning('บัญชีนี้ถูกระงับอยู่แล้ว', 2800));
         }
+
+        $user->forceFill(['suspended_at' => now(), 'remember_token' => null])->save();
+        $user->tokens()->delete(); // API tokens stop working at once; web sessions end on their next request
+
+        Log::info('[Admin\UserController::suspend] account suspended', ['user_id' => $user->id, 'actor_id' => Auth::id()]);
+
+        // A suspended person keeps the jobs they were on, and nothing else looks at them: say how many, so they are handed over.
+        $open = \App\Models\MaintenanceAssignment::where('user_id', $user->id)
+            ->where('status', '!=', \App\Models\MaintenanceAssignment::STATUS_CANCELLED)
+            ->whereHas('maintenanceRequest', fn ($request) => $request->whereIn('status', \App\Models\MaintenanceRequest::OPEN_STATUSES))
+            ->count();
+
+        return back()->with('toast', $open > 0
+            ? Toast::warning("ระงับบัญชี {$user->name} แล้ว แต่ยังมีงานค้าง {$open} งานที่มอบหมายให้คนนี้ กรุณามอบหมายเจ้าหน้าที่ใหม่", 6000)
+            : Toast::success("ระงับบัญชี {$user->name} แล้ว", 2800));
+    }
+
+    public function reactivate(User $user)
+    {
+        if (! $user->isSuspended()) {
+            return back()->with('toast', Toast::warning('บัญชีนี้ไม่ได้ถูกระงับ', 2800));
+        }
+
+        $user->forceFill(['suspended_at' => null])->save();
+
+        Log::info('[Admin\UserController::reactivate] account reactivated', ['user_id' => $user->id, 'actor_id' => Auth::id()]);
+
+        return back()->with('toast', Toast::success("เปิดใช้งานบัญชี {$user->name} แล้ว", 2800));
     }
 }

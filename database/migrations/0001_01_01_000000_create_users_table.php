@@ -11,35 +11,41 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
 
-            // เลขบัตรประชาชน 13 หลัก (ใช้เป็นหลักในการ Login)
-            $table->string('citizen_id', 13)
-                  ->unique()
-                  ->comment('เลขประจำตัวประชาชน 13 หลัก สำหรับใช้ล็อกอิน');
+            // เลขประจำตัวประชาชน 13 หลัก (ใช้เป็น Username หลักในการเข้าสู่ระบบ)
+            $table->string('citizen_id', 13)->unique();
 
+            // ชื่อ-นามสกุล ของผู้ใช้งาน
             $table->string('name');
 
-            // email ไม่บังคับแล้ว แต่ถ้ามีก็ยังต้องไม่ซ้ำกัน
-            $table->string('email')
-                  ->nullable()
-                  ->unique();
+            // ที่อยู่อีเมล (ไม่บังคับ แต่ต้องไม่ซ้ำถ้ามีการระบุ)
+            $table->string('email')->nullable()->unique();
+            
+            // วันที่ยืนยันอีเมล
             $table->timestamp('email_verified_at')->nullable();
 
+            // รหัสผ่านที่ผ่านการ Hash แล้ว
             $table->string('password');
 
-            // เก็บรหัสหน่วยงาน (code จากตาราง departments) เผื่อ filter
-            $table->string('department', 100)
-                  ->nullable()
-                  ->index();
+            // รหัสผ่านที่ผู้ดูแลระบบตั้งให้คนอื่นถูกรู้โดยผู้ดูแล (และมักจดไว้ในกระดาษ): เจ้าของบัญชีต้องเปลี่ยนเองก่อนใช้งาน
+            // ตั้งเป็น true เมื่อแอดมินตั้งรหัสให้ผู้อื่น และเคลียร์เมื่อเจ้าตัวเปลี่ยนรหัส (หน้าโปรไฟล์) หรือรีเซ็ตทางอีเมล
+            $table->boolean('must_change_password')->default(false);
 
-            // เก็บ role เป็น code (ไปแมปกับ roles.code)
-            $table->string('role', 50)
-                  ->default('member')
-                  ->comment('Role code roles.code เช่น member, admin, supervisor, it_support, network, developer, technician')
-                  ->index();
+            // รหัสแผนก/หน่วยงาน (อ้างอิงจาก code ในตาราง departments)
+            $table->string('department', 100)->nullable()->index();
 
-            // รูปโปรไฟล์
+            // บทบาทของผู้ใช้งาน (เช่น admin, technician, member) อ้างอิงจาก code ในตาราง roles
+            $table->string('role', 50)->default('member')->index();
+
+            // บัญชีถูกระงับ (ไม่ลบ): ผู้ใช้ถูกอ้างอิงโดยใบงาน ล็อก การมอบหมาย คะแนน และแชท (บางตารางลบต่อเนื่อง) การลบจึงทำลายข้อมูลของคนอื่น
+            // บัญชีที่ถูกระงับเก็บประวัติทั้งหมดไว้ แต่เข้าสู่ระบบและรับงานใหม่ไม่ได้ ผู้ดูแลเปิดใช้งานอีกครั้งได้
+            $table->timestamp('suspended_at')->nullable();
+
+            // พาธเก็บไฟล์รูปภาพโปรไฟล์ (Original และ Thumbnail)
             $table->string('profile_photo_path', 2048)->nullable();
             $table->string('profile_photo_thumb', 2048)->nullable();
+
+            // ไฟล์เสียงแจ้งเตือนที่ผู้ใช้เลือกใช้งาน
+            $table->string('notification_sound')->default('new-request.mp3');
 
             $table->rememberToken();
             $table->timestamps();

@@ -11,32 +11,28 @@ return new class extends Migration
         Schema::create('maintenance_assignments', function (Blueprint $table) {
             $table->id();
 
+            // หมายเลขใบงานที่มอบหมาย
             $table->foreignId('maintenance_request_id')
                 ->constrained('maintenance_requests')
                 ->cascadeOnUpdate()
                 ->cascadeOnDelete();
 
+            // ช่างหรือผู้ปฏิบัติงานที่ได้รับมอบหมาย
             $table->foreignId('user_id')
                 ->constrained('users')
                 ->cascadeOnUpdate()
                 ->cascadeOnDelete();
 
-            // บทบาทในงาน (เช่น tech, helper)
+            // บทบาทของช่างในงานนี้ (เช่น tech = ช่างเทคนิค, helper = ผู้ช่วย)
             $table->string('role', 50)->nullable();
 
-            // เป็นช่างหลักหรือไม่
+            // ระบุว่าเป็นช่างหลัก (Lead Technician) หรือไม่
             $table->boolean('is_lead')->default(false);
 
-            // วันที่ถูกมอบหมาย
+            // วันที่และเวลาที่ได้รับการมอบหมายงาน
             $table->dateTime('assigned_at')->nullable();
 
-            /**
-             * การตอบรับงานของช่าง
-             * - pending        : ยังไม่ตอบ
-             * - acknowledged  : รับทราบแล้ว
-             * - accepted      : รับเรื่อง
-             * - rejected      : ไม่รับเรื่อง
-             */
+            // สถานะการตอบรับงานของช่าง (pending = รอการตอบรับ, acknowledged = รับทราบแล้ว, accepted = ตอบรับงาน, rejected = ปฏิเสธงาน)
             $table->enum('response_status', [
                 'pending',
                 'acknowledged',
@@ -44,22 +40,13 @@ return new class extends Migration
                 'rejected',
             ])->default('pending');
 
-            // วันที่ตอบรับ / ปฏิเสธ
+            // วันที่และเวลาที่ทำการตอบรับหรือปฏิเสธงาน
             $table->dateTime('responded_at')->nullable();
 
-            /**
-             * เหตุผล / บันทึกการตอบรับ
-             * ใช้กับกรณี "ไม่รับเรื่อง" เป็นหลัก
-             */
+            // หมายเหตุหรือเหตุผลประกอบการตอบรับ (โดยเฉพาะกรณีปฏิเสธงาน)
             $table->string('remark', 2000)->nullable();
 
-            /**
-             * สถานะความคืบหน้างาน (ระดับ assignment)
-             * - assigned     : อยู่ในรายการ / ยังไม่เริ่ม
-             * - in_progress  : กำลังดำเนินการ
-             * - done         : เสร็จสิ้น
-             * - cancelled    : ยกเลิก / คืนงาน / ไม่รับเรื่อง
-             */
+            // สถานะความคืบหน้าของช่างแต่ละคน (assigned = มอบหมายแล้ว, in_progress = กำลังซ่อม, done = งานในส่วนที่รับผิดชอบเสร็จแล้ว, cancelled = ยกเลิกงาน)
             $table->enum('status', [
                 'assigned',
                 'in_progress',

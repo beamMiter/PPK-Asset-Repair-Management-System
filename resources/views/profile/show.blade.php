@@ -1,272 +1,143 @@
 @extends('layouts.app')
+
 @section('title', 'Profile')
 
-@section('page-header')
-  <div class="border-b border-slate-200 bg-slate-50/80 backdrop-blur-sm">
-    <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-4">
-      <nav class="flex items-center gap-2 text-sm text-slate-500">
-        <a href="{{ route('dashboard') }}" class="hover:text-emerald-700 hover:underline">Dashboard</a>
-        <span class="text-slate-400">/</span>
-        <span class="text-slate-700">Profile</span>
-      </nav>
-
-      <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="min-w-0">
-          <h1 class="text-xl font-semibold text-slate-900 tracking-tight">
-            My Profile
-          </h1>
-          <p class="mt-0.5 text-sm text-slate-500">
-            ข้อมูลส่วนตัวและความปลอดภัยของบัญชี (Account & Security)
-          </p>
-
-          @php
-            $deptName = optional($user->departmentRef)->display_name
-              ?? optional($user->departmentRef)->name_th
-              ?? optional($user->departmentRef)->name_en
-              ?? optional($user->departmentRef)->name
-              ?? '—';
-          @endphp
-
-          <div class="mt-3 flex flex-wrap items-center gap-2">
-
-            {{-- Role (label) --}}
-            <span class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-700">
-              <x-app-icon name="briefcase" class="w-3.5 h-3.5 text-slate-600" />
-              Role: {{ $user->role_label ?? $user->role }}
-            </span>
-
-            {{-- Department --}}
-            <span class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-700">
-              <x-app-icon name="users" class="w-3.5 h-3.5 text-slate-600" />
-              Dept: {{ $deptName }}
-            </span>
-
-            {{-- Citizen ID --}}
-            @if($user->citizen_id)
-              <span class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-700">
-                <x-app-icon name="id-card" class="w-3.5 h-3.5 text-slate-600" />
-                CID: {{ $user->citizen_id }}
-              </span>
-            @endif
-
-            {{-- Updated --}}
-            <span class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-700">
-              <x-app-icon name="bar-chart-3" class="w-3.5 h-3.5 text-slate-600" />
-              Updated: {{ $user->updated_at?->format('Y-m-d H:i') ?? '—' }}
-            </span>
-
-            {{-- Email verify badge (โชว์ต่อเมื่อมีอีเมล) --}}
-            @if($user->email)
-              @if($user->email_verified_at)
-                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs text-emerald-700 ring-1 ring-emerald-200">
-                  ✔ Verified email
-                </span>
-              @else
-                <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs text-amber-800 ring-1 ring-amber-200">
-                  ⏳ Not verified
-                </span>
-              @endif
-            @endif
-          </div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <a href="{{ route('dashboard') }}"
-             class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">
-            <x-app-icon name="inbox" class="w-4 h-4 text-slate-600" />
-            Back
-          </a>
-
-          @if (Route::has('password.edit'))
-            <a href="{{ route('password.edit') }}"
-               class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">
-              <x-app-icon name="shield" class="w-4 h-4 text-slate-600" />
-              Change Password
-            </a>
-          @endif
-
-          @if (Route::has('profile.edit'))
-            <a href="{{ route('profile.edit') }}"
-               class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
-              <x-app-icon name="wrench" class="w-4 h-4 text-white" />
-              Edit Profile
-            </a>
-          @endif
-        </div>
-      </div>
-    </div>
-  </div>
-@endsection
-
 @section('content')
-<div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    @php
+        // Logic การดึงรูปภาพและอักษรย่อให้เหมือนกับหน้าอื่นๆ ในระบบ
+        $avatarMain = data_get($user, 'avatar_url');
+        $avatarThumb = data_get($user, 'avatar_thumb_url');
 
-  @if (session('status'))
-    <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
-      {{ session('status') }}
-    </div>
-  @endif
+        // ตัดอักษรย่อจากชื่อผู้ใช้ (2 ตัว)
+        $name = trim((string) ($user->name ?? ''));
+        $parts = preg_split('/\s+/u', $name) ?: [];
+        $initials = strtoupper(mb_substr($parts[0] ?? 'U', 0, 1) . mb_substr($parts[1] ?? '', 0, 1));
+    @endphp
 
-  {{-- Summary card --}}
-  <section class="rounded-xl border border-slate-200 bg-white p-5">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex items-center gap-3">
-        <div class="grid h-12 w-12 place-items-center rounded-full bg-emerald-100 text-xl text-emerald-700">
-          <x-app-icon name="user" class="w-6 h-6" />
-        </div>
-        <div class="min-w-0">
-          <div class="truncate text-lg font-medium text-slate-900">{{ $user->name }}</div>
+    <div class="w-full flex flex-col min-h-screen bg-white">
 
-          {{-- แสดง citizen_id เป็นหลัก --}}
-          @if($user->citizen_id)
-            <div class="truncate text-sm text-slate-600">เลขบัตร: {{ $user->citizen_id }}</div>
-          @endif
+        {{-- Header Section: ชิดซ้าย-ขวา ปุ่มนิ่งไม่มีโมชั่น --}}
+        <div class="sticky top-16 z-20 bg-white border-b border-slate-200">
+            <div class="px-4 md:px-6 lg:px-8 py-5">
+                <div class="flex items-center justify-between w-full">
 
-          {{-- อีเมล (ถ้ามี) --}}
-          @if($user->email)
-            <div class="truncate text-xs text-slate-500">{{ $user->email }}</div>
-          @endif
-        </div>
-      </div>
+                    {{-- ฝั่งซ้าย: My Profile (Icon เพียวๆ ไม่มีพื้นหลัง) --}}
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-[32px] text-[#0F2D5C]">account_circle</span>
+                        <div class="flex flex-col">
+                            <h1 class="text-[18px] font-bold text-slate-900 leading-tight">My Profile</h1>
+                            <p class="text-[13px] text-slate-500">จัดการข้อมูลส่วนตัวและหน่วยงานของคุณ</p>
+                        </div>
+                    </div>
 
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs text-slate-700">
-          <x-app-icon name="briefcase" class="w-3.5 h-3.5" />
-          {{ $user->role_label ?? $user->role }}
-        </span>
-      </div>
-    </div>
+                    {{-- ฝั่งขวา: ปุ่มแก้ไข (ไม่มี Shadow และไม่มี Motion เวลากด) --}}
+                    <div class="flex items-center">
+                        @if (Route::has('profile.edit'))
+                            <x-ui.button :href="route('profile.edit')" icon="edit">แก้ไขโปรไฟล์</x-ui.button>
+                        @endif
+                    </div>
 
-    <dl class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <div>
-        <dt class="text-sm text-slate-500">แผนก</dt>
-        <dd class="mt-1 text-slate-900">
-          @if($deptName && $deptName !== '—')
-            <span class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm">
-              <x-app-icon name="users" class="w-4 h-4 text-slate-600" />
-              {{ $deptName }}
-            </span>
-          @else
-            —
-          @endif
-        </dd>
-      </div>
-      <div>
-        <dt class="text-sm text-slate-500">อัปเดตล่าสุด</dt>
-        <dd class="mt-1 text-slate-900">{{ $user->updated_at?->format('Y-m-d H:i') }}</dd>
-      </div>
-      <div>
-        <dt class="text-sm text-slate-500">สร้างเมื่อ</dt>
-        <dd class="mt-1 text-slate-900">{{ $user->created_at?->format('Y-m-d H:i') }}</dd>
-      </div>
-    </dl>
-  </section>
-
-  <section class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-    {{-- Account Info --}}
-    <div class="rounded-xl border border-slate-200 bg-white p-5">
-      <div>
-        <h2 class="flex items-center gap-2 text-base font-semibold text-slate-900">
-          <x-app-icon name="clipboard-list" class="w-5 h-5 text-slate-700" />
-          Account Information
-        </h2>
-        <p class="mt-1 text-sm text-slate-500">รายละเอียดระบุตัวตนในระบบ</p>
-      </div>
-
-      <div class="mt-4 divide-y divide-slate-100">
-
-        <div class="py-3">
-          <div class="text-sm text-slate-500">เลขบัตรประชาชน</div>
-          <div class="mt-1 text-slate-900">
-            {{ $user->citizen_id ?? '—' }}
-          </div>
-        </div>
-
-        <div class="py-3">
-          <div class="text-sm text-slate-500">ชื่อ - สกุล</div>
-          <div class="mt-1 text-slate-900">{{ $user->name }}</div>
-        </div>
-
-        <div class="py-3">
-          <div class="text-sm text-slate-500">อีเมล</div>
-          <div class="mt-1 break-all text-slate-900">
-            {{ $user->email ?? '—' }}
-          </div>
-        </div>
-
-        <div class="py-3">
-          <div class="text-sm text-slate-500">แผนก</div>
-          <div class="mt-1 text-slate-900">{{ $deptName }}</div>
-        </div>
-
-        <div class="py-3">
-          <div class="text-sm text-slate-500">สิทธิ์การใช้งาน</div>
-          <div class="mt-1">
-            <span class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-sm">
-              <x-app-icon name="briefcase" class="w-4 h-4 text-slate-600" />
-              {{ $user->role_label ?? $user->role }}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {{-- Security --}}
-    <div class="rounded-xl border border-slate-200 bg-white p-5">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="flex items-center gap-2 text-base font-semibold text-slate-900">
-            <x-app-icon name="shield" class="w-5 h-5 text-slate-700" />
-            Security
-          </h2>
-          <p class="mt-1 text-sm text-slate-500">ตั้งค่าที่ช่วยป้องกันบัญชีของคุณ</p>
-        </div>
-      </div>
-
-      <ul class="mt-4 space-y-3">
-        <li class="rounded-lg border border-slate-200 p-4">
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex items-start gap-2">
-              <x-app-icon name="hammer" class="mt-0.5 w-4 h-4 text-slate-600" />
-              <div>
-                <div class="font-medium text-slate-900">Password</div>
-                <p class="text-sm text-slate-500">แนะนำให้เปลี่ยนรหัสผ่านเป็นระยะ</p>
-              </div>
-            </div>
-            @if (Route::has('password.edit'))
-              <a href="{{ route('password.edit') }}" class="text-sm text-emerald-700 hover:underline">เปลี่ยน</a>
-            @endif
-          </div>
-        </li>
-
-        {{-- Email verification เฉพาะกรณีมีอีเมล --}}
-        @if($user->email)
-          <li class="rounded-lg border border-slate-200 p-4">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex items-start gap-2">
-                <x-app-icon name="mail" class="mt-0.5 w-4 h-4 text-slate-600" />
-                <div>
-                  <div class="font-medium text-slate-900">Email Verification</div>
-                  <p class="text-sm text-slate-500">
-                    @if($user->email_verified_at)
-                      Verified on {{ $user->email_verified_at?->format('Y-m-d H:i') }}
-                    @else
-                      ยังไม่ได้ยืนยันอีเมล
-                    @endif
-                  </p>
                 </div>
-              </div>
-              @if(!$user->email_verified_at && Route::has('verification.send'))
-                <form method="POST" action="{{ route('verification.send') }}">
-                  @csrf
-                  <button type="submit" class="text-sm text-emerald-700 hover:underline">ส่งลิงก์ใหม่</button>
-                </form>
-              @endif
             </div>
-          </li>
-        @endif
-      </ul>
+        </div>
+
+        <div class="px-4 md:px-6 lg:px-8 py-10 max-w-5xl mx-auto w-full">
+
+            @if (session('status'))
+                <div
+                    class="mb-8 rounded-md bg-emerald-50 border border-emerald-100 px-4 py-3 text-[13px] text-emerald-700 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                    {{ session('status') }}
+                </div>
+            @endif
+
+            {{-- ส่วนสรุปข้อมูลและ Avatar --}}
+            <div class="flex items-center gap-6 mb-12">
+                <div
+                    class="h-20 w-20 rounded-full overflow-hidden flex items-center justify-center bg-emerald-600 shrink-0 border border-emerald-700/10">
+                    @if ($avatarThumb || $avatarMain)
+                        <img src="{{ $avatarThumb ?: $avatarMain }}" alt="{{ $user->name }}"
+                            class="h-full w-full object-cover">
+                    @else
+                        <span class="text-white font-bold text-[28px] tracking-tighter">
+                            {{ $initials }}
+                        </span>
+                    @endif
+                </div>
+                <div>
+                    <h2 class="text-[24px] font-bold text-slate-900 leading-tight">{{ $user->name }}</h2>
+                    <div class="flex flex-wrap items-center gap-3 mt-1.5">
+                        <span class="text-[14px] text-slate-500 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[18px]">badge</span>
+                            {{ $user->citizen_id ?? 'ไม่ระบุเลขบัตร' }}
+                        </span>
+                        <span class="h-1 w-1 bg-slate-300 rounded-full"></span>
+                        <span class="text-[13px] text-emerald-600 font-bold uppercase tracking-widest">
+                            {{ $user->role_label ?? $user->role }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ส่วนตารางข้อมูล --}}
+            <div class="space-y-6">
+                <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <span class="material-symbols-outlined text-[20px] text-slate-400">info</span>
+                    <h3 class="text-[16px] font-bold text-slate-800 uppercase tracking-tight">Account Information</h3>
+                </div>
+
+                <div class="w-full">
+                    {{-- ชื่อ-นามสกุล --}}
+                    <div
+                        class="grid grid-cols-1 md:grid-cols-3 py-4 border-b border-slate-100 items-center hover:bg-slate-50/50 transition-colors">
+                        <div class="text-[14px] font-bold text-slate-400 uppercase tracking-wider">ชื่อ - นามสกุล</div>
+                        <div class="md:col-span-2 text-[15px] font-medium text-slate-800 py-1 md:py-0">{{ $user->name }}
+                        </div>
+                    </div>
+
+                    {{-- อีเมล --}}
+                    <div
+                        class="grid grid-cols-1 md:grid-cols-3 py-4 border-b border-slate-100 items-center hover:bg-slate-50/50 transition-colors">
+                        <div class="text-[14px] font-bold text-slate-400 uppercase tracking-wider">อีเมลที่ใช้งาน</div>
+                        <div class="md:col-span-2 text-[15px] font-medium text-slate-800 py-1 md:py-0">
+                            {{ $user->email ?? '-' }}</div>
+                    </div>
+
+                    {{-- เลขบัตรประชาชน --}}
+                    <div
+                        class="grid grid-cols-1 md:grid-cols-3 py-4 border-b border-slate-100 items-center hover:bg-slate-50/50 transition-colors">
+                        <div class="text-[14px] font-bold text-slate-400 uppercase tracking-wider">หมายเลขบัตรประชาชน</div>
+                        <div class="md:col-span-2 text-[15px] font-medium text-slate-800 py-1 md:py-0 tracking-widest">
+                            {{ $user->citizen_id ?? '-' }}</div>
+                    </div>
+
+                    {{-- หน่วยงาน / แผนก (เช็คความถูกต้องเรียบร้อย) --}}
+                    <div
+                        class="grid grid-cols-1 md:grid-cols-3 py-4 border-b border-slate-100 items-center hover:bg-slate-50/50 transition-colors">
+                        <div class="text-[14px] font-bold text-slate-400 uppercase tracking-wider">หน่วยงาน / แผนก</div>
+                        <div class="md:col-span-2 text-[15px] font-medium text-slate-800 py-1 md:py-0">
+                            {{ optional($user->departmentRef)->display_name ?? (optional($user->departmentRef)->name_th ?? '—') }}
+                        </div>
+                    </div>
+
+                    {{-- สิทธิ์การใช้งาน --}}
+                    <div
+                        class="grid grid-cols-1 md:grid-cols-3 py-4 border-b border-slate-100 items-center hover:bg-slate-50/50 transition-colors">
+                        <div class="text-[14px] font-bold text-slate-400 uppercase tracking-wider">สิทธิ์การเข้าใช้งาน</div>
+                        <div class="md:col-span-2 text-[15px] font-bold text-emerald-700 py-1 md:py-0">
+                            {{ $user->role_label ?? $user->role }}</div>
+                    </div>
+
+                    {{-- วันที่สมัคร --}}
+                    <div
+                        class="grid grid-cols-1 md:grid-cols-3 py-4 border-b border-slate-100 items-center hover:bg-slate-50/50 transition-colors">
+                        <div class="text-[14px] font-bold text-slate-400 uppercase tracking-wider">วันที่สมัครสมาชิก</div>
+                        <div class="md:col-span-2 text-[14px] text-slate-500 py-1 md:py-0">
+                            {{ $user->created_at?->format('d/m/Y H:i') }}</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
     </div>
-  </section>
-</div>
 @endsection

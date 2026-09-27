@@ -1,10 +1,32 @@
-html.intro-pending .navbar-pinwheel{
-  opacity: 0;
-  pointer-events: none;
+/* 1. สั่งซ่อนทุกอย่างทันทีที่มีคลาส .intro-pending หรือ .intro-reveal บน <html> */
+html.intro-pending .navbar-pinwheel,
+html.intro-pending #side,
+html.intro-pending #main,
+html.intro-pending footer,
+html.intro-pending #chatWidgetRoot,
+html.intro-pending #teamTab,
+html.intro-reveal .navbar-pinwheel,
+html.intro-reveal #side,
+html.intro-reveal #main,
+html.intro-reveal footer,
+html.intro-reveal #chatWidgetRoot,
+html.intro-reveal #teamTab {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
-.navbar-pinwheel{
-  transition: opacity .55s ease;
+/* 2. ค่อยๆ ปล่อยคืนมาทีละส่วนตามคลาสที่ JS เป็นคนสั่ง (Staggered Reveal) */
+html.intro-show-nav .navbar-pinwheel { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
+html.intro-show-side #side { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
+html.intro-show-main #main { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
+html.intro-show-footer footer { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
+html.intro-show-footer #chatWidgetRoot,
+html.intro-show-footer #teamTab { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
+
+/* Transition พื้นฐาน */
+.navbar-pinwheel, #side, #main, footer {
+  transition: opacity .45s ease, visibility .45s;
 }
 
 .intro-frame-overlay{

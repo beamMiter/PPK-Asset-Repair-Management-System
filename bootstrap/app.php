@@ -37,6 +37,14 @@ return Application::configure(basePath: dirname(__DIR__))
     */
     ->withMiddleware(function (Middleware $middleware) {
 
+        // First of all: nothing below may build a link from a Host header this app is not known by.
+        $middleware->prepend(\App\Http\Middleware\TrustProductionHosts::class);
+
+        // Every response, web and API, error pages included.
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+        // ?q[]=x is not a search: an array where a word is expected (was a 500 on ten pages) - dropped on GET/HEAD, once, here
+        $middleware->append(\App\Http\Middleware\IgnoreArrayQuery::class);
+
         /*
         |-----------------------------
         | WEB Middleware Group
@@ -45,6 +53,8 @@ return Application::configure(basePath: dirname(__DIR__))
         | Sidebar intro ต้องอยู่ตรงนี้เท่านั้น
         */
         $middleware->web(append: [
+            \App\Http\Middleware\EnsureAccountIsActive::class,
+            \App\Http\Middleware\EnsurePasswordIsChanged::class,
             PlaySidebarIntroOnce::class,
         ]);
 
@@ -66,7 +76,8 @@ return Application::configure(basePath: dirname(__DIR__))
         |-----------------------------
         */
         $middleware->alias([
-            'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
+            'active' => \App\Http\Middleware\EnsureAccountIsActive::class,
+            'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
         ]);
     })
 
@@ -77,7 +88,35 @@ return Application::configure(basePath: dirname(__DIR__))
     */
     ->withExceptions(function (Exceptions $exceptions) {
 
-        $exceptions->render(function ($e, Request $request) {
+        /*
+        |-----------------------------
+        | WEB: a refused form says why in a toast
+        |-----------------------------
+        | A form that fails validation is sent back with its errors, and only a handful of pages print them: the modals of a job
+        | (พักชั่วคราว / ซ่อมเสร็จ / ยกเลิก / ไม่รับเรื่อง), the notification-sound and SLA settings, the chat all bounced back and said
+        | nothing. The first message goes in a toast too. Left alone: JSON / API requests (they get their 422), and a request that
+        | already flashed a toast of its own (the profile form, an action that words its refusal itself).
+        */
+        $exceptions->respond(function ($response, \Throwable $e, Request $request) {
+            if (
+                ! $e instanceof ValidationException
+                || ! $response instanceof \Illuminate\Http\RedirectResponse
+                || $request->expectsJson() || $request->is('api/*')
+                || ! $request->hasSession()
+                // only a toast flashed by THIS request counts: one left over from the last request is flash data on its way out
+                || in_array('toast', $request->session()->get('_flash.new', []), true)
+            ) {
+                return $response;
+            }
+
+            $messages = collect($e->errors())->flatten();
+            $more = $messages->count() - 1;
+            $text = $messages->first() . ($more > 0 ? " (และมีอีก {$more} ข้อ)" : '');
+
+            return $response->with('toast', \App\Support\Toast::warning($text, 4200));
+        });
+
+        $exceptions->render(function (\Throwable $e, Request $request) {
 
             /*
             |-----------------------------
@@ -85,7 +124,7 @@ return Application::configure(basePath: dirname(__DIR__))
             |-----------------------------
             */
             if (
-                !$request->is('api/*') &&
+                !$request->expectsJson() && !$request->is('api/*') &&
                 (
                     $e instanceof \Illuminate\Auth\Access\AuthorizationException ||
                     $e instanceof \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException
@@ -108,10 +147,45 @@ return Application::configure(basePath: dirname(__DIR__))
 
             /*
             |-----------------------------
+            | WEB: Session / CSRF Token expired (419)
+            |-----------------------------
+            */
+            // The framework converts TokenMismatchException into an HttpException(419) before the
+            // render callbacks run, so the instanceof alone never matched — the user got the bare
+            // "419 | Page Expired" page instead of this redirect + message.
+            $isTokenMismatch = $e instanceof \Illuminate\Session\TokenMismatchException
+                || ($e instanceof HttpExceptionInterface && $e->getStatusCode() === 419);
+
+            if (!$request->expectsJson() && !$request->is('api/*') && $isTokenMismatch) {
+                return redirect()->back()->withInput($request->except(['password', 'password_confirmation', '_token']))->with('toast', [
+                    'type'     => 'warning',
+                    'message'  => 'หน้าเว็บหมดอายุ (Page Expired) หรือเปิดหน้านี้ทิ้งไว้นานเกินไป กรุณาลองใหม่อีกครั้ง',
+                    'timeout'  => 4000,
+                    'position' => 'tc',
+                    'size'     => 'md',
+                ]);
+            }
+
+            /*
+            |-----------------------------
+            | WEB: too many requests (429)
+            |-----------------------------
+            */
+            // The browser got the bare "429 | Too Many Requests" page; it goes back to the form with the wait in a toast.
+            if (!$request->expectsJson() && !$request->is('api/*') && $e instanceof ThrottleRequestsException) {
+                $seconds = max(1, (int) ($e->getHeaders()['Retry-After'] ?? 60));
+
+                return redirect()->back()
+                    ->withInput($request->except(['password', 'password_confirmation', '_token']))
+                    ->with('toast', \App\Support\Toast::warning("ส่งคำขอถี่เกินไป กรุณารอ {$seconds} วินาทีแล้วลองใหม่", 4500));
+            }
+
+            /*
+            |-----------------------------
             | WEB: default handling
             |-----------------------------
             */
-            if (! $request->is('api/*')) {
+            if (!$request->expectsJson() && !$request->is('api/*')) {
                 return null;
             }
 
@@ -177,9 +251,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 $payload['errors'] = $errors;
             }
 
+            // The headers the exception carries are part of its answer: `Retry-After` (and X-RateLimit-*) of a 429, `Allow` of a 405. They were
+            // dropped, so a client told to slow down was not told for how long.
             return response()
                 ->json($payload, $status)
-                ->withHeaders([
+                ->withHeaders(($e instanceof HttpExceptionInterface ? $e->getHeaders() : []) + [
                     'X-Correlation-ID' => $cid,
                 ]);
         });
