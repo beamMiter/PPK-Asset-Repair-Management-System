@@ -35,7 +35,13 @@ class AssetRepairHistoryTest extends TestCase
 
         $this->assertStringContainsString('ประวัติการแจ้งซ่อม', $html);
         $this->assertMatchesRegularExpression('/ประวัติการแจ้งซ่อม\s*<span[^>]*>3<\/span>/u', $html, 'the count badge, like the job page\'s own history button');
-        $this->assertStringContainsString('showHistory = true', $html, 'the button opens the modal');
+        $this->assertStringContainsString('id="openAssetHistoryModalBtn"', $html);
+        $this->assertStringContainsString('id="assetHistoryModal"', $html);
+        // the trigger and the modal are in two different @section blocks (the header is wrapped in "sticky-under-topbar",
+        // which traps a nested fixed modal below the topbar's own z-index - see the comment in the view), so this is plain
+        // classList wiring like the job page's own history modal, not an Alpine scope shared between the two
+        $this->assertStringContainsString("getElementById('assetHistoryModal')", $html);
+        $this->assertStringNotContainsString('x-data="{ showHistory', $html);
     }
 
     public function test_the_timeline_shows_the_five_most_recent_requests_newest_first(): void

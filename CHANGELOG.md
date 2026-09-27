@@ -868,7 +868,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   opening a dialog built exactly like `_modal_history.blade.php`'s, whose body is the same dot / connecting-line / card skeleton as
   `partials/_timeline.blade.php` - one item per repair request instead of per status change, no actor or note or duration, since
   none of those apply to a whole separate request. The 5 most recent, newest first; "ดูประวัติการแจ้งซ่อมทั้งหมด" for the rest.
-  `AssetRepairHistoryTest`.
+  First put the button *and* the modal together in the header, which is wrapped in `sticky-under-topbar`
+  (`layouts/app.blade.php`) - a stacking context of its own, so a modal nested inside it can never paint above the topbar
+  (`z-index: 1030`) no matter what z-index the modal itself asks for; the modal was hidden under it. Split the two the same way
+  the job page does: the button stays in the header, the modal moves to `@section('content')`, wired together with the same
+  plain `classList` open/close the job page's own history modal uses (`@push('scripts')`), since the two no longer share an
+  Alpine scope. `AssetRepairHistoryTest`.
 
 ### Removed
 
