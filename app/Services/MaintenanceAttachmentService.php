@@ -6,6 +6,7 @@ use App\Models\MaintenanceRequest as MR;
 use App\Models\File;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class MaintenanceAttachmentService
 {
@@ -19,22 +20,7 @@ class MaintenanceAttachmentService
         foreach ($files as $key => $up) {
             if (!$up instanceof UploadedFile || !$up->isValid()) continue;
 
-            $disk = $isPrivate ? 'local' : 'public';
-            $storedPath = $up->store("maintenance/{$req->id}", $disk);
-
-            // ป้องกันไฟล์ซ้ำระดับ Storage ด้วย SHA256 checksum
-            $sha = hash_file('sha256', $up->getRealPath());
-
-            $file = File::firstOrCreate(
-                ['checksum_sha256' => $sha],
-                [
-                    'path'      => $storedPath,
-                    'disk'      => $disk,
-                    'mime'      => $up->getClientMimeType(),
-                    'size'      => $up->getSize(),
-                    'path_hash' => hash('sha256', $storedPath),
-                ]
-            );
+            $file = $this->storedFileFor($up, $req, $isPrivate ? 'local' : 'public');
 
             // ตรวจสอบว่าเคยแนบไฟล์ไปในใบงานนี้แล้วหรือยัง (ดึงที่ถูกลบซ่อนกลับมาด้วยถ้ามี)
             $existing = $req->attachments()->withTrashed()->where('file_id', $file->id)->first();
@@ -76,6 +62,37 @@ class MaintenanceAttachmentService
         }
 
         return $attachedFiles;
+    }
+
+    /**
+     * The file row for these bytes. A file is kept once per content (`checksum_sha256` is unique, deleted rows included):
+     * the bytes are written only when they are not on the disk yet, and a row whose bytes are gone is brought back.
+     */
+    private function storedFileFor(UploadedFile $up, MR $req, string $disk): File
+    {
+        $sha  = hash_file('sha256', $up->getRealPath());
+        $file = File::withTrashed()->where('checksum_sha256', $sha)->first();
+
+        if ($file && ! $file->trashed() && Storage::disk($file->disk)->exists($file->path)) {
+            return $file;
+        }
+
+        $path  = $up->store("maintenance/{$req->id}", $disk);
+        $attrs = [
+            'path'      => $path,
+            'disk'      => $disk,
+            'mime'      => $up->getClientMimeType(),
+            'size'      => $up->getSize(),
+            'path_hash' => hash('sha256', $path),
+        ];
+
+        if (! $file) {
+            return File::create($attrs + ['checksum_sha256' => $sha]);
+        }
+
+        $file->fill($attrs)->restore();
+
+        return $file;
     }
 
     /**
