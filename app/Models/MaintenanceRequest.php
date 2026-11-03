@@ -100,6 +100,8 @@ class MaintenanceRequest extends Model
     public const STATUS_CANCELLED    = 'cancelled';
     public const STATUS_REJECTED     = 'rejected';
 
+    public const MAX_ATTACHMENTS = 3;
+
     // legacy
     public const STATUS_COMPLETED    = 'completed';
 
@@ -218,6 +220,23 @@ class MaintenanceRequest extends Model
     public function attachments()
     {
         return $this->morphMany(\App\Models\Attachment::class, 'attachable')->ordered();
+    }
+
+    /**
+     * Why $incoming more files do not fit on this request, or null when they do. Files removed in the same save make room.
+     */
+    public function attachmentLimitError(int $incoming, array $removing = []): ?string
+    {
+        $kept = $this->attachments()->whereNotIn('id', array_filter($removing, 'is_numeric'))->count();
+        $room = max(0, self::MAX_ATTACHMENTS - $kept);
+
+        if ($incoming <= $room) {
+            return null;
+        }
+
+        return $room > 0
+            ? 'แนบเพิ่มได้อีก '.$room.' ไฟล์ (สูงสุด '.self::MAX_ATTACHMENTS.' ไฟล์ต่อใบงาน)'
+            : 'แนบไฟล์ได้สูงสุด '.self::MAX_ATTACHMENTS.' ไฟล์ต่อใบงาน';
     }
 
     public function imageAttachments()

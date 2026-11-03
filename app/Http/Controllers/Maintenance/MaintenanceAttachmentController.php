@@ -8,6 +8,7 @@ use App\Models\MaintenanceRequest as MR;
 use App\Models\Attachment;
 use App\Services\MaintenanceAttachmentService;
 use App\Traits\ApiResponseWithToast;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -28,20 +29,21 @@ class MaintenanceAttachmentController extends Controller
     {
         Gate::authorize('attach', $req);
 
-        $currentCount = $req->attachments()->count();
-        if ($currentCount >= 3) {
-            return $this->respondWithToast($request, Toast::warning('สามารถแนบไฟล์ได้สูงสุด 3 ไฟล์ต่อใบงาน', 2500), back(), ['message' => 'สามารถแนบไฟล์ได้สูงสุด 3 ไฟล์ต่อใบงาน'], 422);
-        }
-
         $maxKb = config('uploads.max_kb', 10240);
         $mimes = implode(',', config('uploads.mimes'));   // pictures and PDF - not `image/*`, which lets an SVG (with script) in
         
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'files'      => ['required', 'array', 'max:3'],
+            'files'      => ['required', 'array', 'max:' . MR::MAX_ATTACHMENTS],
             'files.*'    => ['file', 'max:' . $maxKb, 'mimes:' . $mimes],
             'is_private' => ['nullable', 'boolean'],
             'captions'   => ['nullable', 'array'],
         ]);
+
+        $validator->after(function ($v) use ($request, $req) {
+            if ($error = $req->attachmentLimitError(count(Arr::wrap($request->file('files'))))) {
+                $v->errors()->add('files', $error);
+            }
+        });
 
         if ($validator->fails()) {
             return $this->respondWithToast($request, Toast::warning($validator->errors()->first(), 3000), back(), ['errors' => $validator->errors()], 422);

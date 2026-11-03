@@ -109,6 +109,18 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A member refused a job's page could still get the address of its files.** `GET /attachments/{id}` redirected to a
+  public file before it looked at who was asking, so counting up the id handed out other people's photos. Every file is
+  now checked against what it is attached to (and against its expiry) first. `PublicAttachmentAccessTest`.
+- **"At most 3 files per request" could be passed.** The job page only looked at the files already there, the edit form
+  at nothing: 2 on the job and 3 more made 5. Both now count the two together, and a file removed in the same save makes
+  room. A request already over the limit can still be edited. `AttachmentLimitTest`.
+- **A photo that had been removed could not be put back.** Files are kept once per content, but the upload did not see
+  the deleted row and hit the unique index. The same upload also wrote the bytes before it looked, leaving an unused copy
+  on the disk at every repeat. `AttachmentReuploadTest`.
+- **The job page never showed the delete button for a file.** Its address used a parameter name the route does not have,
+  and a `try/catch` turned the error into "no button". `AttachmentDeleteButtonTest`.
+
 - **On the chat page the floating widget drew its rows inside the messages of the open thread.** The page's message list and the widget's drawer list were
   both `id="chatList"`, and the widget looks its list up by id, so on `/chat` it found the page's list first: the open thread showed thread titles with
   "sender: text" and a hide button on each row instead of its messages (and so two hide buttons). The widget's list is `chatWidgetList`.

@@ -11,6 +11,7 @@ use App\Models\Department;
 use App\Models\Asset;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -181,7 +182,7 @@ class MaintenanceRequestController extends Controller
             'reporter_name'  => ['nullable', 'string', 'max:255'],
             'reporter_phone' => ['nullable', 'string', 'max:30'],
             'reporter_email' => ['nullable', 'email', 'max:255'],
-            'files'          => ['nullable', 'array', 'max:3'],
+            'files'          => ['nullable', 'array', 'max:' . MR::MAX_ATTACHMENTS],
             'files.*'        => ['file', "max:{$maxKb}", 'mimes:' . implode(',', $allowedMimes)],
             'captions'       => ['nullable', 'array'],
         ];
@@ -283,6 +284,13 @@ class MaintenanceRequestController extends Controller
         ];
 
         $validator = Validator::make($request->all(), $rules);
+
+        $validator->after(function ($v) use ($request, $req) {
+            $error = $req->attachmentLimitError(count(Arr::wrap($request->file('files'))), Arr::wrap($request->input('remove_attachments')));
+            if ($error) {
+                $v->errors()->add('files', $error);
+            }
+        });
 
         if ($validator->fails()) {
             if ($request->expectsJson()) {

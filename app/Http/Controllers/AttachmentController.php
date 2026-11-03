@@ -14,9 +14,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class AttachmentController extends Controller
 {
     /**
-     * A private file is exactly as visible as the thing it is attached to: a request's files follow the request
-     * policy (reporter, assigned team, admin team), an asset's files follow the asset policy. Before this, any
-     * signed-in user could read any private attachment just by changing the id in the URL.
+     * A file, private or public, is exactly as visible as the thing it is attached to: a request's files follow the
+     * request policy (reporter, assigned team, admin team), an asset's files follow the asset policy. Before this, any
+     * signed-in user could reach another person's attachment just by changing the id in the URL.
      */
     private function authorizeDownload(User $user, Attachment $attachment): void
     {
@@ -34,16 +34,16 @@ class AttachmentController extends Controller
 
     public function show(Request $request, Attachment $attachment)
     {
+        $this->authorizeDownload($request->user(), $attachment);
+
+        // retention: an attachment past its expiry is no longer served
+        abort_if($attachment->expires_at && $attachment->expires_at->isPast(), 410, 'ไฟล์แนบนี้หมดอายุแล้ว');
+
         if (!$attachment->is_private) {
             $publicUrl = $attachment->url;
             abort_unless($publicUrl, 404);
             return redirect()->away($publicUrl);
         }
-
-        $this->authorizeDownload($request->user(), $attachment);
-
-        // retention: an attachment past its expiry is no longer served
-        abort_if($attachment->expires_at && $attachment->expires_at->isPast(), 410, 'ไฟล์แนบนี้หมดอายุแล้ว');
 
         // path / disk / mime / size live on the linked File, not on Attachment —
         // reading them off $attachment made every private download 404.
