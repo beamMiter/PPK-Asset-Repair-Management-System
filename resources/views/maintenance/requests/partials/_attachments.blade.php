@@ -177,15 +177,6 @@
                         } catch (\Throwable $e) {
                             $openUrl = $publicUrl;
                         }
-                        $deleteUrl = null;
-                        try {
-                            $deleteUrl = route('maintenance.requests.attachments.destroy', [
-                                'maintenanceRequest' => $req->id,
-                                'attachment' => $att->id,
-                            ]);
-                        } catch (\Throwable $e) {
-                            $deleteUrl = null;
-                        }
                     @endphp
                     <figure
                         class="overflow-hidden rounded-lg border {{ $line }} bg-white text-xs flex flex-col hover: transition">
@@ -231,14 +222,12 @@
                             </div>
                             <div class="pt-2 mt-auto border-t border-slate-50 flex items-center justify-end">
                                 @can('deleteAttachment', $req)
-                                    @if ($deleteUrl)
-                                        <form method="POST" action="{{ $deleteUrl }}"
-                                            onsubmit="return confirmSubmit(event, { title: 'ยืนยันการลบไฟล์แนบ', message: 'ยืนยันลบไฟล์แนบนี้?', variant: 'danger', confirmText: 'ลบไฟล์แนบ' })">
-                                            @csrf
-                                            @method('DELETE')
-                                            <x-ui.button type="submit" variant="danger-outline" size="icon" icon="delete" aria-label="ลบไฟล์แนบ" />
-                                        </form>
-                                    @endif
+                                    <form method="POST" action="{{ route('maintenance.requests.attachments.destroy', [$req, $att]) }}"
+                                        onsubmit="return confirmSubmit(event, { title: 'ยืนยันการลบไฟล์แนบ', message: 'ยืนยันลบไฟล์แนบนี้?', variant: 'danger', confirmText: 'ลบไฟล์แนบ' })">
+                                        @csrf
+                                        @method('DELETE')
+                                        <x-ui.button type="submit" variant="danger-outline" size="icon" icon="delete" aria-label="ลบไฟล์แนบ" />
+                                    </form>
                                 @endcan
                             </div>
                         </figcaption>
