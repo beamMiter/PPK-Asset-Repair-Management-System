@@ -109,6 +109,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`php artisan test` no longer depends on this machine's Vite.** With Vite stopped and an old `public/build`, 327 of 1018
+  tests failed on a missing manifest entry, and a fresh build failed 5 more that look for source paths. Tests now render
+  their `@vite` tags from `tests/fixtures/vite-hot`, so the result is the same with Vite running, stopped or freshly built.
 - **A Thai file name did not survive a download.** The header carried the raw UTF-8 bytes, and a line break in a name went
   straight into it. The name now travels as `filename*` beside a plain ASCII fallback. `PrivateAttachmentServeTest`.
 - **A member refused a job's page could still get the address of its files.** `GET /attachments/{id}` redirected to a
