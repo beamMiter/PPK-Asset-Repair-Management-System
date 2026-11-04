@@ -42,15 +42,16 @@ class NativeDialogsReplacedTest extends TestCase
     public function test_the_admin_users_list_confirms_suspend_and_reactivate_through_the_shared_dialog(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        $active = User::factory()->create(['role' => 'member']);
-        $suspended = User::factory()->create(['role' => 'member', 'suspended_at' => now()]);
+        // an apostrophe on purpose: the page escapes it, and faker draws such names now and then (this test used to fail at random)
+        $active = User::factory()->create(['role' => 'member', 'name' => "Nils D'Amore"]);
+        $suspended = User::factory()->create(['role' => 'member', 'name' => "Sean O'Brien", 'suspended_at' => now()]);
 
         $html = $this->actingAs($admin)->get(route('admin.users.index'))->assertOk()->getContent();
 
         $this->assertStringContainsString("variant: 'warning'", $html, 'suspending someone is a caution, not a destructive confirm');
         $this->assertStringContainsString("variant: 'success'", $html, 'reactivating someone reads positively');
-        $this->assertStringContainsString($active->name, $html);
-        $this->assertStringContainsString($suspended->name, $html);
+        $this->assertStringContainsString(e($active->name), $html);
+        $this->assertStringContainsString(e($suspended->name), $html);
     }
 
     public function test_the_maintenance_type_disable_confirms_through_the_shared_dialog(): void
