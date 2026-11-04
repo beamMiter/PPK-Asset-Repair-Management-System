@@ -19,7 +19,7 @@ class AttachmentDeleteButtonTest extends TestCase
 
     public function test_whoever_may_delete_a_file_gets_the_button_on_the_job_page(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $reporter = User::factory()->create(['role' => 'member']);
         $job = MaintenanceRequest::factory()->create([
             'status' => 'pending', 'reporter_id' => $reporter->id, 'technician_id' => null, 'asset_id' => null,

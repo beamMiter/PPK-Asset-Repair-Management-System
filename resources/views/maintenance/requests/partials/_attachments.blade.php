@@ -160,45 +160,23 @@
                         $isPrivate = (bool) ($att->is_private ?? false);
                         $mime = $file?->mime ?? '';
                         $isImg = $mime && str_starts_with($mime, 'image/');
-                        $publicUrl = null;
-                        if ($file && ($file->disk ?? null) && ($file->path ?? null)) {
-                            try {
-                                $disk = Storage::disk($file->disk);
-                                $publicUrl = $disk->url($file->path);
-                            } catch (\Throwable $e) {
-                                $publicUrl = null;
-                            }
-                        }
-                        $canOpenPrivate = auth()->check() && auth()->user()->can('update', $req);
-                        $canOpen = !$isPrivate || $canOpenPrivate;
-                        $openUrl = $publicUrl;
-                        try {
-                            $openUrl = route('attachments.show', $att);
-                        } catch (\Throwable $e) {
-                            $openUrl = $publicUrl;
-                        }
+                        // whoever can see this page can open its files: the route asks the same policy as the page
+                        $openUrl = route('attachments.show', $att);
                     @endphp
                     <figure
                         class="overflow-hidden rounded-lg border {{ $line }} bg-white text-xs flex flex-col hover: transition">
-                        @if ($canOpen && $openUrl)
-                            <a href="{{ $openUrl }}" target="_blank" rel="noopener"
-                                class="block overflow-hidden group border-b border-slate-100">
-                                @if ($isImg)
-                                    <img src="{{ $openUrl }}" alt="{{ $att->alt_text ?? $name }}"
-                                        class="h-28 w-full object-cover transition-transform duration-300 group-hover:scale-105">
-                                @else
-                                    <div
-                                        class="grid h-28 w-full place-items-center bg-slate-50 text-slate-500 text-[15px] font-bold group-hover:bg-slate-100 transition-colors">
-                                        {{ strtoupper(pathinfo($name, PATHINFO_EXTENSION) ?: 'FILE') }}
-                                    </div>
-                                @endif
-                            </a>
-                        @else
-                            <div
-                                class="grid h-28 w-full place-items-center bg-slate-50 text-slate-400 text-[13px] font-bold border-b border-slate-100">
-                                LOCKED
-                            </div>
-                        @endif
+                        <a href="{{ $openUrl }}" target="_blank" rel="noopener"
+                            class="block overflow-hidden group border-b border-slate-100">
+                            @if ($isImg)
+                                <img src="{{ $openUrl }}" alt="{{ $att->alt_text ?? $name }}"
+                                    class="h-28 w-full object-cover transition-transform duration-300 group-hover:scale-105">
+                            @else
+                                <div
+                                    class="grid h-28 w-full place-items-center bg-slate-50 text-slate-500 text-[15px] font-bold group-hover:bg-slate-100 transition-colors">
+                                    {{ strtoupper(pathinfo($name, PATHINFO_EXTENSION) ?: 'FILE') }}
+                                </div>
+                            @endif
+                        </a>
                         <figcaption class="px-3 py-2.5 space-y-2 flex-1 flex flex-col justify-between">
                             <div class="space-y-1.5">
                                 <div class="flex items-center justify-between gap-1">

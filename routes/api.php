@@ -152,7 +152,9 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     // Attachments — เลิกใช้แล้ว ทั้งสองเส้นตอบ 410 เสมอ (เหลือไว้ให้ client เก่าไม่เจอ 404)
     //   แนบไฟล์ตอนแจ้งซ่อม: POST /api/repair-requests (files[]) · เพิ่ม/ลบไฟล์ในใบงานเดิม: ใช้ route ฝั่งเว็บ
     //   POST|DELETE /maintenance/requests/{req}/attachments[/{attachment}] (routes/web.php)
-    Route::post('/attachments',                [AttachmentController::class, 'store'])->name('attachments.store');
+    //   เปิดไฟล์: GET /attachments/{id} (ค่า `url` ของไฟล์แนบในใบงาน) ส่ง bearer token ได้ · สิทธิ์เท่ากับการดูใบงานนั้น (403)
+    //   · ส่ง If-None-Match มาพร้อม ETag เดิมแล้วไฟล์ไม่เปลี่ยน = 304 · ไฟล์ของใบงานเป็น private เสมอ ไม่มีที่อยู่ /storage/
+    Route::post('/attachments',              [AttachmentController::class, 'store'])->name('attachments.store');
     Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
     // Chat (กระทู้) — ทุกคนที่ login เห็นทุกกระทู้ ไม่มีสิทธิ์รายกระทู้

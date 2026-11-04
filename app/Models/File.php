@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Filesystem\FilesystemAdapter;
 
@@ -27,6 +28,9 @@ use Illuminate\Filesystem\FilesystemAdapter;
 class File extends Model
 {
     use SoftDeletes;
+
+    /** The disk no web server hands out: its files are reached only through GET /attachments/{id}. */
+    public const PRIVATE_DISK = 'local';
 
     protected $fillable = [
         'path',
@@ -62,6 +66,10 @@ class File extends Model
 
     public function getUrlAttribute(): ?string
     {
+        if ($this->disk === self::PRIVATE_DISK) {
+            return null; // Laravel would answer with a /storage/ address that opens nothing
+        }
+
         try {
             /** @var FilesystemAdapter $fs */
             $fs = Storage::disk($this->disk);
@@ -69,6 +77,36 @@ class File extends Model
         } catch (\Throwable $e) {
             return null;
         }
+    }
+
+    /**
+     * Take the bytes off the public disk. Everybody who shares them becomes private with them, deleted attachments
+     * included, so no attachment is left pointing at a public address that no longer exists.
+     */
+    public function moveToPrivate(): void
+    {
+        if ($this->disk === self::PRIVATE_DISK) {
+            return;
+        }
+
+        $from   = Storage::disk($this->disk);
+        $stream = $from->readStream($this->path);
+
+        if (! $stream || ! Storage::disk(self::PRIVATE_DISK)->writeStream($this->path, $stream)) {
+            throw new \RuntimeException("Could not move file {$this->id} to the private disk");
+        }
+
+        if (is_resource($stream)) {
+            fclose($stream);
+        }
+
+        DB::transaction(function () {
+            $this->update(['disk' => self::PRIVATE_DISK]);
+            $this->attachments()->withTrashed()->update(['is_private' => true]);
+        });
+
+        // last: if anything above failed, the public copy is still what the rows point at
+        $from->delete($this->path);
     }
 
     public function isImage(): bool

@@ -26,7 +26,7 @@ class AttachmentReuploadTest extends TestCase
     {
         parent::setUp();
 
-        Storage::fake('public');
+        Storage::fake('local');
         $this->reporter = User::factory()->create(['role' => 'member']);
         $this->bytes = UploadedFile::fake()->image('same.jpg', 40, 40);
     }
@@ -53,13 +53,13 @@ class AttachmentReuploadTest extends TestCase
 
         $this->actingAs($this->reporter)->delete(route('maintenance.requests.attachments.destroy', [$job, $first]));
         $this->assertSame(0, $job->attachments()->count());
-        $this->assertSame([], Storage::disk('public')->allFiles('maintenance'), 'removing the last use erases the bytes');
+        $this->assertSame([], Storage::disk('local')->allFiles('maintenance'), 'removing the last use erases the bytes');
 
         $this->upload($job)->assertSessionHas('toast.type', 'success');
 
         $back = $job->attachments()->with('file')->firstOrFail();
         $this->assertNotNull($back->file, 'the attachment has a live file row');
-        Storage::disk('public')->assertExists($back->file->path);
+        Storage::disk('local')->assertExists($back->file->path);
     }
 
     public function test_the_same_photo_on_two_requests_is_stored_once(): void
@@ -67,7 +67,7 @@ class AttachmentReuploadTest extends TestCase
         $this->upload($this->job());
         $this->upload($this->job());
 
-        $this->assertCount(1, Storage::disk('public')->allFiles('maintenance'));
+        $this->assertCount(1, Storage::disk('local')->allFiles('maintenance'));
     }
 
     public function test_removing_it_from_one_request_leaves_it_on_the_other(): void
@@ -80,18 +80,18 @@ class AttachmentReuploadTest extends TestCase
         $this->actingAs($this->reporter)->delete(route('maintenance.requests.attachments.destroy', [$one, $one->attachments()->firstOrFail()]));
 
         $left = $two->attachments()->with('file')->firstOrFail();
-        Storage::disk('public')->assertExists($left->file->path);
+        Storage::disk('local')->assertExists($left->file->path);
     }
 
     public function test_bytes_that_went_missing_from_the_disk_are_written_again(): void
     {
         $job = $this->job();
         $this->upload($job);
-        Storage::disk('public')->deleteDirectory('maintenance');
+        Storage::disk('local')->deleteDirectory('maintenance');
 
         $this->upload($job);
 
         $att = $job->attachments()->with('file')->firstOrFail();
-        Storage::disk('public')->assertExists($att->file->path);
+        Storage::disk('local')->assertExists($att->file->path);
     }
 }

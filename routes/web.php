@@ -36,6 +36,12 @@ Route::match(['get', 'post'], '/broadcasting/auth', [\App\Http\Controllers\Broad
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class])
     ->name('broadcasting.auth');
 
+// GET /attachments/{attachment} - the only way to a private file; the controller asks the policy of what it is attached to. It is the
+// address the API hands out as `url`, so like the route above it takes the browser's session and the app's bearer token alike.
+Route::get('/attachments/{attachment}', [AttachmentController::class, 'show'])
+    ->middleware(['auth:sanctum', 'active', 'password.changed'])
+    ->name('attachments.show');
+
 // Auth-only
 Route::middleware(['auth'])->group(function () {
 
@@ -116,9 +122,6 @@ Route::middleware(['auth'])->group(function () {
 
     // Repair views
     Route::get('/repair/my-jobs', [MaintenanceJobController::class, 'myJobsPage'])->name('repairs.my_jobs');
-
-    // Attachments (serve private files after auth)
-    Route::get('/attachments/{attachment}', [AttachmentController::class, 'show'])->name('attachments.show');
 
     // Chat
     Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');

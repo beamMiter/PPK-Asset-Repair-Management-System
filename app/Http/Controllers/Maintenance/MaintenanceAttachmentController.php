@@ -35,7 +35,6 @@ class MaintenanceAttachmentController extends Controller
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'files'      => ['required', 'array', 'max:' . MR::MAX_ATTACHMENTS],
             'files.*'    => ['file', 'max:' . $maxKb, 'mimes:' . $mimes],
-            'is_private' => ['nullable', 'boolean'],
             'captions'   => ['nullable', 'array'],
         ]);
 
@@ -57,8 +56,7 @@ class MaintenanceAttachmentController extends Controller
                 $validated['files'],
                 $validated['captions'] ?? [],
                 optional($request->user())->id,
-                'web',
-                (bool) ($validated['is_private'] ?? false)
+                'web'
             );
 
             if (empty($attachments)) {
