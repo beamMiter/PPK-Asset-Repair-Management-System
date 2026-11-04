@@ -109,6 +109,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A Thai file name did not survive a download.** The header carried the raw UTF-8 bytes, and a line break in a name went
+  straight into it. The name now travels as `filename*` beside a plain ASCII fallback. `PrivateAttachmentServeTest`.
 - **A member refused a job's page could still get the address of its files.** `GET /attachments/{id}` redirected to a
   public file before it looked at who was asking, so counting up the id handed out other people's photos. Every file is
   now checked against what it is attached to (and against its expiry) first. `PublicAttachmentAccessTest`.
@@ -967,6 +969,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   predicates and one-line scopes were kept on purpose.
 
 ### Security
+
+- **A new repair request file is private.** Files landed on the public disk, where the web server hands them to anybody
+  holding the address, and a repair photo can show a patient's name on a screen. They now go to the private disk and are
+  reached only through `GET /attachments/{id}`, which asks the request's own policy; no form field can choose otherwise.
+  The same address serves the app, with its bearer token. Bytes an older upload left public move when they are attached
+  again; the rest stay public until they are moved by the next step of this work. The file's type on record now comes
+  from its content, and an unchanged file answers 304 so a job page does not fetch its photos again. `PrivateUploadsTest`.
 
 - **An SVG or HTML file can no longer be uploaded as an attachment, and one that a browser could run is never shown as a page.** The repair
   request's "attach later" rule was `mimetypes:image/*`, which took an SVG - and an SVG with a `<script>`, opened directly, runs on the site's own
