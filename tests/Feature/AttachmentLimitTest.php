@@ -27,7 +27,7 @@ class AttachmentLimitTest extends TestCase
     {
         parent::setUp();
 
-        Storage::fake('public');
+        Storage::fake('local');
         $this->reporter = User::factory()->create(['role' => 'member']);
         $this->job = MaintenanceRequest::factory()->create([
             'status' => 'pending', 'reporter_id' => $this->reporter->id, 'technician_id' => null, 'asset_id' => null,

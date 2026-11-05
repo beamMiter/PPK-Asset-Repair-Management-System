@@ -19,7 +19,7 @@ class CdnAssetsTest extends TestCase
 
     /**
      * Every third-party script / stylesheet URL on the page, in order. The app's own assets (built files, or the Vite dev
-     * server when `public/hot` exists on this machine) are not third-party, whatever host they are served from.
+     * server, which is how tests render them: see Tests\TestCase) are not third-party, whatever host they are served from.
      */
     private function externalAssets(string $html): array
     {

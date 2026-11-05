@@ -120,8 +120,9 @@ class Attachment extends Model
 
     public function getUrlAttribute(): ?string
     {
+        // a private file has one address, the guarded one (the app reaches it with its bearer token, the browser with its session)
         if ($this->is_private) {
-            return null;
+            return $this->getKey() ? route('attachments.show', $this->getKey()) : null;
         }
         return optional($this->file)->url;
     }

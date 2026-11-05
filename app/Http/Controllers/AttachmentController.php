@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AttachmentController extends Controller
@@ -55,6 +56,14 @@ class AttachmentController extends Controller
 
         abort_unless($path && Storage::disk($disk)->exists($path), 404);
 
+        // Every view of a job comes through here, so the browser must ask each time (the check above runs each time) but
+        // need not fetch again: the same bytes answer 304.
+        $cacheControl = 'private, max-age=0, must-revalidate';
+        $etag = $file->checksum_sha256 ? '"'.$file->checksum_sha256.'"' : null;
+        if ($etag && in_array($etag, $request->getETags(), true)) {
+            return response('', 304, ['ETag' => $etag, 'Cache-Control' => $cacheControl]);
+        }
+
         $stream = Storage::disk($disk)->readStream($path);
         abort_unless($stream !== false, 404);
 
@@ -66,8 +75,12 @@ class AttachmentController extends Controller
         $headers = [
             'Content-Type'            => $mime,
             'X-Content-Type-Options'  => 'nosniff',
-            'Cache-Control'           => 'private, max-age=0, must-revalidate',
+            'Cache-Control'           => $cacheControl,
         ];
+
+        if ($etag) {
+            $headers['ETag'] = $etag;
+        }
 
         // Something a browser could run as a page (SVG, HTML, XML) is never shown inline: it is a download. And whatever is shown is sandboxed -
         // no script, no access to this site - except a PDF, which Chrome's viewer will not open inside a sandbox.
@@ -81,7 +94,7 @@ class AttachmentController extends Controller
         }
 
         $disposition = ($download || ! $showInline) ? 'attachment' : 'inline';
-        $headers['Content-Disposition'] = $disposition.'; filename="'.addslashes($filename).'"';
+        $headers['Content-Disposition'] = $this->contentDisposition($disposition, $filename);
 
         return new StreamedResponse(function () use ($stream) {
             fpassthru($stream);
@@ -89,6 +102,22 @@ class AttachmentController extends Controller
                 fclose($stream);
             }
         }, 200, $headers);
+    }
+
+    /**
+     * The name someone gave their file, made fit for a header: a Thai name travels as `filename*`, beside a plain ASCII
+     * fallback, and a line break or a slash in it cannot do anything.
+     */
+    private function contentDisposition(string $type, string $name): string
+    {
+        $clean = str_replace(['/', '\\'], '-', (string) preg_replace('/[\x00-\x1F\x7F]/', '', $name));
+        $extension = (string) preg_replace('/[^A-Za-z0-9]/', '', pathinfo($clean, PATHINFO_EXTENSION));
+
+        $fallback = preg_match('/^[\x20-\x7E]+$/', $clean) && ! str_contains($clean, '%')
+            ? $clean
+            : 'file'.($extension !== '' ? '.'.$extension : '');
+
+        return HeaderUtils::makeDisposition($type, $clean !== '' ? $clean : $fallback, $fallback);
     }
 
     public function store(Request $request)
