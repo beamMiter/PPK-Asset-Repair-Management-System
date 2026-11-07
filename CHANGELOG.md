@@ -973,6 +973,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **The sites allowed to call the app with a user's cookies were two developer addresses.** `config/cors.php` named
+  `localhost:8000` and `127.0.0.1:8000`, in production too, and never the app's real address. The list now comes from
+  `APP_URL`, plus `CORS_ALLOWED_ORIGINS` for a separate front end; a wildcard or anything that is not http(s) is dropped.
+  The app's own pages and the mobile app are unaffected: neither goes through CORS. `CorsOriginsTest`.
+
 - **A new repair request file is private.** Files landed on the public disk, where the web server hands them to anybody
   holding the address, and a repair photo can show a patient's name on a screen. They now go to the private disk and are
   reached only through `GET /attachments/{id}`, which asks the request's own policy; no form field can choose otherwise.

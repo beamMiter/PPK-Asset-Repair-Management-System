@@ -91,6 +91,7 @@ re-reading files that never change.
 | `BROADCAST_CONNECTION`, `PUSHER_APP_*` | Real-time chat and notifications | the chat page polls every 5 s instead of receiving pushes |
 | `CHAT_*` (see `config/chat.php`) | Flood limits, threads per day (5), messages loaded per page (30), and how long a conversation lives: idle → locked after 90 days (`CHAT_LOCK_IDLE_AFTER_DAYS`), locked → deleted after 90 more (`CHAT_DELETE_LOCKED_AFTER_DAYS`), deleted → erased after 30 (`CHAT_PURGE_DELETED_AFTER_DAYS`); `0` turns a rule off | the defaults in that file |
 | `SANCTUM_TOKEN_EXPIRATION_MINUTES` | API token lifetime | 30 days |
+| `CORS_ALLOWED_ORIGINS` | A separate front end on another site that calls the API with the user's cookies (comma separated origins). The app's own pages and the mobile app do not need it | only `APP_URL`'s own origin |
 
 ## Tests
 
