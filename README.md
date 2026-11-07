@@ -82,6 +82,16 @@ PHP limits live in `.docker/php.ini` (uploads 12 MB a file, 40 MB a request, `me
 (`.docker/nginx.conf`) is kept equal to `post_max_size`. In a production deployment set `PHP_OPCACHE_VALIDATE_TIMESTAMPS=0` so PHP stops
 re-reading files that never change.
 
+**Once, after deploying the change that made repair request files private:** files attached before it are still on the public
+disk, open to anybody holding their address. Move them (they are copied before the public copy goes; an asset's files stay public):
+
+```bash
+docker compose exec app php artisan attachments:make-private --dry-run   # says what would move, moves nothing
+docker compose exec app php artisan attachments:make-private             # moves them; safe to run again
+```
+
+Request files now live on the private disk (`storage/app/private`, the `storage_private` volume): back it up with the public one.
+
 ## Settings worth knowing (`.env`)
 
 | Key | What it is for | If unset |
