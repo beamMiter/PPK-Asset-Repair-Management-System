@@ -973,6 +973,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **A reporter was handed the technician's citizen ID.** `GET /api/repair-requests/pending/evaluations` loaded the whole
+  user record of the technician on each job, and a user turned into JSON carried `citizen_id` - a national ID number and
+  the name people sign in with - along with their email and account state. The list now names the technician only (id,
+  name), and `citizen_id` is hidden from every JSON answer. The owner still reads their own through `/api/auth/me` and the
+  sign-in answer. A test opens every page and API list as a member and as a technician and finds nobody else's citizen ID.
+  `CitizenIdIsNotHandedOutTest`.
+
 - **A new repair request file is private.** Files landed on the public disk, where the web server hands them to anybody
   holding the address, and a repair photo can show a patient's name on a screen. They now go to the private disk and are
   reached only through `GET /attachments/{id}`, which asks the request's own policy; no form field can choose otherwise.
