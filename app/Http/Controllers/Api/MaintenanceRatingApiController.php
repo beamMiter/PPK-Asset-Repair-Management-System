@@ -28,7 +28,7 @@ class MaintenanceRatingApiController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        $requests = MaintenanceRequest::with(['technician', 'rating'])
+        $requests = MaintenanceRequest::with(['technician:id,name', 'rating']) // who did the job, not their account
             ->where('reporter_id', $user->id)
             ->whereIn('status', [
                 MaintenanceRequest::STATUS_RESOLVED,

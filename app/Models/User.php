@@ -35,9 +35,11 @@ class User extends Authenticatable
         'notification_sound',
     ];
 
+    // citizen_id is a national ID number and the sign-in name: never in a JSON answer about somebody (/api/auth/me gives the owner theirs)
     protected $hidden = [
         'password',
         'remember_token',
+        'citizen_id',
     ];
 
     protected $appends = [
