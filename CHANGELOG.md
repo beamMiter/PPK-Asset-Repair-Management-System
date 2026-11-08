@@ -973,6 +973,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **The sites allowed to call the app with a user's cookies were two developer addresses.** `config/cors.php` named
+  `localhost:8000` and `127.0.0.1:8000`, in production too, and never the app's real address. The list now comes from
+  `APP_URL`, plus `CORS_ALLOWED_ORIGINS` for a separate front end; a wildcard or anything that is not http(s) is dropped.
+  The app's own pages and the mobile app are unaffected: neither goes through CORS. `CorsOriginsTest`.
+
 - **A reporter was handed the technician's citizen ID.** `GET /api/repair-requests/pending/evaluations` loaded the whole
   user record of the technician on each job, and a user turned into JSON carried `citizen_id` - a national ID number and
   the name people sign in with - along with their email and account state. The list now names the technician only (id,
