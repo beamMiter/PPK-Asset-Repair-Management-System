@@ -19,7 +19,8 @@ class DashboardController extends Controller
 
     public function index(Request $req)
     {
-        $base = DB::table('maintenance_requests as mr');
+        // the bare table, past the model's soft-delete scope: a deleted request is not a request any more
+        $base = DB::table('maintenance_requests as mr')->whereNull('mr.deleted_at');
         $from = $req->query('from');
 
         $hasFilter = $this->applyFilters($base, $req);
@@ -214,6 +215,7 @@ class DashboardController extends Controller
     {
         $rows = DB::table('maintenance_requests as mr')
             ->join('users as t', 't.id', '=', 'mr.technician_id')
+            ->whereNull('mr.deleted_at')
             ->whereNotIn('mr.status', ['resolved', 'closed', 'cancelled'])
             ->selectRaw('t.id as tech_id, COUNT(*) as total')
             ->groupBy('t.id')
