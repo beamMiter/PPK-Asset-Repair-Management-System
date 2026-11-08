@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Repair;
 
 use App\Http\Controllers\Controller;
+use App\Models\MaintenanceRequest;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
@@ -216,7 +217,7 @@ class DashboardController extends Controller
         $rows = DB::table('maintenance_requests as mr')
             ->join('users as t', 't.id', '=', 'mr.technician_id')
             ->whereNull('mr.deleted_at')
-            ->whereNotIn('mr.status', ['resolved', 'closed', 'cancelled'])
+            ->whereIn('mr.status', MaintenanceRequest::OPEN_STATUSES) // a rejected job is over too: it was never in anybody's hands
             ->selectRaw('t.id as tech_id, COUNT(*) as total')
             ->groupBy('t.id')
             ->orderByDesc('total')
