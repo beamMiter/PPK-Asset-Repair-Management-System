@@ -74,7 +74,8 @@ Route::prefix('auth')->name('auth.')->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(function () {
-    // GET /api/user — User model ทั้งก้อน (ตาม $hidden) ส่วน /api/auth/me ตอบเฉพาะฟิลด์ที่เลือกไว้ + abilities
+    // GET /api/user — User model ทั้งก้อน (ตาม $hidden: ไม่มี password, remember_token, citizen_id) ส่วน /api/auth/me ตอบเฉพาะฟิลด์ที่เลือกไว้
+    //   (รวม citizen_id ของตัวเอง) + abilities
     Route::get('/user', fn (Request $r) => $r->user());
 
     // Assets API — AssetController ตัวเดียวกับหน้าเว็บ; ชื่อ route คือ api.assets.*

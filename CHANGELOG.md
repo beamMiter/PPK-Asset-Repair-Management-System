@@ -978,11 +978,20 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `APP_URL`, plus `CORS_ALLOWED_ORIGINS` for a separate front end; a wildcard or anything that is not http(s) is dropped.
   The app's own pages and the mobile app are unaffected: neither goes through CORS. `CorsOriginsTest`.
 
+- **A reporter was handed the technician's citizen ID.** `GET /api/repair-requests/pending/evaluations` loaded the whole
+  user record of the technician on each job, and a user turned into JSON carried `citizen_id` - a national ID number and
+  the name people sign in with - along with their email and account state. The list now names the technician only (id,
+  name), and `citizen_id` is hidden from every JSON answer. The owner still reads their own through `/api/auth/me` and the
+  sign-in answer. A test opens every page and API list as a member and as a technician and finds nobody else's citizen ID.
+  `CitizenIdIsNotHandedOutTest`.
+
 - **A new repair request file is private.** Files landed on the public disk, where the web server hands them to anybody
   holding the address, and a repair photo can show a patient's name on a screen. They now go to the private disk and are
   reached only through `GET /attachments/{id}`, which asks the request's own policy; no form field can choose otherwise.
   The same address serves the app, with its bearer token. Bytes an older upload left public move when they are attached
-  again; the rest stay public until they are moved by the next step of this work. The file's type on record now comes
+  again, and `php artisan attachments:make-private` (`--dry-run` first) moves the rest once after deploying: deleted
+  requests and attachments included, an asset's files and a file shared with one left public, a file whose bytes are gone
+  named and left alone (`MakeRequestFilesPrivateTest`). The file's type on record now comes
   from its content, and an unchanged file answers 304 so a job page does not fetch its photos again. `PrivateUploadsTest`.
 
 - **An SVG or HTML file can no longer be uploaded as an attachment, and one that a browser could run is never shown as a page.** The repair
