@@ -395,7 +395,8 @@
                                             @foreach ($attached as $att)
                                                 <div
                                                     class="flex items-center justify-between gap-2 p-2 rounded-md border border-slate-100 bg-slate-50/50 text-[11px]">
-                                                    <span class="truncate">{{ $att->original_name }}</span>
+                                                    <a href="{{ route('attachments.show', $att) }}" target="_blank" rel="noopener"
+                                                        class="truncate hover:underline" title="{{ $att->original_name }}">{{ $att->original_name }}</a>
                                                 </div>
                                             @endforeach
                                         </div>

@@ -390,6 +390,11 @@ class MaintenanceRequestController extends Controller
     
         // เตรียมข้อมูล Master Data สำหรับ Dropdown ในหน้า View
         $assets = Asset::orderBy('asset_code')->get(['id', 'asset_code', 'name', 'his_asset_id']);
+        // A request whose asset was deleted since keeps it in its own list (the form marks it), or saving would clear it.
+        if ($mr->asset_id && ! $assets->contains('id', $mr->asset_id)
+            && ($gone = Asset::onlyTrashed()->find($mr->asset_id, ['id', 'asset_code', 'name', 'his_asset_id', 'deleted_at']))) {
+            $assets->push($gone);
+        }
         $users  = User::orderBy('name')->get(['id', 'name']);
         $depts  = Department::orderBy('name_th')->get(['id', 'code', 'name_th', 'name_en']);
     

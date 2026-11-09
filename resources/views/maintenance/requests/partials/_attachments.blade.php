@@ -157,7 +157,6 @@
                     @php
                         $file = $att->file;
                         $name = $att->original_name ?? ($file?->path ?? 'file');
-                        $isPrivate = (bool) ($att->is_private ?? false);
                         $mime = $file?->mime ?? '';
                         $isImg = $mime && str_starts_with($mime, 'image/');
                         // whoever can see this page can open its files: the route asks the same policy as the page
@@ -179,12 +178,7 @@
                         </a>
                         <figcaption class="px-3 py-2.5 space-y-2 flex-1 flex flex-col justify-between">
                             <div class="space-y-1.5">
-                                <div class="flex items-center justify-between gap-1">
-                                    <span
-                                        class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide
-                                                    {{ $isPrivate ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600' }}">
-                                        {{ $isPrivate ? 'Private' : 'Public' }}
-                                    </span>
+                                <div class="flex items-center justify-end gap-1">
                                     <span
                                         class="text-[10px] text-slate-400">{{ number_format(($file?->size ?? 0) / 1024, 1) }}
                                         KB</span>
