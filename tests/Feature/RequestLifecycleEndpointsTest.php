@@ -109,8 +109,10 @@ class RequestLifecycleEndpointsTest extends TestCase
         $this->step($b, 'start', $req)->assertRedirect(route('maintenance.requests.show', $req));
         $this->assertSame('in_progress', $req->fresh()->status);
 
-        // once somebody is on it, it is theirs: a technician who is not on it cannot open it
-        $this->actingAs($a)->get(route('maintenance.requests.show', $req))->assertRedirect(route('dashboard'));   // "no permission" toast
+        // once somebody is on it, it is theirs to work: a technician who is not on it may still read it, but not move it
+        $this->actingAs($a)->get(route('maintenance.requests.show', $req))->assertOk();
+        $this->step($a, 'hold', $req, ['note' => 'not mine'])->assertRedirect();
+        $this->assertSame('in_progress', $req->fresh()->status);
     }
 
     public function test_reject_and_cancel_keep_their_reason(): void
