@@ -24,6 +24,8 @@ use App\Support\Toast;
 
 class MaintenanceRequestController extends Controller
 {
+    private const ASSET_GONE = 'ครุภัณฑ์ที่เลือกถูกลบไปแล้วหรือไม่มีอยู่ กรุณาเลือกครุภัณฑ์อื่น';
+
     use \App\Traits\ApiResponseWithToast;
 
     public function indexPage(Request $request)
@@ -175,7 +177,7 @@ class MaintenanceRequestController extends Controller
         $rules = [
             'title'          => ['required', 'string', 'max:255'],
             'description'    => ['nullable', 'string', 'max:5000'],
-            'asset_id'       => ['nullable', 'integer', 'exists:assets,id'],
+            'asset_id'       => ['nullable', 'integer', Rule::exists('assets', 'id')->whereNull('deleted_at')],
             'department_id'  => ['nullable', 'integer', 'exists:departments,id'],
             'type_id'        => ['nullable', 'integer', 'exists:maintenance_request_types,id'],
             'location_text'  => ['nullable', 'string', 'max:255'],
@@ -187,7 +189,7 @@ class MaintenanceRequestController extends Controller
             'captions'       => ['nullable', 'array'],
         ];
 
-        $validator = Validator::make($request->all(), $rules);
+        $validator = Validator::make($request->all(), $rules, ['asset_id.exists' => self::ASSET_GONE]);
 
         if ($validator->fails()) {
             if ($request->expectsJson()) {
@@ -250,7 +252,8 @@ class MaintenanceRequestController extends Controller
         $rules = [
             'title'           => ['sometimes', 'required', 'string', 'max:255'],
             'description'     => ['nullable', 'string', 'max:5000'],
-            'asset_id'        => ['nullable', 'integer', 'exists:assets,id'],
+            // a live asset, or the one the request already has (which may have been deleted since)
+            'asset_id'        => ['nullable', 'integer', Rule::exists('assets', 'id')->where(fn ($q) => $q->whereNull('deleted_at')->orWhere('id', $req->asset_id))],
             'request_date'    => ['nullable', 'date'],
             'reporter_name'   => ['nullable', 'string', 'max:255'],
             'reporter_phone'  => ['nullable', 'string', 'max:30'],
@@ -283,7 +286,7 @@ class MaintenanceRequestController extends Controller
             'user_ids.*'       => ['integer', Rule::exists('users', 'id')->whereNull('suspended_at')->whereIn('role', User::teamRoles())],
         ];
 
-        $validator = Validator::make($request->all(), $rules);
+        $validator = Validator::make($request->all(), $rules, ['asset_id.exists' => self::ASSET_GONE]);
 
         $validator->after(function ($v) use ($request, $req) {
             $error = $req->attachmentLimitError(count(Arr::wrap($request->file('files'))), Arr::wrap($request->input('remove_attachments')));
