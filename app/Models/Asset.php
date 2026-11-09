@@ -11,6 +11,9 @@ class Asset extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /** Deleting is refused while a repair for the asset is open: the job would point at an asset that is gone. */
+    public const DELETE_BLOCKED = 'ลบไม่ได้: ครุภัณฑ์นี้ยังมีใบแจ้งซ่อมที่ยังไม่แล้วเสร็จ ปิดหรือยกเลิกงานนั้นก่อน';
+
     public const STATUS_ACTIVE = 'active';
     public const STATUS_IN_REPAIR = 'in_repair';
     public const STATUS_DISPOSED = 'disposed';

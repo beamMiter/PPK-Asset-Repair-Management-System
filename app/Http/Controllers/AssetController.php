@@ -204,6 +204,14 @@ class AssetController extends Controller
     public function destroy(Asset $asset)
     {
         $this->authorize('delete', $asset);
+
+        if ($asset->hasOpenMaintenance()) {
+            return response()->json([
+                'message' => Asset::DELETE_BLOCKED,
+                'toast'   => Toast::warning(Asset::DELETE_BLOCKED, 3500),
+            ], Response::HTTP_CONFLICT, [], $this->jsonOptions(request()));
+        }
+
         $assetCode = $asset->asset_code;
         $assetId   = $asset->id;
 
@@ -396,6 +404,11 @@ class AssetController extends Controller
     public function destroyPage(Asset $asset)
     {
         $this->authorize('delete', $asset);
+
+        if ($asset->hasOpenMaintenance()) {
+            return back()->with('toast', Toast::warning(Asset::DELETE_BLOCKED, 3500));
+        }
+
         $assetCode = $asset->asset_code;
         $assetId   = $asset->id;
         $assetName = $asset->name;

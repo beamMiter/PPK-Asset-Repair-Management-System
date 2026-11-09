@@ -84,7 +84,7 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     //   POST   /api/assets            สร้างครุภัณฑ์ (ฟิลด์ตาม AssetInput::rules()) → 201
     //   GET    /api/assets/{asset}    ดูรายการเดียว
     //   PUT|PATCH /api/assets/{asset} แก้ไข
-    //   DELETE /api/assets/{asset}    soft delete
+    //   DELETE /api/assets/{asset}    soft delete · ยังมีใบแจ้งซ่อมที่ยังไม่เสร็จ = 409 · กู้คืน: php artisan assets:restore <รหัส>
     //   สิทธิ์ (AssetPolicy): ดู = ทุกคนที่ login · สร้าง/แก้ = admin, supervisor, ทีมช่าง · ลบ = admin, supervisor
     Route::name('api.')->group(function () {
         Route::apiResource('assets', AssetController::class);
