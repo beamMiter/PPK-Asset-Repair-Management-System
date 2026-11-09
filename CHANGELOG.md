@@ -565,6 +565,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A request's files no longer carry a "Private" / "Public" badge.** Every request file is private now, so the badge said
+  nothing. **An asset's files open from its page** (each name links to `/attachments/{id}`; it was plain text). **A request
+  whose asset was deleted keeps it on the edit form**, marked "(ถูกลบแล้ว)": the list left it out, so saving the form
+  cleared the asset. The manual calls the staff "เจ้าหน้าที่" in the seven places it still said "ช่าง".
+  `FilesAndDeletedAssetTest`, `ManualCallsTheStaffTest`.
 - **The white "secondary" button ("ดูรายละเอียด" / "แก้ไข") darkens clearly on hover, the same way the status-change buttons on a job's page already do**
   (รับทราบ, รับเรื่อง, พักชั่วคราว, เสร็จสิ้น, ไม่รับเรื่อง, ยกเลิกการซ่อมบำรุง). Those already went a shade darker on hover (`bg-blue-600` →
   `hover:bg-blue-700` and so on) and needed nothing new; the white button's own hover (`hover:bg-slate-50`) was too close to white to notice, so it
