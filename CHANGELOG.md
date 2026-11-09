@@ -109,6 +109,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Deleting an asset was a dead end.** It went with a repair still open on it, nothing could bring it back, and its
+  code, serial and HIS number stayed taken (the database keeps them unique across deleted rows) behind a bare "already
+  used". An asset with an open repair is now kept (API 409, a toast on the page); a value a deleted asset holds is named
+  as such; and `php artisan assets:restore <code>` brings the asset back. `AssetDeleteLifecycleTest`.
+- **A repair request could name a deleted asset, and the API answered 500.** `exists:assets,id` counted deleted assets.
+  A new request must name a live one (422 with the reason); an edit may keep the asset the request already has, deleted
+  or not. `RequestOnDeletedAssetTest`.
 - **`php artisan test` no longer depends on this machine's Vite.** With Vite stopped and an old `public/build`, 327 of 1018
   tests failed on a missing manifest entry, and a fresh build failed 5 more that look for source paths. Tests now render
   their `@vite` tags from `tests/fixtures/vite-hot`, so the result is the same with Vite running, stopped or freshly built.
