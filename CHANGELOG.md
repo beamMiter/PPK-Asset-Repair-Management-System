@@ -112,6 +112,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`/api/health` answered 503 wherever phpredis is installed, the Docker image included.** It compared Redis's reply to
+  PING with "pong", but phpredis answers `true` (since 5.0), so a healthy Redis read as "unexpected". Found by the new CI
+  run, the first to test against phpredis and a real Redis. `HealthEndpointTest`.
 - **Deleting an asset was a dead end.** It went with a repair still open on it, nothing could bring it back, and its
   code, serial and HIS number stayed taken (the database keeps them unique across deleted rows) behind a bare "already
   used". An asset with an open repair is now kept (API 409, a toast on the page); a value a deleted asset holds is named
