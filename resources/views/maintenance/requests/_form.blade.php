@@ -59,6 +59,9 @@
                             if ($showHis) {
                                 $label .= ' (รพจ. '.$a->his_asset_id.')';
                             }
+                            if ($a->trashed()) {
+                                $label .= ' (ถูกลบแล้ว)'; // the request's own asset, deleted since: kept so saving does not clear it
+                            }
                         @endphp
                         {{-- data-his: the picker draws that part of the text in the table's colour (layout/widgets.js) --}}
                         <option value="{{ $a->id }}" @if ($showHis) data-his="{{ $a->his_asset_id }}" @endif
@@ -193,7 +196,6 @@
                                 @php
                                     $file = $att->file;
                                     $name = $att->original_name ?? ($file?->path ?? 'file');
-                                    $isPrivate = (bool) ($att->is_private ?? false);
                                     $mime = $file?->mime ?? '';
                                     $isImg = $mime && str_starts_with($mime, 'image/');
                                     // whoever can see this page can open its files: the route asks the same policy as the page
@@ -215,12 +217,6 @@
                                     </a>
                                     <figcaption class="px-3 py-2 space-y-1.5 flex-1 flex flex-col justify-between">
                                         <div class="space-y-1">
-                                            <div class="flex items-center gap-1.5">
-                                                <span
-                                                    class="inline-flex items-center rounded-md px-1 py-0.5 text-[8.5px] font-bold uppercase tracking-wide {{ $isPrivate ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600' }}">
-                                                    {{ $isPrivate ? 'Private' : 'Public' }}
-                                                </span>
-                                            </div>
                                             <div class="text-[11px] font-medium text-slate-700 line-clamp-1"
                                                 title="{{ $name }}">{{ $name }}</div>
                                         </div>

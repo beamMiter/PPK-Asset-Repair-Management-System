@@ -578,6 +578,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A request's files no longer carry a "Private" / "Public" badge.** Every request file is private now, so the badge said
+  nothing. **An asset's files open from its page** (each name links to `/attachments/{id}`; it was plain text). **A request
+  whose asset was deleted keeps it on the edit form**, marked "(ถูกลบแล้ว)": the list left it out, so saving the form
+  cleared the asset. The manual calls the staff "เจ้าหน้าที่" in the seven places it still said "ช่าง".
+  `FilesAndDeletedAssetTest`, `ManualCallsTheStaffTest`.
 - **The staff read every job; they change only their own.** The request list showed a staff member every job, but opening
   one somebody else had taken sent them back to the dashboard. They now open any job, read-only: editing, moving its status,
   files and team stay with the people on it. Two permissions that let anyone change somebody else's job are closed: starting

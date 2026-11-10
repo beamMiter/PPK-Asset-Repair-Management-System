@@ -282,7 +282,7 @@
                                             1</div>
                                         <div class="flex-1">
                                             <div class="font-bold text-slate-900 mb-1 text-[18px]">ข้อมูลหลัก: ทรัพย์สิน หน่วยงาน สถานที่</div>
-                                            <div class="text-[15px] text-slate-600 leading-relaxed space-y-2">พิมพ์รหัสหรือชื่อทรัพย์สินเพื่อค้นหาและเลือก ระบบจะดึงข้อมูลของทรัพย์สินนั้นมาให้ หากไม่ได้ซ่อมครุภัณฑ์ที่อยู่ในระบบให้เว้นไว้ได้ จากนั้นเลือกหน่วยงานและระบุสถานที่/ตำแหน่งที่ช่างต้องไปหา</div>
+                                            <div class="text-[15px] text-slate-600 leading-relaxed space-y-2">พิมพ์รหัสหรือชื่อทรัพย์สินเพื่อค้นหาและเลือก ระบบจะดึงข้อมูลของทรัพย์สินนั้นมาให้ หากไม่ได้ซ่อมครุภัณฑ์ที่อยู่ในระบบให้เว้นไว้ได้ จากนั้นเลือกหน่วยงานและระบุสถานที่/ตำแหน่งที่เจ้าหน้าที่ต้องไปหา</div>
                                         </div>
                                     </div>
                                     <div class="flex gap-4 border-t border-slate-50 pt-8">
@@ -290,7 +290,7 @@
                                             2</div>
                                         <div class="flex-1">
                                             <div class="font-bold text-slate-900 mb-1 text-[18px]">รายละเอียดปัญหา</div>
-                                            <div class="text-[15px] text-slate-600 leading-relaxed space-y-2"><b>หัวข้อ</b> เป็นช่องเดียวที่ต้องกรอก ส่วน <b>รายละเอียด / อาการเสีย</b> ยิ่งชัดเจนช่างยิ่งวิเคราะห์ได้แม่นยำ ส่วน <b>ประเภทงาน</b> เลือกได้ตามความเหมาะสม (ช่วยให้ระบบกำหนดเวลาเป้าหมายในการดำเนินการ) หากไม่แน่ใจปล่อยให้เจ้าหน้าที่ระบุภายหลังได้</div>
+                                            <div class="text-[15px] text-slate-600 leading-relaxed space-y-2"><b>หัวข้อ</b> เป็นช่องเดียวที่ต้องกรอก ส่วน <b>รายละเอียด / อาการเสีย</b> ยิ่งชัดเจนเจ้าหน้าที่ยิ่งวิเคราะห์ได้แม่นยำ ส่วน <b>ประเภทงาน</b> เลือกได้ตามความเหมาะสม (ช่วยให้ระบบกำหนดเวลาเป้าหมายในการดำเนินการ) หากไม่แน่ใจปล่อยให้เจ้าหน้าที่ระบุภายหลังได้</div>
                                         </div>
                                     </div>
                                     <div class="flex gap-4 border-t border-slate-50 pt-8">
@@ -389,7 +389,7 @@
                                         'icon' => 'autorenew',
                                         'color' => 'text-blue-700',
                                         'name' => 'กำลังดำเนินการ',
-                                        'desc' => 'ช่างกำลังปฏิบัติงาน ณ พื้นที่',
+                                        'desc' => 'เจ้าหน้าที่กำลังปฏิบัติงาน ณ พื้นที่',
                                     ],
                                     [
                                         'icon' => 'pause_circle',
@@ -401,7 +401,7 @@
                                         'icon' => 'task_alt',
                                         'color' => 'text-emerald-600',
                                         'name' => 'ซ่อมบำรุงเสร็จสิ้น',
-                                        'desc' => 'ช่างแก้ไขปัญหาเรียบร้อยแล้ว รอผู้แจ้งตรวจสอบและอนุมัติ',
+                                        'desc' => 'เจ้าหน้าที่แก้ไขปัญหาเรียบร้อยแล้ว รอผู้แจ้งตรวจสอบและอนุมัติ',
                                     ],
                                     [
                                         'icon' => 'task',
@@ -486,7 +486,7 @@
                                         <div class="text-[13px] text-slate-500 italic leading-relaxed">
                                             หมายเหตุ: ประเมินได้เฉพาะ <b>ผู้แจ้งซ่อมของงานนั้น</b> ครั้งเดียวต่อใบงาน ภายใน
                                             {{ \App\Http\Controllers\Maintenance\MaintenanceRatingController::RATING_DEADLINE_DAYS }}
-                                            วันหลังปิดงาน และเฉพาะงานที่มีสถานะ "อนุมัติผลการซ่อมบำรุง" และมีเจ้าหน้าที่ประจำงานแล้ว เพื่อความถูกต้องของสถิติผลงานช่าง
+                                            วันหลังปิดงาน และเฉพาะงานที่มีสถานะ "อนุมัติผลการซ่อมบำรุง" และมีเจ้าหน้าที่ประจำงานแล้ว เพื่อความถูกต้องของสถิติผลงานเจ้าหน้าที่
                                         </div>
                                     </div>
                                 </div>
@@ -890,7 +890,7 @@
                                                     <span class="text-xs font-bold">ซ่อมแอร์ไม่เย็น...</span>
                                                     <span class="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-bold">ใหม่ 2</span>
                                                 </div>
-                                                <div class="text-[11px] text-slate-500 line-clamp-1">ช่าง: กำลังเข้าไปตรวจสอบครับ...</div>
+                                                <div class="text-[11px] text-slate-500 line-clamp-1">เจ้าหน้าที่: กำลังเข้าไปตรวจสอบครับ...</div>
                                             </div>
                                         </div>
                                         <div class="flex gap-3 pt-3 border-t border-slate-50">
@@ -919,7 +919,7 @@
                         <tr class="border-t border-slate-100"><td class="px-4 py-3 align-top text-slate-600 leading-relaxed font-semibold text-slate-900">ตอบในกระทู้</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">ทุกคน</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">เมื่อกระทู้ยังไม่ถูกล็อก</td></tr>
                         <tr class="border-t border-slate-100"><td class="px-4 py-3 align-top text-slate-600 leading-relaxed font-semibold text-slate-900">แก้ไขข้อความ</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">เจ้าของข้อความเท่านั้น (ขณะกระทู้ยังไม่ล็อก)</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">กดจุดสามจุด (⋮) ข้างข้อความ แล้วเลือก "แก้ไข" ข้อความจะเปลี่ยนเป็นช่องพิมพ์ในที่เดิม (Enter บันทึก, Esc ยกเลิก) และมีป้าย "แก้ไขแล้ว" กำกับให้ทุกคนเห็น ผู้ดูแลลบข้อความของคนอื่นได้ แต่แก้ไขแทนไม่ได้</td></tr>
                         <tr class="border-t border-slate-100"><td class="px-4 py-3 align-top text-slate-600 leading-relaxed font-semibold text-slate-900">ลบข้อความ</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">เจ้าของข้อความ (ขณะกระทู้ยังไม่ล็อก) และผู้ดูแลกระทู้</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">กดจุดสามจุด (⋮) แล้วเลือก "ลบ" และยืนยันในหน้าต่างที่ขึ้นมา ข้อความจะกลายเป็น "ข้อความนี้ถูกลบ" สำหรับทุกคน ไม่มีใครเห็นเนื้อหาเดิมอีก</td></tr>
-                        <tr class="border-t border-slate-100"><td class="px-4 py-3 align-top text-slate-600 leading-relaxed font-semibold text-slate-900">ล็อก / ปลดล็อกกระทู้</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">ผู้ดูแลระบบ และทีม IT / ช่าง (IT Support, Network Engineer, Programmer, เจ้าหน้าที่ซ่อมบำรุง)</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">หัวหน้างาน บุคลากรทั่วไป และแม้แต่เจ้าของกระทู้ ล็อกหรือปลดล็อกไม่ได้ กระทู้ที่ล็อกจะไม่มีใครส่งข้อความเพิ่มได้</td></tr>
+                        <tr class="border-t border-slate-100"><td class="px-4 py-3 align-top text-slate-600 leading-relaxed font-semibold text-slate-900">ล็อก / ปลดล็อกกระทู้</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">ผู้ดูแลระบบ และเจ้าหน้าที่ IT / ซ่อมบำรุง (IT Support, Network Engineer, Programmer, เจ้าหน้าที่ซ่อมบำรุง)</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">หัวหน้างาน บุคลากรทั่วไป และแม้แต่เจ้าของกระทู้ ล็อกหรือปลดล็อกไม่ได้ กระทู้ที่ล็อกจะไม่มีใครส่งข้อความเพิ่มได้</td></tr>
                         <tr class="border-t border-slate-100"><td class="px-4 py-3 align-top text-slate-600 leading-relaxed font-semibold text-slate-900">ลบกระทู้</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">เจ้าของกระทู้ และผู้ดูแลระบบ</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">กระทู้และข้อความทั้งหมดถูกซ่อนทันที</td></tr>
                         <tr class="border-t border-slate-100"><td class="px-4 py-3 align-top text-slate-600 leading-relaxed font-semibold text-slate-900">ซ่อนกระทู้</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">ทุกคน (เฉพาะรายการของตนเอง)</td><td class="px-4 py-3 align-top text-slate-600 leading-relaxed">ไม่กระทบผู้อื่น คนที่มีส่วนร่วมแต่ไม่ใช่เจ้าของกระทู้ใช้ "ซ่อน" แทนการลบ</td></tr>
                         </tbody>
