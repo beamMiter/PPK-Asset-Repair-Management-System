@@ -114,6 +114,9 @@ php artisan test        # PHP - uses its own MySQL database (see phpunit.xml), n
 npm run test:js         # the browser-side logic (Node's test runner, a fake DOM)
 ```
 
+Both run on GitHub Actions for every pull request and every push to `dev` (`.github/workflows/tests.yml`, MariaDB 11 like
+the Docker setup). Neither needs Vite running: the PHP tests render asset tags from `tests/fixtures/vite-hot`.
+
 ## Where things live
 
 `app/Http/Controllers` (web, and `Api/` for the token API), `app/Services` (logic that reads or writes the database),

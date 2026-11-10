@@ -8,6 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The tests run on every pull request.** `.github/workflows/tests.yml` runs `php artisan test` and `npm run test:js` on
+  GitHub Actions for every pull request and every push to `dev`, on the Docker setup's PHP 8.4, Node 20 and MariaDB 11.
+  `CiWorkflowTest` keeps the workflow in step with the Dockerfile, docker-compose and phpunit.xml.
 - **A message can be edited, and the bin beside it is a "⋮" menu.** The little bin beside each bubble was odd, and there was no way to correct a typo.
   Each message you may act on now has a "⋮" (no circle or box: the icon just lights up under the pointer) that opens a menu: **แก้ไข** (`rate_review`: a speech bubble with a pencil) and **ลบ** (`chat_error`: a speech bubble with a cross), icons that say "this message" rather than a plain pencil and bin. Editing turns the bubble into a
   text box in place (Enter saves, Shift+Enter is a new line - not while a Thai input method is composing - Esc cancels; saving the same words does nothing),
