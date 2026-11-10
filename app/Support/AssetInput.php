@@ -30,16 +30,16 @@ final class AssetInput
         $ignore = $asset ? ','.$asset->id : '';
 
         return [
-            'asset_code' => [$required, 'string', 'max:100', 'unique:assets,asset_code'.$ignore],
+            'asset_code' => [$required, 'string', 'max:100', self::notHeldByADeletedAsset('asset_code', 'รหัสครุภัณฑ์'), 'unique:assets,asset_code'.$ignore],
             'name' => [$required, 'string', 'max:255'],
             'type' => ['nullable', 'string', 'max:100'],
             'category_id' => ['nullable', 'integer', 'exists:asset_categories,id'],
             'brand' => ['nullable', 'string', 'max:100'],
             'model' => ['nullable', 'string', 'max:100'],
-            'serial_number' => ['nullable', 'string', 'max:100', 'unique:assets,serial_number'.$ignore],
+            'serial_number' => ['nullable', 'string', 'max:100', self::notHeldByADeletedAsset('serial_number', 'Serial'), 'unique:assets,serial_number'.$ignore],
             'location' => ['nullable', 'string', 'max:255'],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
-            'his_asset_id' => ['nullable', 'string', 'max:100', 'unique:assets,his_asset_id'.$ignore],
+            'his_asset_id' => ['nullable', 'string', 'max:100', self::notHeldByADeletedAsset('his_asset_id', 'เลข HIS'), 'unique:assets,his_asset_id'.$ignore],
             'purchase_date' => ['nullable', 'date'],
             'warranty_start' => ['nullable', 'date'],
             'warranty_expire' => ['nullable', 'date', 'after_or_equal:warranty_start'],
@@ -52,6 +52,20 @@ final class AssetInput
             'files.*' => ['file', 'max:10240', 'mimes:' . implode(',', config('uploads.document_mimes'))],
             'status' => ['nullable', Rule::in([Asset::STATUS_ACTIVE, Asset::STATUS_IN_REPAIR, Asset::STATUS_DISPOSED])],
         ];
+    }
+
+    /**
+     * The database keeps asset_code, serial_number and his_asset_id unique across deleted assets too, so a deleted asset's
+     * value cannot be used again. Say that, and the way out (restoring it), instead of a bare "already used". It runs before
+     * `unique`, and a failed rule stops the field, so this is the one reason given.
+     */
+    private static function notHeldByADeletedAsset(string $column, string $label): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($column, $label) {
+            if ($value !== null && $value !== '' && Asset::onlyTrashed()->where($column, $value)->exists()) {
+                $fail("{$label} เป็นของครุภัณฑ์ที่ถูกลบไปแล้ว ให้ผู้ดูแลระบบกู้คืนครุภัณฑ์เดิมแทนการสร้างใหม่");
+            }
+        };
     }
 
     /** "ข้อมูลไม่ถูกต้อง: <the fields that failed>" — by the names above, else the Thai one in lang/th/validation.php, the raw key last. */

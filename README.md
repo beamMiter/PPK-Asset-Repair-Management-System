@@ -92,6 +92,10 @@ docker compose exec app php artisan attachments:make-private             # moves
 
 Request files now live on the private disk (`storage/app/private`, the `storage_private` volume): back it up with the public one.
 
+**A deleted asset** keeps its code, serial and HIS number (the database keeps them unique, deleted rows included), so it is
+brought back rather than entered again: `docker compose exec app php artisan assets:restore <asset code>`. An asset with a
+repair still open cannot be deleted.
+
 ## Settings worth knowing (`.env`)
 
 | Key | What it is for | If unset |
