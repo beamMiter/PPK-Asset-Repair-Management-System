@@ -36,10 +36,14 @@ class CiWorkflowTest extends TestCase
         preg_match('/^ARG PHP_VERSION=(\S+)$/m', (string) file_get_contents(base_path('.docker/Dockerfile')), $php);
         preg_match('/^FROM node:(\d+)/m', (string) file_get_contents(base_path('.docker/Dockerfile')), $node);
         preg_match('/^\s+image:\s*(mariadb:\S+)$/m', (string) file_get_contents(base_path('docker-compose.yml')), $db);
+        preg_match('/^\s+image:\s*(redis:\S+)$/m', (string) file_get_contents(base_path('docker-compose.yml')), $redis);
 
         $this->assertStringContainsString("php-version: '{$php[1]}'", $yml);
         $this->assertStringContainsString("node-version: {$node[1]}", $yml);
         $this->assertStringContainsString("image: {$db[1]}", $yml);
+        // with phpredis installed, /api/health pings Redis and answers 503 without it (it did, on the first run)
+        $this->assertStringContainsString("image: {$redis[1]}", $yml);
+        $this->assertMatchesRegularExpression('/extensions:.*\bredis\b/', $yml);
     }
 
     public function test_its_database_is_the_one_phpunit_xml_names(): void
@@ -54,5 +58,7 @@ class CiWorkflowTest extends TestCase
     {
         // storage/framework/views is where Blade compiles to: without it every page test fails on a fresh checkout
         $this->assertStringContainsString('storage/framework/views', $this->workflow());
+        // an empty .env: without one, phpdotenv's attempt to read it is a warning on every test (1067 on the first run)
+        $this->assertStringContainsString('touch .env', $this->workflow());
     }
 }

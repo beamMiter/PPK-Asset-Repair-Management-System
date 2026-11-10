@@ -1,6 +1,6 @@
 # Both test suites, on every pull request and every push to dev, so nothing is merged red.
 # Same PHP, Node and database as the Docker setup (.docker/Dockerfile, docker-compose.yml); tests/Feature/Infra/CiWorkflowTest.php
-# keeps them in step. No .env is needed: phpunit.xml sets the test environment, the job sets the database login and an app key.
+# keeps them in step. The .env is empty: phpunit.xml sets the test environment, the job sets the database login and an app key.
 name: Tests
 
 on:
@@ -34,12 +34,24 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=30
+      # with phpredis installed (as in the Docker image), /api/health pings Redis and answers 503 without one
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
 
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
       DB_USERNAME: root
       DB_PASSWORD: password
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
 
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +59,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_mysql, intl, mbstring, zip, exif, gd, bcmath
+          extensions: pdo_mysql, intl, mbstring, zip, exif, gd, bcmath, redis
           coverage: none
 
       - uses: actions/setup-node@v4
@@ -58,8 +70,11 @@ jobs:
       - name: App key for this run
         run: echo "APP_KEY=base64:$(openssl rand -base64 32)" >> "$GITHUB_ENV"
 
-      - name: Folders git does not keep
-        run: mkdir -p storage/framework/views storage/fonts
+      # an empty .env as well: without one phpdotenv's attempt to read it is a warning on every test (the values come from the env above)
+      - name: Folders and files git does not keep
+        run: |
+          mkdir -p storage/framework/views storage/fonts
+          touch .env
 
       - name: Composer cache folder
         id: composer-cache
