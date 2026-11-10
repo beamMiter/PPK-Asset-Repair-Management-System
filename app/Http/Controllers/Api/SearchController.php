@@ -18,6 +18,7 @@ class SearchController extends Controller
 
         $rows = DB::table('assets')
             ->select(['id', 'asset_code', 'name'])
+            ->whereNull('deleted_at') // a deleted asset cannot be repaired: it is not offered
             ->when($departmentId, fn($qq) => $qq->where('department_id', $departmentId))
             ->when($q !== '', function ($qq) use ($q) {
                 $like = Like::contains($q);
