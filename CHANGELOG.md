@@ -578,6 +578,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Every page loads about a fifth less JavaScript.** `app.js`, loaded by every page, went from 311 kB (97 kB gzipped) to
+  244 kB (74 kB). It carried axios (50 kB), which nothing called (every request is `fetch()`), and the signature pad
+  (15 kB), which only the SLA page's print dialog uses: that page's own script brings it now. `JsBundleTest`.
 - **A request's files no longer carry a "Private" / "Public" badge.** Every request file is private now, so the badge said
   nothing. **An asset's files open from its page** (each name links to `/attachments/{id}`; it was plain text). **A request
   whose asset was deleted keeps it on the edit form**, marked "(ถูกลบแล้ว)": the list left it out, so saving the form
