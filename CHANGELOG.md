@@ -578,6 +578,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The staff read every job; they change only their own.** The request list showed a staff member every job, but opening
+  one somebody else had taken sent them back to the dashboard. They now open any job, read-only: editing, moving its status,
+  files and team stay with the people on it. Two permissions that let anyone change somebody else's job are closed: starting
+  an accepted job (it used to start another person's job, and still starts one nobody is on) and changing the job type, which
+  moves the SLA deadlines (still open to all staff while nobody has taken the job). Every type change was and is written to
+  the job's history with its author. The manual says so. `WorkersSeeEveryJobTest`.
 - **The white "secondary" button ("ดูรายละเอียด" / "แก้ไข") darkens clearly on hover, the same way the status-change buttons on a job's page already do**
   (รับทราบ, รับเรื่อง, พักชั่วคราว, เสร็จสิ้น, ไม่รับเรื่อง, ยกเลิกการซ่อมบำรุง). Those already went a shade darker on hover (`bg-blue-600` →
   `hover:bg-blue-700` and so on) and needed nothing new; the white button's own hover (`hover:bg-slate-50`) was too close to white to notice, so it

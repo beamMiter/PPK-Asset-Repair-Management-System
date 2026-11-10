@@ -94,19 +94,9 @@ class MaintenanceRequestPolicy
     {
         if ($this->isAdminTeam($user)) return Response::allow();
 
-        // เจ้าหน้าที่ดูได้กว้างขึ้น (ดูได้เมื่ออยู่ในคิวรอรับทราบ หรือ รอคนมาตอบรับ)
-        if ($this->isWorker($user) && ($this->isOpenForAcknowledge($req, $user) || $this->isOpenForAccept($user, $req) || $this->isOpenForStart($req))) return Response::allow();
-
-        // ผู้ที่ถูกมอบหมาย/รับผิดชอบ
-        if ($this->isAssignedWorker($user, $req)) return Response::allow();
-
-        // A cancelled / not-taken job marks its team "cancelled", but the people who were on it still see what became of it —
-        // the technician who cancels a job is sent to its page.
-        if (
-            $this->isWorker($user)
-            && in_array((string) $req->status, [MR::STATUS_CANCELLED, MR::STATUS_REJECTED], true)
-            && $req->assignments()->where('user_id', $user->id)->exists()
-        ) return Response::allow();
+        // The team reads every job (the list shows them all, and they cover for each other); what they may change is decided
+        // by each action's own ability below, so a job they are not on opens read-only.
+        if ($this->isWorker($user)) return Response::allow();
 
         // ผู้แจ้ง
         if ((int) $req->reporter_id === (int) $user->id) return Response::allow();
@@ -217,14 +207,14 @@ class MaintenanceRequestPolicy
     {
         if ($this->isAdminTeam($user)) return Response::allow();
 
-        // ต้องเป็นทีมงานช่าง/เจ้าหน้าที่
         if (!$this->isWorker($user)) return Response::deny('เฉพาะเจ้าหน้าที่เท่านั้น');
 
-        // ปลดล็อค: เจ้าหน้าที่ทุกคนสามารถกด "เริ่มดำเนินการ" ได้เลย 
-        // โดยไม่ต้องถูกสั่งงานก่อน (เพื่อรองรับการจ่ายงานกันเอง)
-        if ($req->status === MR::STATUS_ACCEPTED) return Response::allow();
+        if ($req->status !== MR::STATUS_ACCEPTED) return Response::deny('ต้องอยู่สถานะรับเรื่องแล้วเท่านั้น');
 
-        return Response::deny('ต้องอยู่สถานะรับเรื่องแล้วเท่านั้น');
+        // A job nobody is on may be started by any of the staff (self-dispatch); once somebody is on it, it is theirs to start.
+        if ($this->isOpenForStart($req) || $this->isAssignedWorker($user, $req)) return Response::allow();
+
+        return Response::deny('เริ่มดำเนินการได้เฉพาะเจ้าหน้าที่ที่อยู่ในงานนี้');
     }
 
     // hold
@@ -434,9 +424,11 @@ class MaintenanceRequestPolicy
     {
         if ($this->isAdminTeam($user)) return Response::allow();
 
-        if ($this->isWorker($user)) return Response::allow();
+        // The type sets the SLA targets. While nobody is on the job any of the staff may sort it; once somebody is, changing
+        // it would move their deadlines, so it is theirs to change.
+        if ($this->isWorker($user) && ($this->hasNoTeam($req) || $this->isAssignedWorker($user, $req))) return Response::allow();
 
-        return Response::deny('อนุญาตให้เปลี่ยนประเภทงานเฉพาะผู้ดูแลระบบ/เจ้าหน้าที่เท่านั้น');
+        return Response::deny('เปลี่ยนประเภทงานได้เฉพาะเจ้าหน้าที่ที่อยู่ในงานนี้ หรืองานที่ยังไม่มีผู้รับ');
     }
 
     // updateOperationLog (แก้ไขรายงานการปฏิบัติงาน)
