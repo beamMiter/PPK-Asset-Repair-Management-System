@@ -13,19 +13,20 @@ class StatsController extends Controller
     {
         $key = 'stats:summary:v1';
         $payload = Cache::remember($key, 60, function () {
-            $assetTotal = DB::table('assets')->count();
+            $assetTotal = DB::table('assets')->whereNull('deleted_at')->count();
             // Open / closed sets must match the model's canonical split
             // (MaintenanceRequest::syncAssetStatus): 'acknowledged' is open,
             // 'rejected' is terminal — both were missing here.
-            $openRequests = DB::table('maintenance_requests')->whereIn('status', [
+            $openRequests = DB::table('maintenance_requests')->whereNull('deleted_at')->whereIn('status', [
                 'pending','acknowledged','accepted','in_progress','on_hold'
             ])->count();
-            $closedRequests = DB::table('maintenance_requests')->whereIn('status', [
+            $closedRequests = DB::table('maintenance_requests')->whereNull('deleted_at')->whereIn('status', [
                 'resolved','closed','cancelled','rejected'
             ])->count();
 
 
             $recent = DB::table('maintenance_requests')
+                ->whereNull('deleted_at')
                 ->selectRaw('DATE(created_at) as d, COUNT(*) as c')
                 ->where('created_at','>=', now()->subDays(6)->startOfDay())
                 ->groupBy('d')
@@ -53,6 +54,7 @@ class StatsController extends Controller
     {
         $raw = Cache::remember('stats:maintenance_status_counts:v1', 60, function () {
             return DB::table('maintenance_requests')
+                ->whereNull('deleted_at')
                 ->selectRaw('status, COUNT(*) as c')
                 ->groupBy('status')
                 ->pluck('c','status')
@@ -72,6 +74,7 @@ class StatsController extends Controller
                 AVG(CASE WHEN resolved_at IS NOT NULL AND started_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, started_at, resolved_at) END) as avg_hours
             ')
             ->whereNotNull('technician_id')
+            ->whereNull('deleted_at')
             ->groupBy('technician_id')
             ->orderByDesc('total_count')
             ->limit(50)
@@ -99,6 +102,7 @@ class StatsController extends Controller
             return DB::table('assets')
             ->selectRaw('department_id as id, COUNT(*) as c')
             ->whereNotNull('department_id')
+            ->whereNull('deleted_at')
             ->groupBy('department_id')
             ->orderByDesc('c')
             ->get();

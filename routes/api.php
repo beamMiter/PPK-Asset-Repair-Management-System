@@ -84,7 +84,7 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     //   POST   /api/assets            สร้างครุภัณฑ์ (ฟิลด์ตาม AssetInput::rules()) → 201
     //   GET    /api/assets/{asset}    ดูรายการเดียว
     //   PUT|PATCH /api/assets/{asset} แก้ไข
-    //   DELETE /api/assets/{asset}    soft delete
+    //   DELETE /api/assets/{asset}    soft delete · ยังมีใบแจ้งซ่อมที่ยังไม่เสร็จ = 409 · กู้คืน: php artisan assets:restore <รหัส>
     //   สิทธิ์ (AssetPolicy): ดู = ทุกคนที่ login · สร้าง/แก้ = admin, supervisor, ทีมช่าง · ลบ = admin, supervisor
     Route::name('api.')->group(function () {
         Route::apiResource('assets', AssetController::class);
@@ -221,14 +221,13 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
 
     // Search — สำหรับ autocomplete ตอบ {data:[...]} · ?limit= 1–50 (ปริยาย 10)
     Route::prefix('search')->name('search.')->group(function () {
-        // ?q= (รหัส/ชื่อ) &department_id= → {id, code, name, label}  (หมายเหตุ: รวมครุภัณฑ์ที่ถูก soft delete ด้วย)
+        // ?q= (รหัส/ชื่อ) &department_id= → {id, code, name, label}  (ไม่รวมครุภัณฑ์ที่ถูกลบ)
         Route::get('/assets', [SearchController::class, 'assets'])->name('assets');
         // ?q= (เลขที่/หัวข้อ) &status= → {id, request_no, title, status} · เห็นตามสิทธิ์เดียวกับหน้ารายการ (member เห็นเฉพาะของตนเอง)
         Route::get('/maintenance-requests', [SearchController::class, 'requests'])->name('requests');
     });
 
-    // Stats — ตัวเลขรวมทั้งระบบ ไม่แยกตามผู้ใช้/บทบาท และแคชไว้ 60 วินาที
-    //   นับด้วย DB::table ตรงๆ จึงรวมแถวที่ถูก soft delete ด้วย
+    // Stats — ตัวเลขรวมทั้งระบบ ไม่แยกตามผู้ใช้/บทบาท และแคชไว้ 60 วินาที · นับเฉพาะใบงาน/ครุภัณฑ์ที่ยังไม่ถูกลบ
     Route::prefix('stats')->name('stats.')->group(function () {
         // {assets_total, requests_open, requests_closed, recent_daily: 7 วันล่าสุด [{date, count}]}
         Route::get('/summary',                     [StatsController::class, 'summary'])->name('summary');

@@ -109,6 +109,19 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Deleting an asset was a dead end.** It went with a repair still open on it, nothing could bring it back, and its
+  code, serial and HIS number stayed taken (the database keeps them unique across deleted rows) behind a bare "already
+  used". An asset with an open repair is now kept (API 409, a toast on the page); a value a deleted asset holds is named
+  as such; and `php artisan assets:restore <code>` brings the asset back. `AssetDeleteLifecycleTest`.
+- **A repair request could name a deleted asset, and the API answered 500.** `exists:assets,id` counted deleted assets.
+  A new request must name a live one (422 with the reason); an edit may keep the asset the request already has, deleted
+  or not. `RequestOnDeletedAssetTest`.
+- **The dashboard counted deleted requests.** The repair dashboard and the `/api/stats` numbers read the tables directly,
+  past the soft-delete scope, so a deleted request stayed in every total, chart and technician workload, and a deleted
+  asset in the asset totals. The asset autocomplete (`/api/search/assets`) still offered a deleted asset to pick. Only
+  live rows count now. `DeletedRowsAreNotCountedTest`.
+- **A job a technician turned down stayed in their workload.** The dashboard counted every status but resolved, closed
+  and cancelled, so a rejected job never left. It now counts the open statuses only. `TechnicianWorkloadTest`.
 - **`php artisan test` no longer depends on this machine's Vite.** With Vite stopped and an old `public/build`, 327 of 1018
   tests failed on a missing manifest entry, and a fresh build failed 5 more that look for source paths. Tests now render
   their `@vite` tags from `tests/fixtures/vite-hot`, so the result is the same with Vite running, stopped or freshly built.
@@ -570,6 +583,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   whose asset was deleted keeps it on the edit form**, marked "(ถูกลบแล้ว)": the list left it out, so saving the form
   cleared the asset. The manual calls the staff "เจ้าหน้าที่" in the seven places it still said "ช่าง".
   `FilesAndDeletedAssetTest`, `ManualCallsTheStaffTest`.
+- **The staff read every job; they change only their own.** The request list showed a staff member every job, but opening
+  one somebody else had taken sent them back to the dashboard. They now open any job, read-only: editing, moving its status,
+  files and team stay with the people on it. Two permissions that let anyone change somebody else's job are closed: starting
+  an accepted job (it used to start another person's job, and still starts one nobody is on) and changing the job type, which
+  moves the SLA deadlines (still open to all staff while nobody has taken the job). Every type change was and is written to
+  the job's history with its author. The manual says so. `WorkersSeeEveryJobTest`.
 - **The white "secondary" button ("ดูรายละเอียด" / "แก้ไข") darkens clearly on hover, the same way the status-change buttons on a job's page already do**
   (รับทราบ, รับเรื่อง, พักชั่วคราว, เสร็จสิ้น, ไม่รับเรื่อง, ยกเลิกการซ่อมบำรุง). Those already went a shade darker on hover (`bg-blue-600` →
   `hover:bg-blue-700` and so on) and needed nothing new; the white button's own hover (`hover:bg-slate-50`) was too close to white to notice, so it

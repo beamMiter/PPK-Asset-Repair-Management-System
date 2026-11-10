@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Repair;
 
 use App\Http\Controllers\Controller;
+use App\Models\MaintenanceRequest;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
@@ -19,7 +20,8 @@ class DashboardController extends Controller
 
     public function index(Request $req)
     {
-        $base = DB::table('maintenance_requests as mr');
+        // the bare table, past the model's soft-delete scope: a deleted request is not a request any more
+        $base = DB::table('maintenance_requests as mr')->whereNull('mr.deleted_at');
         $from = $req->query('from');
 
         $hasFilter = $this->applyFilters($base, $req);
@@ -214,7 +216,8 @@ class DashboardController extends Controller
     {
         $rows = DB::table('maintenance_requests as mr')
             ->join('users as t', 't.id', '=', 'mr.technician_id')
-            ->whereNotIn('mr.status', ['resolved', 'closed', 'cancelled'])
+            ->whereNull('mr.deleted_at')
+            ->whereIn('mr.status', MaintenanceRequest::OPEN_STATUSES) // a rejected job is over too: it was never in anybody's hands
             ->selectRaw('t.id as tech_id, COUNT(*) as total')
             ->groupBy('t.id')
             ->orderByDesc('total')
