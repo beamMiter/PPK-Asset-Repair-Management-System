@@ -72,7 +72,7 @@ function makeWorld({ stored = null, echo = true } = {}) {
     IntersectionObserver: class { observe() {} disconnect() {} },
   };
   sandbox.window = sandbox; sandbox.globalThis = sandbox;
-  if (echo) sandbox.Echo = { channel: (name) => { world.subs.push(name); return { listen(evt, cb) { world.handlers[evt] = cb; return this; } }; } };
+  if (echo) sandbox.Echo = { private: (name) => { world.subs.push('private:' + name); return { listen(evt, cb) { world.handlers[evt] = cb; return this; } }; } };
   vm.createContext(sandbox);
   vm.runInContext(code, sandbox);
   return world;
@@ -121,7 +121,7 @@ test('a new request beeps after visiting other pages (the listener does not depe
 test('the realtime channel is subscribed once however many pages are visited', () => {
   const w = makeWorld();
   w.visit(); w.visit(); w.visit();
-  assert.deepEqual(w.subs, ['maintenance-requests']);
+  assert.deepEqual(w.subs, ['private:maintenance-requests'], 'a private channel: a new request is not readable without signing in');
 });
 
 test('a page loaded without a bell or audio element does not disable the feature for the rest of the session', async () => {

@@ -997,6 +997,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **A new repair request was announced on a public channel.** `maintenance-requests` carried each new request's number
+  and title, and anybody holding the Pusher key (it is in the page's JavaScript) could read them live without signing in.
+  It is a private channel now, like the chat's: only the staff who get the new-job bell (`view-my-jobs`: admins,
+  supervisors and the staff) are given a signature. The bell sounds as before. `NewJobChannelIsPrivateTest`.
+
 - **The sites allowed to call the app with a user's cookies were two developer addresses.** `config/cors.php` named
   `localhost:8000` and `127.0.0.1:8000`, in production too, and never the app's real address. The list now comes from
   `APP_URL`, plus `CORS_ALLOWED_ORIGINS` for a separate front end; a wildcard or anything that is not http(s) is dropped.
