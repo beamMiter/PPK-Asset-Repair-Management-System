@@ -251,7 +251,7 @@
 
     // one subscription for the whole session: it belongs to the WebSocket, not to a page
     subscribedToNewRequests = true;
-    window.Echo.channel("maintenance-requests")
+    window.Echo.private("maintenance-requests") // private: it carries the request's title
       .listen(".maintenance.created", (e) => {
         console.log("[MyJobs] maintenance.created", e);
         playNotifySound();

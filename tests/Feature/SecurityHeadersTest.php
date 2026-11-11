@@ -69,31 +69,34 @@ class SecurityHeadersTest extends TestCase
         }
     }
 
-    public function test_the_strict_preview_is_report_only_outside_production_and_names_every_host_the_pages_use(): void
+    public function test_the_strict_preview_is_report_only_outside_production_and_names_no_cdn(): void
     {
         $report = $this->get('/login')->assertOk()->headers->get('Content-Security-Policy-Report-Only');
 
         $this->assertNotNull($report);
         $this->assertStringContainsString("default-src 'self'", $report);
         $this->assertStringNotContainsString("'unsafe-inline'", $report, 'the point of the preview is to list what is inline');
-        foreach (['https://cdn.jsdelivr.net', 'https://unpkg.com', 'https://cdnjs.cloudflare.com', 'https://fonts.googleapis.com', 'https://fonts.bunny.net', 'https://assets.mixkit.co', 'wss://*.pusher.com'] as $host) {
-            $this->assertStringContainsString($host, $report, $host);
+        // the pages take nothing from another site any more (public/vendor), so the policy they will be held to names none
+        foreach (['cdn.jsdelivr.net', 'unpkg.com', 'cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'fonts.bunny.net', 'mixkit.co'] as $host) {
+            $this->assertStringNotContainsString($host, $report, $host);
         }
+        $this->assertStringContainsString("media-src 'self';", $report);
+        // the one other site the app talks to: Pusher, for the chat and the new-job bell
+        $this->assertStringContainsString('wss://*.pusher.com', $report);
     }
 
-    public function test_every_external_host_in_a_view_is_named_by_the_preview(): void
+    public function test_no_view_names_a_host_on_another_site(): void
     {
-        // a host added to a page and forgotten here would be reported (harmlessly) - and would break the day the policy is enforced
-        $named = SecurityHeaders::strictPreview();
+        // the policy names no CDN, so a view that took a file from one again would break the day it is enforced
         $found = [];
         foreach (\Illuminate\Support\Facades\File::allFiles(resource_path('views')) as $file) {
-            preg_match_all('#(?:src|href)=["\']https://([a-z0-9.-]+)#i', $file->getContents(), $m);
-            $found = array_merge($found, $m[1]);
+            preg_match_all('#(?:src|href)=["\']https?://([a-z0-9.-]+)#i', $file->getContents(), $m);
+            foreach ($m[1] as $host) {
+                $found[] = $file->getRelativePathname().': '.$host;
+            }
         }
 
-        foreach (array_unique($found) as $host) {
-            $this->assertStringContainsString($host, $named, "https://$host is used by a view but not named in the strict preview");
-        }
+        $this->assertSame([], array_values(array_unique($found)));
     }
 
     public function test_production_sends_the_enforced_policy_only(): void

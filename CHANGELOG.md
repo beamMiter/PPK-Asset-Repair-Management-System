@@ -581,6 +581,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Every page loads about a fifth less JavaScript.** `app.js`, loaded by every page, went from 311 kB (97 kB gzipped) to
   244 kB (74 kB). It carried axios (50 kB), which nothing called (every request is `fetch()`), and the signature pad
   (15 kB), which only the SLA page's print dialog uses: that page's own script brings it now. `JsBundleTest`.
+- **The pages need no internet.** Bootstrap, Bootstrap Icons and TomSelect (jsDelivr), Inter and Material Symbols (Google
+  Fonts), Figtree (Bunny Fonts), Font Awesome (cdnjs), Cropper (unpkg) and the chat sound (mixkit) were loaded from other
+  sites: on a hospital network closed to the internet the pages lost their layout, icons, fonts, menus and sound. The same
+  files and versions are served from `public/vendor` (3 MB; its README gives each source and licence), in the same order,
+  so nothing should look different. The report-only CSP preview names no CDN any more: Pusher is the one other site.
+  `CdnAssetsTest`, `VendoredFilesTest`, `SecurityHeadersTest`.
 - **A request's files no longer carry a "Private" / "Public" badge.** Every request file is private now, so the badge said
   nothing. **An asset's files open from its page** (each name links to `/attachments/{id}`; it was plain text). **A request
   whose asset was deleted keeps it on the edit form**, marked "(ถูกลบแล้ว)": the list left it out, so saving the form
@@ -999,6 +1005,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   predicates and one-line scopes were kept on purpose.
 
 ### Security
+
+- **A new repair request was announced on a public channel.** `maintenance-requests` carried each new request's number
+  and title, and anybody holding the Pusher key (it is in the page's JavaScript) could read them live without signing in.
+  It is a private channel now, like the chat's: only the staff who get the new-job bell (`view-my-jobs`: admins,
+  supervisors and the staff) are given a signature. The bell sounds as before. `NewJobChannelIsPrivateTest`.
 
 - **The sites allowed to call the app with a user's cookies were two developer addresses.** `config/cors.php` named
   `localhost:8000` and `127.0.0.1:8000`, in production too, and never the app's real address. The list now comes from

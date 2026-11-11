@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Queue\SerializesModels;
 
@@ -12,9 +12,10 @@ class MaintenanceRequestCreated implements ShouldBroadcastNow
 
     public function __construct(public array $data) {}
 
-    public function broadcastOn(): Channel
+    // Private: it carries the request's number and title. Only the staff who get the new-job bell may listen (routes/channels.php).
+    public function broadcastOn(): PrivateChannel
     {
-        return new Channel('maintenance-requests');
+        return new PrivateChannel('maintenance-requests');
     }
 
     public function broadcastAs(): string

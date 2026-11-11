@@ -119,7 +119,8 @@ npm run test:js         # the browser-side logic (Node's test runner, a fake DOM
 `app/Http/Controllers` (web, and `Api/` for the token API), `app/Services` (logic that reads or writes the database),
 `app/Support` (small helpers with no database), `app/Events/Chat` (chat broadcast events), `app/Console` (artisan commands),
 `resources/js/<page>/` (one bundle per page, listed in `vite.config.js`), `tests/Feature` (grouped by area: `Chat/`, `Infra/`, `Ui/`, `Auth/`),
-`openapi.yaml` (the API), `CHANGELOG.md` (what changed, `[Unreleased]` first).
+`public/vendor` (third-party CSS, JS, fonts and the chat sound, served by the app so the pages need no internet; its README
+says where each comes from), `openapi.yaml` (the API), `CHANGELOG.md` (what changed, `[Unreleased]` first).
 
 ---
 
