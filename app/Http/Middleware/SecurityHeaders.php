@@ -36,10 +36,8 @@ class SecurityHeaders
     /** Enforced: cannot break a page (see the class comment). */
     public const ENFORCED = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'";
 
-    /** The hosts the pages really take things from (every view and script checked): three script CDNs, the font services, the sound files, Pusher. */
-    private const SCRIPT_HOSTS = 'https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com';
-    private const STYLE_HOSTS = 'https://fonts.googleapis.com https://fonts.bunny.net https://cdn.jsdelivr.net https://cdnjs.cloudflare.com';
-    private const FONT_HOSTS = 'https://fonts.gstatic.com https://fonts.bunny.net https://cdn.jsdelivr.net https://cdnjs.cloudflare.com';
+    // The pages take nothing from another site: the CDN and font-service files are served from public/vendor. The one other site
+    // the app talks to is Pusher (connect-src below).
     private const DEV_HOSTS = 'http://localhost:* http://127.0.0.1:* http://[::1]:*';   // the Vite dev server
 
     /** The strict policy the pages would have to meet before it can be enforced: no inline script, no inline style. Report-only. */
@@ -50,11 +48,11 @@ class SecurityHeaders
 
         return implode('; ', [
             "default-src 'self'",
-            "script-src 'self' " . self::SCRIPT_HOSTS . $dev,
-            "style-src 'self' " . self::STYLE_HOSTS . $dev,
-            "font-src 'self' " . self::FONT_HOSTS . ' data:',
+            "script-src 'self'" . $dev,
+            "style-src 'self'" . $dev,
+            "font-src 'self' data:",
             "img-src 'self' data: blob:",
-            "media-src 'self' https://assets.mixkit.co",
+            "media-src 'self'",
             "connect-src 'self' https://*.pusher.com wss://*.pusher.com" . $dev . $devSockets,
             "object-src 'none'",
             "base-uri 'self'",

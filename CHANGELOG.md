@@ -578,6 +578,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The pages need no internet.** Bootstrap, Bootstrap Icons and TomSelect (jsDelivr), Inter and Material Symbols (Google
+  Fonts), Figtree (Bunny Fonts), Font Awesome (cdnjs), Cropper (unpkg) and the chat sound (mixkit) were loaded from other
+  sites: on a hospital network closed to the internet the pages lost their layout, icons, fonts, menus and sound. The same
+  files and versions are served from `public/vendor` (3 MB; its README gives each source and licence), in the same order,
+  so nothing should look different. The report-only CSP preview names no CDN any more: Pusher is the one other site.
+  `CdnAssetsTest`, `VendoredFilesTest`, `SecurityHeadersTest`.
 - **A request's files no longer carry a "Private" / "Public" badge.** Every request file is private now, so the badge said
   nothing. **An asset's files open from its page** (each name links to `/attachments/{id}`; it was plain text). **A request
   whose asset was deleted keeps it on the edit form**, marked "(ถูกลบแล้ว)": the list left it out, so saving the form
