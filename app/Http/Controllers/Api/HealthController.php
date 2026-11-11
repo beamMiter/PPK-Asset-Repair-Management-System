@@ -10,6 +10,20 @@ use Throwable;
 
 class HealthController extends Controller
 {
+    /**
+     * Whether a Redis client's answer to PING says the server is there. phpredis (the Docker image's client) answers `true`
+     * since 5.0; predis answers "PONG". Comparing the reply to "pong" alone reported a healthy Redis as "unexpected", and the
+     * endpoint answered 503, wherever phpredis is installed.
+     */
+    public static function pongReceived(mixed $reply): bool
+    {
+        if ($reply === true) {
+            return true;
+        }
+
+        return (is_string($reply) || $reply instanceof \Stringable) && strtoupper(ltrim((string) $reply, '+')) === 'PONG';
+    }
+
     public function index(Request $request)
     {
         $checks = [];
@@ -33,11 +47,12 @@ class HealthController extends Controller
         try {
             if (class_exists('Redis')) {
                 $pong = Redis::connection()->ping();
+                $ok = self::pongReceived($pong);
                 $checks['redis'] = [
-                    'status' => strtolower((string) $pong) === 'pong' ? 'ok' : 'unexpected',
-                    'reply' => is_string($pong) ? $pong : (string) $pong,
+                    'status' => $ok ? 'ok' : 'unexpected',
+                    'reply' => $pong === true ? 'PONG' : (is_string($pong) ? $pong : var_export($pong, true)),
                 ];
-                if (strtolower((string) $pong) !== 'pong') {
+                if (! $ok) {
                     $overallOk = false;
                 }
             } else {

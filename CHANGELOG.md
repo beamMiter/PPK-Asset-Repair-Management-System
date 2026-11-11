@@ -8,6 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The tests run on every pull request.** `.github/workflows/tests.yml` runs `php artisan test` and `npm run test:js` on
+  GitHub Actions for every pull request and every push to `dev`, on the Docker setup's PHP 8.4, Node 20 and MariaDB 11.
+  `CiWorkflowTest` keeps the workflow in step with the Dockerfile, docker-compose and phpunit.xml.
 - **A message can be edited, and the bin beside it is a "⋮" menu.** The little bin beside each bubble was odd, and there was no way to correct a typo.
   Each message you may act on now has a "⋮" (no circle or box: the icon just lights up under the pointer) that opens a menu: **แก้ไข** (`rate_review`: a speech bubble with a pencil) and **ลบ** (`chat_error`: a speech bubble with a cross), icons that say "this message" rather than a plain pencil and bin. Editing turns the bubble into a
   text box in place (Enter saves, Shift+Enter is a new line - not while a Thai input method is composing - Esc cancels; saving the same words does nothing),
@@ -109,6 +112,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`/api/health` answered 503 wherever phpredis is installed, the Docker image included.** It compared Redis's reply to
+  PING with "pong", but phpredis answers `true` (since 5.0), so a healthy Redis read as "unexpected". Found by the new CI
+  run, the first to test against phpredis and a real Redis. `HealthEndpointTest`.
 - **Deleting an asset was a dead end.** It went with a repair still open on it, nothing could bring it back, and its
   code, serial and HIS number stayed taken (the database keeps them unique across deleted rows) behind a bare "already
   used". An asset with an open repair is now kept (API 409, a toast on the page); a value a deleted asset holds is named

@@ -1,0 +1,100 @@
+# Both test suites, on every pull request and every push to dev, so nothing is merged red.
+# Same PHP, Node and database as the Docker setup (.docker/Dockerfile, docker-compose.yml); tests/Feature/Infra/CiWorkflowTest.php
+# keeps them in step. The .env is empty: phpunit.xml sets the test environment, the job sets the database login and an app key.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: php artisan test + npm run test:js
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      db:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: password
+          MARIADB_DATABASE: ppk_asset_repair_dataAsset_Repair_Management_testing
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+      # with phpredis installed (as in the Docker image), /api/health pings Redis and answers 503 without one
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: password
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, intl, mbstring, zip, exif, gd, bcmath, redis
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: App key for this run
+        run: echo "APP_KEY=base64:$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+
+      # an empty .env as well: without one phpdotenv's attempt to read it is a warning on every test (the values come from the env above)
+      - name: Folders and files git does not keep
+        run: |
+          mkdir -p storage/framework/views storage/fonts
+          touch .env
+
+      - name: Composer cache folder
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      # a PHP test reads node_modules (Tailwind's preflight), and the JS tests need esbuild
+      - name: Node dependencies
+        run: npm ci
+
+      - name: PHP tests
+        run: php artisan test
+
+      - name: JS tests
+        run: npm run test:js

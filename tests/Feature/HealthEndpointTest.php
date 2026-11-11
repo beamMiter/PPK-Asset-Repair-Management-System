@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Api\HealthController;
 use Tests\TestCase;
 
 /**
@@ -18,6 +19,18 @@ class HealthEndpointTest extends TestCase
         $res->assertOk()->assertJsonPath('status', 'ok')->assertJsonPath('checks.db.status', 'ok');
         $this->assertArrayNotHasKey('queue', $res->json('checks'), 'nothing here is queued, so there is nothing to check');
         $this->assertSame(['app', 'env', 'time', 'version'], array_keys($res->json('meta')));
+    }
+
+    public function test_a_redis_pong_is_recognised_from_either_client(): void
+    {
+        // phpredis (the Docker image's client) answers PING with `true` since 5.0; predis with "PONG". The check compared the
+        // reply to "pong" only, so with phpredis and a healthy Redis it reported "unexpected" and the endpoint answered 503.
+        $this->assertTrue(HealthController::pongReceived(true), 'phpredis');
+        $this->assertTrue(HealthController::pongReceived('PONG'), 'predis');
+        $this->assertTrue(HealthController::pongReceived('+PONG'), 'a raw status reply');
+        $this->assertFalse(HealthController::pongReceived(false));
+        $this->assertFalse(HealthController::pongReceived('1'));
+        $this->assertFalse(HealthController::pongReceived(null));
     }
 
     public function test_health_needs_no_login(): void
