@@ -578,6 +578,9 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Every page loads about a fifth less JavaScript.** `app.js`, loaded by every page, went from 311 kB (97 kB gzipped) to
+  244 kB (74 kB). It carried axios (50 kB), which nothing called (every request is `fetch()`), and the signature pad
+  (15 kB), which only the SLA page's print dialog uses: that page's own script brings it now. `JsBundleTest`.
 - **The pages need no internet.** Bootstrap, Bootstrap Icons and TomSelect (jsDelivr), Inter and Material Symbols (Google
   Fonts), Figtree (Bunny Fonts), Font Awesome (cdnjs), Cropper (unpkg) and the chat sound (mixkit) were loaded from other
   sites: on a hospital network closed to the internet the pages lost their layout, icons, fonts, menus and sound. The same

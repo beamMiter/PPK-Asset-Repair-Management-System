@@ -71,6 +71,37 @@ class JsBundleTest extends TestCase
         $this->assertMatchesRegularExpression('/CHART_CANVASES\.some\(safeGet\)\)\s*return/', $code, 'a page without a chart must not fetch the library');
     }
 
+    /** Every bare package the files of this graph import statically (`import x from 'pkg'`, `import 'pkg'`). */
+    private function packagesImportedBy(array $graph): array
+    {
+        $packages = [];
+        foreach ($graph as $code) {
+            preg_match_all('/^\s*import\s+(?:[^\'";]*?\s+from\s+)?[\'"]([^\'".][^\'"]*)[\'"]/m', $code, $m);
+            foreach ($m[1] as $specifier) {
+                $packages[] = $specifier;
+            }
+        }
+
+        return array_values(array_unique($packages));
+    }
+
+    public function test_the_main_bundle_carries_no_http_client_nothing_uses(): void
+    {
+        // axios (50 kB) was imported for `window.axios`, and nothing calls it: every request is fetch(), and no broadcast
+        // uses toOthers(), which is what Echo would read axios for.
+        $this->assertNotContains('axios', $this->packagesImportedBy($this->staticImportGraph('resources/js/app.js')));
+    }
+
+    public function test_the_signature_pad_is_loaded_by_the_one_page_that_signs(): void
+    {
+        // signature_pad (15 kB) is used only by the SLA page's print dialog
+        $this->assertNotContains('signature_pad', $this->packagesImportedBy($this->staticImportGraph('resources/js/app.js')));
+
+        $sla = (string) file_get_contents(base_path('resources/js/maintenance/sla/dashboard.js'));
+        $this->assertMatchesRegularExpression("/^import SignaturePad from 'signature_pad';$/m", $sla);
+        $this->assertStringContainsString('window.SignaturePad = SignaturePad', $sla, 'the print dialog reads it from window');
+    }
+
     public function test_the_page_specific_chart_bundles_are_separate_vite_entries(): void
     {
         $vite = file_get_contents(base_path('vite.config.js'));

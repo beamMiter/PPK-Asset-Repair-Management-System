@@ -1,4 +1,9 @@
 import Chart from 'chart.js/auto';
+import SignaturePad from 'signature_pad';
+
+// The print dialog's signature (maintenance/sla/print-dialog.js reads it from window). This page is the only one that signs, so the
+// library comes with it rather than with app.js on every page.
+window.SignaturePad = SignaturePad;
 
 (function () {
     const activeCharts = [];

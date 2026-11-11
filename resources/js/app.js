@@ -1,8 +1,6 @@
 import '@hotwired/turbo'
 import '../css/app.css'
 import Alpine from 'alpinejs'
-import SignaturePad from 'signature_pad'
-window.SignaturePad = SignaturePad
 import './sidebar-intro';
 import { installToast } from './toast';
 import { installImageFallback } from './image-fallback';

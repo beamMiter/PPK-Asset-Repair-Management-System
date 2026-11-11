@@ -1,8 +1,5 @@
-import axios from 'axios';
-
-window.axios = axios;
-
-window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+// axios used to be imported here for `window.axios`. Nothing called it (every request is fetch(), and no broadcast uses
+// toOthers(), which is what Echo reads it for), and it was 50 kB of every page.
 
 /**
  * Echo exposes an expressive API for subscribing to channels and listening
