@@ -22,23 +22,23 @@
         })();
     </script>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    {{-- Third-party files are served from public/vendor (same versions the CDNs gave): the hospital network may be closed to the internet. --}}
+    <link href="{{ asset('vendor/bootstrap@5.3.3/dist/css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('vendor/bootstrap-icons@1.11.3/font/bootstrap-icons.css') }}" rel="stylesheet">
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css">
+    <link rel="stylesheet" href="{{ asset('vendor/tom-select@2.3.1/dist/css/tom-select.css') }}">
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="{{ asset('vendor/fonts/inter/inter.css') }}" rel="stylesheet" />
     <title>@hasSection('title')@yield('title') - @endif{{ config('app.title_suffix') }}</title>
 
-    <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0" />
+    <link rel="stylesheet" href="{{ asset('vendor/fonts/material-symbols-outlined/material-symbols-outlined.css') }}" />
 
-    {{-- The two CDN libraries the layout needs live HERE, not at the end of <body>: Turbo replaces the <body> on every visit and re-creates
+    {{-- The two script libraries the layout needs live HERE, not at the end of <body>: Turbo replaces the <body> on every visit and re-creates
          the scripts in it, so they were fetched and run again on each page (and Bootstrap stacked its document listeners again). Scripts
          in <head> are kept by Turbo and added only when a page brings one the document does not have yet. `defer`: run in document
          order once the page is parsed — before the modules below and before DOMContentLoaded — without blocking the first paint. --}}
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js" defer></script>
+    <script src="{{ asset('vendor/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js') }}" defer></script>
+    <script src="{{ asset('vendor/tom-select@2.3.1/dist/js/tom-select.complete.min.js') }}" defer></script>
 
     @yield('head')
 

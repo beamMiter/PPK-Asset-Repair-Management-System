@@ -234,11 +234,11 @@
 @endsection
 
 @push('styles')
-    <link href="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.css" rel="stylesheet">
+    <link href="{{ asset('vendor/cropperjs@1.6.2/dist/cropper.min.css') }}" rel="stylesheet">
 @endpush
 
 @push('scripts')
-    <script src="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.js"></script>
+    <script src="{{ asset('vendor/cropperjs@1.6.2/dist/cropper.min.js') }}"></script>
     <script>
         (() => {
             const fileInput = document.getElementById('avatar-input');
