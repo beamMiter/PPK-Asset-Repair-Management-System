@@ -934,6 +934,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
+- **The unused `axios` package.** The bundle stopped carrying it in the change above; now the package is gone too. Nothing in the
+  app, the views or the tests calls it (every request is `fetch()`; Echo only looks for a global `axios` to add a header for
+  `toOthers()`, which no broadcast uses, and lists axios as its own dev dependency, not one it hands on). It left `package.json`
+  with the 23 packages only it needed (`follow-redirects`, `form-data`, `https-proxy-agent` and what they pull in): `npm ci`
+  installs less, and `npm audit` no longer reports `follow-redirects` (high) in the production tree for a library the app never
+  ran. `JsBundleTest` still pins that the bundle carries no HTTP client.
 - **Creating a user on the admin pages.** Accounts are made by people signing themselves up, and an admin then sets the role, department and
   status on the edit-user page — so the "สร้างผู้ใช้ใหม่" button, `GET /admin/users/create`, `POST /admin/users`, the create view and
   the create branches of the shared form are gone (`admin.users.create` / `admin.users.store` no longer exist; the list, edit, suspend
