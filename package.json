@@ -38,7 +38,6 @@
   },
   "dependencies": {
     "@hotwired/turbo": "^8.0.23",
-    "axios": "^1.13.2",
     "chart.js": "^4.5.1",
     "signature_pad": "^5.1.3"
   }
