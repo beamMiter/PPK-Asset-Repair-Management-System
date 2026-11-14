@@ -1012,6 +1012,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Five Symfony packages updated for their security fixes** (`composer.lock` only; patch versions, nothing else moved):
+  `http-foundation`, `http-kernel` and `routing` 8.1.6 → 8.1.11, `yaml` 8.1.6 → 8.1.11, `mime` 8.1.6 → 8.1.10. The one that
+  reaches every request is a ReDoS in `HeaderUtils::split()`, which anybody could trigger with a long `Cache-Control` request
+  header and hold a PHP worker. The others are about host handling (the app pins its hosts: `TrustProductionHosts`,
+  `APP_URL`), about path rules in front of PHP (nginx here has a few: dotfiles and `/storage/`, the kind one advisory
+  says can be got round by appending the path to the script name) or about parts the app does not use (`security.access_control`,
+  the YAML parser). `composer audit` goes from 7 packages with advisories to 2: `laravel/framework`
+  (low, the `Concurrency` facade) and `league/commonmark` (markdown from users), neither of which the app uses.
 - **A new repair request was announced on a public channel.** `maintenance-requests` carried each new request's number
   and title, and anybody holding the Pusher key (it is in the page's JavaScript) could read them live without signing in.
   It is a private channel now, like the chat's: only the staff who get the new-job bell (`view-my-jobs`: admins,
