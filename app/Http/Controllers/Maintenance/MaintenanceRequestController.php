@@ -346,39 +346,6 @@ class MaintenanceRequestController extends Controller
         }
     }
 
-    /**
-     * API: ลบใบงานซ่อม (REST: DELETE /api/repair-requests/{req})
-     */
-    public function destroy(Request $request, MR $req)
-    {
-        Gate::authorize('delete', $req);
-
-        $actorId = (int) Auth::id();
-
-        DB::transaction(function () use ($req, $actorId) {
-            $id = $req->id;
-
-            $req->delete();
-
-            MaintenanceLog::create([
-                'request_id' => $id,
-                'user_id'    => $actorId ?: null,
-                'action'     => 'delete_request',
-                'note'       => 'ลบใบงานซ่อม (soft delete) ผ่าน API',
-            ]);
-        });
-
-        if (!$request->expectsJson()) {
-            return redirect()
-                ->route('maintenance.requests.index')
-                ->with('toast', Toast::success('ลบใบงานเรียบร้อย', 1600));
-        }
-
-        return response()->json([
-            'deleted' => true,
-            'toast' => Toast::success('ลบใบงานเรียบร้อย', 1600),
-        ], Response::HTTP_OK);
-    }
     public function edit($id)
     {
         // โหลดข้อมูลหลักพร้อม Relations ที่จำเป็นสำหรับหน้าแก้ไข
