@@ -112,6 +112,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Two inputs made the app answer 500 instead of saying what was wrong.** A list sent as `current_password` (on the profile
+  form and on `PUT /api/auth/password`) reached the hasher and was a TypeError: the field is now checked as text first
+  (`bail`), so the answer is the usual validation error. And a maintenance-type page opened with an id that is not a number
+  (`/settings/maintenance-types/abc/edit`, and the update and delete of it) was a TypeError on an `int` argument: the
+  routes take only digits now, so it is a 404. Found by sending every route that changes something an empty, a junk and a
+  list-valued payload, with ids that exist, are text, belong to a deleted row or to somebody else; that sweep is a test now
+  (`MutationRoutesNeverAnswerWithAServerErrorTest`), beside `BadInputIsNotAServerErrorTest`.
 - **`/api/health` answered 503 wherever phpredis is installed, the Docker image included.** It compared Redis's reply to
   PING with "pong", but phpredis answers `true` (since 5.0), so a healthy Redis read as "unexpected". Found by the new CI
   run, the first to test against phpredis and a real Redis. `HealthEndpointTest`.
