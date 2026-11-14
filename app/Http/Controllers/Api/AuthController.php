@@ -130,7 +130,7 @@ class AuthController extends Controller
     public function changePassword(Request $request)
     {
         $data = $request->validate([
-            'current_password' => ['required', 'current_password:sanctum'],
+            'current_password' => ['bail', 'required', 'string', 'current_password:sanctum'],
             'password' => ['required', Password::defaults(), 'confirmed', 'different:current_password'],
         ]);
 
