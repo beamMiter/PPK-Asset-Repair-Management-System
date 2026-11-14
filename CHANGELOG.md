@@ -584,6 +584,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The asset form says that "ดึงข้อมูล HIS" gives made-up data.** The button fills the form from `getMockHisData()`, which
+  invents a brand, a vendor, a price and a warranty for ANY number typed, and the toast said "สำเร็จ": the manual and the
+  README said it was a mock, the form did not, so somebody could register made-up data believing the hospital system gave it.
+  A line under the button now says so, the toast is a warning ("ดึงข้อมูลจำลองแล้ว (ยังไม่ใช่ข้อมูลจริงจาก HIS) กรุณาตรวจก่อนบันทึก"),
+  and the answer carries `mock: true`. All three follow `HisAssetSyncService::IS_MOCK`: when the hospital's API takes over,
+  set it false and the plain "สำเร็จ" comes back by itself. `HisFetchSaysItIsAMockTest`.
 - **Every page loads about a fifth less JavaScript.** `app.js`, loaded by every page, went from 311 kB (97 kB gzipped) to
   244 kB (74 kB). It carried axios (50 kB), which nothing called (every request is `fetch()`), and the signature pad
   (15 kB), which only the SLA page's print dialog uses: that page's own script brings it now. `JsBundleTest`.
