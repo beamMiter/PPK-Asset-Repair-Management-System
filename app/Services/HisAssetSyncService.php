@@ -8,6 +8,13 @@ use Illuminate\Support\Facades\Log;
 class HisAssetSyncService
 {
     /**
+     * True while `getMockHisData()` is the only source: it makes the data up from the number typed (for ANY number), so the asset
+     * form says next to the "ดึงข้อมูล HIS" button that it is a mock, and the answer and its toast say so. When the hospital's API
+     * takes over, set this false (and replace `getMockHisData()`): the form and the toast go back to plain "สำเร็จ" by themselves.
+     */
+    public const IS_MOCK = true;
+
+    /**
      * Map HIS payload to our internal Asset format.
      *
      * TODO: รอ HIS API จริง — map field ตรงนี้ที่เดียว

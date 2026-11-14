@@ -507,7 +507,11 @@ class AssetController extends Controller
                 'status'         => $mockData['status']          ?? null,
                 'note'           => $mockData['note']            ?? null,
             ],
-            'toast' => Toast::success('ดึงข้อมูล HIS สำเร็จ', 1600),
+            // the form decides its wording from `mock`; the toast is for whoever else calls this
+            'mock'  => HisAssetSyncService::IS_MOCK,
+            'toast' => HisAssetSyncService::IS_MOCK
+                ? Toast::warning('ดึงข้อมูลจำลองแล้ว (ยังไม่ใช่ข้อมูลจริงจาก HIS)', 3000)
+                : Toast::success('ดึงข้อมูล HIS สำเร็จ', 1600),
         ], 200, [], $this->jsonOptions($request));
     }
 
