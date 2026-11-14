@@ -89,6 +89,9 @@
                                     placeholder="RPJ-XXXXXX" maxlength="100">
                                 <x-ui.button id="btn-fetch-his" variant="info" icon="cloud_download" class="mt-2">ดึงข้อมูล HIS</x-ui.button>
                             </div>
+                            @if (\App\Services\HisAssetSyncService::IS_MOCK)
+                                <p id="his-mock-note" class="ui-hint mt-1">ขณะนี้ปุ่มนี้ให้<b>ข้อมูลจำลองเพื่อทดสอบ</b> ยังไม่ใช่ข้อมูลจริงจากระบบ HIS กรุณาตรวจและแก้ก่อนบันทึก</p>
+                            @endif
                         @endif
                     </div>
                 </div>
@@ -592,7 +595,12 @@
                                 }
                             }
                         });
-                        showToast('ดึงข้อมูล HIS สำเร็จ', 'success');
+                        // `mock` is true while the data is made up (HisAssetSyncService::IS_MOCK): say so, do not call it a success
+                        if (json.mock) {
+                            showToast('ดึงข้อมูลจำลองแล้ว (ยังไม่ใช่ข้อมูลจริงจาก HIS) กรุณาตรวจก่อนบันทึก', 'warning');
+                        } else {
+                            showToast('ดึงข้อมูล HIS สำเร็จ', 'success');
+                        }
                     } catch {
                         showToast('เกิดข้อผิดพลาดในการดึงข้อมูล', 'error');
                     } finally {
