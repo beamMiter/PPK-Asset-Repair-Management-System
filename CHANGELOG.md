@@ -1009,6 +1009,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   transition rules, the log and the asset sync), `User::rating_average` / `rating_count` (an N+1 per read), `Toast::isSuccess`,
   a second copy of the asset sort whitelist and of the operation-log upsert, and pure wrappers. 21 other unused relations,
   predicates and one-line scopes were kept on purpose.
+- **`DELETE /api/repair-requests/{req}`, which nobody could use.** The route comment said admin and supervisor may delete a
+  request, but it answered 403 to everybody, admins included: `MaintenanceRequestPolicy` has no `delete` method, and Laravel
+  does not run a policy's `before()` (the admin bypass) for a method that is not there. No page, no client and no test used
+  it. A request is the record of who did what, so the owner chose to take the route and `destroy()` away rather than make it
+  work; it answers 405 now and the comment says why. What a deleted request does to its asset and to numbering (the guard
+  described under Fixed above) stays, for when something does delete one. `NoRequestDeleteRouteTest`.
 
 ### Security
 
