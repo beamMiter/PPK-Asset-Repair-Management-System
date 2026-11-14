@@ -162,9 +162,11 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Settings - Maintenance Types
+    // `{id}` is a number: the controller takes an int, and an id like "abc" was a TypeError (500) instead of a 404
     Route::prefix('settings/maintenance-types')
         ->name('settings.maintenance-types.')
         ->middleware('can:manage-system')
+        ->where(['id' => '[0-9]+'])
         ->group(function () {
             Route::get('/', [MaintenanceRequestTypeController::class, 'index'])->name('index');
             Route::get('/create', [MaintenanceRequestTypeController::class, 'create'])->name('create');

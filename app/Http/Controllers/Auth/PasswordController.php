@@ -13,7 +13,9 @@ class PasswordController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validateWithBag('updatePassword', [
-            'current_password' => ['required', 'current_password'],
+            // `bail` + `string` first: the `current_password` rule hands whatever it is given to the hasher, and a list was a
+            // TypeError (500). Without `bail` the later rules still run after `string` has failed.
+            'current_password' => ['bail', 'required', 'string', 'current_password'],
             'password' => ['required', Password::defaults(), 'confirmed', 'different:current_password'],
         ]);
 
