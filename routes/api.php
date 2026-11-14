@@ -121,9 +121,8 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
         //   note? = เหตุผลของการเปลี่ยนสถานะ (on_hold ต้องมี)
         Route::put('/{req}',              [MaintenanceRequestController::class, 'update'])->name('update');
 
-        // DELETE /api/repair-requests/{req} — soft delete + บันทึก log delete_request → 200 {deleted:true, toast}
-        //   เฉพาะ admin, supervisor (MaintenanceRequestPolicy ไม่มี delete ผู้อื่นจึงถูกปฏิเสธ)
-        Route::delete('/{req}',           [MaintenanceRequestController::class, 'destroy'])->name('destroy');
+        // ไม่มี DELETE /api/repair-requests/{req}: ใบงานเป็นหลักฐานว่าใครทำอะไร จึงไม่มีทางลบผ่าน API (ตอบ 405)
+        //   (เคยมี route นี้โดยเขียนว่า admin/supervisor ลบได้ แต่ policy ไม่มี delete จึงตอบ 403 กับทุกคนมาตลอด)
 
         // POST /api/repair-requests/{req}/transition   body: status*, note?, technician_id?
         //   เปลี่ยนสถานะตาม MaintenanceRequest::ALLOWED_TRANSITIONS · Gate 'transition': admin/supervisor หรือผู้ที่ถูกมอบหมาย
