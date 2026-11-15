@@ -64,7 +64,7 @@ class ManualIsCurrentTest extends TestCase
             . $this->source('maintenance/requests/partials/_modal_status_actions.blade.php');
         $html = $this->manual('admin');
 
-        foreach (['รับทราบ', 'รับเรื่อง', 'ดำเนินการ', 'หยุดชั่วคราว', 'กลับเข้าดำเนินการ', 'เสร็จสิ้น', 'อนุมัติปิดงาน', 'ไม่รับเรื่อง', 'ยกเลิกการซ่อมบำรุง', 'พิมพ์ PDF', 'ประวัติการดำเนินงาน', 'ประเมินความพึงพอใจ'] as $button) {
+        foreach (['รับทราบ', 'รับเรื่อง', 'ดำเนินการ', 'หยุดชั่วคราว', 'กลับเข้าดำเนินการ', 'เสร็จสิ้น', 'อนุมัติปิดงาน', 'ไม่รับเรื่อง', 'ส่งกลับไปแก้ไข', 'ส่งใบงานอีกครั้ง', 'ยกเลิกการซ่อมบำรุง', 'พิมพ์ PDF', 'ประวัติการดำเนินงาน', 'ประเมินความพึงพอใจ'] as $button) {
             $this->assertStringContainsString($button, $page, "the page has no button \"{$button}\"");
             $this->assertStringContainsString($button, $html, "the manual never names \"{$button}\"");
         }

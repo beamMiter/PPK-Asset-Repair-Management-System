@@ -96,6 +96,9 @@ Route::middleware(['auth'])->group(function () {
             // Status transitions
             Route::post('/{req}/acknowledge', [MaintenanceTransitionController::class, 'acknowledgeCase'])->name('acknowledge');
             Route::post('/{req}/reject', [MaintenanceTransitionController::class, 'rejectCase'])->name('reject');
+            // sent back to its reporter to fix (not final, unlike reject), and sent again by the reporter
+            Route::post('/{req}/send-back', [MaintenanceTransitionController::class, 'sendBackCase'])->name('send-back');
+            Route::post('/{req}/resubmit', [MaintenanceTransitionController::class, 'resubmitCase'])->name('resubmit');
             Route::post('/{req}/accept', [MaintenanceTransitionController::class, 'acceptCase'])->name('accept');
 
             Route::post('/{req}/start', [MaintenanceTransitionController::class, 'startCase'])->name('start');

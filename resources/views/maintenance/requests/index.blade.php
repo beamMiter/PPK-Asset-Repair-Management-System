@@ -24,6 +24,7 @@
             'resolved' => 'text-emerald-800',
             'closed' => 'text-emerald-950',
             'cancelled' => 'text-rose-700',
+            'returned' => 'text-orange-700',
             default => 'text-slate-700',
         };
 

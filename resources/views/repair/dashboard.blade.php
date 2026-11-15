@@ -76,6 +76,7 @@
             'on_hold' => 'พักไว้ชั่วคราว',
             'resolved' => 'ซ่อมบำรุงเสร็จสิ้น',
             'closed' => 'อนุมัติผลการซ่อมบำรุง',
+            'returned' => 'ส่งกลับแก้ไข',
         ];
 
         $statusPill = fn($s) => match ($s) {
@@ -86,6 +87,7 @@
             'on_hold' => 'bg-[#F1F5F9] text-[#475569]',
             'resolved' => 'bg-[#ECFDF5] text-[#059669]',
             'closed' => 'bg-emerald-100 text-emerald-800',
+            'returned' => 'bg-orange-100 text-orange-700',
             default => 'bg-slate-100 text-slate-500',
         };
 
@@ -131,6 +133,12 @@
                 'color' => 'text-emerald-500',
                 'bg' => 'bg-emerald-50',
                 'border' => 'border-emerald-300',
+            ],
+            'returned' => [
+                'icon' => 'undo',
+                'color' => 'text-orange-500',
+                'bg' => 'bg-orange-50',
+                'border' => 'border-orange-200',
             ],
             default => [
                 'icon' => 'info',

@@ -130,6 +130,11 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
         //   · ข้อมูลไม่ถูกต้อง = 422 · ย้ายสถานะผิดกติกา/ขาดเหตุผลที่ต้องระบุ = 409
         Route::post('/{req}/transition',  [MaintenanceTransitionController::class, 'transition'])->name('transition');
 
+        // POST /api/repair-requests/{req}/resubmit — the reporter sends a request again after fixing it (status `returned` → `pending`;
+        //   admin/supervisor may on their behalf). The staff send one back with POST …/transition body status=returned and a `note`
+        //   (what to fix; required) from pending or acknowledged. `returned` is not final (rejected is) and the SLA clock stops while it lasts
+        Route::post('/{req}/resubmit',    [MaintenanceTransitionController::class, 'resubmitCase'])->name('resubmit');
+
         // GET /api/repair-requests/{req}/logs — ประวัติการเปลี่ยนแปลง ใหม่→เก่า 20 รายการ/หน้า (paginator ตรงๆ) · Gate 'view'
         Route::get('/{req}/logs',         [MaintenanceLogController::class, 'index'])->name('logs');
 

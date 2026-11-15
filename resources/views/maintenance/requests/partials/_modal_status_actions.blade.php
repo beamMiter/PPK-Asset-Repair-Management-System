@@ -1,3 +1,33 @@
+        {{-- Send-back Modal: give it back to the reporter to fix (not final, unlike reject) --}}
+        @if ($canSendBack)
+            <div id="sendBackModal"
+                class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+                <div class="relative z-[10000] w-full max-w-xl rounded-md border {{ $line }} bg-white ">
+                    <div class="flex items-center justify-between border-b {{ $line }} px-4 py-3">
+                        <div class="text-sm font-semibold text-orange-600">ส่งกลับไปแก้ไข</div>
+                        <x-ui.button id="closeSendBackModalBtn" variant="ghost" size="icon" icon="close" aria-label="ปิด" />
+                    </div>
+                    <form method="POST" action="{{ route('maintenance.requests.send-back', $req->id) }}"
+                        class="px-4 py-4 space-y-4" data-dirty-check="true">
+                        @csrf
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700">ระบุว่าต้องแก้ไขส่วนไหน อะไร และอย่างไร <span
+                                    class="text-rose-600">*</span></label>
+                            <p class="mt-1 text-[12px] text-slate-500">ผู้แจ้งจะเห็นข้อความนี้ แก้ไขใบงานเดิม แล้วส่งกลับมาอีกครั้ง ใบงานยังเป็นเลขเดิมและประวัติยังอยู่ ถ้าไม่ใช่งานของทีมเจ้าหน้าที่ ให้ใช้ "ไม่รับเรื่อง"</p>
+                            <textarea name="return_reason" rows="3" required style="min-height:unset;height:auto;"
+                                class="mt-2 w-full rounded-md border {{ $line }} bg-white px-3 py-2 text-sm resize-none overflow-hidden
+                               focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                                placeholder="เช่น ระบุห้อง/ตำแหน่งที่เครื่องตั้งอยู่และอาการที่เกิดให้ชัดเจน, แนบรูปอาการ, ระบุเลขครุภัณฑ์..." maxlength="2000" data-counter></textarea>
+                        </div>
+                        <div class="flex justify-end gap-2 pt-2">
+                            <x-ui.button id="cancelSendBackModalBtn">ยกเลิก</x-ui.button>
+                            <x-ui.button type="submit" variant="warning">ยืนยันการส่งกลับ</x-ui.button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        @endif
+
         {{-- Reject Modal --}}
         @if ($canReject)
             <div id="rejectModal"
@@ -16,7 +46,7 @@
                             <textarea name="reject_reason" rows="3" required style="min-height:unset;height:auto;"
                                 class="mt-2 w-full rounded-md border {{ $line }} bg-white px-3 py-2 text-sm resize-none overflow-hidden
                                focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
-                                placeholder="เช่น ข้อมูลไม่ครบถ้วน, แจ้งซ้ำ, หรือไม่ใช่หน้าที่ของทีมเจ้าหน้าที่..." maxlength="2000" data-counter></textarea>
+                                placeholder="เช่น แจ้งซ้ำ, ไม่ใช่หน้าที่ของทีมเจ้าหน้าที่, เป็นงานของหน่วยงานภายนอก... (ถ้าแค่รายละเอียดไม่ชัด ให้ใช้ \"ส่งกลับไปแก้ไข\")" maxlength="2000" data-counter></textarea>
                         </div>
                         <div class="flex justify-end gap-2 pt-2">
                             <x-ui.button id="cancelRejectModalBtn">ยกเลิก</x-ui.button>

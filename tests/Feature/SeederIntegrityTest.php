@@ -28,7 +28,7 @@ class SeederIntegrityTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const STATUS_LEVEL = ['pending' => 0, 'acknowledged' => 1, 'accepted' => 2, 'in_progress' => 3, 'on_hold' => 3, 'resolved' => 4, 'closed' => 5];
+    private const STATUS_LEVEL = ['pending' => 0, 'returned' => 0, 'acknowledged' => 1, 'accepted' => 2, 'in_progress' => 3, 'on_hold' => 3, 'resolved' => 4, 'closed' => 5];
 
     public function test_people_and_reference_data(): void
     {

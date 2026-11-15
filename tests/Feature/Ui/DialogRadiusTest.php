@@ -79,11 +79,11 @@ class DialogRadiusTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/rounded-(sm|lg|xl|2xl|3xl)\b/', $card, "$view: a different radius");
     }
 
-    public function test_the_four_status_confirm_dialogs_all_match(): void
+    public function test_the_five_status_confirm_dialogs_all_match(): void
     {
         $source = file_get_contents(resource_path('views/maintenance/requests/partials/_modal_status_actions.blade.php'));
 
-        $this->assertSame(4, substr_count($source, 'class="relative z-[10000] w-full max-w-xl rounded-md border {{ $line }} bg-white ">'), 'reject, cancel, hold and close');
+        $this->assertSame(5, substr_count($source, 'class="relative z-[10000] w-full max-w-xl rounded-md border {{ $line }} bg-white ">'), 'send back, reject, cancel, hold and close');
         $this->assertDoesNotMatchRegularExpression('/rounded-(sm|lg|xl|2xl|3xl)\b/', $source);
     }
 

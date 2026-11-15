@@ -53,6 +53,28 @@ class MaintenanceTransitionService
                     abort(409, 'ต้องระบุเหตุผลในการหยุดการซ่อมบำรุงชั่วคราว');
                 }
 
+                // Sending a request back says what to fix: without it the reporter has nothing to act on, and it would be a
+                // rejection with a longer wait. (Rejecting for good is the other button.)
+                if ($targetStatus === MR::STATUS_RETURNED && empty(trim($data['note'] ?? ''))) {
+                    abort(409, 'ต้องระบุว่าให้ผู้แจ้งแก้ไขส่วนไหน อะไร และอย่างไร');
+                }
+
+                // Leaving "sent back": the SLA clock stood still while the request was with the reporter, so the time away is
+                // added to the paused minutes and moves the deadlines (the response deadline only if nobody has responded yet).
+                // The moment it went back is `status_updated_at`, which every change of status sets.
+                if ($from === MR::STATUS_RETURNED && $locked->status_updated_at) {
+                    $awaySecs = (int) Carbon::parse($locked->status_updated_at)->diffInSeconds(now(), true);
+
+                    $locked->paused_duration_minutes = (int) $locked->paused_duration_minutes + (int) ceil($awaySecs / 60);
+
+                    if ($locked->sla_due_date) {
+                        $locked->sla_due_date = Carbon::parse($locked->sla_due_date)->addSeconds($awaySecs);
+                    }
+                    if ($locked->response_due_date && ! $locked->acknowledged_at) {
+                        $locked->response_due_date = Carbon::parse($locked->response_due_date)->addSeconds($awaySecs);
+                    }
+                }
+
                 // คำนวณเวลาหยุดการซ่อมบำรุงชั่วคราวเมื่อออกจากการหยุดชั่วคราว
                 if ($from === MR::STATUS_ON_HOLD && $locked->on_hold_at) {
                     $onHoldAt = Carbon::parse($locked->on_hold_at);
@@ -331,6 +353,8 @@ class MaintenanceTransitionService
             MR::STATUS_CLOSED       => 'อนุมัติผลการซ่อมบำรุง',
             MR::STATUS_CANCELLED    => 'ยกเลิก',
             MR::STATUS_REJECTED     => 'ไม่รับเรื่อง',
+            MR::STATUS_RETURNED     => 'ส่งกลับให้ผู้แจ้งแก้ไข',
+            MR::STATUS_PENDING      => 'ผู้แจ้งส่งใบงานอีกครั้ง',
             default                 => 'อัปเดตสถานะ',
         };
     }

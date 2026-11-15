@@ -18,6 +18,7 @@
             'resolved' => 'เสร็จสิ้น',
             'closed' => 'ปิดงาน',
             'cancelled' => 'ยกเลิก',
+            'returned' => 'ส่งกลับแก้ไข',
         ];
 
         $status = $req->status;
@@ -57,9 +58,20 @@
         $canAccept = $status === MR::STATUS_ACKNOWLEDGED && \Gate::allows('accept', $req);
         $canReject =
             in_array($status, [MR::STATUS_PENDING, MR::STATUS_ACKNOWLEDGED], true) && \Gate::allows('reject', $req);
+        // "ส่งกลับแก้ไข" (give it back to the reporter to fix) comes before "ไม่รับเรื่อง" (final); the reporter sends it again
+        $canSendBack =
+            in_array($status, [MR::STATUS_PENDING, MR::STATUS_ACKNOWLEDGED], true) && \Gate::allows('sendBack', $req);
+        $canResubmit = $status === MR::STATUS_RETURNED && \Gate::allows('resubmit', $req);
         $canCancel =
-            in_array($status, [MR::STATUS_ACCEPTED, MR::STATUS_IN_PROGRESS, MR::STATUS_ON_HOLD], true) &&
+            in_array($status, [MR::STATUS_RETURNED, MR::STATUS_ACCEPTED, MR::STATUS_IN_PROGRESS, MR::STATUS_ON_HOLD], true) &&
             \Gate::allows('cancel', $req);
+
+        // what the staff said to fix: the note of the move into "returned" (the history keeps it after "[from -> to] ")
+        $returnReason = null;
+        if ($status === MR::STATUS_RETURNED) {
+            $returnLog = $req->logs()->where('to_status', MR::STATUS_RETURNED)->latest('id')->first();
+            $returnReason = $returnLog ? trim((string) preg_replace('/^\[[^\]]*\]\s*/u', '', (string) $returnLog->note)) : null;
+        }
         $canStart = $status === MR::STATUS_ACCEPTED && \Gate::allows('startWork', $req);
         $canHold =
             in_array($status, [MR::STATUS_ACCEPTED, MR::STATUS_IN_PROGRESS], true) && \Gate::allows('hold', $req);
@@ -156,6 +168,8 @@
             url.searchParams.delete('rate');
             window.history.replaceState({}, '', url);
         }">
+        @include('maintenance.requests.partials._returned_notice')
+
         @include('maintenance.requests.partials._summary_cards')
 
         @include('maintenance.requests.partials._modal_assign')

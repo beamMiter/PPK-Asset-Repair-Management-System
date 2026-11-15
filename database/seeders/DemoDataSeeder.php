@@ -59,6 +59,7 @@ class DemoDataSeeder extends Seeder
         'closed' => 'อนุมัติผลการซ่อมบำรุง',
         'cancelled' => 'ยกเลิก',
         'rejected' => 'ไม่รับเรื่อง',
+        'returned' => 'ส่งกลับให้ผู้แจ้งแก้ไข',
     ];
 
     private const LEVELS = ['pending' => 0, 'acknowledged' => 1, 'accepted' => 2, 'in_progress' => 3, 'on_hold' => 3, 'resolved' => 4, 'closed' => 5];
@@ -207,8 +208,8 @@ class DemoDataSeeder extends Seeder
         $lead = $team[0] ?? null;
         $t0 = $s['t0'];
 
-        // how far the request got: cancelled / rejected requests stopped somewhere on the way
-        $stage = in_array($status, ['cancelled', 'rejected'], true) ? ($s['from'] ?? 'pending') : $status;
+        // how far the request got: cancelled / rejected / sent-back requests stopped somewhere on the way
+        $stage = in_array($status, ['cancelled', 'rejected', 'returned'], true) ? ($s['from'] ?? 'pending') : $status;
         $level = self::LEVELS[$stage];
         if ($level >= 2 && ! $lead) {
             throw new \LogicException("Scenario \"{$s['title']}\" reaches {$stage} without a team.");
@@ -258,6 +259,9 @@ class DemoDataSeeder extends Seeder
         }
         if ($status === 'cancelled') {
             $step('cancelled', ($steps ? end($steps)['at'] : $t0)->copy()->addMinutes($s['cancel_after'] ?? 60), $this->users[$s['cancel_by'] ?? $s['by']], $s['reason'] ?? null);
+        }
+        if ($status === 'returned') {
+            $step('returned', ($steps ? end($steps)['at'] : $t0)->copy()->addMinutes($s['return_after'] ?? 30), $this->users[$s['returner'] ?? 'sup'], $s['reason'] ?? null);
         }
         if ($status === 'rejected') {
             $step('rejected', ($steps ? end($steps)['at'] : $t0)->copy()->addMinutes($s['reject_after'] ?? 45), $this->users[$s['rejecter'] ?? 'sup'], $s['reason'] ?? null);
@@ -683,6 +687,10 @@ class DemoDataSeeder extends Seeder
                 'title' => 'ตรวจสอบสัญญาณ WiFi ห้องฉุกเฉิน', 'desc' => 'WiFi ห้องฉุกเฉินสัญญาณไม่นิ่ง'],
             ['s' => 'cancelled', 'from' => 'acknowledged', 'age' => 8, 'by' => 'lab', 'a' => 'PC-LAB-01', 't' => 'Hardware', 'reason' => 'ไม่ต้องการแล้ว เปลี่ยนไปใช้เครื่องสำรอง',
                 'title' => 'ขอเปลี่ยนเครื่องคอมพิวเตอร์ห้อง LAB', 'desc' => 'เครื่องเก่าช้า ขอเปลี่ยนเป็นเครื่องใหม่'],
+
+            // ================= returned: the details were not clear, so it went back to its reporter to fix
+            ['s' => 'returned', 'age' => 1, 'by' => 'fin', 'place' => 'ห้องการเงิน ชั้น 2', 'reason' => 'กรุณาระบุเลขครุภัณฑ์ของเครื่อง และอาการที่เกิดให้ชัดเจน (เปิดไม่ติดเลย หรือขึ้นข้อความอะไร) แนบรูปถ้ามี',
+                'title' => 'คอมพิวเตอร์ใช้งานไม่ได้', 'desc' => 'เครื่องมีปัญหา ช่วยตรวจสอบให้หน่อย'],
 
             // ================= rejected: out of scope
             ['s' => 'rejected', 'age' => 3, 'by' => 'fin', 'place' => 'ห้องการเงิน ชั้น 2', 'reason' => 'ไม่อยู่ในขอบเขตงาน — เป็นอุปกรณ์ส่วนตัว',

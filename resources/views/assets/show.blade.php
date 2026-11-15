@@ -116,6 +116,7 @@
                                                 'completed'    => ['icon' => 'task_alt',        'dot' => 'bg-emerald-50 text-emerald-600'],
                                                 'cancelled'    => ['icon' => 'cancel',          'dot' => 'bg-slate-100 text-slate-500'],
                                                 'rejected'     => ['icon' => 'block',           'dot' => 'bg-rose-50 text-rose-600'],
+                                                'returned'     => ['icon' => 'undo',            'dot' => 'bg-orange-50 text-orange-600'],
                                             ];
                                             $neutralStyle = ['icon' => 'info', 'dot' => 'bg-slate-100 text-slate-500'];
                                             $statusTextClass = fn(?string $s) => match (strtolower((string) $s)) {
@@ -127,6 +128,7 @@
                                                 'resolved' => 'text-emerald-800',
                                                 'closed' => 'text-emerald-950',
                                                 'cancelled', 'rejected' => 'text-rose-700',
+                                                'returned' => 'text-orange-700',
                                                 default => 'text-slate-700',
                                             };
                                             $recentRequests = $asset->maintenanceRequests->sortByDesc('created_at')->take(5)->values();

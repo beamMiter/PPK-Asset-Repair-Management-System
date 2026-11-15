@@ -100,6 +100,13 @@ class MaintenanceRequest extends Model
     public const STATUS_CANCELLED    = 'cancelled';
     public const STATUS_REJECTED     = 'rejected';
 
+    /**
+     * Sent back to the person who filed it, with what to fix, instead of being rejected for good. The request keeps its number and
+     * its history; the reporter edits it and sends it again (back to pending). It expires if they never do, and the SLA clock
+     * stops while it is with them. "Rejected" is a different case (not our job) and stays final.
+     */
+    public const STATUS_RETURNED     = 'returned';
+
     public const MAX_ATTACHMENTS = 3;
 
     // legacy
@@ -108,6 +115,7 @@ class MaintenanceRequest extends Model
     /** Still being worked on — the asset is not free while one of these exists. */
     public const OPEN_STATUSES = [
         self::STATUS_PENDING,
+        self::STATUS_RETURNED,
         self::STATUS_ACKNOWLEDGED,
         self::STATUS_ACCEPTED,
         self::STATUS_IN_PROGRESS,
@@ -126,8 +134,9 @@ class MaintenanceRequest extends Model
      * Transition map: สถานะปัจจุบัน => สถานะที่อนุญาตให้เปลี่ยนไปได้
      */
     public const ALLOWED_TRANSITIONS = [
-        self::STATUS_PENDING      => [self::STATUS_ACKNOWLEDGED, self::STATUS_CANCELLED, self::STATUS_REJECTED],
-        self::STATUS_ACKNOWLEDGED => [self::STATUS_ACCEPTED, self::STATUS_CANCELLED, self::STATUS_REJECTED],
+        self::STATUS_PENDING      => [self::STATUS_ACKNOWLEDGED, self::STATUS_CANCELLED, self::STATUS_REJECTED, self::STATUS_RETURNED],
+        self::STATUS_ACKNOWLEDGED => [self::STATUS_ACCEPTED, self::STATUS_CANCELLED, self::STATUS_REJECTED, self::STATUS_RETURNED],
+        self::STATUS_RETURNED     => [self::STATUS_PENDING, self::STATUS_CANCELLED],
         self::STATUS_ACCEPTED     => [self::STATUS_IN_PROGRESS, self::STATUS_ON_HOLD, self::STATUS_CANCELLED],
         self::STATUS_IN_PROGRESS  => [self::STATUS_RESOLVED, self::STATUS_CANCELLED, self::STATUS_ON_HOLD],
         self::STATUS_ON_HOLD      => [self::STATUS_IN_PROGRESS, self::STATUS_CANCELLED],
@@ -158,6 +167,7 @@ class MaintenanceRequest extends Model
             self::STATUS_CLOSED       => 'อนุมัติผลการซ่อมบำรุง',
             self::STATUS_CANCELLED    => 'ยกเลิกการซ่อมบำรุง',
             self::STATUS_REJECTED     => 'ไม่รับเรื่อง',
+            self::STATUS_RETURNED     => 'ส่งกลับแก้ไข',
             self::STATUS_COMPLETED    => 'เสร็จสิ้น (legacy)',
         ];
     }
@@ -564,6 +574,7 @@ class MaintenanceRequest extends Model
         // สถานะที่ถือว่า "กำลังซ่อม/รอซ่อม" (ทำให้ Asset เป็น in_repair)
         $activeStatuses = [
             self::STATUS_PENDING,
+            self::STATUS_RETURNED,
             self::STATUS_ACKNOWLEDGED,
             self::STATUS_ACCEPTED,
             self::STATUS_IN_PROGRESS,
