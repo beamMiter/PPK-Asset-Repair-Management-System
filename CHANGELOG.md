@@ -112,6 +112,16 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A rating counts for everybody on the team, not for the one person the system picked.** A request has one rating ("how was the
+  work"), and it was credited to one person: the lead, and the team dialog clears every lead, so after any team edit it was
+  whoever had been added last. Ann accepts a job, does it and resolves it, the supervisor adds Bob afterwards, and all the stars were
+  Bob's. The owner chose (2026-11-16) one overall score per job, counted for **every person on the job's team** (not only the one who
+  pressed accept), and for the past ratings too. A person taken off the job is not credited. The technician board, a person's own page
+  (average, count, spread, trend, comments) and its JSON follow the team; the board's header counts each rating once (a team of three
+  would have counted it three times); the reporter's list names the whole team and a search finds a job by any of them (it showed
+  "-" after the team dialog); and the rating form says who the score is for ("คะแนนนี้นับให้ผู้ปฏิบัติงานทุกคนในงานนี้"). The rating
+  row still stores one person in `technician_id` (the API shows it): the one who pressed "ซ่อมเสร็จ" if still on the team, else the first
+  put on, but it no longer decides who is credited. No schema change. `RatingCountsTheWholeTeamTest`.
 - **Two inputs made the app answer 500 instead of saying what was wrong.** A list sent as `current_password` (on the profile
   form and on `PUT /api/auth/password`) reached the hasher and was a TypeError: the field is now checked as text first
   (`bail`), so the answer is the usual validation error. And a maintenance-type page opened with an id that is not a number
