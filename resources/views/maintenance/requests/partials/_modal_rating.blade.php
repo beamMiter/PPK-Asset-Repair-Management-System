@@ -32,6 +32,12 @@
                 <p class="mt-1 text-sm font-semibold text-slate-900 break-words">{{ $req->title }}</p>
             </div>
 
+            {{-- The score is one for the whole job and counts for everybody on its team: say who they are --}}
+            @php($ratedTeam = $req->teamWorkers())
+            @if ($ratedTeam->isNotEmpty())
+                <div id="rating-team" class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-600">คะแนนนี้นับให้ผู้ปฏิบัติงานทุกคนในงานนี้: <span class="font-semibold text-slate-800">{{ $ratedTeam->pluck('name')->implode(', ') }}</span></div>
+            @endif
+
             {{-- Star Rating --}}
             <div class="text-center">
                 <div class="block text-sm font-medium text-slate-700 mb-[12px]">คุณพึงพอใจกับงานซ่อมนี้แค่ไหน?</div>

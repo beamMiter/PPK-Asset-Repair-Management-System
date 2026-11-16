@@ -41,9 +41,13 @@ class MaintenanceRating extends Model
     }
 
 
+    /** The ratings a person has: those of the requests they are (still) on the team of. */
     public function scopeForTechnician(Builder $query, int $technicianId): Builder
     {
-        return $query->where('technician_id', $technicianId);
+        return $query->whereIn('maintenance_request_id', MaintenanceAssignment::query()
+            ->select('maintenance_request_id')
+            ->where('user_id', $technicianId)
+            ->where('status', '!=', MaintenanceAssignment::STATUS_CANCELLED));
     }
 
     public function scopeForRequest(Builder $query, int $requestId): Builder

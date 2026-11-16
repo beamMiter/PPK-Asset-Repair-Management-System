@@ -57,9 +57,11 @@ trait HandlesMaintenanceRating
     }
 
     /**
-     * The team member a rating is attributed to: the lead assignment,
-     * preferring a completed one, most recently assigned. Memoised because
-     * the guard and the write both need it.
+     * The one team member the rating row stores in `technician_id` (the API has always shown it). It is a representative, not the
+     * credit: the rating counts for everybody on the team (see User::technicianRatings). It is the person who pressed "ซ่อมเสร็จ"
+     * when they are still on the team, else whoever was put on first, preferring the staff who do the repair to an admin or supervisor
+     * who runs the process. People taken off the job are never picked. Null when nobody is on it, and then it cannot be rated.
+     * Memoised because the guard and the write both need it.
      */
     protected function resolveTechnicianIdForRating(MaintenanceRequest $maintenanceRequest): ?int
     {
@@ -68,14 +70,30 @@ trait HandlesMaintenanceRating
             return $this->resolvedTechnicianId[$key];
         }
 
-        $assignment = $maintenanceRequest->assignments()
+        $team = $maintenanceRequest->assignments()
+            ->where('status', '!=', \App\Models\MaintenanceAssignment::STATUS_CANCELLED)
             ->whereHas('user', fn ($q) => $q->whereIn('role', User::teamRoles()))
-            ->orderByDesc('is_lead')
-            ->orderByRaw("CASE WHEN status = 'done' THEN 1 ELSE 0 END DESC")
-            ->orderByDesc('assigned_at')
-            ->first();
+            ->with('user:id,role')
+            ->orderBy('assigned_at')
+            ->orderBy('id')
+            ->get();
 
-        return $this->resolvedTechnicianId[$key] = $assignment?->user_id;
+        if ($team->isEmpty()) {
+            return $this->resolvedTechnicianId[$key] = null;
+        }
+
+        $resolver = \App\Models\MaintenanceLog::query()
+            ->where('request_id', $maintenanceRequest->id)
+            ->where('action', \App\Models\MaintenanceLog::ACTION_TRANSITION)
+            ->where('to_status', MaintenanceRequest::STATUS_RESOLVED)
+            ->latest('id')
+            ->value('user_id');
+
+        $pick = $team->firstWhere('user_id', $resolver)
+            ?? $team->first(fn ($a) => in_array($a->user->role, User::workerRoles(), true))
+            ?? $team->first();
+
+        return $this->resolvedTechnicianId[$key] = (int) $pick->user_id;
     }
 
     /** Score/comment rules shared by both controllers. */
