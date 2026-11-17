@@ -39,7 +39,9 @@ class CitizenIdIsNotHandedOutTest extends TestCase
     {
         $reporter = User::factory()->create(['role' => 'member']);
         $technician = User::factory()->create(['role' => 'technician']);
-        $this->resolvedJobFor($reporter, $technician);
+        $job = $this->resolvedJobFor($reporter, $technician);
+        // the list holds requests the reporter has approved (closed) and not yet rated
+        MaintenanceRequest::whereKey($job->id)->update(['status' => 'closed', 'closed_at' => now()->subHours(3), 'completed_date' => now()->subHours(3)]);
         Sanctum::actingAs($reporter);
 
         $res = $this->getJson('/api/repair-requests/pending/evaluations')->assertOk();

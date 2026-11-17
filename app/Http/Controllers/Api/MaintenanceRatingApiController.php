@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\MaintenanceRating;
 use App\Models\MaintenanceRequest;
 use App\Models\User;
-use App\Services\MaintenanceTransitionService;
 use App\Traits\HandlesMaintenanceRating;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,10 +29,7 @@ class MaintenanceRatingApiController extends Controller
 
         $requests = MaintenanceRequest::with(['technician:id,name', 'rating']) // who did the job, not their account
             ->where('reporter_id', $user->id)
-            ->whereIn('status', [
-                MaintenanceRequest::STATUS_RESOLVED,
-                MaintenanceRequest::STATUS_CLOSED,
-            ])
+            ->where('status', MaintenanceRequest::STATUS_CLOSED)   // rated after the reporter approved it, like the web list
             ->whereDoesntHave('rating')
             ->get()
             ->filter(fn (MaintenanceRequest $req) => $this->withinRatingWindow($req))
@@ -62,13 +58,10 @@ class MaintenanceRatingApiController extends Controller
             ], 403);
         }
 
-        // 2) งานต้องปิดแล้ว (RESOLVED / CLOSED)
-        if (! in_array($maintenanceRequest->status, [
-            MaintenanceRequest::STATUS_RESOLVED,
-            MaintenanceRequest::STATUS_CLOSED,
-        ], true)) {
+        // 2) งานต้องปิดแล้ว (CLOSED = ผู้แจ้งอนุมัติผลการซ่อมบำรุงแล้ว) การให้คะแนนไม่ใช่การอนุมัติและไม่ปิดงานแทนผู้แจ้ง
+        if ($maintenanceRequest->status !== MaintenanceRequest::STATUS_CLOSED) {
             return response()->json([
-                'message' => 'สามารถให้คะแนนได้เฉพาะงานที่ปิดแล้วเท่านั้น',
+                'message' => 'ให้คะแนนได้หลังอนุมัติผลการซ่อมบำรุง (ปิดงาน) แล้วเท่านั้น',
             ], 422);
         }
 
@@ -116,24 +109,8 @@ class MaintenanceRatingApiController extends Controller
             'comment'                => $data['comment'] ?? null,
         ]);
 
-        // 8) Auto-close งานที่ยัง 'resolved' หลังผู้แจ้งให้คะแนน (เหมือนฝั่ง web)
-        $maintenanceRequest->refresh();
-        $autoClosed = false;
-        if ($maintenanceRequest->status === MaintenanceRequest::STATUS_RESOLVED) {
-            try {
-                app(MaintenanceTransitionService::class)->applyTransition(
-                    $maintenanceRequest,
-                    ['status' => MaintenanceRequest::STATUS_CLOSED, 'note' => 'ปิดงานอัตโนมัติหลังผู้แจ้งให้คะแนนเรียบร้อย'],
-                    $user->id
-                );
-                $autoClosed = true;
-            } catch (\Throwable $e) {
-                Log::warning("Auto-close failed for Request ID {$maintenanceRequest->id}: " . $e->getMessage());
-            }
-        }
-
         return response()->json([
-            'message' => $autoClosed ? 'บันทึกคะแนนและปิดงานเรียบร้อย' : 'บันทึกคะแนนเรียบร้อย',
+            'message' => 'บันทึกคะแนนเรียบร้อย',
             'data'    => $rating,
         ], 201);
     }
