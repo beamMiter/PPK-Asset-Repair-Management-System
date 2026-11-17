@@ -624,6 +624,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A reporter can withdraw their own request until it is finished, not only after the staff accepted it.** The cancel button was only
+  there once a request was accepted, in progress or on hold, so a request filed by mistake or twice had to wait for somebody to reject it:
+  the junk the owner wants less of. It is there from the first moment now: while the request waits (รอดำเนินการ), once it is
+  acknowledged, and (as before) when sent back, accepted, in progress or on hold; not when it is resolved, closed, cancelled or
+  rejected. The reason is asked for as before, the asset is freed and a team somebody had been given is cleared. The staff still turn a
+  request away with "ไม่รับเรื่อง" / "ส่งกลับไปแก้ไข" before taking it on. For the app: `POST /api/repair-requests/{req}/cancel` (it had no way
+  to withdraw: `PUT` with a `status` answered 403, and since the update would have been silently ignored it is now refused with a 422).
+  Decided 2026-11-17. `ReporterCanWithdrawTest`.
 - **The dashboard's "ภาระงานเจ้าหน้าที่แต่ละคน" counts everybody on a job.** It counted only the person marked in charge
   (`technician_id`), and the team dialog leaves that empty on purpose: a job somebody had accepted counted for nobody until it
   started, and a job the supervisor put three people on disappeared from the chart altogether. Now every person on an open
