@@ -77,6 +77,12 @@ class MaintenanceAssignmentController extends Controller
 
                 $existing = $lockedReq->assignments()->get()->keyBy('user_id');
 
+                // a person put on a request whose repair is already done is "done", not "working": the same dating the transition service gives
+                // every row (an admin may still correct the team of a resolved request, and the row then agrees with the rest of it)
+                $rowStatus = in_array($lockedReq->status, [MaintenanceRequest::STATUS_RESOLVED, MaintenanceRequest::STATUS_CLOSED], true)
+                    ? MaintenanceAssignment::STATUS_DONE
+                    : MaintenanceAssignment::STATUS_IN_PROGRESS;
+
                 // บังคับเป็น null เสมอ เพราะเราไม่ใช้ระบบเจ้าหน้าที่รับผิดชอบหลัก (Lead) แล้ว
                 $lockedReq->technician_id = null;
 
@@ -99,7 +105,7 @@ class MaintenanceAssignmentController extends Controller
                         ];
 
                         if ($assignment->status === MaintenanceAssignment::STATUS_CANCELLED) {
-                            $updateData['status'] = MaintenanceAssignment::STATUS_IN_PROGRESS;
+                            $updateData['status'] = $rowStatus;
                             $updateData['response_status'] = MaintenanceAssignment::RESP_PENDING;
                             $updateData['responded_at'] = null;
                         }
@@ -114,7 +120,7 @@ class MaintenanceAssignmentController extends Controller
                             'is_lead'                => false,
                             'assigned_at'            => $now,
                             'response_status'        => MaintenanceAssignment::RESP_PENDING,
-                            'status'                 => MaintenanceAssignment::STATUS_IN_PROGRESS,
+                            'status'                 => $rowStatus,
                         ]);
                     }
                 }
