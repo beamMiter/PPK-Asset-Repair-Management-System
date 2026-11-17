@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Repair;
 
 use App\Http\Controllers\Controller;
+use App\Models\MaintenanceAssignment;
 use App\Models\MaintenanceRequest;
 use App\Models\User;
 use Carbon\Carbon;
@@ -211,16 +212,39 @@ class DashboardController extends Controller
             ->values();
     }
 
-    /** Open requests per assigned technician, busiest first (top 15). */
+    /**
+     * Open requests per person on them, busiest first (top 15). Everybody on a job's team carries it (a job with three people on
+     * it is in all three loads), whether or not somebody is marked in charge: the team dialog leaves `technician_id` empty on
+     * purpose, so counting only that dropped every job it was used on, and an accepted job counted for nobody until it started.
+     * A person in charge with no team row (older data) still counts, once.
+     */
     private function technicianWorkload(): Collection
     {
-        $rows = DB::table('maintenance_requests as mr')
-            ->join('users as t', 't.id', '=', 'mr.technician_id')
+        $open = MaintenanceRequest::OPEN_STATUSES; // a rejected job is over too: it was never in anybody's hands
+
+        $onTheTeam = DB::table('maintenance_assignments as a')
+            ->join('maintenance_requests as mr', 'mr.id', '=', 'a.maintenance_request_id')
             ->whereNull('mr.deleted_at')
-            ->whereIn('mr.status', MaintenanceRequest::OPEN_STATUSES) // a rejected job is over too: it was never in anybody's hands
+            ->whereIn('mr.status', $open)
+            ->where('a.status', '!=', MaintenanceAssignment::STATUS_CANCELLED)
+            ->select('a.user_id as tech_id', 'mr.id as request_id');
+
+        $inCharge = DB::table('maintenance_requests as mr')
+            ->whereNull('mr.deleted_at')
+            ->whereIn('mr.status', $open)
+            ->whereNotNull('mr.technician_id')
+            ->select('mr.technician_id as tech_id', 'mr.id as request_id');
+
+        // UNION (not UNION ALL): a person who is both on the team and in charge is one (person, job) pair
+        $pairs = $onTheTeam->union($inCharge);
+
+        $rows = DB::query()
+            ->fromSub($pairs, 'p')
+            ->join('users as t', 't.id', '=', 'p.tech_id')
             ->selectRaw('t.id as tech_id, COUNT(*) as total')
             ->groupBy('t.id')
             ->orderByDesc('total')
+            ->orderBy('t.id')
             ->limit(15)
             ->get();
 

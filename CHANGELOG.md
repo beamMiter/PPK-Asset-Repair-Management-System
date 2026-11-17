@@ -591,6 +591,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The dashboard's "ภาระงานเจ้าหน้าที่แต่ละคน" counts everybody on a job.** It counted only the person marked in charge
+  (`technician_id`), and the team dialog leaves that empty on purpose: a job somebody had accepted counted for nobody until it
+  started, and a job the supervisor put three people on disappeared from the chart altogether. Now every person on an open
+  job's team carries it (a job with three people on it is in all three loads), a person in charge with no team row (older
+  data) still counts, once, and someone taken off the job, a finished job and a deleted one do not. The owner chose this on
+  2026-11-15. `/api/stats/maintenance/technicians` is unchanged: it is documented as per person in charge. `TechnicianWorkloadTest`.
 - **The asset form says that "ดึงข้อมูล HIS" gives made-up data.** The button fills the form from `getMockHisData()`, which
   invents a brand, a vendor, a price and a warranty for ANY number typed, and the toast said "สำเร็จ": the manual and the
   README said it was a mock, the form did not, so somebody could register made-up data believing the hospital system gave it.
