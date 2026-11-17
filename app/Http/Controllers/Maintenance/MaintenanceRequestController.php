@@ -273,7 +273,9 @@ class MaintenanceRequestController extends Controller
             ])),
             'status' => $isTeam
                 ? ['nullable', \Illuminate\Validation\Rule::in(['pending', 'acknowledged', 'accepted', 'in_progress', 'on_hold', 'resolved', 'closed', 'cancelled', 'rejected', 'returned'])]
-                : ['nullable', \Illuminate\Validation\Rule::in(['cancelled'])],
+                // a reporter does not move a request with an edit: the service ignored `status` for them without saying so (a 200 that
+                // changed nothing); they cancel with the cancel button, or `POST /api/repair-requests/{req}/cancel` from the app
+                : ['prohibited'],
             'note'            => ['nullable', 'string', 'max:2000'], // the reason / remark that goes with a `status` change (required for on_hold)
             'operation_date'   => ['nullable', 'date'],
             'operation_method' => ['nullable', \Illuminate\Validation\Rule::in(['requisition', 'service_fee', 'other'])],
