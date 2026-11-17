@@ -235,6 +235,55 @@ class MaintenanceRequest extends Model
     }
 
     /**
+     * The Thai calendar day a request that was sent back is cancelled, in the nightly sweep, if it has not been sent again: the day it was
+     * sent back plus `repair.return_expires_after_days`. Null unless it is "returned" and the rule is on.
+     */
+    public function returnExpiresOn(): ?\Carbon\CarbonImmutable
+    {
+        $days = (int) config('repair.return_expires_after_days');
+
+        if ($days <= 0 || $this->status !== self::STATUS_RETURNED || $this->status_updated_at === null) {
+            return null;
+        }
+
+        return \Carbon\CarbonImmutable::instance($this->status_updated_at)->timezone('Asia/Bangkok')->startOfDay()->addDays($days);
+    }
+
+    /** Whole days left before the sweep cancels it: the number of days it was sent back with, on that day; 0 on the day it is cancelled. */
+    public function returnDaysLeft(): ?int
+    {
+        $on = $this->returnExpiresOn();
+
+        return $on === null ? null : max(0, (int) now()->timezone('Asia/Bangkok')->startOfDay()->diffInDays($on, false));
+    }
+
+    /** "Close to expiring": `repair.return_warning_days` or fewer left. */
+    public function returnIsExpiring(): bool
+    {
+        $left = $this->returnDaysLeft();
+
+        return $left !== null && $left <= (int) config('repair.return_warning_days');
+    }
+
+    /**
+     * Requests sent back whose countdown has $days days or fewer left (0 = the next sweep cancels them). expiresOn = the Thai day it was
+     * sent back + N, so "expiresOn <= today + $days" is "status_updated_at before the start of (today + $days - N + 1)".
+     */
+    public function scopeReturnedWithinDays($query, int $days)
+    {
+        $expires = (int) config('repair.return_expires_after_days');
+        $query->where('maintenance_requests.status', self::STATUS_RETURNED);
+
+        if ($expires <= 0) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $before = now()->timezone('Asia/Bangkok')->startOfDay()->addDays($days - $expires + 1)->timezone(config('app.timezone'));
+
+        return $query->where('maintenance_requests.status_updated_at', '<', $before);
+    }
+
+    /**
      * Their names, "Ann, Bob" (empty when nobody is on it). A person in charge who has no team row (older data) is on the job too and
      * is named, once. Eager load `technician:id,name` with `workers:id,name` on a list so this is no query per row.
      */

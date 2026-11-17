@@ -8,6 +8,13 @@
         @if (! empty($returnReason))
             <div class="mt-2 whitespace-pre-line text-[13px]">{{ $returnReason }}</div>
         @endif
+        @php($expiresOn = $req->returnExpiresOn())
+        @if ($expiresOn)
+            <div class="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-orange-900">
+                <x-returned-countdown :req="$req" />
+                <span>ถ้าไม่ส่งใบงานอีกครั้ง ระบบจะ<b>ยกเลิกอัตโนมัติ</b>ในวันที่ {{ \App\Support\ThaiDate::long($expiresOn) }}</span>
+            </div>
+        @endif
         <div class="mt-2 text-[12px] text-orange-800">
             @if (! empty($canResubmit))
                 แก้ไขใบงานนี้ (ปุ่ม "แก้ไข" หรือแนบไฟล์เพิ่ม) แล้วกด "ส่งใบงานอีกครั้ง" ใบงานยังเป็นเลขเดิมและประวัติยังอยู่

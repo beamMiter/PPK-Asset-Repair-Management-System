@@ -107,6 +107,11 @@
                                 @foreach ($statusOptions as $k => $v)
                                     <option value="{{ $k }}" @selected($status === $k)>{{ $v }}
                                     </option>
+                                    @if ($k === \App\Models\MaintenanceRequest::STATUS_RETURNED)
+                                        {{-- not a status: the sent-back requests with the last days left --}}
+                                        <option value="returned_expiring" @selected($status === 'returned_expiring')
+                                            title="เหลือ {{ (int) config('repair.return_warning_days') }} วันหรือน้อยกว่า">ส่งกลับแก้ไข — ใกล้หมดอายุ</option>
+                                    @endif
                                 @endforeach
                             </select>
                         </div>
@@ -285,6 +290,9 @@
                                 <span class="text-[12px] font-semibold {{ $statusTextClass($row->status ?? null) }}">
                                     {{ $row->statusLabel() }}
                                 </span>
+                                @if ($row->status === \App\Models\MaintenanceRequest::STATUS_RETURNED)
+                                    <div class="mt-1"><x-returned-countdown :req="$row" /></div>
+                                @endif
                             </td>
 
                             <td class="p-3 text-center whitespace-nowrap align-middle">
