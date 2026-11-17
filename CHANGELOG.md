@@ -112,6 +112,15 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The lists, the SLA page, the printed work order and the per-person stats follow the team, not only "the person in charge".** A request
+  has two answers to "who is on it": `technician_id`, and the team rows, and the team dialog leaves the first empty on purpose. Places
+  that read only `technician_id` therefore said nobody was on a job the team had been picked for, or missed it. **"งานของฉัน"** listed
+  a job somebody had been *taken off* (its join did not look at the status) and its **staff filter** found only the person in charge:
+  both use the rule the app's `/my-jobs` already had (in charge, or on the team and not taken off), and so do the counts above the
+  list. The **SLA page** and its report said "ยังไม่ระบุเจ้าหน้าที่" for a job with a team: they name the team (one query for the page). The
+  printed **work order** shows the team in the "เจ้าหน้าที่หลัก" cell and on the signature line when nobody is in charge, instead of
+  "-" and a blank line. `GET /api/stats/maintenance/technicians` counts every person on a request's team (a person in charge with no
+  team row still counts, once), cache key `v2`. Same owner rule as the dashboard chart and the ratings. `ListsAndReportsFollowTheTeamTest`.
 - **A rating counts for everybody on the team, not for the one person the system picked.** A request has one rating ("how was the
   work"), and it was credited to one person: the lead, and the team dialog clears every lead, so after any team edit it was
   whoever had been added last. Ann accepts a job, does it and resolves it, the supervisor adds Bob afterwards, and all the stars were
