@@ -22,6 +22,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `POST …/transition` with `status=returned` and a `note`. No schema change: the moment it went back is `status_updated_at`, the
   reason is in the job's history. The demo data has one. `SendBackToReporterTest` (13 cases). Not in this change: expiry after 14
   days and the countdown for the reporter (the next one).
+- **A request sent back expires after 14 days, and the reporter sees the days count down.** The second half of "ส่งกลับแก้ไข": if the reporter
+  does not fix it and send it again, the nightly `repair:expire-returned` (03:30 Thai time, after the chat sweeps) cancels it with the history
+  saying "ยกเลิกอัตโนมัติ" and no person behind it (the asset is freed), so a request nobody comes back to is not left in the system.
+  `config/repair.php`: `return_expires_after_days` (14, `REPAIR_RETURN_EXPIRES_AFTER_DAYS`, 0 = never) and `return_warning_days` (3). Days are Thai
+  calendar days: sent back on the 2nd it has 14 left that day and is cancelled in the sweep of the 16th; sending it again and back
+  again starts a new count. The job page says on which day it will be cancelled and how many days are left (staff see it too); **"รายการงานซ่อม"
+  shows "เหลือ N วัน" on each such request** (red in the last 3 days) and its status filter has a new choice, **"ส่งกลับแก้ไข — ใกล้หมดอายุ"**,
+  beside "ส่งกลับแก้ไข" (the app: `status=returned_expiring`). `--dry-run` says what it would cancel. `ReturnedRequestsExpireTest`. Decided 2026-11-17.
 - **The tests run on every pull request.** `.github/workflows/tests.yml` runs `php artisan test` and `npm run test:js` on
   GitHub Actions for every pull request and every push to `dev`, on the Docker setup's PHP 8.4, Node 20 and MariaDB 11.
   `CiWorkflowTest` keeps the workflow in step with the Dockerfile, docker-compose and phpunit.xml.
