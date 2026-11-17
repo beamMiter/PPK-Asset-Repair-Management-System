@@ -222,6 +222,31 @@
                 updateCounts();
             }
 
+            // --- 5.9 Send-back Modal Logic (หน้าต่างส่งกลับไปแก้ไข) ---
+            const sendBackModal = document.getElementById('sendBackModal');
+            const openSendBackBtn = document.getElementById('openSendBackModalBtn');
+            const closeSendBackBtn = document.getElementById('closeSendBackModalBtn');
+            const cancelSendBackBtn = document.getElementById('cancelSendBackModalBtn');
+
+            if (sendBackModal && openSendBackBtn) {
+                const showSendBack = () => {
+                    sendBackModal.classList.remove('hidden');
+                    sendBackModal.classList.add('flex');
+                    document.body.style.overflow = 'hidden';
+                };
+                const hideSendBack = () => {
+                    sendBackModal.classList.add('hidden');
+                    sendBackModal.classList.remove('flex');
+                    document.body.style.overflow = '';
+                };
+                openSendBackBtn.addEventListener('click', showSendBack);
+                closeSendBackBtn?.addEventListener('click', hideSendBack);
+                cancelSendBackBtn?.addEventListener('click', hideSendBack);
+                sendBackModal.addEventListener('click', e => {
+                    if (e.target === sendBackModal) hideSendBack();
+                });
+            }
+
             // --- 6. Reject Modal Logic (หน้าต่างปฏิเสธงาน) ---
             const rejectModal = document.getElementById('rejectModal');
             const openRejectBtn = document.getElementById('openRejectModalBtn');

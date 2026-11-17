@@ -138,6 +138,26 @@ class MaintenanceTransitionController extends Controller
         return $this->handleAction($request, $req, 'reject', MR::STATUS_REJECTED, 'ไม่รับเรื่องเรียบร้อยแล้ว', ['note' => $reason]);
     }
 
+    /**
+     * "ส่งกลับแก้ไข": before the job is taken on, hand it back to whoever filed it. The reason (what to fix, and how) is required,
+     * more strictly than for a cancellation, because it is the whole point: it is what the reporter acts on. The request keeps its
+     * number and its history; "ไม่รับเรื่อง" (rejectCase) is the different, final case.
+     */
+    public function sendBackCase(Request $request, MR $req)
+    {
+        if ($refused = $this->refuseUnless($request, $req, 'sendBack')) return $refused;
+
+        $data = $request->validate(['return_reason' => ['required', 'string', 'max:2000']], [], ['return_reason' => 'สิ่งที่ต้องแก้ไข']);
+
+        return $this->handleAction($request, $req, 'sendBack', MR::STATUS_RETURNED, 'ส่งกลับให้ผู้แจ้งแก้ไขเรียบร้อยแล้ว', ['note' => trim($data['return_reason'])]);
+    }
+
+    /** The reporter has fixed a request that was sent back and sends it again: it goes back to the queue under the same number. */
+    public function resubmitCase(Request $request, MR $req)
+    {
+        return $this->handleAction($request, $req, 'resubmit', MR::STATUS_PENDING, 'ส่งใบงานอีกครั้งเรียบร้อยแล้ว');
+    }
+
     public function acceptCase(Request $request, MR $req)
     {
         return $this->handleAction($request, $req, 'accept', MR::STATUS_ACCEPTED, 'รับเรื่องแล้ว');

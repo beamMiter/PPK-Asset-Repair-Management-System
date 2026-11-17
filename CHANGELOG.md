@@ -8,6 +8,20 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **"ส่งกลับแก้ไข": a request can go back to its reporter to be fixed, instead of being rejected for good.** Before taking a request
+  on, the staff now have two buttons that mean different things: **"ส่งกลับไปแก้ไข"** (the details are unclear or incomplete) and
+  **"ไม่รับเรื่อง"** (a duplicate, or not the team's job; final, as before). Sending back needs a reason saying which part to fix,
+  what and how, as a cancellation needs its reason (the server refuses an empty one). The request gets the new status
+  `returned` (pending or acknowledged → returned), keeps its number and its history, and the reporter sees the reason on the job
+  page, edits it (details, asset, files), and presses **"ส่งใบงานอีกครั้ง"**: it goes back to pending for the staff to take again.
+  The reporter may also give it up (ยกเลิก); the staff may not cancel it for them. The SLA clock stops while it is with the
+  reporter: the time away is added to the paused minutes and moves the deadlines when it is sent again (the response deadline
+  only if nobody had responded yet). The asset stays "in repair" like for any pending request until it is cancelled. Who may send
+  back is who may reject (staff and admin/supervisor, same moments); only the reporter (or admin/supervisor for them) may send it
+  again. `POST /maintenance/requests/{req}/send-back` and `/resubmit`; the app: `POST /api/repair-requests/{req}/resubmit`, and
+  `POST …/transition` with `status=returned` and a `note`. No schema change: the moment it went back is `status_updated_at`, the
+  reason is in the job's history. The demo data has one. `SendBackToReporterTest` (13 cases). Not in this change: expiry after 14
+  days and the countdown for the reporter (the next one).
 - **The tests run on every pull request.** `.github/workflows/tests.yml` runs `php artisan test` and `npm run test:js` on
   GitHub Actions for every pull request and every push to `dev`, on the Docker setup's PHP 8.4, Node 20 and MariaDB 11.
   `CiWorkflowTest` keeps the workflow in step with the Dockerfile, docker-compose and phpunit.xml.

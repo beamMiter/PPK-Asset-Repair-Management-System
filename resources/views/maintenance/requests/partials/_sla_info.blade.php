@@ -13,6 +13,10 @@
     if ($req->status === MR::STATUS_ON_HOLD && $req->on_hold_at) {
         $totalHoldSeconds += (int) $req->on_hold_at->diffInSeconds(now());
     }
+    // sent back to the reporter: the clock stands still until they send it again (the minutes are added when it leaves)
+    if ($req->status === MR::STATUS_RETURNED && $req->status_updated_at) {
+        $totalHoldSeconds += (int) $req->status_updated_at->diffInSeconds(now());
+    }
 
     // 3. Repair Time (Net)
     $actualStart = $req->started_at ?? $req->accepted_at;

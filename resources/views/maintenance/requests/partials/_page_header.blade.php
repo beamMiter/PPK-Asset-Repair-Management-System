@@ -55,7 +55,7 @@
                     // them (แก้ไข, พิมพ์ PDF, กลับ); with none there is nothing to set apart, and it stood at the edge of the row
                     // as a stray bar.
                     $hasWorkflow = $canAcknowledge || $canAccept || $canStart || $canHold || $canResume || $canResolve || $canClose
-                        || $canReject || $canCancel
+                        || $canReject || $canSendBack || $canResubmit || $canCancel
                         || ($req->status === \App\Models\MaintenanceRequest::STATUS_CLOSED && \Gate::allows('rate', $req));
                 @endphp
                 <div class="flex flex-wrap items-center gap-2 shrink-0">
@@ -107,6 +107,17 @@
                         @can('rate', $req)
                             <x-ui.button x-data @click="$dispatch('open-rating-modal')" variant="warning" icon="star">ประเมินความพึงพอใจ</x-ui.button>
                         @endcan
+                    @endif
+
+                    @if ($canResubmit)
+                        <form method="POST" action="{{ route('maintenance.requests.resubmit', $req->id) }}">
+                            @csrf
+                            <x-ui.button type="submit" variant="primary" icon="send">ส่งใบงานอีกครั้ง</x-ui.button>
+                        </form>
+                    @endif
+
+                    @if ($canSendBack)
+                        <x-ui.button id="openSendBackModalBtn" variant="warning" icon="undo">ส่งกลับไปแก้ไข</x-ui.button>
                     @endif
 
                     @if ($canReject)

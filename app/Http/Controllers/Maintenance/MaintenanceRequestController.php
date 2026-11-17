@@ -272,7 +272,7 @@ class MaintenanceRequestController extends Controller
                 'exists:users,id',
             ])),
             'status' => $isTeam
-                ? ['nullable', \Illuminate\Validation\Rule::in(['pending', 'acknowledged', 'accepted', 'in_progress', 'on_hold', 'resolved', 'closed', 'cancelled', 'rejected'])]
+                ? ['nullable', \Illuminate\Validation\Rule::in(['pending', 'acknowledged', 'accepted', 'in_progress', 'on_hold', 'resolved', 'closed', 'cancelled', 'rejected', 'returned'])]
                 : ['nullable', \Illuminate\Validation\Rule::in(['cancelled'])],
             'note'            => ['nullable', 'string', 'max:2000'], // the reason / remark that goes with a `status` change (required for on_hold)
             'operation_date'   => ['nullable', 'date'],

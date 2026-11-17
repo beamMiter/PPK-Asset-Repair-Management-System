@@ -29,6 +29,7 @@
             'closed' => 'อนุมัติผลการซ่อมบำรุง',
             'cancelled' => 'ยกเลิกการซ่อมบำรุง',
             'rejected' => 'ไม่รับเรื่อง',
+            'returned' => 'ส่งกลับแก้ไข',
         ][strtolower((string) $s)] ?? 'ไม่ระบุ';
 
         $respLabel = fn(?string $s) => [
@@ -48,6 +49,7 @@
             'closed' => 'bg-emerald-700',
             'cancelled' => 'bg-rose-500',
             'rejected' => 'bg-rose-600',
+            'returned' => 'bg-orange-500',
             default => 'bg-slate-400',
         };
 
@@ -61,6 +63,7 @@
             'closed' => '#065f46',
             'cancelled' => '#ef4444',
             'rejected' => '#e11d48',
+            'returned' => '#f97316',
             default => '#cbd5e1',
         };
 
@@ -83,6 +86,7 @@
             'closed' => 'task',
             'cancelled' => 'cancel',
             'rejected' => 'error',
+            'returned' => 'undo',
             default => 'info',
         };
 
@@ -96,6 +100,7 @@
             'closed' => 'text-emerald-700',
             'cancelled' => 'text-rose-600',
             'rejected' => 'text-rose-700',
+            'returned' => 'text-orange-700',
             default => 'text-slate-500',
         };
 
@@ -300,7 +305,7 @@
                                        focus:outline-none focus:ring-2 focus:ring-[#0F2D5C]/35 focus:border-[#0F2D5C]/35 cursor-pointer"
                                 onchange="this.form.submit()">
                                 <option value="">ทุกสถานะ</option>
-                                @foreach (['pending', 'acknowledged', 'accepted', 'in_progress', 'on_hold', 'resolved', 'closed', 'cancelled', 'rejected'] as $s)
+                                @foreach (['pending', 'returned', 'acknowledged', 'accepted', 'in_progress', 'on_hold', 'resolved', 'closed', 'cancelled', 'rejected'] as $s)
                                     <option value="{{ $s }}" @selected($status === $s)>{{ $statusLabel($s) }}
                                     </option>
                                 @endforeach

@@ -34,6 +34,7 @@
         'completed'    => ['icon' => 'task_alt',        'dot' => 'bg-emerald-50 text-emerald-600', 'bar' => 'border-emerald-300'],
         'cancelled'    => ['icon' => 'cancel',          'dot' => 'bg-slate-100 text-slate-500',   'bar' => 'border-slate-300'],
         'rejected'     => ['icon' => 'block',           'dot' => 'bg-rose-50 text-rose-600',      'bar' => 'border-rose-300'],
+        'returned'     => ['icon' => 'undo',            'dot' => 'bg-orange-50 text-orange-600',  'bar' => 'border-orange-300'],
     ];
     $neutralStyle = ['icon' => 'info', 'dot' => 'bg-slate-100 text-slate-500', 'bar' => 'border-slate-300'];
 

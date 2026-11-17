@@ -119,6 +119,11 @@ class MaintenanceRequestPolicy
             return Response::allow();
         }
 
+        // A request sent back is the reporter's to fix, whatever it looked like when it went back
+        if ((int) $req->reporter_id === (int) $user->id && (string) $req->status === MR::STATUS_RETURNED) {
+            return Response::allow();
+        }
+
         // ผู้แจ้งแก้ได้เฉพาะตอนยัง pending / acknowledged และยังไม่มีผู้รับผิดชอบ
         if (
             (int) $req->reporter_id === (int) $user->id &&
@@ -159,10 +164,13 @@ class MaintenanceRequestPolicy
             MR::STATUS_CLOSED       => 'close',
             MR::STATUS_CANCELLED    => 'cancel',
             MR::STATUS_REJECTED     => 'reject',
+            MR::STATUS_RETURNED     => 'sendBack',
+            MR::STATUS_PENDING      => $req->status === MR::STATUS_RETURNED ? 'resubmit' : null,
             default                 => null,
         };
 
-        // `pending` and the legacy `completed` are reachable from no status: the transition map refuses them for everybody
+        // `pending` is reachable only from a returned request (the reporter sends it again), and the legacy `completed` from no
+        // status at all: the transition map refuses what is not a step
         return $ability === null ? Response::allow() : $this->{$ability}($user, $req);
     }
 
@@ -200,6 +208,31 @@ class MaintenanceRequestPolicy
         if ($this->isOpenForReject($user, $req)) return Response::allow();
 
         return Response::deny('งานนี้ไม่อยู่ในสถานะที่ไม่รับเรื่องได้');
+    }
+
+    // sendBack — before the job is taken on, hand it back to its reporter with what to fix. Same people and same moments as `reject`
+    // (it is the gentler of the two); the reason is required by the transition itself.
+    public function sendBack(User $user, MR $req): Response
+    {
+        if ($this->isAdminTeam($user)) return Response::allow();
+
+        if (!$this->isWorker($user)) return Response::deny('เฉพาะเจ้าหน้าที่เท่านั้น');
+
+        if ($this->isOpenForReject($user, $req)) return Response::allow();
+
+        return Response::deny('งานนี้ไม่อยู่ในสถานะที่ส่งกลับให้ผู้แจ้งแก้ไขได้');
+    }
+
+    // resubmit — the reporter has fixed a request that was sent back and sends it again (admin and supervisor may on their behalf)
+    public function resubmit(User $user, MR $req): Response
+    {
+        if ($this->isAdminTeam($user)) return Response::allow();
+
+        if ((int) $req->reporter_id !== (int) $user->id) return Response::deny('เฉพาะผู้แจ้งเท่านั้นที่ส่งใบงานใหม่ได้');
+
+        if ((string) $req->status !== MR::STATUS_RETURNED) return Response::deny('ส่งใหม่ได้เฉพาะใบงานที่ถูกส่งกลับให้แก้ไข');
+
+        return Response::allow();
     }
 
     // startWork
@@ -307,7 +340,7 @@ class MaintenanceRequestPolicy
         }
 
         // ผู้แจ้งแนบไฟล์ได้จนกว่าเจ้าหน้าที่จะเริ่มงาน
-        if ((int) $req->reporter_id === (int) $user->id && in_array((string) $req->status, [MR::STATUS_PENDING, MR::STATUS_ACKNOWLEDGED, MR::STATUS_ACCEPTED], true)) {
+        if ((int) $req->reporter_id === (int) $user->id && in_array((string) $req->status, [MR::STATUS_PENDING, MR::STATUS_RETURNED, MR::STATUS_ACKNOWLEDGED, MR::STATUS_ACCEPTED], true)) {
             return Response::allow();
         }
 
@@ -330,7 +363,7 @@ class MaintenanceRequestPolicy
         }
 
         // ผู้แจ้งลบไฟล์ได้ตอนแรกๆ
-        if ((int) $req->reporter_id === (int) $user->id && in_array((string) $req->status, [MR::STATUS_PENDING, MR::STATUS_ACKNOWLEDGED, MR::STATUS_ACCEPTED], true)) {
+        if ((int) $req->reporter_id === (int) $user->id && in_array((string) $req->status, [MR::STATUS_PENDING, MR::STATUS_RETURNED, MR::STATUS_ACKNOWLEDGED, MR::STATUS_ACCEPTED], true)) {
             return Response::allow();
         }
 
@@ -370,8 +403,8 @@ class MaintenanceRequestPolicy
     public function cancel(User $user, MR $req): Response
     {
         // 1. ตรวจสอบสถานะก่อน (เงื่อนไขบังคับ: ยกเลิกได้เฉพาะช่วงที่รับเรื่องหรือกำลังทำอยู่)
-        if (!in_array($req->status, [MR::STATUS_ACCEPTED, MR::STATUS_IN_PROGRESS, MR::STATUS_ON_HOLD], true)) {
-            return Response::deny('ยกเลิกได้เฉพาะงานที่รับเรื่องแล้วหรือกำลังดำเนินการเท่านั้น');
+        if (!in_array($req->status, [MR::STATUS_RETURNED, MR::STATUS_ACCEPTED, MR::STATUS_IN_PROGRESS, MR::STATUS_ON_HOLD], true)) {
+            return Response::deny('ยกเลิกได้เฉพาะงานที่รับเรื่องแล้ว กำลังดำเนินการ หรือที่ส่งกลับให้แก้ไขเท่านั้น');
         }
 
         // 2. เช็คสิทธิ์รายกลุ่ม
@@ -389,8 +422,9 @@ class MaintenanceRequestPolicy
             return Response::deny('ไม่มีสิทธิ์ยกเลิกคำขอนี้');
         }
 
-        // อนุญาตให้ยกเลิกเฉพาะเมื่อรับเรื่องไปแล้ว หรือเริ่มดำเนินการไปแล้ว ตาม Workflow ที่ผู้ใช้ระบุ
-        if (in_array($req->status, [MR::STATUS_ACCEPTED, MR::STATUS_IN_PROGRESS, MR::STATUS_ON_HOLD], true)) {
+        // อนุญาตให้ยกเลิกเฉพาะเมื่อรับเรื่องไปแล้ว หรือเริ่มดำเนินการไปแล้ว ตาม Workflow ที่ผู้ใช้ระบุ — หรือเมื่อใบงานถูกส่งกลับ
+        // ให้แก้ไขและผู้แจ้งเลิกแล้ว (ฝั่งเจ้าหน้าที่ cancelByTech ไม่รวมสถานะนี้)
+        if (in_array($req->status, [MR::STATUS_RETURNED, MR::STATUS_ACCEPTED, MR::STATUS_IN_PROGRESS, MR::STATUS_ON_HOLD], true)) {
             return Response::allow();
         }
 
