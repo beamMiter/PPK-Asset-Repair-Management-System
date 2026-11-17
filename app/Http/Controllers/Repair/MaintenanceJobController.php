@@ -16,6 +16,23 @@ class MaintenanceJobController extends Controller
 {
     use ApiResponseWithToast;
 
+    /**
+     * Keep the jobs this person is on: the one in charge, or on the team and not taken off it. `technician_id` alone missed every job
+     * the team dialog had been used on (it leaves it empty on purpose), and the old "my jobs" counted a job somebody had been taken
+     * off. The same rule as the app's `GET /api/repair-requests/my-jobs`.
+     */
+    private function onTheJobOf($query, int $userId)
+    {
+        return $query->where(function ($where) use ($userId) {
+            $where->where('maintenance_requests.technician_id', $userId)
+                ->orWhereExists(fn ($team) => $team->select(DB::raw(1))
+                    ->from('maintenance_assignments as on_job')
+                    ->whereColumn('on_job.maintenance_request_id', 'maintenance_requests.id')
+                    ->where('on_job.user_id', $userId)
+                    ->where('on_job.status', '!=', MaintenanceAssignment::STATUS_CANCELLED));
+        });
+    }
+
     public function myJobsPage(Request $request)
     {
         $user = Auth::user();
@@ -49,12 +66,7 @@ class MaintenanceJobController extends Controller
         $query = (clone $base)
             ->with(['department', 'type', 'asset', 'reporter:id,name', 'technician:id,name', 'assignments.user:id,name,role'])
             // Filter: My Jobs
-            ->when($filter === 'my', function ($qb) use ($userId) {
-                $qb->where(function ($qq) use ($userId) {
-                    $qq->where('maintenance_requests.technician_id', $userId)
-                       ->orWhereNotNull('ma.maintenance_request_id');
-                });
-            })
+            ->when($filter === 'my', fn ($qb) => $this->onTheJobOf($qb, $userId))
             // Filter: Available (Acknowledged but no main tech)
             ->when($filter === 'available', function ($qb) {
                 $qb->whereNull('maintenance_requests.technician_id')
@@ -62,7 +74,7 @@ class MaintenanceJobController extends Controller
             })
             // Extra Filters
             ->when($status, fn($qb) => $qb->where('maintenance_requests.status', $status))
-            ->when($tech,   fn($qb) => $qb->where('maintenance_requests.technician_id', $tech))
+            ->when($tech,   fn($qb) => $this->onTheJobOf($qb, $tech))
             ->when($typeId, fn($qb) => $qb->where('maintenance_requests.type_id', $typeId))
             ->when($q,      fn($qb) => $qb->search($q))
             ->when($resp,   fn($qb) => $qb->where('ma.response_status', $resp))
@@ -86,17 +98,12 @@ class MaintenanceJobController extends Controller
                 DB::raw("SUM(CASE WHEN maintenance_requests.status = 'resolved' THEN 1 ELSE 0 END) as resolved_count"),
                 DB::raw("SUM(CASE WHEN maintenance_requests.status = 'closed' THEN 1 ELSE 0 END) as closed_count"),
             ])
-            ->when($filter === 'my', function ($qb) use ($userId) {
-                $qb->where(function ($qq) use ($userId) {
-                    $qq->where('maintenance_requests.technician_id', $userId)
-                       ->orWhereNotNull('ma.maintenance_request_id');
-                });
-            })
+            ->when($filter === 'my', fn ($qb) => $this->onTheJobOf($qb, $userId))
             ->when($filter === 'available', function ($qb) {
                 $qb->whereNull('maintenance_requests.technician_id')
                    ->where('maintenance_requests.status', MR::STATUS_ACKNOWLEDGED);
             })
-            ->when($tech,   fn($qb) => $qb->where('maintenance_requests.technician_id', $tech))
+            ->when($tech,   fn($qb) => $this->onTheJobOf($qb, $tech))
             ->when($typeId, fn($qb) => $qb->where('maintenance_requests.type_id', $typeId))
             ->when($q,    fn($qb) => $qb->search($q))
             ->first();

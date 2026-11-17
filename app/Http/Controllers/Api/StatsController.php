@@ -65,20 +65,34 @@ class StatsController extends Controller
 
     public function technicianSummary()
     {
-        $rows = Cache::remember('stats:technician_summary:v1', 60, function () {
-            return DB::table('maintenance_requests')
-            ->selectRaw('technician_id as id,
-                SUM(CASE WHEN status IN (\'pending\',\'acknowledged\',\'accepted\',\'in_progress\',\'on_hold\') THEN 1 ELSE 0 END) as open_count,
-                SUM(CASE WHEN status IN (\'resolved\',\'closed\',\'cancelled\',\'rejected\') THEN 1 ELSE 0 END) as closed_count,
-                COUNT(*) as total_count,
-                AVG(CASE WHEN resolved_at IS NOT NULL AND started_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, started_at, resolved_at) END) as avg_hours
-            ')
-            ->whereNotNull('technician_id')
-            ->whereNull('deleted_at')
-            ->groupBy('technician_id')
-            ->orderByDesc('total_count')
-            ->limit(50)
-            ->get();
+        // Per person on the job, not per person in charge: everybody on a request's team (and not taken off it) carries it, and the one in
+        // charge with no team row (older data) still counts, once (UNION, not UNION ALL: a (person, request) pair is one row). The team
+        // dialog leaves `technician_id` empty, so counting only that left out every job it had been used on. v2: the meaning changed.
+        $rows = Cache::remember('stats:technician_summary:v2', 60, function () {
+            $onTheTeam = DB::table('maintenance_assignments as a')
+                ->join('maintenance_requests as m', 'm.id', '=', 'a.maintenance_request_id')
+                ->whereNull('m.deleted_at')
+                ->where('a.status', '!=', 'cancelled')
+                ->select('a.user_id as person_id', 'm.id as request_id');
+            $inCharge = DB::table('maintenance_requests as m')
+                ->whereNull('m.deleted_at')
+                ->whereNotNull('m.technician_id')
+                ->select('m.technician_id as person_id', 'm.id as request_id');
+
+            return DB::query()
+                ->fromSub($onTheTeam->union($inCharge), 'p')
+                ->join('maintenance_requests as mr', 'mr.id', '=', 'p.request_id')
+                ->selectRaw('p.person_id as id,
+                    SUM(CASE WHEN mr.status IN (\'pending\',\'acknowledged\',\'accepted\',\'in_progress\',\'on_hold\') THEN 1 ELSE 0 END) as open_count,
+                    SUM(CASE WHEN mr.status IN (\'resolved\',\'closed\',\'cancelled\',\'rejected\') THEN 1 ELSE 0 END) as closed_count,
+                    COUNT(*) as total_count,
+                    AVG(CASE WHEN mr.resolved_at IS NOT NULL AND mr.started_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, mr.started_at, mr.resolved_at) END) as avg_hours
+                ')
+                ->groupBy('p.person_id')
+                ->orderByDesc('total_count')
+                ->orderBy('p.person_id')
+                ->limit(50)
+                ->get();
         });
 
         $ids = $rows->pluck('id')->filter()->all();

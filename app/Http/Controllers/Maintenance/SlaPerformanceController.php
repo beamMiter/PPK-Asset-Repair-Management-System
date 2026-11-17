@@ -185,7 +185,7 @@ class SlaPerformanceController extends Controller
 
         $nowDatetime = Carbon::now();
         $warningThreshold = $nowDatetime->copy()->addHours(4);
-        $activeTickets = MaintenanceRequest::with(['reporter:id,name', 'technician:id,name', 'department:id,name_th,name_en', 'type:id,name'])
+        $activeTickets = MaintenanceRequest::with(['reporter:id,name', 'technician:id,name', 'workers:id,name', 'department:id,name_th,name_en', 'type:id,name'])
             ->whereNotIn('status', [
                 MaintenanceRequest::STATUS_RESOLVED, 
                 MaintenanceRequest::STATUS_CLOSED, 

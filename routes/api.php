@@ -232,7 +232,8 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
         Route::get('/summary',                     [StatsController::class, 'summary'])->name('summary');
         // {data: {<status>: จำนวน}}
         Route::get('/maintenance/status-counts',   [StatsController::class, 'maintenanceStatusCounts'])->name('maintenance.status-counts');
-        // ผลงานต่อผู้รับผิดชอบหลัก (สูงสุด 50) → {id, name, total, open, closed, avg_hours}
+        // ผลงานต่อคนที่อยู่ในงาน (สูงสุด 50) → {id, name, total, open, closed, avg_hours}
+        //   นับทุกคนในทีมของใบงาน (ที่ยังไม่ถูกถอดออก) รวมผู้รับผิดชอบหลักที่ไม่มีแถวทีม ใบงานเดียวกันนับให้หลายคนได้ ผลรวมทุกแถวจึงเกินจำนวนใบงาน
         //   เฉพาะฝ่ายจัดการ (can:maintenance-type-manage) เหมือนกระดานคะแนนเจ้าหน้าที่ — เป็นผลงานรายบุคคล ไม่ใช่ตัวเลขรวม
         Route::get('/maintenance/technicians',     [StatsController::class, 'technicianSummary'])->name('maintenance.technicians')
             ->middleware('can:maintenance-type-manage');
