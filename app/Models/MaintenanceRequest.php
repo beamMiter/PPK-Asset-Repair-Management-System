@@ -234,10 +234,20 @@ class MaintenanceRequest extends Model
             ->values();
     }
 
-    /** Their names, "Ann, Bob" (empty when nobody is on it). */
+    /**
+     * Their names, "Ann, Bob" (empty when nobody is on it). A person in charge who has no team row (older data) is on the job too and
+     * is named, once. Eager load `technician:id,name` with `workers:id,name` on a list so this is no query per row.
+     */
     public function teamNames(): string
     {
-        return $this->teamWorkers()->pluck('name')->implode(', ');
+        $team = $this->teamWorkers();
+        $names = $team->pluck('name');
+
+        if ($this->technician_id && ! $team->contains('id', $this->technician_id) && $this->technician) {
+            $names->prepend($this->technician->name);
+        }
+
+        return $names->filter()->implode(', ');
     }
 
     public function logs()

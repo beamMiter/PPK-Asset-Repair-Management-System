@@ -399,7 +399,7 @@
                         <td>{{ $ticket->request_no }}</td>
                         <td>{{ \App\Support\ThaiText::words($ticket->title) }}</td>
                         <td>{{ \App\Support\ThaiText::words($ticket->department?->name_th ?? ($ticket->department?->name_en ?? '-')) }}</td>
-                        <td>{{ \App\Support\ThaiText::words($ticket->technician?->name ?? 'ยังไม่ระบุ') }}</td>
+                        <td>{{ \App\Support\ThaiText::words($ticket->teamNames() ?: 'ยังไม่ระบุ') }}</td>
                         <td>{{ \App\Support\ThaiText::words($ticket->statusLabel()) }}</td>
                         <td>{{ $ticket->overdueLabel($reportDate) }}</td>
                     </tr>

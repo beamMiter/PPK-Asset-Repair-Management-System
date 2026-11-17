@@ -260,7 +260,7 @@
                 @endif
             </td>
             <td class="label">เจ้าหน้าที่หลัก</td>
-            <td>{{ $req->technician->name ?? '-' }}</td>
+            <td>{{ $req->technician->name ?? ($req->teamNames() ?: '-') }}</td>
         </tr>
     </table>
 
@@ -413,7 +413,7 @@
                 <div class="small">เจ้าหน้าที่ผู้ปฏิบัติงาน</div>
                 <div class="signature-line"></div>
                 <div class="small">
-                    ( {{ $req->technician->name ?? '........................' }} )
+                    ( {{ $req->technician->name ?? ($req->teamNames() ?: '........................') }} )
                 </div>
                 <div class="small">วันที่ ....../....../..........</div>
             </td>

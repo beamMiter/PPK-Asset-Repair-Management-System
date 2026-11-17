@@ -525,7 +525,7 @@
                                         x-show="searchGlobal === '' || 
                                                 '{{ strtolower($t->request_no) }}'.includes(searchGlobal.toLowerCase()) || 
                                                 '{{ strtolower($t->title) }}'.includes(searchGlobal.toLowerCase()) || 
-                                                '{{ strtolower($t->technician?->name ?? '') }}'.includes(searchGlobal.toLowerCase())">
+                                                '{{ strtolower($t->teamNames()) }}'.includes(searchGlobal.toLowerCase())">
                                         <div
                                             class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0 border border-red-200 text-red-600 mt-0.5 group-hover:scale-110 transition-transform">
                                             <span class="material-symbols-outlined text-[18px]">warning</span>
@@ -538,7 +538,7 @@
                                             <div class="text-[11px] text-[#444650] mt-1 flex flex-wrap gap-x-2 gap-y-1">
                                                 <span class="font-semibold text-slate-700">#{{ $t->request_no }}</span>
                                                 <span class="text-slate-300">|</span>
-                                                <span>{{ $t->technician?->name ?? 'ยังไม่ระบุเจ้าหน้าที่' }}</span>
+                                                <span>{{ $t->teamNames() ?: 'ยังไม่ระบุเจ้าหน้าที่' }}</span>
                                                 <span class="text-slate-300">|</span>
                                                 <span class="truncate">{{ $t->type?->name ?? 'ทั่วไป' }}</span>
                                             </div>
@@ -583,7 +583,7 @@
                                         x-show="searchGlobal === '' || 
                                                 '{{ strtolower($t->request_no) }}'.includes(searchGlobal.toLowerCase()) || 
                                                 '{{ strtolower($t->title) }}'.includes(searchGlobal.toLowerCase()) || 
-                                                '{{ strtolower($t->technician?->name ?? '') }}'.includes(searchGlobal.toLowerCase())">
+                                                '{{ strtolower($t->teamNames()) }}'.includes(searchGlobal.toLowerCase())">
 
                                         {{-- 2px Thin Progress Bar at bottom of card --}}
                                         <div class="absolute bottom-0 left-0 h-[2px] bg-slate-100 w-full">
@@ -603,7 +603,7 @@
                                             <div class="text-[11px] text-[#444650] mt-1 flex flex-wrap gap-x-2 gap-y-1">
                                                 <span class="font-semibold text-slate-700">#{{ $t->request_no }}</span>
                                                 <span class="text-slate-300">|</span>
-                                                <span>{{ $t->technician?->name ?? 'ยังไม่ระบุเจ้าหน้าที่' }}</span>
+                                                <span>{{ $t->teamNames() ?: 'ยังไม่ระบุเจ้าหน้าที่' }}</span>
                                                 <span class="text-slate-300">|</span>
                                                 <span class="truncate">{{ $t->type?->name ?? 'ทั่วไป' }}</span>
                                             </div>

@@ -89,7 +89,7 @@ class MaintenanceRatingController extends Controller
         $soon = $this->textParam($request, 'urgency') === 'soon';
 
         if ($tab === 'pending') {
-            $query = $this->pendingRatingQuery($user)->with(['workers:id,name']);
+            $query = $this->pendingRatingQuery($user)->with(['workers:id,name', 'technician:id,name']);
 
             if ($soon) {
                 $query->whereRaw(
@@ -112,7 +112,7 @@ class MaintenanceRatingController extends Controller
             // the reporter's OWN rating: one an admin gave to the same job is not theirs to see here, nor does it hide the job from
             // the waiting list
             $query = $this->reporterClosedQuery($user)
-                ->with(['workers:id,name', 'rating' => fn ($rating) => $rating->where('rater_id', $user->id)])
+                ->with(['workers:id,name', 'technician:id,name', 'rating' => fn ($rating) => $rating->where('rater_id', $user->id)])
                 ->whereHas('rating', fn ($rating) => $rating->where('rater_id', $user->id)->when($score, fn ($q) => $q->where('score', $score)));
 
             // newest rating first
