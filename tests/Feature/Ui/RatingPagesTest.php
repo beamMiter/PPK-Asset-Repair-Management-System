@@ -41,6 +41,17 @@ class RatingPagesTest extends TestCase
         ]);
     }
 
+    /** Put the technician on the request's team, as the system does for whoever is in charge: the lists name, and search by, the team. */
+    private function onTheTeam(MaintenanceRequest $request): MaintenanceRequest
+    {
+        \App\Models\MaintenanceAssignment::create([
+            'maintenance_request_id' => $request->id, 'user_id' => $this->tech->id, 'role' => $this->tech->role,
+            'is_lead' => true, 'status' => \App\Models\MaintenanceAssignment::STATUS_DONE,
+        ]);
+
+        return $request;
+    }
+
     private function rate(MaintenanceRequest $req, int $score, ?string $comment = null, ?Carbon $at = null, ?User $rater = null): MaintenanceRating
     {
         $rating = MaintenanceRating::create([
@@ -153,7 +164,7 @@ class RatingPagesTest extends TestCase
 
     public function test_each_pending_job_shows_who_did_it_where_and_when_it_closed(): void
     {
-        $this->closedDaysAgo(4, ['location_text' => 'ห้องฉุกเฉิน ชั้น 2', 'title' => 'เครื่องพิมพ์เสีย']);
+        $this->onTheTeam($this->closedDaysAgo(4, ['location_text' => 'ห้องฉุกเฉิน ชั้น 2', 'title' => 'เครื่องพิมพ์เสีย']));
 
         $this->evaluate()
             ->assertSee('เครื่องพิมพ์เสีย')
@@ -297,6 +308,7 @@ class RatingPagesTest extends TestCase
         $byPlace = $this->closedDaysAgo(4, ['title' => 'อย่างอื่น', 'location_text' => 'ห้องผ่าตัด 2']);
         $other = User::factory()->create(['role' => 'it_support', 'name' => 'ช่างวิเชียร']);
         $byTech = $this->closedDaysAgo(5, ['title' => 'งานสาม', 'technician_id' => $other->id]);
+        \App\Models\MaintenanceAssignment::create(['maintenance_request_id' => $byTech->id, 'user_id' => $other->id, 'role' => $other->role, 'is_lead' => true, 'status' => \App\Models\MaintenanceAssignment::STATUS_DONE]);
         $unrelated = $this->closedDaysAgo(6, ['title' => 'ไม่เกี่ยวเลย', 'location_text' => 'ที่อื่น']);
 
         $ids = fn (string $q) => $this->evaluate(['q' => $q])->viewData('requests')->pluck('id')->all();

@@ -216,7 +216,7 @@ class SeederIntegrityTest extends TestCase
             if ($r->rating) {
                 $r->status === 'closed' || $bad($r, 'rated but not closed');
                 (int) $r->rating->rater_id === (int) $r->reporter_id || $bad($r, 'rated by someone other than the reporter');
-                (int) $r->rating->technician_id === (int) $lead?->user_id || $bad($r, 'rating is not for the lead');
+                $active->contains('user_id', $r->rating->technician_id) || $bad($r, 'the person stored on the rating is not on the team');   // a rating counts for the whole team; this is its representative
                 ($r->rating->score >= 1 && $r->rating->score <= 5) || $bad($r, 'score out of range');
                 ($r->rating->score > 2 || filled($r->rating->comment)) || $bad($r, 'a 1-2 star rating needs a comment');
                 ($r->rating->created_at->gte($r->closed_at) && $r->rating->created_at->lte($now)) || $bad($r, 'rated before it was closed, or in the future');
@@ -299,7 +299,7 @@ class SeederIntegrityTest extends TestCase
             'a rating without a comment' => $requests->contains(fn ($r) => $r->rating && blank($r->rating->comment)),
             // a technician's rating page lists their latest COMMENTS with who wrote them, and draws a six-month trend
             'every technician has 3+ comments to show' => collect(['it1', 'it2', 'net', 'dev', 'tech1', 'tech2', 'gone'])->every(
-                fn ($key) => MaintenanceRating::where('technician_id', UserSeeder::find($key)->id)->whereNotNull('comment')->where('comment', '!=', '')->count() >= 3
+                fn ($key) => UserSeeder::find($key)->technicianRatings()->whereNotNull('maintenance_ratings.comment')->where('maintenance_ratings.comment', '!=', '')->count() >= 3
             ),
             'the comments come from 10+ different members' => MaintenanceRating::whereNotNull('comment')->where('comment', '!=', '')
                 ->whereIn('rater_id', User::where('role', 'member')->pluck('id'))->distinct()->count('rater_id') >= 10,

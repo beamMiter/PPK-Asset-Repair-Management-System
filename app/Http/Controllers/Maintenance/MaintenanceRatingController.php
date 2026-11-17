@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Maintenance;
 
 use App\Http\Controllers\Controller;
+use App\Models\MaintenanceAssignment;
 use App\Models\MaintenanceRequest;
 use App\Models\MaintenanceRating;
 use App\Models\User;
@@ -50,7 +51,7 @@ class MaintenanceRatingController extends Controller
             ->whereRaw('COALESCE(closed_at, resolved_at, completed_date) > ? AND COALESCE(closed_at, resolved_at, completed_date) <= ?', [$limitDate, now()]);
     }
 
-    /** Narrow a list to what the search box holds: the job's number, title or place, or its technician's name. */
+    /** Narrow a list to what the search box holds: the job's number, title or place, or the name of anybody on its team. */
     private function searchedFor($query, string $term)
     {
         if ($term === '') {
@@ -63,7 +64,8 @@ class MaintenanceRatingController extends Controller
             $where->where('request_no', 'like', $like)
                 ->orWhere('title', 'like', $like)
                 ->orWhere('location_text', 'like', $like)
-                ->orWhereHas('technician', fn ($tech) => $tech->where('name', 'like', $like));
+                ->orWhereHas('workers', fn ($worker) => $worker->where('users.name', 'like', $like)
+                    ->where('maintenance_assignments.status', '!=', MaintenanceAssignment::STATUS_CANCELLED));
         });
     }
 
@@ -87,7 +89,7 @@ class MaintenanceRatingController extends Controller
         $soon = $this->textParam($request, 'urgency') === 'soon';
 
         if ($tab === 'pending') {
-            $query = $this->pendingRatingQuery($user)->with(['technician:id,name']);
+            $query = $this->pendingRatingQuery($user)->with(['workers:id,name']);
 
             if ($soon) {
                 $query->whereRaw(
@@ -110,7 +112,7 @@ class MaintenanceRatingController extends Controller
             // the reporter's OWN rating: one an admin gave to the same job is not theirs to see here, nor does it hide the job from
             // the waiting list
             $query = $this->reporterClosedQuery($user)
-                ->with(['technician:id,name', 'rating' => fn ($rating) => $rating->where('rater_id', $user->id)])
+                ->with(['workers:id,name', 'rating' => fn ($rating) => $rating->where('rater_id', $user->id)])
                 ->whereHas('rating', fn ($rating) => $rating->where('rater_id', $user->id)->when($score, fn ($q) => $q->where('score', $score)));
 
             // newest rating first
@@ -195,9 +197,15 @@ class MaintenanceRatingController extends Controller
         $statsQuery = clone $query;
         $allActiveTechs = $statsQuery->get(['id', 'name', 'technician_ratings_avg_score', 'technician_ratings_count', 'performance_score', 'role']);
         
+        // A rating counts for everybody on its team, so adding up the people's counts would count a team job once per person: the
+        // header counts the ratings themselves (those that count for at least one person on this board), and their average.
         $totalTech = $allActiveTechs->count();
-        $globalAvg = round($allActiveTechs->avg('technician_ratings_avg_score'), 2);
-        $totalReviews = $allActiveTechs->sum('technician_ratings_count');
+        $listedRatings = MaintenanceRating::query()->whereIn('maintenance_request_id', MaintenanceAssignment::query()
+            ->select('maintenance_request_id')
+            ->where('status', '!=', MaintenanceAssignment::STATUS_CANCELLED)
+            ->whereIn('user_id', $allActiveTechs->pluck('id')));
+        $globalAvg = round((float) (clone $listedRatings)->avg('score'), 2);
+        $totalReviews = (int) $listedRatings->count();
 
         // Prepare Top 15 for the Chart (Fixed Top 15 regardless of table page)
         $top15 = $allActiveTechs->take(15);
@@ -400,8 +408,8 @@ class MaintenanceRatingController extends Controller
         // Last six months, oldest first. A month nobody rated in is still listed, so a gap reads as a gap.
         $months = collect(range(5, 0))->map(fn (int $ago) => now()->startOfMonth()->subMonths($ago));
         $byMonth = $user->technicianRatings()
-            ->where('created_at', '>=', $months->first())
-            ->get(['score', 'created_at'])
+            ->where('maintenance_ratings.created_at', '>=', $months->first())
+            ->get(['maintenance_ratings.score', 'maintenance_ratings.created_at'])
             ->groupBy(fn ($rating) => $rating->created_at->format('Y-m'));
         $trend = $months->map(function ($month) use ($byMonth) {
             $rows = $byMonth->get($month->format('Y-m'), collect());
@@ -420,7 +428,7 @@ class MaintenanceRatingController extends Controller
             ->whereNotNull('comment')
             ->where('comment', '!=', '')
             ->with(['rater:id,name,role,profile_photo_path,profile_photo_thumb', 'request:id,request_no,title'])
-            ->latest()
+            ->latest('maintenance_ratings.created_at')
             ->take(6)
             ->get();
 
@@ -439,13 +447,12 @@ class MaintenanceRatingController extends Controller
 
         // what each of those jobs was rated
         $jobScores = MaintenanceRating::query()
-            ->where('technician_id', $user->id)
-            ->whereIn('maintenance_request_id', $recentJobs->pluck('maintenance_request_id'))
+            ->whereIn('maintenance_request_id', $recentJobs->pluck('maintenance_request_id'))   // their jobs: the rating is the team's
             ->pluck('score', 'maintenance_request_id');
 
         if (request()->wantsJson()) {
             // (unchanged) the latest six ratings, with or without a comment
-            $reviews = $user->technicianRatings()->with('rater:id,name,role')->latest()->take(6)->get();
+            $reviews = $user->technicianRatings()->with('rater:id,name,role')->latest('maintenance_ratings.created_at')->take(6)->get();
 
             return response()->json([
                 'id'          => $user->id,

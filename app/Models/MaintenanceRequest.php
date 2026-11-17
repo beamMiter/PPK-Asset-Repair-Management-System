@@ -222,6 +222,24 @@ class MaintenanceRequest extends Model
             ->withTimestamps();
     }
 
+    /**
+     * The people on this request's team who were not taken off it: the ones its rating counts for. Uses the `workers` relation
+     * (eager load it with `workers:id,name` on a list) and looks at the pivot status, so a list of requests costs one query, not one each.
+     */
+    public function teamWorkers(): \Illuminate\Support\Collection
+    {
+        return $this->workers
+            ->filter(fn ($worker) => $worker->pivot->status !== MaintenanceAssignment::STATUS_CANCELLED)
+            ->sortBy(fn ($worker) => [$worker->pivot->assigned_at ?? '9999', $worker->id])
+            ->values();
+    }
+
+    /** Their names, "Ann, Bob" (empty when nobody is on it). */
+    public function teamNames(): string
+    {
+        return $this->teamWorkers()->pluck('name')->implode(', ');
+    }
+
     public function logs()
     {
         return $this->hasMany(MaintenanceLog::class, 'request_id');

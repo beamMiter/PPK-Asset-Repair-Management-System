@@ -55,7 +55,9 @@ class RatingTechnicianResolutionTest extends TestCase
             ->count();
         DB::disableQueryLog();
 
-        $this->assertSame($lead->id, $first, 'is_lead assignment should win');
+        // the lead flag no longer decides (the team dialog clears it, and a rating counts for the whole team anyway): with nobody having
+        // pressed "ซ่อมเสร็จ", the stored representative is whoever was put on first
+        $this->assertSame($helper->id, $first, 'the first on the team is the representative when nobody resolved it');
         $this->assertSame($first, $second);
         $this->assertSame(1, $queries, 'resolver should hit maintenance_assignments only once');
     }

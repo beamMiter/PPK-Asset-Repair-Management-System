@@ -340,10 +340,23 @@ class User extends Authenticatable
         return InitialsAvatar::url($this->clean_name ?: 'User', $size, InitialsAvatar::colorFor($this->name ?? 'user'));
     }
 
-    // คะแนนที่ User คนนี้ได้รับในฐานะเจ้าหน้าที่
+    /**
+     * The ratings this person has: one per request, and it counts for everybody on that request's team (a person taken off the job is
+     * not on it). This used to follow the rating's `technician_id`, which holds ONE person, so a team of three credited one, and after a
+     * team edit (which clears every lead) the one added last. The assignments table has one row per person per request, so a rating is
+     * never counted twice for the same person. Qualify `created_at` / `updated_at` / `status` / `id` when you add to this relation: the
+     * join brings the assignment's columns too.
+     */
     public function technicianRatings()
     {
-        return $this->hasMany(\App\Models\MaintenanceRating::class, 'technician_id');
+        return $this->hasManyThrough(
+            \App\Models\MaintenanceRating::class,
+            \App\Models\MaintenanceAssignment::class,
+            'user_id',                 // assignments.user_id = this user
+            'maintenance_request_id',  // ratings.maintenance_request_id = ...
+            'id',
+            'maintenance_request_id'   // ... assignments.maintenance_request_id
+        )->where('maintenance_assignments.status', '!=', \App\Models\MaintenanceAssignment::STATUS_CANCELLED);
     }
 
     public function technicianAssignments()

@@ -230,7 +230,7 @@
                                         <span class="break-words min-w-0">{{ $req->location_text ?: '-' }}</span>
                                     </div>
                                 </td>
-                                <td class="p-3 align-middle text-center text-slate-700 hidden lg:table-cell">{{ $req->technician?->name ?? '-' }}</td>
+                                <td class="p-3 align-middle text-center text-slate-700 hidden lg:table-cell">{{ $req->teamNames() ?: '-' }}</td>
                                 <td class="p-3 align-middle text-center text-slate-700 whitespace-nowrap hidden lg:table-cell">
                                     {{ $closedOn ? \App\Support\ThaiDate::short($closedOn) : '-' }}</td>
                                 <td class="p-3 align-middle text-center whitespace-nowrap">
@@ -269,7 +269,7 @@
                                 <span class="material-symbols-outlined text-[14px] opacity-60" aria-hidden="true">location_on</span>
                                 <span class="break-words min-w-0">{{ $req->location_text ?: '-' }}</span>
                             </div>
-                            <div>ผู้ดำเนินการ: <span class="font-medium text-slate-700">{{ $req->technician?->name ?? '-' }}</span></div>
+                            <div>ผู้ดำเนินการ: <span class="font-medium text-slate-700">{{ $req->teamNames() ?: '-' }}</span></div>
                             <div>ปิดงานเมื่อ: <span class="font-medium text-slate-700">{{ $closedOn ? \App\Support\ThaiDate::short($closedOn) : '-' }}</span></div>
                         </div>
                         <div class="mt-3 flex flex-wrap items-center justify-end gap-[8px]">
@@ -308,7 +308,7 @@
                                         <div class="mt-1 text-[12px] italic text-slate-500 break-words line-clamp-2">“{{ $req->rating->comment }}”</div>
                                     @endif
                                 </td>
-                                <td class="p-3 align-middle text-center text-slate-700 hidden lg:table-cell">{{ $req->technician?->name ?? '-' }}</td>
+                                <td class="p-3 align-middle text-center text-slate-700 hidden lg:table-cell">{{ $req->teamNames() ?: '-' }}</td>
                                 <td class="p-3 align-middle text-center">
                                     <div class="flex flex-col items-center gap-[4px]">
                                         <x-rating.stars :score="$score" size="xs" />
@@ -345,7 +345,7 @@
                             <div class="mt-2 rounded-md border border-slate-100 bg-slate-50 p-3 text-[12px] italic text-slate-600 break-words">“{{ $req->rating->comment }}”</div>
                         @endif
                         <div class="mt-2 grid gap-1 text-[12px] text-slate-500">
-                            <div>ผู้ดำเนินการ: <span class="font-medium text-slate-700">{{ $req->technician?->name ?? '-' }}</span></div>
+                            <div>ผู้ดำเนินการ: <span class="font-medium text-slate-700">{{ $req->teamNames() ?: '-' }}</span></div>
                             <div>ประเมินเมื่อ: <span class="font-medium text-slate-700">{{ \App\Support\ThaiDate::short($req->rating->created_at) }}</span></div>
                         </div>
                         <div class="mt-3 flex justify-end">
