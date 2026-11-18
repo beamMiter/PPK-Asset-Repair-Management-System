@@ -16,4 +16,7 @@ Schedule::command('chat:purge-deleted')->dailyAt('03:10')->timezone('Asia/Bangko
 
 // Threads nobody has used: locked after chat.lock_idle_after_days (90) of silence, deleted after chat.delete_locked_after_days (90) locked. Thai time,
 // ten minutes before the purge above (a thread deleted here is not erased yet: chat.purge_deleted_after_days later).
+// Requests sent back to their reporter and not sent again within repair.return_expires_after_days (14): cancelled, 03:30 Thai time, after the chat sweeps.
+Schedule::command('repair:expire-returned')->dailyAt(\App\Console\Commands\ExpireReturnedRequests::RUNS_AT)->timezone('Asia/Bangkok')->withoutOverlapping();
+
 Schedule::command('chat:expire-idle')->dailyAt(\App\Console\Commands\ExpireIdleChat::RUNS_AT)->timezone('Asia/Bangkok')->withoutOverlapping();

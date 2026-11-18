@@ -62,7 +62,9 @@ class MaintenanceRequestController extends Controller
             ])
             ->visibleTo($user)
             ->when($request->integer('asset_id'), fn ($qb, $assetId) => $qb->where('maintenance_requests.asset_id', $assetId))
-            ->when(filled($status), fn ($qb) => $qb->where('maintenance_requests.status', $status))
+            // "returned_expiring" is not a status: it is the requests sent back that have `repair.return_warning_days` or fewer days left
+            ->when(filled($status) && $status !== 'returned_expiring', fn ($qb) => $qb->where('maintenance_requests.status', $status))
+            ->when($status === 'returned_expiring', fn ($qb) => $qb->returnedWithinDays((int) config('repair.return_warning_days')))
             ->when(filled($q), fn ($qb) => $qb->search($q))
             ->when(filled($typeId), fn ($qb) => $typeId === '__null__'
                 ? $qb->whereNull('maintenance_requests.type_id')
@@ -135,7 +137,8 @@ class MaintenanceRequestController extends Controller
             ->with(['asset', 'reporter:id,name,email', 'technician:id,name'])
             ->visibleTo($request->user())
             ->when($request->integer('asset_id'), fn ($qb, $assetId) => $qb->where('asset_id', $assetId))
-            ->when($status, fn ($qb) => $qb->where('status', $status))
+            ->when($status && $status !== 'returned_expiring', fn ($qb) => $qb->where('status', $status))
+            ->when($status === 'returned_expiring', fn ($qb) => $qb->returnedWithinDays((int) config('repair.return_warning_days')))
             ->when($q !== '', fn ($qb) => $qb->search($q))
             ->orderedForList($sortBy, $sortDir)
             ->paginate(20)

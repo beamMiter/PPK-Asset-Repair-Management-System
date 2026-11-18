@@ -93,7 +93,7 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     // Repair requests (ใบงานซ่อม) - REST-ish API
     // ที่เมธอด index/store/destroy/transition ใช้ controller เดียวกับหน้าเว็บ → ต้องส่ง Accept: application/json
     Route::prefix('repair-requests')->name('repair-requests.')->group(function () {
-        // GET /api/repair-requests   ?status= &q= &asset_id= &sort_by=(request_no|id|request_date) &sort_dir=asc|desc &page=
+        // GET /api/repair-requests   ?status= (หรือ returned_expiring = ใบงานที่ส่งกลับแก้ไขและเหลือไม่เกิน 3 วันก่อนถูกยกเลิกอัตโนมัติ) &q= &asset_id= &sort_by=(request_no|id|request_date) &sort_dir=asc|desc &page=
         //   20 รายการ/หน้า → {data, meta, toast} · member เห็นเฉพาะใบงานที่ตัวเองแจ้ง, admin/supervisor/ทีมช่างเห็นทั้งหมด
         Route::get('/',                   [MaintenanceRequestController::class, 'index'])->name('index');
 
