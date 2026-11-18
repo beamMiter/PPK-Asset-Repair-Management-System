@@ -232,4 +232,14 @@ class ReturnedRequestsExpireTest extends TestCase
 
         $page->assertSee('value="returned_expiring"', false)->assertSee('ส่งกลับแก้ไข — ใกล้หมดอายุ');
     }
+
+    public function test_the_close_to_expiring_choice_is_not_offered_when_nothing_expires(): void
+    {
+        config(['repair.return_expires_after_days' => 0]);
+
+        $page = $this->actingAs($this->reporter)->get(route('maintenance.requests.index'))->assertOk();
+
+        $page->assertDontSee('value="returned_expiring"', false)->assertDontSee('ใกล้หมดอายุ');
+        $page->assertSee('value="returned"', false);   // sent back is still a status to filter by
+    }
 }

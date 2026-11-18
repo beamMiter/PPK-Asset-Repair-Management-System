@@ -107,8 +107,8 @@
                                 @foreach ($statusOptions as $k => $v)
                                     <option value="{{ $k }}" @selected($status === $k)>{{ $v }}
                                     </option>
-                                    @if ($k === \App\Models\MaintenanceRequest::STATUS_RETURNED)
-                                        {{-- not a status: the sent-back requests with the last days left --}}
+                                    @if ($k === \App\Models\MaintenanceRequest::STATUS_RETURNED && (int) config('repair.return_expires_after_days') > 0)
+                                        {{-- not a status: the sent-back requests with the last days left (nothing is close to expiring when nothing expires) --}}
                                         <option value="returned_expiring" @selected($status === 'returned_expiring')
                                             title="เหลือ {{ (int) config('repair.return_warning_days') }} วันหรือน้อยกว่า">ส่งกลับแก้ไข — ใกล้หมดอายุ</option>
                                     @endif
