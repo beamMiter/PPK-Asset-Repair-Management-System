@@ -83,6 +83,8 @@ class RatingCountsTheWholeTeamTest extends TestCase
         $this->actingAs($supervisor)->post(route('maintenance.requests.assignments.store', $job), ['user_ids' => [$this->ann->id, $this->bob->id]]);
         $this->actingAs($this->ann)->post(route('maintenance.requests.resolve', $job), ['resolution_note' => 'done']);
         $this->travel(10)->seconds();
+        $this->actingAs($this->reporter)->post(route('maintenance.requests.close', $job));   // the reporter approves, and only then rates
+        $this->assertSame('closed', $job->fresh()->status);
 
         Sanctum::actingAs($this->reporter);
         $this->postJson("/api/repair-requests/{$job->id}/rating", ['score' => 5])->assertCreated();

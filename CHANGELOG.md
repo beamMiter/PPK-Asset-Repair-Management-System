@@ -638,6 +638,13 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   job's team carries it (a job with three people on it is in all three loads), a person in charge with no team row (older
   data) still counts, once, and someone taken off the job, a finished job and a deleted one do not. The owner chose this on
   2026-11-15. `/api/stats/maintenance/technicians` is unchanged: it is documented as per person in charge. `TechnicianWorkloadTest`.
+- **A rating comes after the reporter's approval, on the web and in the app alike, and it closes nothing.** The manual and the web pages
+  say: the reporter presses "อนุมัติปิดงาน", then may rate. The app's API let them rate a request that was still "ซ่อมเสร็จ" and closed it
+  for them, so on that road the rating was also the approval, and the app's "waiting to be rated" list held requests the web list did not.
+  `POST /api/repair-requests/{id}/rating` answers 422 ("ให้คะแนนได้หลังอนุมัติผลการซ่อมบำรุง (ปิดงาน) แล้วเท่านั้น") until the request is
+  closed, `GET /api/repair-requests/pending/evaluations` lists closed requests only, and neither the web nor the app writes a
+  "ปิดงานอัตโนมัติ" any more. **An app that rated a "ซ่อมเสร็จ" request has to ask the reporter to approve first.** Decided 2026-11-17.
+  `RatingOnlyAfterApprovalTest`.
 - **The asset form says that "ดึงข้อมูล HIS" gives made-up data.** The button fills the form from `getMockHisData()`, which
   invents a brand, a vendor, a price and a warranty for ANY number typed, and the toast said "สำเร็จ": the manual and the
   README said it was a mock, the form did not, so somebody could register made-up data believing the hospital system gave it.

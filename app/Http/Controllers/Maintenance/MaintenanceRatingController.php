@@ -7,7 +7,6 @@ use App\Models\MaintenanceAssignment;
 use App\Models\MaintenanceRequest;
 use App\Models\MaintenanceRating;
 use App\Models\User;
-use App\Services\MaintenanceTransitionService;
 use App\Traits\HandlesMaintenanceRating;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -282,37 +281,10 @@ class MaintenanceRatingController extends Controller
 
         Log::info("Rating stored: User ID {$user->id} rated Technician ID {$technicianId} with score {$data['score']}");
 
-
-        // Auto-close: หากงานยังอยู่สถานะ 'resolved' ให้ปิดงานอัตโนมัติเมื่อผู้แจ้งให้คะแนนแล้ว
-        // (ถือว่าการให้คะแนนคือการยืนยันรับงานคืน)
-        $maintenanceRequest->refresh();
-        $autoClosed = false;
-        if ($maintenanceRequest->status === MaintenanceRequest::STATUS_RESOLVED) {
-            try {
-                app(MaintenanceTransitionService::class)->applyTransition(
-                    $maintenanceRequest,
-                    ['status' => MaintenanceRequest::STATUS_CLOSED, 'note' => 'ปิดงานอัตโนมัติหลังผู้แจ้งให้คะแนนเรียบร้อย'],
-                    $user->id
-                );
-                $autoClosed = true;
-                Log::info("Auto-closed Request ID {$maintenanceRequest->id} after rating by User ID {$user->id}");
-            } catch (\Throwable $e) {
-                Log::warning("Auto-close failed for Request ID {$maintenanceRequest->id}: " . $e->getMessage());
-            }
-        }
-
-        $redirect = redirect()
+        // a rating is a rating: the request was approved (closed) by its reporter before it could be rated, and nothing is closed here
+        return redirect()
             ->route('maintenance.requests.show', $maintenanceRequest)
-            ->with('toast', [
-                'type'    => 'success',
-                'message' => $autoClosed ? 'บันทึกคะแนนและปิดงานเรียบร้อยแล้ว' : 'บันทึกคะแนนเรียบร้อย',
-            ]);
-
-        if ($autoClosed) {
-            $redirect = $redirect->with('show_post_close_modal', true);
-        }
-
-        return $redirect;
+            ->with('toast', ['type' => 'success', 'message' => 'บันทึกคะแนนเรียบร้อย']);
     }
 
 
@@ -326,9 +298,9 @@ class MaintenanceRatingController extends Controller
             abort(403, 'คุณไม่มีสิทธิ์ให้คะแนนงานนี้ คุณต้องเป็นผู้แจ้งซ่อมจึงจะสามารถประเมินได้');
         }
 
-        // 3. ตรวจสอบสถานะ (ต้องเป็น Resolved หรือ Closed เท่านั้น)
-        if (!in_array($maintenanceRequest->status, [MaintenanceRequest::STATUS_RESOLVED, MaintenanceRequest::STATUS_CLOSED], true)) {
-            abort(403, 'สามารถให้คะแนนได้เฉพาะงานที่ดำเนินการเสร็จสิ้นหรือปิดงานเรียบร้อยแล้วเท่านั้น');
+        // 3. ตรวจสอบสถานะ: ให้คะแนนได้หลังผู้แจ้ง "อนุมัติปิดงาน" แล้วเท่านั้น (การให้คะแนนไม่ใช่การอนุมัติ และไม่ปิดงานแทนใคร)
+        if ($maintenanceRequest->status !== MaintenanceRequest::STATUS_CLOSED) {
+            abort(403, 'ให้คะแนนได้หลังผู้แจ้งอนุมัติผลการซ่อมบำรุง (ปิดงาน) แล้วเท่านั้น');
         }
 
         $alreadyRated = MaintenanceRating::query()

@@ -144,15 +144,15 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
         Route::get('/{req}/logs',         [MaintenanceLogController::class, 'index'])->name('logs');
 
         // GET /api/repair-requests/pending/evaluations
-        //   ใบงานที่ฉันแจ้ง เสร็จ/ปิดแล้ว ยังไม่ได้ให้คะแนน และยังอยู่ในกรอบ 30 วัน → {data:[...]}
+        //   ใบงานที่ฉันแจ้ง และอนุมัติปิดงานแล้ว (closed) ยังไม่ได้ให้คะแนน และยังอยู่ในกรอบ 30 วัน → {data:[...]}
         Route::get(
             '/pending/evaluations',
             [MaintenanceRatingApiController::class, 'pendingEvaluations']
         )->name('pending-evaluations');
 
         // POST /api/repair-requests/{maintenanceRequest}/rating   body: score* (1–5), comment (บังคับเมื่อ 1–2 ดาว, ≤ 1,000 ตัวอักษร)
-        //   ให้ได้เฉพาะผู้แจ้ง (403) · งานต้อง resolved/closed (422) · ให้ซ้ำไม่ได้ (409) · ต้องอยู่ในกรอบ 30 วัน (422)
-        //   · ต้องมีหัวหน้าทีมให้ผูกคะแนน (422) → 201; ถ้างานยัง resolved อยู่จะถูกปิดงานอัตโนมัติ
+        //   ให้ได้เฉพาะผู้แจ้ง (403) · งานต้อง closed คือผู้แจ้งอนุมัติแล้ว (422) · ให้ซ้ำไม่ได้ (409) · ต้องอยู่ในกรอบ 30 วัน (422)
+        //   · ต้องมีหัวหน้าทีมให้ผูกคะแนน (422) → 201 (การให้คะแนนไม่ปิดงานแทนผู้แจ้ง)
         Route::post(
             '/{maintenanceRequest}/rating',
             [MaintenanceRatingApiController::class, 'store']
