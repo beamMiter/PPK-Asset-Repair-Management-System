@@ -158,6 +158,13 @@
             </div>
         </div>
 
+        {{-- the reporter's own requests sent back to them to fix: not repeated when they are already looking at exactly those --}}
+        @unless (in_array($status, ['returned', 'returned_expiring'], true))
+            <div class="px-4 md:px-6 lg:px-8 pt-4">
+                <x-returned-requests-banner />
+            </div>
+        @endunless
+
         {{-- Header row --}}
         <div class="px-4 md:px-6 lg:px-8 py-2 border-b border-slate-200">
             <div class="flex items-center justify-between">
