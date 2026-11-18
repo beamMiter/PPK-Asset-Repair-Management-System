@@ -8,6 +8,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A banner tells a reporter their requests were sent back.** On the dashboard and above "รายการงานซ่อม" a reporter with requests sent back to them
+  ("ส่งกลับแก้ไข") sees "มีใบงานของคุณถูกส่งกลับให้แก้ไข N รายการ", how many are close to being cancelled automatically (red, with the days
+  left on the soonest) and links to the list already filtered ("ดูใบงานที่ต้องแก้ไข", "เฉพาะที่ใกล้หมดอายุ"). It counts only what *they* reported (an admin
+  who sees every request is told about their own), shows nothing when nothing waits for them, and is not repeated on the list once they are
+  looking at those requests. "Close to expiring" is the badge's and the filter's rule (3 days or fewer), so the three always agree.
+  `ReturnedRequestsBannerTest`. Asked for 2026-11-18.
 - **"ส่งกลับแก้ไข": a request can go back to its reporter to be fixed, instead of being rejected for good.** Before taking a request
   on, the staff now have two buttons that mean different things: **"ส่งกลับไปแก้ไข"** (the details are unclear or incomplete) and
   **"ไม่รับเรื่อง"** (a duplicate, or not the team's job; final, as before). Sending back needs a reason saying which part to fix,
@@ -134,6 +140,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **"ส่งกลับแก้ไข — ใกล้หมดอายุ" was offered when nothing expires.** With `REPAIR_RETURN_EXPIRES_AFTER_DAYS=0` the list's status filter still had the
+  choice, and it could only show an empty list. It is offered only while the expiry rule is on.
 - **The lists, the SLA page, the printed work order and the per-person stats follow the team, not only "the person in charge".** A request
   has two answers to "who is on it": `technician_id`, and the team rows, and the team dialog leaves the first empty on purpose. Places
   that read only `technician_id` therefore said nobody was on a job the team had been picked for, or missed it. **"งานของฉัน"** listed
