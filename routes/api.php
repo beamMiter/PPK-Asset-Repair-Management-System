@@ -117,7 +117,7 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
         //   ใบงานที่จบแล้ว (resolved/closed/cancelled/rejected) แก้ไม่ได้ ยกเว้น admin/supervisor
         //   ฟิลด์แยกตามบทบาท: ทีมงานเท่านั้นที่ส่ง technician_id / user_ids (ทีม) / status
         //   status = การเปลี่ยนสถานะจริง (เหมือน POST …/transition): ต้องมีสิทธิ์ของขั้นนั้นเท่ากับปุ่ม (เช่น closed = ผู้แจ้ง/admin,
-        //   ผู้แจ้งยกเลิกใบ pending ไม่ได้ → 403) แล้วผ่านตาราง ALLOWED_TRANSITIONS (ผิดกติกา = 409 และไม่บันทึกอะไรเลย)
+        //   ผู้แจ้งยกเลิกใบที่เสร็จแล้วไม่ได้ → 403) แล้วผ่านตาราง ALLOWED_TRANSITIONS (ผิดกติกา = 409 และไม่บันทึกอะไรเลย)
         //   note? = เหตุผลของการเปลี่ยนสถานะ (on_hold ต้องมี)
         Route::put('/{req}',              [MaintenanceRequestController::class, 'update'])->name('update');
 
@@ -129,6 +129,11 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
         //   เท่านั้น (ผู้อื่น 403) และต้องมีสิทธิ์ของขั้นนั้นเท่ากับปุ่ม (เช่น closed = ผู้แจ้ง/admin; ช่างในทีมปิดงานแทนผู้แจ้งไม่ได้ → 403)
         //   · ข้อมูลไม่ถูกต้อง = 422 · ย้ายสถานะผิดกติกา/ขาดเหตุผลที่ต้องระบุ = 409
         Route::post('/{req}/transition',  [MaintenanceTransitionController::class, 'transition'])->name('transition');
+
+        // POST /api/repair-requests/{req}/cancel   body: cancel_reason? (≤ 2,000) — ผู้แจ้งยกเลิกใบงานของตัวเอง (admin/supervisor ทำแทนได้)
+        //   ได้ตราบที่งานยังไม่เสร็จ: รอดำเนินการ, รับทราบ, ส่งกลับแก้ไข, รับเรื่อง, กำลังทำ, พักไว้ · ผู้อื่น 403 · ใบที่เสร็จแล้ว 403
+        //   (การส่ง status ผ่าน PUT ไม่ใช่ทางของผู้แจ้ง: 422)
+        Route::post('/{req}/cancel',      [MaintenanceTransitionController::class, 'cancelCase'])->name('cancel');
 
         // POST /api/repair-requests/{req}/resubmit — the reporter sends a request again after fixing it (status `returned` → `pending`;
         //   admin/supervisor may on their behalf). The staff send one back with POST …/transition body status=returned and a `note`

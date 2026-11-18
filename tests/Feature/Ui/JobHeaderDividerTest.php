@@ -33,12 +33,13 @@ class JobHeaderDividerTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin']);
 
-        $html = $this->page('pending', $admin);   // รับทราบ and ไม่รับเรื่อง
+        $html = $this->page('pending', $admin);   // รับทราบ, ส่งกลับไปแก้ไข, ไม่รับเรื่อง and (the admin may withdraw it too) ยกเลิก
 
         $this->assertSame(1, substr_count($html, self::DIVIDER), 'exactly one bar');
         $bar = strpos($html, self::DIVIDER);
-        $this->assertLessThan($bar, strpos($html, 'openRejectModalBtn'), 'after the last status button');
-        $this->assertLessThan(strpos($html, 'ยกเลิกการซ่อมบำรุง') ?: PHP_INT_MAX, $bar);
+        foreach (['openSendBackModalBtn', 'openRejectModalBtn', 'openCancelModalBtn'] as $button) {
+            $this->assertLessThan($bar, strpos($html, $button), "after the status button $button");
+        }
         $this->assertGreaterThan($bar, strpos($html, 'พิมพ์ PDF'), 'before the tools');
     }
 
@@ -60,12 +61,22 @@ class JobHeaderDividerTest extends TestCase
         $this->assertStringNotContainsString(self::DIVIDER, $html);
     }
 
-    public function test_a_reporter_whose_request_nobody_has_picked_up_yet_sees_no_bar(): void
+    public function test_a_reporter_whose_request_nobody_has_picked_up_yet_can_withdraw_it_and_so_has_the_bar(): void
     {
         $reporter = User::factory()->create(['role' => 'member']);
 
-        // staff acknowledge and accept it; the reporter can only watch (and edit) — nothing to press
-        $this->assertStringNotContainsString(self::DIVIDER, $this->page('pending', $reporter, $reporter));
+        // "ยกเลิกการซ่อมบำรุง" is theirs to press while the request waits (decided 2026-11-17): a status button, so the bar
+        $html = $this->page('pending', $reporter, $reporter);
+
+        $this->assertStringContainsString('openCancelModalBtn', $html);
+        $this->assertSame(1, substr_count($html, self::DIVIDER));
+    }
+
+    public function test_a_reporter_whose_request_was_rejected_has_nothing_to_press_and_no_bar(): void
+    {
+        $reporter = User::factory()->create(['role' => 'member']);
+
+        $this->assertStringNotContainsString(self::DIVIDER, $this->page('rejected', $reporter, $reporter));
     }
 
     public function test_a_reporter_who_can_approve_the_finished_repair_has_a_status_button_and_so_the_bar(): void

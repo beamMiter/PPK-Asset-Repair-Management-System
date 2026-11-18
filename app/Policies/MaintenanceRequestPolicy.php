@@ -12,6 +12,12 @@ class MaintenanceRequestPolicy
 {
     use HandlesAuthorization;
 
+    /** Statuses a request can still be withdrawn (ยกเลิก) from: everything that is not finished. */
+    public const WITHDRAWABLE = [
+        MR::STATUS_PENDING, MR::STATUS_ACKNOWLEDGED, MR::STATUS_RETURNED,
+        MR::STATUS_ACCEPTED, MR::STATUS_IN_PROGRESS, MR::STATUS_ON_HOLD,
+    ];
+
     public function before(User $user, string $ability)
     {
         // 'rate' is excluded from admin bypass so that the full rate() policy
@@ -402,9 +408,9 @@ class MaintenanceRequestPolicy
     // cancel (รวมศูนย์การยกเลิก)
     public function cancel(User $user, MR $req): Response
     {
-        // 1. ตรวจสอบสถานะก่อน (เงื่อนไขบังคับ: ยกเลิกได้เฉพาะช่วงที่รับเรื่องหรือกำลังทำอยู่)
-        if (!in_array($req->status, [MR::STATUS_RETURNED, MR::STATUS_ACCEPTED, MR::STATUS_IN_PROGRESS, MR::STATUS_ON_HOLD], true)) {
-            return Response::deny('ยกเลิกได้เฉพาะงานที่รับเรื่องแล้ว กำลังดำเนินการ หรือที่ส่งกลับให้แก้ไขเท่านั้น');
+        // 1. ตรวจสอบสถานะก่อน: ยกเลิกได้ตราบที่งานยังไม่เสร็จ (รอดำเนินการ / รับทราบ / ส่งกลับ / รับเรื่อง / กำลังทำ / พักไว้)
+        if (!in_array($req->status, self::WITHDRAWABLE, true)) {
+            return Response::deny('ยกเลิกได้เฉพาะงานที่ยังไม่เสร็จสิ้นเท่านั้น');
         }
 
         // 2. เช็คสิทธิ์รายกลุ่ม
@@ -422,9 +428,9 @@ class MaintenanceRequestPolicy
             return Response::deny('ไม่มีสิทธิ์ยกเลิกคำขอนี้');
         }
 
-        // อนุญาตให้ยกเลิกเฉพาะเมื่อรับเรื่องไปแล้ว หรือเริ่มดำเนินการไปแล้ว ตาม Workflow ที่ผู้ใช้ระบุ — หรือเมื่อใบงานถูกส่งกลับ
-        // ให้แก้ไขและผู้แจ้งเลิกแล้ว (ฝั่งเจ้าหน้าที่ cancelByTech ไม่รวมสถานะนี้)
-        if (in_array($req->status, [MR::STATUS_RETURNED, MR::STATUS_ACCEPTED, MR::STATUS_IN_PROGRESS, MR::STATUS_ON_HOLD], true)) {
+        // ผู้แจ้งยกเลิกใบงานของตัวเองได้ทุกสถานะที่ยังไม่เสร็จ รวมถึงตอนที่ยังไม่มีใครรับเรื่อง (เดิมต้องรอเจ้าหน้าที่ปฏิเสธ จึงเกิดใบงานขยะ)
+        // ฝั่งเจ้าหน้าที่ cancelByTech ยังจำกัดเฉพาะงานที่รับไปแล้ว: ก่อนรับเรื่องเขามี "ไม่รับเรื่อง" กับ "ส่งกลับไปแก้ไข"
+        if (in_array($req->status, self::WITHDRAWABLE, true)) {
             return Response::allow();
         }
 

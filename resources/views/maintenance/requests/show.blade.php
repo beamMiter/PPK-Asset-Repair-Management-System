@@ -63,7 +63,7 @@
             in_array($status, [MR::STATUS_PENDING, MR::STATUS_ACKNOWLEDGED], true) && \Gate::allows('sendBack', $req);
         $canResubmit = $status === MR::STATUS_RETURNED && \Gate::allows('resubmit', $req);
         $canCancel =
-            in_array($status, [MR::STATUS_RETURNED, MR::STATUS_ACCEPTED, MR::STATUS_IN_PROGRESS, MR::STATUS_ON_HOLD], true) &&
+            in_array($status, \App\Policies\MaintenanceRequestPolicy::WITHDRAWABLE, true) &&
             \Gate::allows('cancel', $req);
 
         // what the staff said to fix: the note of the move into "returned" (the history keeps it after "[from -> to] ")

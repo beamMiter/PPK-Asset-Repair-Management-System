@@ -117,13 +117,14 @@ class RequestStatusPathTest extends TestCase
         $this->assertEqualsWithDelta(180, $due->diffInMinutes($fresh->sla_due_date), 1, 'the SLA deadline moves out by the paused time');
     }
 
-    public function test_a_reporter_cannot_cancel_a_pending_job_through_put(): void
+    public function test_a_reporter_cannot_move_a_request_with_an_edit_even_to_withdraw_it(): void
     {
         $member = User::factory()->create(['role' => 'member']);
         $req = $this->job('pending', $member);
 
-        // the same rule as the cancel button: a reporter may cancel once staff have taken the job
-        $this->putAs($member, $req, ['status' => 'cancelled'])->assertForbidden();
+        // a reporter may withdraw a request that is not finished (the cancel button, `POST …/cancel` for the app), but never with an
+        // edit: it used to answer 200 and change nothing, so it is refused and says why
+        $this->putAs($member, $req, ['status' => 'cancelled'])->assertStatus(422)->assertJsonValidationErrors('status');
         $this->assertSame('pending', $req->fresh()->status);
     }
 
