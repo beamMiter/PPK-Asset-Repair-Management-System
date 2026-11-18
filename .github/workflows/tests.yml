@@ -98,3 +98,8 @@ jobs:
 
       - name: JS tests
         run: npm run test:js
+
+      # What .docker/Dockerfile does when it makes the image. Without it a pull request that broke the build (vite.config.js, a CSS file,
+      # an import) was green here and failed only on deploy. After the suites, so a built public/build/manifest.json cannot change what they saw.
+      - name: Build the assets
+        run: npm run build
