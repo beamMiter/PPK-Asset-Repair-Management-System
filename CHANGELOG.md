@@ -143,6 +143,10 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   printed **work order** shows the team in the "เจ้าหน้าที่หลัก" cell and on the signature line when nobody is in charge, instead of
   "-" and a blank line. `GET /api/stats/maintenance/technicians` counts every person on a request's team (a person in charge with no
   team row still counts, once), cache key `v2`. Same owner rule as the dashboard chart and the ratings. `ListsAndReportsFollowTheTeamTest`.
+- **A person added to a request whose repair is done was left "working".** The team dialog gave everybody it added (or brought back) the
+  status `in_progress` whatever the request's own, so an admin correcting the team of a resolved request, the one case the policy allows,
+  left a live "กำลังทำ" row on a finished job. It dates the row by the request's status now, as the transition service always has: done
+  once the repair is done, working otherwise. Found by a random-lifecycle check. `TeamRowsTakeTheJobStatusTest`.
 - **A rating counts for everybody on the team, not for the one person the system picked.** A request has one rating ("how was the
   work"), and it was credited to one person: the lead, and the team dialog clears every lead, so after any team edit it was
   whoever had been added last. Ann accepts a job, does it and resolves it, the supervisor adds Bob afterwards, and all the stars were
