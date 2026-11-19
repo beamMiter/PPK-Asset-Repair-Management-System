@@ -1117,6 +1117,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Laravel 13.31 → 13.43 and Sanctum 4.3 → 4.5** (`composer.lock` only, nothing in `composer.json` moved): the framework, Sanctum (the API tokens),
+  `laravel/prompts` and `league/commonmark` 2.10.1 → 2.10.7, with the 42 packages they pull along (25 of them Symfony components, `guzzlehttp` 8.5,
+  `nesbot/carbon` 3.15; one major, the transitive `brick/math` 0.18 → 1.0). `composer audit` goes from 3 advisories in 2 packages to none:
+  the framework's (low, task-output injection in the `Concurrency` facade, fixed in 13.40.0; the app does not use it) and two in `league/commonmark`
+  (denial of service in markdown parsing; the app renders no markdown). The suite passes unchanged in random order with no deprecation, warning or
+  notice, and a random-lifecycle check of the repair requests is clean.
 - **Three build tools updated for their security fixes** (`package-lock.json` only; patch versions, nothing else moved): `vite` 7.3.6 → 7.3.8
   (five advisories against 7.3.6, all fixed in 7.3.7; the ones I could read are about the dev server: files outside `server.fs.allow`, and three
   in `launch-editor`), `source-map-js` 1.2.1 → 1.2.2 (an event-loop denial of service through a crafted source map) and
