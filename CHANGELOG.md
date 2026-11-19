@@ -39,6 +39,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **The tests run on every pull request.** `.github/workflows/tests.yml` runs `php artisan test` and `npm run test:js` on
   GitHub Actions for every pull request and every push to `dev`, on the Docker setup's PHP 8.4, Node 20 and MariaDB 11.
   `CiWorkflowTest` keeps the workflow in step with the Dockerfile, docker-compose and phpunit.xml.
+- **The assets are built on every pull request, and Dependabot watches the dependencies.** The test workflow now ends with `npm run build`, the
+  command `.docker/Dockerfile` runs when it makes the image: a change that broke the build (`vite.config.js`, a CSS file, an import) was green
+  and failed only on deploy. `.github/dependabot.yml` has Dependabot open the update pull requests each Monday (06:00 Thai time) for `composer`,
+  `npm` and the GitHub Actions, security fixes at once; minor and patch updates of a kind come as one pull request, at most 5 are open per
+  ecosystem, they are named `chore(deps): …`, and **every entry targets `dev`** (the default branch is `main`, where they would go otherwise).
+  Tailwind's next major is ignored: it is a rewrite of the styling, not an update. `CiWorkflowTest` and `DependabotConfigTest` keep both in shape.
 - **A message can be edited, and the bin beside it is a "⋮" menu.** The little bin beside each bubble was odd, and there was no way to correct a typo.
   Each message you may act on now has a "⋮" (no circle or box: the icon just lights up under the pointer) that opens a menu: **แก้ไข** (`rate_review`: a speech bubble with a pencil) and **ลบ** (`chat_error`: a speech bubble with a cross), icons that say "this message" rather than a plain pencil and bin. Editing turns the bubble into a
   text box in place (Enter saves, Shift+Enter is a new line - not while a Thai input method is composing - Esc cancels; saving the same words does nothing),

@@ -1,0 +1,51 @@
+# Dependabot opens the update pull requests (security fixes at once, the rest weekly); the Tests workflow checks each one like any other.
+# `target-branch: dev` on every entry is not optional: the repository's default branch is `main`, where a Dependabot pull request would
+# otherwise go. tests/Feature/Infra/DependabotConfigTest.php keeps that, and the rest of this file's shape, from drifting.
+version: 2
+
+updates:
+  - package-ecosystem: composer
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Asia/Bangkok
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Asia/Bangkok
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Tailwind 4 is a rewrite of the configuration and the class names, not an update: it is a piece of work to plan, not a weekly pull request
+      - dependency-name: tailwindcss
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Asia/Bangkok
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)

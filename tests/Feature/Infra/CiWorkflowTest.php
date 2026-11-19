@@ -29,6 +29,21 @@ class CiWorkflowTest extends TestCase
         $this->assertStringContainsString('run: npm run test:js', $yml);
     }
 
+    public function test_it_builds_the_assets_the_way_the_docker_image_does_after_both_suites(): void
+    {
+        $yml = $this->workflow();
+
+        // .docker/Dockerfile runs `npm run build`; a pull request that broke it (vite.config.js, a CSS file, an import) was green here and
+        // failed only when the image was built
+        preg_match('/^RUN (npm run build)$/m', (string) file_get_contents(base_path('.docker/Dockerfile')), $dockerBuild);
+        $this->assertSame('npm run build', $dockerBuild[1] ?? null, 'the Docker image still builds with npm run build');
+        $this->assertStringContainsString('run: npm run build', $yml);
+
+        // after the suites, not before: a built public/build/manifest.json must not change what the tests see
+        $this->assertGreaterThan(strpos($yml, 'run: npm run test:js'), strpos($yml, 'run: npm run build'));
+        $this->assertGreaterThan(strpos($yml, 'run: php artisan test'), strpos($yml, 'run: npm run build'));
+    }
+
     public function test_it_uses_the_php_node_and_database_of_the_docker_setup(): void
     {
         $yml = $this->workflow();
