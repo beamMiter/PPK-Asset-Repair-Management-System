@@ -146,6 +146,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The dashboard's status donut did not add up to the total.** "สถานะการทำงาน" had three groups and a fourth written as a hard-coded 0 under a
+  label that was not its own ("อนุมัติแล้ว"; the cancelled slice was never counted), while "ใบแจ้งซ่อมสะสมทั้งหมด" counted every request, so a request
+  that was cancelled, refused or sent back was in the total and in no slice. It has five slices now, **รอดำเนินการ, กำลังดำเนินการ,
+  ซ่อมบำรุงเสร็จสิ้น, ส่งกลับแก้ไข, ยกเลิก/ไม่รับเรื่อง**, that add up to the total, and the labels travel with the numbers from the page (the five
+  labels over four numbers had slid every slice after the missing one). Rows with the old status `completed` count as done, in the filter too.
+  `RepairDashboardCountsEveryStatusTest` creates a request of every status the model knows, so a status added later and forgotten here fails it.
 - **"ส่งกลับแก้ไข — ใกล้หมดอายุ" was offered when nothing expires.** With `REPAIR_RETURN_EXPIRES_AFTER_DAYS=0` the list's status filter still had the
   choice, and it could only show an empty list. It is offered only while the expiry rule is on.
 - **The lists, the SLA page, the printed work order and the per-person stats follow the team, not only "the person in charge".** A request
