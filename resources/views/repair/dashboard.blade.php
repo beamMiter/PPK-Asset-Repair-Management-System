@@ -180,6 +180,9 @@
 
         {{-- CONTENT --}}
         <main class="relative z-30 px-[clamp(16px,2vw,28px)] mt-[-20px] sm:mt-[-40px] md:mt-[-84px] lg:mt-[-98px]">
+            {{-- the reporter's own requests sent back to them to fix (nothing when there are none) --}}
+            <x-returned-requests-banner class="mb-[14px] shadow-sm" />
+
             {{-- FILTERS --}}
 
             {{-- OVERVIEW (Charts) --}}
