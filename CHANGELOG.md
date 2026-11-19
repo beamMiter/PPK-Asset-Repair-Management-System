@@ -1111,6 +1111,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Three build tools updated for their security fixes** (`package-lock.json` only; patch versions, nothing else moved): `vite` 7.3.6 → 7.3.8
+  (five advisories against 7.3.6, all fixed in 7.3.7; the ones I could read are about the dev server: files outside `server.fs.allow`, and three
+  in `launch-editor`), `source-map-js` 1.2.1 → 1.2.2 (an event-loop denial of service through a crafted source map) and
+  `postcss-selector-parser` 6.1.4 → 6.1.6 (CPU exhaustion on a long flat selector). All three run on a developer's machine or in CI while
+  building, not on the server. A build before and after gives byte-identical files, `npm run test:js` passes. `npm audit` goes from 15 flagged
+  packages to 13. **The 13 left cannot be fixed by upgrading:** all trace back to `picomatch` (ReDoS in extglob matching, used by Vite's file
+  watching and by Tailwind), whose advisory covers every release up to the latest, 4.0.7 (`vite` is still on the list only through it); `npm
+  audit fix --force` would only "fix" it by moving `vite` and `laravel-vite-plugin` back to older majors. They wait for a patched `picomatch`.
 - **Five Symfony packages updated for their security fixes** (`composer.lock` only; patch versions, nothing else moved):
   `http-foundation`, `http-kernel` and `routing` 8.1.6 → 8.1.11, `yaml` 8.1.6 → 8.1.11, `mime` 8.1.6 → 8.1.10. The one that
   reaches every request is a ReDoS in `HeaderUtils::split()`, which anybody could trigger with a long `Cache-Control` request
