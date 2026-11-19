@@ -136,7 +136,7 @@ paths:
                 properties:
                   message: { type: string }
                   must_change_password: { type: boolean }
-        '422': { description: The current password is wrong, or the new one is weak, unconfirmed or the same }
+        '422': { description: "The current password is wrong, or the new one is weak, unconfirmed or the same" }
   /auth/logout:
     post:
       tags: [Auth]
