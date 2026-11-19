@@ -198,6 +198,7 @@ const CHART_CANVASES = ['trendBar', 'typeDonut', 'statusDonut', 'deptBar'];
     const SECONDARY_GREEN = '#006c46';
     const ACCENT_BLUE = '#00609b';
     const DANGER_RED = '#ba1a1a';
+    const WARN_ORANGE = '#c2410c'; // sent back to be fixed
     
     const BLUE_SET = [PRIMARY_NAVY, ACCENT_BLUE, SECONDARY_GREEN, DANGER_RED, '#6b7280', '#94a3b8'];
 
@@ -336,15 +337,12 @@ const CHART_CANVASES = ['trendBar', 'typeDonut', 'statusDonut', 'deptBar'];
       // 3. Status donut
       const statusEl = safeGet('statusDonut');
       if (statusEl) {
+        // labels and numbers come together from the page (one slice each: waiting, in progress, done, sent back, cancelled/refused)
+        const statusLabels = parseJSON(statusEl.dataset.labels);
         const statusChart = new Chart(statusEl.getContext('2d'), donutConfig(
-          ['รอดำเนินการ', 'กำลังดำเนินการ', 'ซ่อมบำรุงเสร็จสิ้น', 'อนุมัติแล้ว', 'ยกเลิกการซ่อมบำรุง/ไม่รับเรื่อง'],
-          [
-            Number(statusEl.dataset.pending || 0),
-            Number(statusEl.dataset.progress || 0),
-            Number(statusEl.dataset.completed || 0),
-            Number(statusEl.dataset.cancelled || 0),
-          ],
-          [ACCENT_BLUE, PRIMARY_NAVY, SECONDARY_GREEN, DANGER_RED]
+          statusLabels,
+          parseJSON(statusEl.dataset.values).map(Number),
+          [ACCENT_BLUE, PRIMARY_NAVY, SECONDARY_GREEN, WARN_ORANGE, DANGER_RED].slice(0, statusLabels.length)
         ));
         activeCharts.push(statusChart);
         watchAndAnimate(statusEl, statusChart);

@@ -226,9 +226,8 @@
                             <div class="pl-2.5 mb-1.5 text-[13px] font-semibold text-[#0B1F3B] tracking-tight">
                                 สถานะการทำงาน</div>
                             <div class="relative h-[240px] p-2 bg-white">
-                                <canvas id="statusDonut" data-pending="{{ (int) ($stats['pending'] ?? 0) }}"
-                                    data-progress="{{ (int) ($stats['inProgress'] ?? 0) }}"
-                                    data-completed="{{ (int) ($stats['completed'] ?? 0) }}" data-cancelled="0"></canvas>
+                                <canvas id="statusDonut" data-labels='@json(array_column($statusSlices, 'label'))'
+                                    data-values='@json(array_column($statusSlices, 'value'))'></canvas>
                             </div>
                             <div class="flex gap-[22px] items-baseline px-2.5 pt-2.5">
                                 <div class="flex flex-col gap-0.5">
