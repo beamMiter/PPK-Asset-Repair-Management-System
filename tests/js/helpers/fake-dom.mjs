@@ -222,6 +222,7 @@ export function createWorld({ storage = {}, mobile = false, extraWindow = {} } =
       return mql;
     },
     confirm: () => true,
+    Date: { now: () => world.now },   // the page asks `window.Date.now()`: the virtual clock, so a test can age an answer with advance()
     console,
     ...extraWindow,
   });

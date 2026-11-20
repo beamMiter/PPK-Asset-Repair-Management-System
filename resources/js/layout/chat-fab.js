@@ -1,7 +1,8 @@
 // The floating chat button and its "กระทู้ที่มีส่วนร่วม" drawer (partials/chat-fab.blade.php, on every page of the app layout).
 // It used to be an inline <script> that Turbo Drive re-ran on every visit; each run started ANOTHER `setInterval`, so after
 // N page visits the browser polled `/chat/my-updates` N times every interval. Now the timer is created once, and each page
-// load only wires the freshly rendered button, drawer and list.
+// load only wires the freshly rendered button, drawer and list, and draws them from the last answer (a visit used to ask
+// again at once; it still does on the chat pages, where opening a thread changes what is unread, and when the answer is old).
 //
 // What the page passes in, as data attributes of #chatWidgetRoot:
 //   data-updates-url   the endpoint to poll (route chat.my_updates)
@@ -50,6 +51,9 @@ function el(doc, tag, className, text) {
     if (text !== undefined) node.textContent = text;
     return node;
 }
+
+const totalUnread = (data) => data.reduce((n, x) => n + (x.unread || 0), 0);
+const CHAT_PAGE = /^\/chat(\/|$)/;           // /chat and /chat/threads/…, not /chatty
 
 const HIDE_LABEL = 'ซ่อนจากกระทู้ที่มีส่วนร่วม';
 
@@ -116,6 +120,9 @@ export function installChatFab(win = window) {
     let page = null;        // the widget of the page on screen (its elements are replaced by every Turbo visit)
     let timer = null;
     let serverUnread = null; // null = never polled in this tab, so the first poll does not ring
+    // The last good answer of the server and when it came. A Turbo visit replaces the widget; instead of asking again at once, the new
+    // widget is drawn from this while it is younger than one interval (the timer keeps it that young). null = nothing worth reusing.
+    let last = null;
 
     try {
         const saved = win.sessionStorage.getItem(BASELINE_KEY);
@@ -177,6 +184,7 @@ export function installChatFab(win = window) {
                     },
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                last = null; // the answer we kept still lists it: the next page must ask
                 p.allItems = p.allItems.filter((x) => x.id !== it.id);
                 p.applyFilter();
                 win.showToast?.({ type: 'success', message: 'ซ่อนกระทู้นี้แล้ว ยังหาเจอในแท็บทั้งหมดของหน้าแชท' });
@@ -267,11 +275,12 @@ export function installChatFab(win = window) {
                 return;
             }
 
+            last = { at: win.Date.now(), data };
             p.firstLoaded = true;
             p.allItems = data;
             p.renderList(data);
 
-            const sumUnread = data.reduce((n, x) => n + (x.unread || 0), 0);
+            const sumUnread = totalUnread(data);
 
             // ring only when the unread total the server reports really went UP since the last poll — not on a page
             // load or when the drawer opens (the baseline survives Turbo visits in sessionStorage)
@@ -288,7 +297,21 @@ export function installChatFab(win = window) {
         }
     }
 
-    // A page was rendered: wire its widget (once per rendered widget) and load the list.
+    // Draw a freshly wired widget from an answer we already have (no request); the same steps as a poll, minus the ringing.
+    function paint(p, data) {
+        p.firstLoaded = true;
+        p.allItems = data;
+        p.renderList(data);
+        p.unreadTotal = totalUnread(data);
+        p.renderBadge();
+    }
+
+    // Opening a thread marks it read, so on the chat pages the widget must hear the server's new total rather than repeat the old one.
+    function onChatPage() {
+        return CHAT_PAGE.test(String(win.location?.pathname ?? ''));
+    }
+
+    // A page was rendered: wire its widget (once per rendered widget) and fill the list.
     function pageLoaded() {
         const root = doc.getElementById('chatWidgetRoot');
         if (!root) { page = null; return; }
@@ -296,7 +319,8 @@ export function installChatFab(win = window) {
         page = wire(root);
         if (!page) return;
 
-        poll();
+        if (last !== null && win.Date.now() - last.at < POLL_MS && !onChatPage()) paint(page, last.data);
+        else poll();
         if (timer === null) timer = win.setInterval(poll, POLL_MS); // one timer for the whole session
     }
 
