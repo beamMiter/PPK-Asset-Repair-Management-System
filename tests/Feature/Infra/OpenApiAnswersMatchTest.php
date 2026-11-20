@@ -31,8 +31,11 @@ class OpenApiAnswersMatchTest extends TestCase
     use RefreshDatabase;
 
     private array $spec;
+
     private User $admin;
+
     private User $member;
+
     private User $tech;
 
     protected function setUp(): void
@@ -70,7 +73,9 @@ class OpenApiAnswersMatchTest extends TestCase
             $part = $this->flatten($part, $value);
             $schema['properties'] = ($schema['properties'] ?? []) + ($part['properties'] ?? []);
             $schema['type'] ??= $part['type'] ?? null;
-            if (isset($part['additionalProperties'])) $schema['additionalProperties'] = $part['additionalProperties'];
+            if (isset($part['additionalProperties'])) {
+                $schema['additionalProperties'] = $part['additionalProperties'];
+            }
         }
         if (isset($schema['oneOf'])) {
             $branches = array_map(fn ($b) => $this->ref($b), $schema['oneOf']);
