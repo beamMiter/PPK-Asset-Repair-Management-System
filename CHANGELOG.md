@@ -8,6 +8,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`openapi.yaml` describes every API route, and a test keeps it so.** Twelve operations were missing, among them the three whose rules changed
+  this week: `POST /repair-requests/{id}/cancel`, `…/rating` (only after the approval, 422 before) and `…/resubmit`, with `GET …/my-jobs`,
+  `…/pending/evaluations`, `GET /user`, `PATCH /assets/{id}`, `GET /chat/my-updates`, `POST /threads/{id}/lock|unlock` and the two removed
+  attachment routes (marked deprecated: they answer 410). Each was written from what the route really answers (probed), not from its name.
+  `OpenApiMatchesRoutesTest`: every route is documented, nothing documented is gone, every operation has a tag, a summary and answers, every
+  `$ref` resolves, and the file parses as strict YAML.
 - **A banner tells a reporter their requests were sent back.** On the dashboard and above "รายการงานซ่อม" a reporter with requests sent back to them
   ("ส่งกลับแก้ไข") sees "มีใบงานของคุณถูกส่งกลับให้แก้ไข N รายการ", how many are close to being cancelled automatically (red, with the days
   left on the soonest) and links to the list already filtered ("ดูใบงานที่ต้องแก้ไข", "เฉพาะที่ใกล้หมดอายุ"). It counts only what *they* reported (an admin
@@ -152,6 +158,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   ซ่อมบำรุงเสร็จสิ้น, ส่งกลับแก้ไข, ยกเลิก/ไม่รับเรื่อง**, that add up to the total, and the labels travel with the numbers from the page (the five
   labels over four numbers had slid every slice after the missing one). Rows with the old status `completed` count as done, in the filter too.
   `RepairDashboardCountsEveryStatusTest` creates a request of every status the model knows, so a status added later and forgotten here fails it.
+- **A line of `openapi.yaml` was read wrongly by a strict YAML parser.** `'422': { description: The current password is wrong, or the new one is
+  weak, … }` has commas in an unquoted flow value: it ended at the first one and the rest became keys with no value. Quoted.
 - **"ส่งกลับแก้ไข — ใกล้หมดอายุ" was offered when nothing expires.** With `REPAIR_RETURN_EXPIRES_AFTER_DAYS=0` the list's status filter still had the
   choice, and it could only show an empty list. It is offered only while the expiry rule is on.
 - **The lists, the SLA page, the printed work order and the per-person stats follow the team, not only "the person in charge".** A request
@@ -1123,6 +1131,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Laravel 13.31 → 13.43 and Sanctum 4.3 → 4.5** (`composer.lock` only, nothing in `composer.json` moved): the framework, Sanctum (the API tokens),
+  `laravel/prompts` and `league/commonmark` 2.10.1 → 2.10.7, with the 42 packages they pull along (25 of them Symfony components, `guzzlehttp` 8.5,
+  `nesbot/carbon` 3.15; one major, the transitive `brick/math` 0.18 → 1.0). `composer audit` goes from 3 advisories in 2 packages to none:
+  the framework's (low, task-output injection in the `Concurrency` facade, fixed in 13.40.0; the app does not use it) and two in `league/commonmark`
+  (denial of service in markdown parsing; the app renders no markdown). The suite passes unchanged in random order with no deprecation, warning or
+  notice, and a random-lifecycle check of the repair requests is clean.
 - **Three build tools updated for their security fixes** (`package-lock.json` only; patch versions, nothing else moved): `vite` 7.3.6 → 7.3.8
   (five advisories against 7.3.6, all fixed in 7.3.7; the ones I could read are about the dev server: files outside `server.fs.allow`, and three
   in `launch-editor`), `source-map-js` 1.2.1 → 1.2.2 (an event-loop denial of service through a crafted source map) and

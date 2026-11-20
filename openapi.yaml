@@ -136,7 +136,7 @@ paths:
                 properties:
                   message: { type: string }
                   must_change_password: { type: boolean }
-        '422': { description: The current password is wrong, or the new one is weak, unconfirmed or the same }
+        '422': { description: "The current password is wrong, or the new one is weak, unconfirmed or the same" }
   /auth/logout:
     post:
       tags: [Auth]
@@ -261,6 +261,28 @@ paths:
             schema: { $ref: '#/components/schemas/AssetUpdate' }
       responses:
         '200': { description: Updated }
+    patch:
+      tags: [Assets]
+      security: [{ bearerAuth: [] }]
+      summary: Update asset (same route and rules as PUT)
+      description: "`PUT` and `PATCH` are one route: send the fields to change."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssetUpdate' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssetWrapper' }
+        '403': { description: "Not an admin, supervisor or repair-team member" }
+        '422': { description: Invalid input }
     delete:
       tags: [Assets]
       security: [{ bearerAuth: [] }]
@@ -398,6 +420,210 @@ paths:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/MaintenanceLog' }
+  /user:
+    get:
+      tags: [Auth]
+      security: [{ bearerAuth: [] }]
+      summary: The signed-in user's record
+      description: |
+        The whole User model minus its hidden fields (no password, remember_token or citizen_id). `/auth/me` is the short profile
+        (it includes the caller's own citizen_id) plus the token's abilities.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+  /repair-requests/my-jobs:
+    get:
+      tags: [Maintenance]
+      security: [{ bearerAuth: [] }]
+      summary: My jobs (requests I lead or am assigned to)
+      description: |
+        Requests where the caller leads the team or is assigned (not one removed from the job). Staff only: admin, supervisor and the
+        repair team; a member gets 403. Declared above `/repair-requests/{id}`, which would otherwise take "my-jobs" for an id.
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+          description: Request number or title
+        - in: query
+          name: status
+          schema: { type: string }
+          description: A status. Omitted = every status; `all` = every status except closed.
+        - in: query
+          name: page
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK (a Laravel paginator, 20 a page, under `data`)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      current_page: { type: integer }
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/MaintenanceRequest' }
+                      last_page: { type: integer }
+                      per_page: { type: integer }
+                      total: { type: integer }
+        '403': { description: The caller is a member }
+  /repair-requests/pending/evaluations:
+    get:
+      tags: [Maintenance]
+      security: [{ bearerAuth: [] }]
+      summary: My requests waiting for a rating
+      description: |
+        Requests I reported that I have approved (status `closed`), have not rated yet, and that are still inside the 30 days
+        after the approval. A request that is only `resolved` is not listed: the rating comes after the approval.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/MaintenanceRequest' }
+  /repair-requests/{id}/cancel:
+    post:
+      tags: [Maintenance]
+      security: [{ bearerAuth: [] }]
+      summary: Cancel (withdraw) a request
+      description: |
+        The reporter cancels their own request at any time before it is finished: pending, acknowledged, returned, accepted, in progress
+        or on hold. Admin and supervisor may do it for any unfinished request, and staff assigned to the request in the statuses the policy
+        allows (`MaintenanceRequestPolicy::cancelByTech`). Any other member, and a request that is already resolved, closed, cancelled or
+        rejected, gets 403. This is the only way for a reporter to change a status: `PUT /repair-requests/{id}`
+        with a `status` is refused with 422 for them.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cancel_reason: { type: string, maxLength: 2000, description: "Kept in the history; \"ยกเลิกโดยผู้ใช้งาน\" when empty" }
+      responses:
+        '200':
+          description: Cancelled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionResult' }
+        '403':
+          description: Not allowed (not the reporter or an administrator, or the request is finished)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionResult' }
+        '422': { description: "cancel_reason is longer than 2,000 characters" }
+  /repair-requests/{id}/resubmit:
+    post:
+      tags: [Maintenance]
+      security: [{ bearerAuth: [] }]
+      summary: Send a request again after fixing it
+      description: |
+        For a request the staff sent back (`returned`, via `POST …/transition` with `status=returned` and a `note` saying what to fix): the
+        reporter, or an admin or supervisor for them, sends it again and it becomes `pending` with the same number and history. A request
+        that is not `returned`, or a caller who is not allowed, gets 403. A request left `returned` for 14 days (`REPAIR_RETURN_EXPIRES_AFTER_DAYS`)
+        is cancelled by the nightly sweep.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Sent again
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionResult' }
+        '403':
+          description: Not the reporter, or the request is not `returned`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionResult' }
+  /repair-requests/{id}/rating:
+    post:
+      tags: [Maintenance]
+      security: [{ bearerAuth: [] }]
+      summary: Rate a finished request
+      description: |
+        One score for the whole job, counted for every person on its team. Only the reporter may rate, only after they have approved the
+        request (`closed`), once, and within 30 days of the approval. Rating closes nothing: approving is a separate step.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                score: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string, maxLength: 1000, description: "Required when the score is 1 or 2" }
+              required: [score]
+      responses:
+        '201':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: integer }
+                      maintenance_request_id: { type: integer }
+                      rater_id: { type: integer }
+                      technician_id: { type: integer, description: The lead the score is tied to }
+                      score: { type: integer }
+                      comment: { type: string, nullable: true }
+        '403': { description: The caller did not report this request }
+        '409': { description: The request has been rated already }
+        '422': { description: "Not closed yet, past the 30 days, no lead to tie the score to, or invalid input (1-2 stars need a comment)" }
+  /attachments:
+    post:
+      tags: [Maintenance]
+      deprecated: true
+      security: [{ bearerAuth: [] }]
+      summary: Removed (always 410)
+      description: |
+        Kept so an old client gets a clear answer instead of 404. Attach files when reporting (`POST /repair-requests`, `files[]`);
+        add or remove files of an existing request with the web routes `POST|DELETE /maintenance/requests/{req}/attachments`.
+        A file is opened with `GET /attachments/{id}` (outside `/api`; the `url` of the attachment, bearer token accepted).
+      responses:
+        '410': { description: "Gone: {error: deprecated, message}" }
+  /attachments/{id}:
+    delete:
+      tags: [Maintenance]
+      deprecated: true
+      security: [{ bearerAuth: [] }]
+      summary: Removed (410 for an attachment that exists)
+      description: See `POST /attachments`.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '410': { description: "Gone: {error: deprecated, message}" }
+        '404': { description: No attachment has this id }
   /stats/summary:
     get:
       tags: [Stats]
@@ -592,6 +818,58 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ChatThreadDetail' }
+  /chat/my-updates:
+    get:
+      tags: [Chat]
+      security: [{ bearerAuth: [] }]
+      summary: The threads I started or wrote in, with what is unread
+      description: The 30 most recent, as a plain array (not wrapped in `data`). It is what the chat widget lists.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ChatUpdate' }
+  /threads/{id}/lock:
+    post:
+      tags: [Chat]
+      security: [{ bearerAuth: [] }]
+      summary: Lock a thread
+      description: |
+        Admin and the repair team (IT support, network, programmer, technician) only; supervisor and member get 403. A locked thread
+        takes no new messages. Locking a locked thread answers 200 again.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Locked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatThreadState' }
+        '403': { description: The caller may not lock threads }
+  /threads/{id}/unlock:
+    post:
+      tags: [Chat]
+      security: [{ bearerAuth: [] }]
+      summary: Unlock a thread
+      description: Same people as `lock`. Unlocking an open thread answers 200 again.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Unlocked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatThreadState' }
+        '403': { description: The caller may not unlock threads }
   /threads/{id}/hide:
     post:
       tags: [Chat]
@@ -912,3 +1190,30 @@ components:
         id: { type: integer }
         name: { type: string, nullable: true }
         count: { type: integer }
+    ActionResult:
+      type: object
+      description: The answer of a status action (cancel, resubmit, ...), and of a refusal of one
+      properties:
+        message: { type: string }
+        toast:
+          type: object
+          properties:
+            type: { type: string, enum: [success, warning, error, info] }
+            message: { type: string }
+    ChatThreadState:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        is_locked: { type: boolean }
+        created_at: { type: string }
+    ChatUpdate:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        show_url: { type: string }
+        unread: { type: integer }
+        last_user_name: { type: string, nullable: true }
+        last_body: { type: string, nullable: true }
+        last_created_at: { type: string, nullable: true }
