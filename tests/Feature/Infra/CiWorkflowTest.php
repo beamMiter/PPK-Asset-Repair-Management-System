@@ -52,7 +52,9 @@ class CiWorkflowTest extends TestCase
         // bury every review; the old files are brought in line one at a time, by whoever next edits them
         $this->assertStringContainsString('vendor/bin/pint --test --diff="origin/$BASE_REF"', $yml);
         $this->assertStringContainsString('BASE_REF: ${{ github.base_ref }}', $yml, 'the branch name goes through env, not into the script');
-        $this->assertStringContainsString('git fetch --no-tags --depth=1 origin "$BASE_REF"', $yml, 'the checkout is one commit deep: the base has to be fetched to be compared with');
+        // `pint --diff=origin/dev` asks git for `origin/dev...HEAD`, which needs the merge base: on the one-commit checkout it finds none and Pint
+        // answers "the [--diff] option is only available when using Git" (the first run of this check did)
+        $this->assertMatchesRegularExpression('/uses: actions\/checkout@v4\s*\n\s+with:\s*\n(?:\s+#.*\n)*\s+fetch-depth: 0\b/', $yml, 'the whole history is checked out');
         $this->assertStringContainsString("if: github.event_name == 'pull_request'", $yml, 'a push has no base to compare with');
 
         // it needs vendor/ (so after composer install) and is quick (so before the suites)

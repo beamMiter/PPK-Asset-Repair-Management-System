@@ -55,6 +55,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # the whole history: `pint --diff` compares with the merge base of the pull request and its base branch, which a one-commit checkout lacks
+          fetch-depth: 0
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -96,9 +99,7 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
-        run: |
-          git fetch --no-tags --depth=1 origin "$BASE_REF"
-          vendor/bin/pint --test --diff="origin/$BASE_REF"
+        run: vendor/bin/pint --test --diff="origin/$BASE_REF"
 
       # a PHP test reads node_modules (Tailwind's preflight), and the JS tests need esbuild
       - name: Node dependencies
