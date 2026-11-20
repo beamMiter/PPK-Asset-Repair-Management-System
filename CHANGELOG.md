@@ -8,6 +8,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`openapi.yaml` describes every API route, and a test keeps it so.** Twelve operations were missing, among them the three whose rules changed
+  this week: `POST /repair-requests/{id}/cancel`, `…/rating` (only after the approval, 422 before) and `…/resubmit`, with `GET …/my-jobs`,
+  `…/pending/evaluations`, `GET /user`, `PATCH /assets/{id}`, `GET /chat/my-updates`, `POST /threads/{id}/lock|unlock` and the two removed
+  attachment routes (marked deprecated: they answer 410). Each was written from what the route really answers (probed), not from its name.
+  `OpenApiMatchesRoutesTest`: every route is documented, nothing documented is gone, every operation has a tag, a summary and answers, every
+  `$ref` resolves, and the file parses as strict YAML.
 - **A banner tells a reporter their requests were sent back.** On the dashboard and above "รายการงานซ่อม" a reporter with requests sent back to them
   ("ส่งกลับแก้ไข") sees "มีใบงานของคุณถูกส่งกลับให้แก้ไข N รายการ", how many are close to being cancelled automatically (red, with the days
   left on the soonest) and links to the list already filtered ("ดูใบงานที่ต้องแก้ไข", "เฉพาะที่ใกล้หมดอายุ"). It counts only what *they* reported (an admin
@@ -146,6 +152,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A line of `openapi.yaml` was read wrongly by a strict YAML parser.** `'422': { description: The current password is wrong, or the new one is
+  weak, … }` has commas in an unquoted flow value: it ended at the first one and the rest became keys with no value. Quoted.
 - **"ส่งกลับแก้ไข — ใกล้หมดอายุ" was offered when nothing expires.** With `REPAIR_RETURN_EXPIRES_AFTER_DAYS=0` the list's status filter still had the
   choice, and it could only show an empty list. It is offered only while the expiry rule is on.
 - **The lists, the SLA page, the printed work order and the per-person stats follow the team, not only "the person in charge".** A request
