@@ -1453,9 +1453,11 @@ components:
           additionalProperties:
             type: object
             properties:
-              status: { type: string }
-              latency_ms: { type: number }
-              reason: { type: string }
+              status: { type: string, enum: [ok, error, unexpected, skipped], description: "`skipped` = the check could not run here (no Redis extension); `unexpected` = Redis answered something other than PONG" }
+              latency_ms: { type: number, description: The database check only }
+              reply: { type: string, description: What Redis answered to PING }
+              reason: { type: string, description: Why a check was skipped }
+              error: { type: string, description: "The failure's own message (database or Redis)" }
         meta:
           type: object
           properties:
