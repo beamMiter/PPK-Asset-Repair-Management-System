@@ -93,11 +93,69 @@ test('one poll timer for the whole session: N visits still mean one poll per int
   for (let i = 0; i < 10; i++) await world.go();
   assert.equal(world.pendingTimers(), 1, 'a single interval, however many pages were opened');
 
-  const before = world.fetches.length;                 // the first load and each visit polled once
-  assert.equal(before, 11);
+  const before = world.fetches.length;                 // the first load polled once; the visits drew from its answer (next section)
+  assert.equal(before, 1);
   world.advance(Fab.POLL_MS);
   await settle();
   assert.equal(world.fetches.length - before, 1);
+});
+
+// ── a visit does not ask again ─────────────────────────────────────────────────────────────────────────────────────
+// Every Turbo visit replaces the widget, and used to ask /chat/my-updates for its list at once: a request per page opened, on top of the timer.
+// Now a visit draws the new widget from the last answer while that is younger than one interval (the timer keeps it that young).
+test('a visit within the interval draws its list and badge from the last answer and does not ask the server again', async () => {
+  const world = boot({ answers: [[item({ id: 1, unread: 2 }), item({ id: 2, unread: 3 })]] });
+  await settle();
+  assert.equal(world.fetches.length, 1);
+  for (let i = 0; i < 5; i++) {
+    world.advance(1000);
+    const page = await world.go();
+    assert.equal(world.fetches.length, 1, `visit ${i + 1}`);
+    assert.equal(page.list.children.length, 2, 'the new page has its list at once');
+    assert.equal(page.badge.textContent, '5');
+    assert.ok(!page.badge.classList.contains('hidden'));
+  }
+});
+
+test('an answer a whole interval old is not reused: the visit asks again (a timer that never ran, a sleeping laptop)', async () => {
+  const world = boot({ answers: [[item({ unread: 1 })], [item({ unread: 4 })]] });
+  await settle();
+  world.timers.length = 0;                              // the interval did not fire
+  world.advance(Fab.POLL_MS - 1);
+  await world.go();
+  assert.equal(world.fetches.length, 1, 'one millisecond short of the interval: still the same answer');
+  world.advance(1);
+  const page = await world.go();
+  assert.equal(world.fetches.length, 2);
+  assert.equal(page.badge.textContent, '4');
+});
+
+test('on a chat page the visit always asks: opening a thread reads it, so the badge must not stay on the old answer', async () => {
+  const world = boot({ answers: [[item({ unread: 2 })], [item({ unread: 0 })]] });
+  await settle();
+  world.win.location.pathname = '/chat/threads/1';
+  const page = await world.go();
+  assert.equal(world.fetches.length, 2);
+  assert.ok(page.badge.classList.contains('hidden'), 'the thread is read: no badge');
+
+  world.win.location.pathname = '/chat';
+  await world.go();
+  assert.equal(world.fetches.length, 3, 'the chat index too');
+
+  world.win.location.pathname = '/chatty-things';       // not a chat page
+  await world.go();
+  assert.equal(world.fetches.length, 3);
+  world.win.location.pathname = '/dashboard';
+  await world.go();
+  assert.equal(world.fetches.length, 3, 'and the pages after it use what the chat page just heard');
+});
+
+test('a failed poll is not remembered: the next visit asks again', async () => {
+  const world = boot({ answers: [500, [item({ title: 'กลับมาแล้ว' })]] });
+  await settle();
+  await world.go();
+  assert.equal(world.fetches.length, 2);
+  assert.equal(rows(world).length, 1);
 });
 
 test('the widget polls every 30 seconds, and asks the endpoint the page names', async () => {
@@ -429,6 +487,17 @@ test('a hidden thread does not come back on the next poll (the server no longer 
   hideButton(world, 0).dispatch('click'); await settle();
   world.queue.splice(0, world.queue.length, [hideable({ id: 2 })]);
   world.advance(Fab.POLL_MS); await settle();
+  assert.equal(rows(world).length, 1);
+  assert.equal(rows(world)[0].href, '/chat/threads/2');
+});
+
+test('after a thread is hidden the next visit asks, so it is not drawn again from the answer that still listed it', async () => {
+  const world = bootHideable([[hideable({ id: 1 }), hideable({ id: 2 })], { hidden: true }, [hideable({ id: 2 })]]);
+  await settle();
+  hideButton(world, 0).dispatch('click'); await settle();
+  const before = world.fetches.length;
+  await world.go();
+  assert.equal(world.fetches.length, before + 1);
   assert.equal(rows(world).length, 1);
   assert.equal(rows(world)[0].href, '/chat/threads/2');
 });

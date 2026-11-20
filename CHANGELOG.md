@@ -160,6 +160,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   sorts, `thread_quota` and the edited-message answer were missing. Each is written from what the call really answers now.
   `OpenApiAnswersMatchTest` calls the main operations with real records and holds every answer to its schema: a status the document does not
   list, a key it does not name, or a value of another type fails it (against the old document all five of its cases fail).
+- **Every page you opened asked the server for the chat list again.** The floating chat button asks `/chat/my-updates` every 30 seconds, and
+  on top of that each Turbo visit (a new page) asked once more, because the new page's button had to be filled. A visit now draws its list and
+  badge from the last answer while it is under 30 seconds old, so opening pages costs no request. It still asks on the chat pages (opening a
+  thread marks it read, so the badge must not repeat the old total), after hiding a thread (the kept answer still lists it), after a failed
+  poll, and when the answer is a whole interval old. Ringing is unchanged: it only follows a poll. Five cases in `chat-fab.test.mjs`.
 - **The dashboard's status donut did not add up to the total.** "สถานะการทำงาน" had three groups and a fourth written as a hard-coded 0 under a
   label that was not its own ("อนุมัติแล้ว"; the cancelled slice was never counted), while "ใบแจ้งซ่อมสะสมทั้งหมด" counted every request, so a request
   that was cancelled, refused or sent back was in the total and in no slice. It has five slices now, **รอดำเนินการ, กำลังดำเนินการ,
