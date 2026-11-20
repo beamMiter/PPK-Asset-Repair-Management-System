@@ -49,11 +49,24 @@ paths:
                 type: object
                 properties:
                   token: { type: string }
-                  token_type: { type: string }
+                  token_type: { type: string, description: Always Bearer }
                   user:
-                    $ref: '#/components/schemas/User'
-        '401': { description: "invalid_credentials (a wrong password and an unknown citizen id read the same)" }
-        '403': { description: "account_suspended (only shown when the password was right)" }
+                    $ref: '#/components/schemas/LoginUser'
+        '401':
+          description: "invalid_credentials (a wrong password and an unknown citizen id read the same)"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: "account_suspended (only shown when the password was right)"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: "citizen_id or password is missing or not well formed (`errors` names the field)"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
         '429':
           description: "too_many_attempts (see Retry-After) or RATE_LIMITED"
           headers:
@@ -106,7 +119,16 @@ paths:
           required: true
           schema: { type: integer }
       responses:
-        '200': { description: Revoked }
+        '200':
+          description: Revoked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '404':
+          description: "Not a token of this account"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /auth/password:
     put:
       tags: [Auth]
@@ -136,7 +158,11 @@ paths:
                 properties:
                   message: { type: string }
                   must_change_password: { type: boolean }
-        '422': { description: "The current password is wrong, or the new one is weak, unconfirmed or the same" }
+        '422':
+          description: "The current password is wrong, or the new one is weak, unconfirmed or the same"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
   /auth/logout:
     post:
       tags: [Auth]
@@ -144,14 +170,22 @@ paths:
       summary: Logout (revoke current token)
       description: With a bearer token that token is revoked; called with the browser's own session the session ends.
       responses:
-        '200': { description: Logged out }
+        '200':
+          description: "Logged out"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
   /auth/logout-all:
     post:
       tags: [Auth]
       security: [{ bearerAuth: [] }]
       summary: Logout and revoke all tokens
       responses:
-        '200': { description: Logged out all }
+        '200':
+          description: "Logged out everywhere"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
   /auth/password/email:
     post:
       tags: [Auth]
@@ -169,8 +203,16 @@ paths:
                 email: { type: string, format: email }
               required: [email]
       responses:
-        '200': { description: "Accepted — \"if this address has an account, a link is on its way\"" }
-        '422': { description: Not a well-formed address }
+        '200':
+          description: "Accepted: 'if this address has an account, a link is on its way'"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '422':
+          description: "Not a well-formed address"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
   /auth/password/reset:
     post:
       tags: [Auth]
@@ -191,45 +233,95 @@ paths:
                 password_confirmation: { type: string }
               required: [email,token,password,password_confirmation]
       responses:
-        '200': { description: Reset OK }
-        '400': { description: "password_reset_failed" }
-        '422': { description: Password does not meet the rule }
+        '200':
+          description: "Reset OK"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '400':
+          description: "password_reset_failed"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: "The password does not meet the rule, or is not confirmed"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
   /assets:
     get:
       tags: [Assets]
       security: [{ bearerAuth: [] }]
       summary: List assets (paginated)
+      description: Every signed-in person may list assets. Deleted assets are left out.
       parameters:
         - in: query
           name: per_page
-          schema: { type: integer, minimum: 1, maximum: 100 }
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
         - in: query
           name: q
           schema: { type: string }
+          description: Matches the code, name, serial number and the like; the best matches come first
+        - in: query
+          name: status
+          schema: { type: string, enum: [active, in_repair, disposed] }
+        - in: query
+          name: type
+          schema: { type: string }
+        - in: query
+          name: category_id
+          schema: { type: integer }
+        - in: query
+          name: department_id
+          schema: { type: integer }
+        - in: query
+          name: location
+          schema: { type: string }
+        - in: query
+          name: sort_by
+          schema: { type: string, enum: [id, asset_code, name, purchase_date, warranty_expire, status, created_at], default: id }
+        - in: query
+          name: sort_dir
+          schema: { type: string, enum: [asc, desc] }
+        - in: query
+          name: page
+          schema: { type: integer }
       responses:
         '200':
           description: OK
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items: { $ref: '#/components/schemas/Asset' }
-                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+              schema: { $ref: '#/components/schemas/AssetList' }
     post:
       tags: [Assets]
       security: [{ bearerAuth: [] }]
       summary: Create asset
+      description: "Admin, supervisor and the repair team. Send JSON, or multipart/form-data to attach `hero_image` and `files`."
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/AssetCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssetCreate'
       responses:
-        '201': { description: Created }
+        '201':
+          description: "Created: `{message: created, toast, data}`"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssetResult' }
+        '403':
+          description: "Not an admin, supervisor or repair-team member"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: "Invalid input (`errors` names the fields). A code, serial number or HIS number that belongs to a deleted asset is refused too"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
   /assets/{id}:
     get:
       tags: [Assets]
@@ -246,10 +338,16 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AssetWrapper' }
+        '404':
+          description: "No such asset (or it was deleted)"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     put:
       tags: [Assets]
       security: [{ bearerAuth: [] }]
       summary: Update asset
+      description: "`PUT` and `PATCH` are one route: send the fields to change. Admin, supervisor and the repair team."
       parameters:
         - in: path
           name: id
@@ -259,8 +357,29 @@ paths:
         content:
           application/json:
             schema: { $ref: '#/components/schemas/AssetUpdate' }
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/AssetUpdate' }
       responses:
-        '200': { description: Updated }
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssetResult' }
+        '403':
+          description: "Not an admin, supervisor or repair-team member"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: "No such asset"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: "Invalid input, or putting an asset back to `active` while a repair is still open"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
     patch:
       tags: [Assets]
       security: [{ bearerAuth: [] }]
@@ -275,80 +394,124 @@ paths:
         content:
           application/json:
             schema: { $ref: '#/components/schemas/AssetUpdate' }
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/AssetUpdate' }
       responses:
         '200':
           description: Updated
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AssetWrapper' }
-        '403': { description: "Not an admin, supervisor or repair-team member" }
-        '422': { description: Invalid input }
+              schema: { $ref: '#/components/schemas/AssetResult' }
+        '403':
+          description: "Not an admin, supervisor or repair-team member"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: "No such asset"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: "Invalid input, or putting an asset back to `active` while a repair is still open"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
     delete:
       tags: [Assets]
       security: [{ bearerAuth: [] }]
       summary: Delete asset
+      description: "Not while a repair of it is still open (409)."
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: integer }
       responses:
-        '200': { description: Deleted }
+        '200':
+          description: "Deleted: `{message: deleted, toast}`"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActionResult' }
+        '403':
+          description: "Not allowed to delete assets"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: "No such asset"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: "The asset still has a repair that is not finished"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /repair-requests:
     get:
       tags: [Maintenance]
       security: [{ bearerAuth: [] }]
       summary: List maintenance requests
+      description: |
+        20 a page. A member sees only the requests they reported; admin, supervisor and the repair team see all of them.
+        The order is kept per person on the web; over the API send `sort_by` / `sort_dir` each time.
       parameters:
         - in: query
           name: status
-          schema: { type: string }
-        - in: query
-          name: priority
-          schema: { type: string }
+          schema: { type: string, enum: [pending, acknowledged, accepted, in_progress, on_hold, resolved, closed, cancelled, rejected, returned, completed, returned_expiring] }
+          description: "`returned_expiring` = sent back to the reporter and within the last 3 days before the automatic cancel"
         - in: query
           name: q
           schema: { type: string }
+          description: Request number, title and the like
+        - in: query
+          name: asset_id
+          schema: { type: integer }
+        - in: query
+          name: sort_by
+          schema: { type: string, enum: [request_no, id, request_date] }
+        - in: query
+          name: sort_dir
+          schema: { type: string, enum: [asc, desc] }
+        - in: query
+          name: page
+          schema: { type: integer }
       responses:
         '200':
           description: OK
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items: { $ref: '#/components/schemas/MaintenanceRequest' }
-                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+              schema: { $ref: '#/components/schemas/MaintenanceRequestList' }
     post:
       tags: [Maintenance]
       security: [{ bearerAuth: [] }]
       summary: Create maintenance request
+      description: "Every signed-in person may report. Send multipart/form-data to attach files (up to 3), or JSON without them. There is no `priority`."
       requestBody:
         required: true
         content:
           multipart/form-data:
-            schema:
-              type: object
-              properties:
-                title: { type: string }
-                priority: { type: string }
-                description: { type: string }
-                asset_id: { type: integer, nullable: true }
-                files:
-                  type: array
-                  items:
-                    type: string
-                    format: binary
-              required: [title,priority]
+            schema: { $ref: '#/components/schemas/MaintenanceRequestCreate' }
+          application/json:
+            schema: { $ref: '#/components/schemas/MaintenanceRequestCreate' }
       responses:
-        '201': { description: Created }
+        '201':
+          description: "Created: the new request with its `type`, `asset` and `attachments`, and a toast"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MaintenanceRequestResult' }
+        '422':
+          description: "Invalid input: `message` is the first error, `errors` names the fields"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
   /repair-requests/{id}:
     get:
       tags: [Maintenance]
       security: [{ bearerAuth: [] }]
       summary: Show maintenance request
+      description: "Admin and supervisor, the reporter, the people assigned, and the repair team while the request waits to be acknowledged or taken. Everyone else gets 403."
       parameters:
         - in: path
           name: id
@@ -360,10 +523,26 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MaintenanceRequestWrapper' }
+        '403':
+          description: "The caller may not see this request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: "No such request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     put:
       tags: [Maintenance]
       security: [{ bearerAuth: [] }]
       summary: Update maintenance request
+      description: |
+        Who may edit: admin and supervisor always; the people assigned while the request is accepted, in progress or on hold; the reporter
+        while it is pending or acknowledged and nobody is in charge yet. A finished request (resolved, closed, cancelled, rejected) is
+        closed to everyone but admin and supervisor. `technician_id`, `user_ids` (the team) and `status` are for staff; a reporter who
+        sends `status` gets 422 (they cancel with `POST .../cancel`). A `status` here is a real transition, with the same permission as
+        the button and the same rules as `POST .../transition`.
       parameters:
         - in: path
           name: id
@@ -374,13 +553,45 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/MaintenanceRequestUpdate'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaintenanceRequestUpdate'
       responses:
-        '200': { description: Updated }
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MaintenanceRequestResult' }
+        '403':
+          description: "The caller may not edit this request, or not make that status move"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: "No such request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: "The status move is not one the state map allows; nothing is saved"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: "Invalid input (`errors` names the fields)"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
   /repair-requests/{id}/transition:
     post:
       tags: [Maintenance]
       security: [{ bearerAuth: [] }]
       summary: Transition maintenance request status
+      description: |
+        Admin, supervisor, or a person assigned to the request; anyone else gets 403. (The web's acknowledge, accept and reject buttons are
+        open to every staff member; this endpoint is not, so staff who are not on the request cannot take it from here.) The move also needs
+        the permission of that step's button (only the reporter, or an admin, closes). A move the state map does not allow is 409; the
+        reasons that a step needs (`note` for on hold and for sending back) are checked there too.
       parameters:
         - in: path
           name: id
@@ -393,17 +604,42 @@ paths:
             schema:
               type: object
               properties:
-                status: { type: string }
-                note: { type: string }
-                technician_id: { type: integer }
+                status: { type: string, enum: [pending, acknowledged, accepted, in_progress, on_hold, resolved, closed, cancelled, rejected, returned, completed] }
+                note: { type: string, maxLength: 2000, description: "The reason; required for some steps (on hold, sending back)" }
+                technician_id: { type: integer, description: Staff only }
               required: [status]
       responses:
-        '200': { description: Transitioned }
+        '200':
+          description: "Transitioned: the request (with `technician` and `assignments`) and a toast"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MaintenanceRequestResult' }
+        '403':
+          description: "Not allowed to move this request, or not to that status"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: "No such request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: "The state map does not allow this move, or a required reason is missing (`message`, `toast`)"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: "`status` is missing or not a status (`errors`, `toast`)"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
   /repair-requests/{id}/logs:
     get:
       tags: [Maintenance]
       security: [{ bearerAuth: [] }]
       summary: List maintenance request logs
+      description: "Newest first, 20 a page; a Laravel paginator, not wrapped in `data`."
       parameters:
         - in: path
           name: id
@@ -414,12 +650,17 @@ paths:
           description: OK
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items: { $ref: '#/components/schemas/MaintenanceLog' }
+              schema: { $ref: '#/components/schemas/MaintenanceLogPage' }
+        '403':
+          description: "The caller may not see this request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: "No such request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /user:
     get:
       tags: [Auth]
@@ -433,7 +674,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
+              schema: { $ref: '#/components/schemas/UserRecord' }
   /repair-requests/my-jobs:
     get:
       tags: [Maintenance]
@@ -463,15 +704,13 @@ paths:
                 type: object
                 properties:
                   data:
-                    type: object
-                    properties:
-                      current_page: { type: integer }
-                      data:
-                        type: array
-                        items: { $ref: '#/components/schemas/MaintenanceRequest' }
-                      last_page: { type: integer }
-                      per_page: { type: integer }
-                      total: { type: integer }
+                    allOf:
+                      - $ref: '#/components/schemas/Paginator'
+                      - type: object
+                        properties:
+                          data:
+                            type: array
+                            items: { $ref: '#/components/schemas/MaintenanceRequest' }
         '403': { description: The caller is a member }
   /repair-requests/pending/evaluations:
     get:
@@ -629,6 +868,10 @@ paths:
       tags: [Stats]
       security: [{ bearerAuth: [] }]
       summary: Dashboard summary statistics
+      description: |
+        System-wide numbers, the same for everyone, cached for 60 seconds; deleted requests and assets are not counted.
+        `requests_open` = pending, acknowledged, accepted, in progress, on hold; `requests_closed` = resolved, closed, cancelled, rejected.
+        A request that is `returned` (sent back to the reporter) or has the old status `completed` is in neither count.
       responses:
         '200':
           description: Stats summary
@@ -640,14 +883,8 @@ paths:
                   assets_total: { type: integer }
                   requests_open: { type: integer }
                   requests_closed: { type: integer }
-                  priority_counts:
-                    type: object
-                    properties:
-                      low: { type: integer }
-                      medium: { type: integer }
-                      high: { type: integer }
-                      urgent: { type: integer }
                   recent_daily:
+                    description: The last 7 days, oldest first; a day with no request is 0
                     type: array
                     items:
                       type: object
@@ -675,6 +912,10 @@ paths:
       tags: [Stats]
       security: [{ bearerAuth: [] }]
       summary: Technician performance summary
+      description: |
+        Per person on a request's team, at most 50. Everyone on the team of a request counts (a person in charge with no team row once),
+        so the rows add up to more than the number of requests. Managers only (the `maintenance-type-manage` ability): it is individual
+        performance, not a total.
       responses:
         '200':
           description: OK
@@ -686,6 +927,11 @@ paths:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/TechnicianSummary' }
+        '403':
+          description: "The caller is not a manager"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /stats/assets/by-department:
     get:
       tags: [Stats]
@@ -707,57 +953,172 @@ paths:
       tags: [Meta]
       security: [{ bearerAuth: [] }]
       summary: List departments meta
+      description: At most 50, by Thai name.
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Code, Thai or English name
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        code: { type: string }
+                        name: { type: string, description: The Thai name }
+                        display: { type: string, description: Thai name with the English one in brackets }
   /meta/categories:
     get:
       tags: [Meta]
       security: [{ bearerAuth: [] }]
       summary: List asset categories meta
+      description: At most 50, by name.
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Name or slug
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        name: { type: string }
+                        slug: { type: string }
+                        color: { type: string, nullable: true }
+                        description: { type: string, nullable: true }
   /meta/users:
     get:
       tags: [Meta]
       security: [{ bearerAuth: [] }]
       summary: List users (filter by role)
+      description: |
+        At most 200, by name, without suspended accounts. Managers (the `maintenance-type-manage` ability) see every role; everyone else
+        is offered only the repair team, never other members.
       parameters:
         - in: query
           name: role
-          schema: { type: string }
+          schema: { type: string, enum: [admin, supervisor, it_support, network, programmer, technician, member] }
+          description: Omitted = every role the caller may see
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        name: { type: string }
+                        role: { type: string }
+                        department: { type: string, nullable: true }
   /search/assets:
     get:
       tags: [Search]
       security: [{ bearerAuth: [] }]
       summary: Quick asset search
+      description: For autocomplete. Deleted assets are left out.
       parameters:
         - in: query
           name: q
           schema: { type: string }
+          description: Code or name
+        - in: query
+          name: department_id
+          schema: { type: integer }
         - in: query
           name: limit
-          schema: { type: integer, default: 10 }
+          schema: { type: integer, default: 10, minimum: 1, maximum: 50 }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        code: { type: string }
+                        name: { type: string }
+                        label: { type: string, description: What an autocomplete shows }
   /search/maintenance-requests:
     get:
       tags: [Search]
       security: [{ bearerAuth: [] }]
       summary: Quick maintenance request search
+      description: For autocomplete. A member finds only their own requests, as in the list.
       parameters:
         - in: query
           name: q
           schema: { type: string }
+          description: Request number or title
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10, minimum: 1, maximum: 50 }
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        request_no: { type: string }
+                        title: { type: string }
+                        status: { type: string }
   /health:
     get:
       tags: [Health]
       summary: Health check
+      description: "No sign-in needed. 200 when the database (and Redis, if there is one) answer; 503 with `status: degraded` when one does not."
       responses:
-        '200': { description: OK }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+        '503':
+          description: "Degraded: the same shape, `status` is `degraded` and the failing check says why"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
   /threads:
     get:
       tags: [Chat]
@@ -782,7 +1143,7 @@ paths:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/ChatThread' }
-                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+                  meta: { $ref: '#/components/schemas/ChatThreadMeta' }
     post:
       tags: [Chat]
       security: [{ bearerAuth: [] }]
@@ -801,7 +1162,12 @@ paths:
           description: Created
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ChatThread' }
+              schema: { $ref: '#/components/schemas/ChatThreadState' }
+        '422':
+          description: "No title, or one that is too long"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
   /threads/{id}:
     get:
       tags: [Chat]
@@ -818,6 +1184,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ChatThreadDetail' }
+        '404':
+          description: "No such thread"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /chat/my-updates:
     get:
       tags: [Chat]
@@ -961,6 +1332,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ChatMessage' }
+        '422':
+          description: "No words, or more than the limit (`errors`)"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
   /threads/{id}/messages/{message_id}:
     patch:
       tags: [Chat]
@@ -990,7 +1366,7 @@ paths:
           description: The message as it is now
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ChatMessage' }
+              schema: { $ref: '#/components/schemas/ChatMessageEdited' }
         '403': { description: "Not the author, or the thread is locked" }
         '404': { description: "Not a message of this thread, or it was deleted" }
         '422': { description: "Empty, or longer than 3,000 characters" }
@@ -1020,6 +1396,75 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    Error:
+      type: object
+      description: What a refusal looks like when it is not a validation failure
+      properties:
+        message: { type: string }
+        code: { type: string, description: "A stable word an app can switch on (invalid_credentials, account_suspended, ...); not on every refusal" }
+        correlation_id: { type: string, description: Quote it when reporting a problem }
+        toast: { $ref: '#/components/schemas/Toast' }
+    ValidationError:
+      type: object
+      description: "A 422. Which of these keys are present depends on the route; `errors` always is."
+      properties:
+        message: { type: string }
+        code: { type: string }
+        correlation_id: { type: string }
+        errors:
+          type: object
+          description: Field name to the messages for it
+          additionalProperties:
+            type: array
+            items: { type: string }
+        toast: { $ref: '#/components/schemas/Toast' }
+    Toast:
+      type: object
+      description: A line for a web page to show; an app may ignore it
+      properties:
+        type: { type: string, enum: [success, warning, error, info] }
+        message: { type: string }
+        position: { type: string }
+        timeout: { type: integer }
+        size: { type: string }
+    Message:
+      type: object
+      properties:
+        message: { type: string }
+    PersonCard:
+      type: object
+      description: A person as another record shows them
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, nullable: true }
+        avatar_url: { type: string }
+        avatar_thumb_url: { type: string }
+        department_name: { type: string, nullable: true }
+        role_label: { type: string }
+        department_ref: { type: object, nullable: true }
+    Health:
+      type: object
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+        checks:
+          type: object
+          description: One entry per check (db, redis)
+          additionalProperties:
+            type: object
+            properties:
+              status: { type: string, enum: [ok, error, unexpected, skipped], description: "`skipped` = the check could not run here (no Redis extension); `unexpected` = Redis answered something other than PONG" }
+              latency_ms: { type: number, description: The database check only }
+              reply: { type: string, description: What Redis answered to PING }
+              reason: { type: string, description: Why a check was skipped }
+              error: { type: string, description: "The failure's own message (database or Redis)" }
+        meta:
+          type: object
+          properties:
+            app: { type: string }
+            env: { type: string }
+            time: { type: string }
+            version: { type: string }
     PaginationMeta:
       type: object
       properties:
@@ -1029,28 +1474,100 @@ components:
         last_page: { type: integer }
     User:
       type: object
+      description: "The short profile of `/auth/login` and `/auth/me`; `citizen_id` is the caller's own"
       properties:
         id: { type: integer }
         name: { type: string }
-        email: { type: string, format: email }
+        citizen_id: { type: string }
+        email: { type: string, format: email, nullable: true }
         role: { type: string }
         abilities:
           type: array
           items: { type: string }
-    Asset:
+    LoginUser:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            must_change_password: { type: boolean, description: "true when an admin chose the password: change it (PUT /auth/password) first, every other call answers 403 password_change_required" }
+    UserRecord:
+      type: object
+      description: "`GET /user`: the User model without its hidden fields (no password, remember_token, citizen_id)"
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, nullable: true }
+        email_verified_at: { type: string, nullable: true }
+        role: { type: string }
+        role_label: { type: string }
+        avatar_url: { type: string }
+        avatar_thumb_url: { type: string }
+        department_name: { type: string, nullable: true }
+        department_ref: { type: object, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+    Department:
       type: object
       properties:
         id: { type: integer }
-        asset_code: { type: string }
+        code: { type: string }
+        name_th: { type: string }
+        name_en: { type: string, nullable: true }
+        display_name: { type: string }
+        created_at: { type: string }
+        updated_at: { type: string }
+    AssetCategory:
+      type: object
+      properties:
+        id: { type: integer }
         name: { type: string }
-        type: { type: string }
-        brand: { type: string }
-        model: { type: string }
-        serial_number: { type: string }
-        location: { type: string }
-        status: { type: string }
-        department_id: { type: integer }
-        category_id: { type: integer }
+        slug: { type: string }
+        color: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        is_active: { type: boolean }
+        created_at: { type: string }
+        updated_at: { type: string }
+    Asset:
+      type: object
+      description: "An asset as the API gives it: the columns, the computed fields (`display_name`, `status_label`, ...) and, when loaded, its category and department"
+      properties:
+        id: { type: integer }
+        asset_code: { type: string }
+        his_asset_id: { type: string, nullable: true, description: The number the hospital system (HIS) knows it by }
+        name: { type: string }
+        type: { type: string, nullable: true }
+        brand: { type: string, nullable: true }
+        model: { type: string, nullable: true }
+        serial_number: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        internal_phone: { type: string, nullable: true }
+        vendor_name: { type: string, nullable: true }
+        vendor_phone: { type: string, nullable: true }
+        price: { type: string, nullable: true, description: "A decimal, as text" }
+        department_id: { type: integer, nullable: true }
+        category_id: { type: integer, nullable: true }
+        purchase_date: { type: string, nullable: true }
+        warranty_start: { type: string, nullable: true }
+        warranty_expire: { type: string, nullable: true }
+        status: { type: string, enum: [active, in_repair, disposed] }
+        created_at: { type: string }
+        updated_at: { type: string }
+        his_synced_at: { type: string, nullable: true }
+        his_raw: { description: "What the hospital system (HIS) sent for this asset, as it sent it; null when it never synced" }
+        deleted_at: { type: string, nullable: true }
+        display_name: { type: string }
+        status_label: { type: string }
+        status_color: { type: string }
+        formatted_price: { type: string, nullable: true }
+        hero_image_url: { type: string, nullable: true }
+        category_ref:
+          oneOf:
+            - $ref: '#/components/schemas/AssetCategory'
+            - type: 'null'
+        department:
+          oneOf:
+            - $ref: '#/components/schemas/Department'
+            - type: 'null'
     AssetCreate:
       allOf:
         - $ref: '#/components/schemas/AssetUpdate'
@@ -1058,22 +1575,52 @@ components:
     AssetUpdate:
       type: object
       properties:
-        asset_code: { type: string }
-        name: { type: string }
-        type: { type: string }
+        asset_code: { type: string, maxLength: 100, description: "Unique, also among deleted assets" }
+        name: { type: string, maxLength: 255 }
+        type: { type: string, maxLength: 100 }
         category_id: { type: integer }
-        brand: { type: string }
-        model: { type: string }
-        serial_number: { type: string }
-        location: { type: string }
+        brand: { type: string, maxLength: 100 }
+        model: { type: string, maxLength: 100 }
+        serial_number: { type: string, maxLength: 100, description: "Unique, also among deleted assets" }
+        location: { type: string, maxLength: 255 }
         department_id: { type: integer }
+        his_asset_id: { type: string, maxLength: 100, description: "Unique, also among deleted assets" }
         purchase_date: { type: string, format: date }
-        warranty_expire: { type: string, format: date }
-        status: { type: string }
+        warranty_start: { type: string, format: date }
+        warranty_expire: { type: string, format: date, description: Not before warranty_start }
+        vendor_name: { type: string, maxLength: 255 }
+        vendor_phone: { type: string, maxLength: 50 }
+        price: { type: number, minimum: 0 }
+        status: { type: string, enum: [active, in_repair, disposed] }
+        hero_image: { type: string, format: binary, description: "multipart only; an image up to 5 MB" }
+        files:
+          type: array
+          description: "multipart only; pictures, PDF and equipment documents up to 10 MB each"
+          items: { type: string, format: binary }
     AssetWrapper:
       type: object
       properties:
         data: { $ref: '#/components/schemas/Asset' }
+        toast: { $ref: '#/components/schemas/Toast' }
+    AssetResult:
+      type: object
+      properties:
+        message: { type: string, description: "created or updated" }
+        toast: { $ref: '#/components/schemas/Toast' }
+        data: { $ref: '#/components/schemas/Asset' }
+    AssetList:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Asset' }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
+        sort:
+          type: object
+          properties:
+            by: { type: string }
+            dir: { type: string }
+        toast: { $ref: '#/components/schemas/Toast' }
     Token:
       type: object
       properties:
@@ -1089,6 +1636,39 @@ components:
       properties:
         id: { type: integer }
         name: { type: string }
+    ChatMessageEdited:
+      type: object
+      description: The answer of an edit
+      properties:
+        id: { type: integer }
+        chat_thread_id: { type: integer }
+        user_id: { type: integer }
+        body: { type: string }
+        deleted: { type: boolean }
+        edited: { type: boolean }
+        edited_at: { type: string, nullable: true }
+        created_at: { type: string }
+        user:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            avatar_thumb_url: { type: string }
+    ThreadQuota:
+      type: object
+      description: How many threads the caller may still start
+      properties:
+        unlimited: { type: boolean }
+        limit: { type: integer }
+        used: { type: integer }
+        remaining: { type: integer }
+        resets_at: { type: string }
+    ChatThreadMeta:
+      allOf:
+        - $ref: '#/components/schemas/PaginationMeta'
+        - type: object
+          properties:
+            thread_quota: { $ref: '#/components/schemas/ThreadQuota' }
     ChatMessage:
       type: object
       properties:
@@ -1112,7 +1692,9 @@ components:
         messages_count: { type: integer }
         unread_count: { type: integer }
         latest_message:
-          $ref: '#/components/schemas/ChatMessage'
+          oneOf:
+            - $ref: '#/components/schemas/ChatMessage'
+            - type: 'null'
     HiddenState:
       type: object
       properties:
@@ -1139,42 +1721,290 @@ components:
               items: { $ref: '#/components/schemas/ChatMessage' }
     MaintenanceRequest:
       type: object
+      description: "A request. Which dates are filled depends on how far it has come; the create and update answers carry fewer of the empty fields than a list row does."
       properties:
         id: { type: integer }
+        request_no: { type: string }
         title: { type: string }
-        description: { type: string }
-        status: { type: string }
-        priority: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: string, enum: [pending, acknowledged, accepted, in_progress, on_hold, resolved, closed, cancelled, rejected, returned, completed], description: "`completed` is the old name of resolved/closed" }
+        status_updated_at: { type: string, nullable: true }
+        status_updated_by: { type: integer, nullable: true }
+        source: { type: string }
         asset_id: { type: integer, nullable: true }
+        department_id: { type: integer, nullable: true }
+        type_id: { type: integer, nullable: true }
+        location_text: { type: string, nullable: true }
         reporter_id: { type: integer, nullable: true }
+        reporter_name: { type: string, nullable: true }
+        reporter_phone: { type: string, nullable: true }
         reporter_email: { type: string, nullable: true }
-        request_date: { type: string, format: date-time }
-    MaintenanceRequestUpdate:
+        technician_id: { type: integer, nullable: true, description: "The person in charge; the team is in `assignments`" }
+        request_date: { type: string }
+        assigned_date: { type: string, nullable: true }
+        acknowledged_at: { type: string, nullable: true }
+        accepted_at: { type: string, nullable: true }
+        started_at: { type: string, nullable: true }
+        on_hold_at: { type: string, nullable: true }
+        resolved_at: { type: string, nullable: true }
+        closed_at: { type: string, nullable: true }
+        completed_date: { type: string, nullable: true }
+        response_due_date: { type: string, nullable: true }
+        sla_due_date: { type: string, nullable: true }
+        paused_duration_minutes: { type: integer }
+        remark: { type: string, nullable: true }
+        resolution_note: { type: string, nullable: true }
+        cost: { type: string, nullable: true, description: "A decimal, as text" }
+        extra: { nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+        deleted_at: { type: string, nullable: true }
+        asset:
+          oneOf:
+            - $ref: '#/components/schemas/Asset'
+            - type: 'null'
+        reporter:
+          oneOf:
+            - $ref: '#/components/schemas/PersonCard'
+            - type: 'null'
+        technician:
+          oneOf:
+            - $ref: '#/components/schemas/PersonCard'
+            - type: 'null'
+        type: { type: object, nullable: true, description: The request type }
+        department:
+          oneOf:
+            - $ref: '#/components/schemas/Department'
+            - type: 'null'
+        attachments:
+          type: array
+          items: { $ref: '#/components/schemas/Attachment' }
+        assignments:
+          type: array
+          description: The team, without the people taken off the job
+          items: { $ref: '#/components/schemas/Assignment' }
+        rating:
+          oneOf:
+            - $ref: '#/components/schemas/Rating'
+            - type: 'null'
+        operation_log: { type: object, nullable: true }
+    MaintenanceRequestDetail:
+      description: "What `GET /repair-requests/{id}` adds to a list row"
+      allOf:
+        - $ref: '#/components/schemas/MaintenanceRequest'
+        - type: object
+          properties:
+            logs:
+              type: array
+              items: { $ref: '#/components/schemas/MaintenanceLog' }
+    Attachment:
       type: object
       properties:
-        title: { type: string }
-        description: { type: string }
-        priority: { type: string }
+        id: { type: integer }
+        file_id: { type: integer }
+        attachable_type: { type: string }
+        attachable_id: { type: integer }
+        original_name: { type: string }
+        filename: { type: string }
+        extension: { type: string }
+        caption: { type: string, nullable: true }
+        alt_text: { type: string, nullable: true }
+        order_column: { type: integer }
+        is_private: { type: boolean }
+        is_image: { type: boolean }
+        uploaded_by: { type: integer, nullable: true }
+        source: { type: string }
+        expires_at: { type: string, nullable: true }
+        url: { type: string }
+        created_at: { type: string }
+        updated_at: { type: string }
+        deleted_at: { type: string, nullable: true }
+        file:
+          type: object
+          properties:
+            id: { type: integer }
+            disk: { type: string }
+            path: { type: string }
+            path_hash: { type: string }
+            mime: { type: string }
+            size: { type: integer }
+            checksum_sha256: { type: string }
+            variant_of_id: { type: integer, nullable: true }
+            meta: { nullable: true }
+            url: { type: string, nullable: true }
+            created_at: { type: string }
+            updated_at: { type: string }
+            deleted_at: { type: string, nullable: true }
+    Assignment:
+      type: object
+      properties:
+        id: { type: integer }
+        maintenance_request_id: { type: integer }
+        user_id: { type: integer }
+        role: { type: string }
+        is_lead: { type: boolean }
         status: { type: string }
-        asset_id: { type: integer }
-        reporter_email: { type: string }
+        response_status: { type: string, nullable: true }
+        assigned_at: { type: string, nullable: true }
+        responded_at: { type: string, nullable: true }
+        remark: { type: string, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+        user:
+          allOf:
+            - $ref: '#/components/schemas/PersonCard'
+            - type: object
+              description: "Some answers (a transition) carry the person's whole record, so the optional ones below can be there too"
+              properties:
+                role: { type: string }
+                profile_photo_path: { type: string, nullable: true }
+                profile_photo_thumb: { type: string, nullable: true }
+                email_verified_at: { type: string, nullable: true }
+                must_change_password: { type: boolean }
+                department: { type: string, nullable: true }
+                suspended_at: { type: string, nullable: true }
+                notification_sound: { type: string, nullable: true }
+                created_at: { type: string }
+                updated_at: { type: string }
+    Rating:
+      type: object
+      properties:
+        id: { type: integer }
+        maintenance_request_id: { type: integer }
+        rater_id: { type: integer }
+        technician_id: { type: integer, nullable: true }
+        score: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+        deleted_at: { type: string, nullable: true }
+        rater: { $ref: '#/components/schemas/PersonCard' }
+    MaintenanceRequestCreate:
+      type: object
+      properties:
+        title: { type: string, maxLength: 255 }
+        description: { type: string, maxLength: 5000 }
+        asset_id: { type: integer, nullable: true, description: A live asset }
+        department_id: { type: integer }
+        type_id: { type: integer }
+        location_text: { type: string, maxLength: 255 }
+        reporter_name: { type: string, maxLength: 255 }
+        reporter_phone: { type: string, maxLength: 30 }
+        reporter_email: { type: string, format: email }
         files:
           type: array
-          items:
-            type: string
-            format: binary
+          maxItems: 3
+          items: { type: string, format: binary }
+        captions:
+          type: array
+          description: One caption per file, in the same order
+          items: { type: string }
+      required: [title]
+    MaintenanceRequestUpdate:
+      type: object
+      description: Send only what changes. The staff-only fields are marked.
+      properties:
+        title: { type: string, maxLength: 255 }
+        description: { type: string, maxLength: 5000 }
+        asset_id: { type: integer, nullable: true }
+        request_date: { type: string, format: date }
+        reporter_name: { type: string, maxLength: 255 }
+        reporter_phone: { type: string, maxLength: 30 }
+        reporter_email: { type: string, format: email }
+        department_id: { type: integer }
+        type_id: { type: integer }
+        location_text: { type: string, maxLength: 255 }
+        resolution_note: { type: string, maxLength: 5000 }
+        cost: { type: number, minimum: 0, maximum: 99999999.99 }
+        technician_id: { type: integer, description: Staff only }
+        user_ids:
+          type: array
+          description: "Staff only: the team. Active members of the repair team"
+          items: { type: integer }
+        status: { type: string, enum: [pending, acknowledged, accepted, in_progress, on_hold, resolved, closed, cancelled, rejected, returned], description: "Staff only; a real transition" }
+        note: { type: string, maxLength: 2000, description: The reason that goes with a status change }
+        operation_date: { type: string, format: date }
+        operation_method: { type: string, enum: [requisition, service_fee, other] }
+        property_code: { type: string, maxLength: 100 }
+        require_precheck: { type: boolean }
+        remark: { type: string, maxLength: 5000 }
+        issue_software: { type: boolean }
+        issue_hardware: { type: boolean }
+        files:
+          type: array
+          items: { type: string, format: binary }
+        captions:
+          type: array
+          items: { type: string }
+        remove_attachments:
+          type: array
+          description: Ids of attachments to take off
+          items: { type: integer }
     MaintenanceRequestWrapper:
       type: object
       properties:
+        data: { $ref: '#/components/schemas/MaintenanceRequestDetail' }
+    MaintenanceRequestResult:
+      type: object
+      properties:
         data: { $ref: '#/components/schemas/MaintenanceRequest' }
+        toast: { $ref: '#/components/schemas/Toast' }
+    MaintenanceRequestList:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/MaintenanceRequest' }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
+        toast: { $ref: '#/components/schemas/Toast' }
     MaintenanceLog:
       type: object
       properties:
         id: { type: integer }
+        request_id: { type: integer }
         action: { type: string }
         note: { type: string, nullable: true }
+        from_status: { type: string, nullable: true }
+        to_status: { type: string, nullable: true }
         user_id: { type: integer, nullable: true }
         created_at: { type: string, format: date-time }
+        updated_at: { type: string }
+        user:
+          oneOf:
+            - $ref: '#/components/schemas/PersonCard'
+            - type: 'null'
+    MaintenanceLogPage:
+      allOf:
+        - $ref: '#/components/schemas/Paginator'
+        - type: object
+          properties:
+            data:
+              type: array
+              items: { $ref: '#/components/schemas/MaintenanceLog' }
+    Paginator:
+      type: object
+      description: A Laravel paginator, as it is; the rows are under `data`
+      properties:
+        current_page: { type: integer }
+        first_page_url: { type: string }
+        from: { type: integer, nullable: true }
+        last_page: { type: integer }
+        last_page_url: { type: string }
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              url: { type: string, nullable: true }
+              label: { type: string }
+              page: { type: integer, nullable: true }
+              active: { type: boolean }
+        next_page_url: { type: string, nullable: true }
+        path: { type: string }
+        per_page: { type: integer }
+        prev_page_url: { type: string, nullable: true }
+        to: { type: integer, nullable: true }
+        total: { type: integer }
     TechnicianSummary:
       type: object
       properties:
@@ -1195,11 +2025,7 @@ components:
       description: The answer of a status action (cancel, resubmit, ...), and of a refusal of one
       properties:
         message: { type: string }
-        toast:
-          type: object
-          properties:
-            type: { type: string, enum: [success, warning, error, info] }
-            message: { type: string }
+        toast: { $ref: '#/components/schemas/Toast' }
     ChatThreadState:
       type: object
       properties:
