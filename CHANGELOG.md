@@ -152,6 +152,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The dashboard's status donut did not add up to the total.** "สถานะการทำงาน" had three groups and a fourth written as a hard-coded 0 under a
+  label that was not its own ("อนุมัติแล้ว"; the cancelled slice was never counted), while "ใบแจ้งซ่อมสะสมทั้งหมด" counted every request, so a request
+  that was cancelled, refused or sent back was in the total and in no slice. It has five slices now, **รอดำเนินการ, กำลังดำเนินการ,
+  ซ่อมบำรุงเสร็จสิ้น, ส่งกลับแก้ไข, ยกเลิก/ไม่รับเรื่อง**, that add up to the total, and the labels travel with the numbers from the page (the five
+  labels over four numbers had slid every slice after the missing one). Rows with the old status `completed` count as done, in the filter too.
+  `RepairDashboardCountsEveryStatusTest` creates a request of every status the model knows, so a status added later and forgotten here fails it.
 - **A line of `openapi.yaml` was read wrongly by a strict YAML parser.** `'422': { description: The current password is wrong, or the new one is
   weak, … }` has commas in an unquoted flow value: it ended at the first one and the rest became keys with no value. Quoted.
 - **"ส่งกลับแก้ไข — ใกล้หมดอายุ" was offered when nothing expires.** With `REPAIR_RETURN_EXPIRES_AFTER_DAYS=0` the list's status filter still had the

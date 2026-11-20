@@ -49,7 +49,9 @@ class DashboardController extends Controller
         // who is carrying how much is about people, not the service: management sees it, a plain member does not
         $techWorkload = \Illuminate\Support\Facades\Gate::allows('maintenance-type-manage') ? $this->technicianWorkload() : collect();
 
-        return view('repair.dashboard', compact('stats', 'monthlyTrend', 'byAssetType', 'byDept', 'kpi', 'techWorkload'));
+        $statusSlices = $this->statusSlices($stats);
+
+        return view('repair.dashboard', compact('stats', 'statusSlices', 'monthlyTrend', 'byAssetType', 'byDept', 'kpi', 'techWorkload'));
     }
 
     /** Applies ?status / ?from / ?to to the base query; true when at least one filter was applied. */
@@ -60,7 +62,7 @@ class DashboardController extends Controller
 
         if ($status !== '') {
             $statusMap = [
-                'completed' => ['resolved', 'closed'],
+                'completed' => ['resolved', 'closed', 'completed'],
                 'processing' => ['acknowledged', 'accepted', 'in_progress', 'on_hold'],
                 'cancelled' => ['cancelled', 'rejected'],
             ];
@@ -99,16 +101,30 @@ class DashboardController extends Controller
 
         $stats = ['total' => (clone $base)->count()];
 
-        foreach (['pending', 'acknowledged', 'accepted', 'in_progress', 'on_hold', 'resolved', 'closed'] as $status) {
+        foreach (['pending', 'acknowledged', 'accepted', 'in_progress', 'on_hold', 'resolved', 'closed', 'returned'] as $status) {
             $stats[$status] = (int) $counts->get($status, 0);
         }
 
+        // Every status the model knows is in exactly one of these groups, so the groups add up to the total (RepairDashboardCountsEveryStatusTest
+        // fails the day a status is added and forgotten here): waiting, in progress, done, sent back, cancelled or refused.
         $stats['processing'] = $stats['acknowledged'] + $stats['accepted'] + $stats['in_progress'] + $stats['on_hold'];
-        $stats['completed'] = $stats['resolved'] + $stats['closed'];
-        $stats['cancelled'] = 0;
+        $stats['completed'] = $stats['resolved'] + $stats['closed'] + (int) $counts->get('completed', 0); // 'completed' is the old name of done
+        $stats['cancelled'] = (int) $counts->get('cancelled', 0) + (int) $counts->get('rejected', 0);
         $stats['inProgress'] = $stats['processing']; // the "Active" card
 
         return $stats;
+    }
+
+    /** The status donut's slices, labels and numbers together: a label without its number slid every slice after it. */
+    private function statusSlices(array $stats): array
+    {
+        return [
+            ['label' => 'รอดำเนินการ', 'value' => $stats['pending']],
+            ['label' => 'กำลังดำเนินการ', 'value' => $stats['processing']],
+            ['label' => 'ซ่อมบำรุงเสร็จสิ้น', 'value' => $stats['completed']],
+            ['label' => 'ส่งกลับแก้ไข', 'value' => $stats['returned']],
+            ['label' => 'ยกเลิก/ไม่รับเรื่อง', 'value' => $stats['cancelled']],
+        ];
     }
 
     private function monthlyTrend(Builder $chartBase): Collection
