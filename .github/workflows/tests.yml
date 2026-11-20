@@ -89,6 +89,17 @@ jobs:
       - name: PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      # The PHP a pull request changes has to be in Pint's style: those files only, not the whole project. Most of the code is older than Pint,
+      # so it is brought in line a file at a time, by whoever next edits it, rather than in one 200-file change nobody can review. Not on a
+      # push to dev: there is no base to compare with there, and the pull request was checked. To fix a failure: vendor/bin/pint --diff=origin/dev
+      - name: PHP style of the changed files
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          vendor/bin/pint --test --diff="origin/$BASE_REF"
+
       # a PHP test reads node_modules (Tailwind's preflight), and the JS tests need esbuild
       - name: Node dependencies
         run: npm ci

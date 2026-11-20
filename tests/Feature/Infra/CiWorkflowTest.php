@@ -44,6 +44,26 @@ class CiWorkflowTest extends TestCase
         $this->assertGreaterThan(strpos($yml, 'run: php artisan test'), strpos($yml, 'run: npm run build'));
     }
 
+    public function test_it_holds_the_php_a_pull_request_changes_to_pint_before_the_suites_run(): void
+    {
+        $yml = $this->workflow();
+
+        // only the files the pull request changes, never the whole project: most of the code is older than Pint, and one 200-file change would
+        // bury every review; the old files are brought in line one at a time, by whoever next edits them
+        $this->assertStringContainsString('vendor/bin/pint --test --diff="origin/$BASE_REF"', $yml);
+        $this->assertStringContainsString('BASE_REF: ${{ github.base_ref }}', $yml, 'the branch name goes through env, not into the script');
+        $this->assertStringContainsString('git fetch --no-tags --depth=1 origin "$BASE_REF"', $yml, 'the checkout is one commit deep: the base has to be fetched to be compared with');
+        $this->assertStringContainsString("if: github.event_name == 'pull_request'", $yml, 'a push has no base to compare with');
+
+        // it needs vendor/ (so after composer install) and is quick (so before the suites)
+        $pint = strpos($yml, 'vendor/bin/pint');
+        $this->assertGreaterThan(strpos($yml, 'run: composer install'), $pint);
+        $this->assertLessThan(strpos($yml, 'run: php artisan test'), $pint);
+
+        $composer = json_decode((string) file_get_contents(base_path('composer.json')), true);
+        $this->assertArrayHasKey('laravel/pint', $composer['require-dev']);
+    }
+
     public function test_it_uses_the_php_node_and_database_of_the_docker_setup(): void
     {
         $yml = $this->workflow();
