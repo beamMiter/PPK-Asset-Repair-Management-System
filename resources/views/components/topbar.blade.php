@@ -34,12 +34,12 @@
         {{-- Mobile Right Toggle --}}
         <div class="d-lg-none d-flex align-items-center gap-3 ms-auto" style="min-width: 44px;">
             @auth
-                {{-- กระดิ่งแจ้งเตือน (Mobile) --}}
+                {{-- ปุ่มเสียงแจ้งเตือนงานใหม่ (Mobile) --}}
                 @if ($user->role !== 'member')
                     <button type="button" id="notifyToggleBtnMobileTop"
                         class="btn btn-no-bg p-0 text-white position-relative d-flex align-items-center justify-content-center"
                         style="width: 32px; height: 32px;" title="เปิด/ปิดเสียงแจ้งเตือน">
-                        <i id="notifyIconMobileTop" class="bi bi-bell" style="font-size: 1.3rem;"></i>
+                        <i id="notifyIconMobileTop" class="bi bi-volume-mute-fill" style="font-size: 1.3rem;"></i>
                         <span id="notifyStatusDotMobileTop" class="nav-dot d-none">
                             <span class="nav-dot__ping" style="background: rgba(239, 68, 68, 0.6);"></span>
                             <span class="nav-dot__core" style="border-color: var(--ppk-blue);"></span>
@@ -104,8 +104,8 @@
                 @if ($user->role !== 'member')
                     <button type="button" id="notifyToggleBtn"
                         class="nav-icon-btn d-flex align-items-center justify-content-center border-0"
-                        title="เปิด/ปิดเสียงแจ้งเตือน" aria-label="แจ้งเตือน">
-                        <i id="notifyIcon" class="bi bi-bell" aria-hidden="true" style="font-size: 1.2rem;"></i>
+                        title="เปิด/ปิดเสียงแจ้งเตือน" aria-label="เสียงแจ้งเตือน">
+                        <i id="notifyIcon" class="bi bi-volume-mute-fill" aria-hidden="true" style="font-size: 1.2rem;"></i>
                         <span id="notifyStatusDot" class="nav-dot d-none">
                             <span class="nav-dot__ping"></span>
                             <span class="nav-dot__core"></span>
@@ -151,7 +151,7 @@
                     @if ($user->role !== 'member')
                         <button type="button" id="notifyToggleBtnMobile"
                             class="btn btn-light btn-sm ff-sarabun text-start px-3">
-                            <i class="bi bi-bell me-2"></i> ตั้งค่าเสียงแจ้งเตือน
+                            <i class="bi bi-volume-mute-fill me-2"></i> ตั้งค่าเสียงแจ้งเตือน
                         </button>
                     @endif
 
