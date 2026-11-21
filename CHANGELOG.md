@@ -8,6 +8,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A banner tells a reporter that a finished repair waits for their approval.** The reporter is the one who approves ("อนุมัติปิดงาน"), and only
+  after that can they rate it, but nothing told them: they had to open the list and notice the status. On the dashboard and above "รายการงานซ่อม"
+  a green note now says how many of THEIR requests are "ซ่อมบำรุงเสร็จสิ้น" and links to the list already filtered; it is not repeated when they are
+  looking at exactly those, sits beside the banner for requests sent back, and the manual mentions it. The two banners share one wrapper above
+  the list, so a page with neither keeps the one gap it had. `ResolvedRequestsBannerTest`.
 - **`openapi.yaml` describes every API route, and a test keeps it so.** Twelve operations were missing, among them the three whose rules changed
   this week: `POST /repair-requests/{id}/cancel`, `…/rating` (only after the approval, 422 before) and `…/resubmit`, with `GET …/my-jobs`,
   `…/pending/evaluations`, `GET /user`, `PATCH /assets/{id}`, `GET /chat/my-updates`, `POST /threads/{id}/lock|unlock` and the two removed
