@@ -205,9 +205,10 @@ class ChatController extends Controller
             ->limit(15)
             ->get();
 
-        $pointers = $this->readPointers((int) $u->id, $threads->pluck('id')->all());
+        // unread ของทุกกระทู้ใน query เดียว (เดิมนับทีละกระทู้: ทุกการโพลเสียเพิ่มอีกสูงสุด 15 query)
+        $unread = $this->unreadCountsFor((int) $u->id, $threads->pluck('id')->all());
 
-        $items = $threads->map(function ($t) use ($pointers) {
+        $items = $threads->map(function ($t) use ($unread) {
             $last = $t->messages->first();
 
             return [
@@ -215,7 +216,7 @@ class ChatController extends Controller
                 'title' => $t->title ?? ('กระทู้ #'.$t->id),
                 'show_url' => route('chat.show', $t),
                 'hide_url' => route('chat.hide', $t),
-                'unread' => $this->unreadCount((int) $t->id, $pointers[$t->id] ?? null, (int) ($t->messages_count ?? 0)),
+                'unread' => $unread[$t->id] ?? 0,
                 'last_user_name' => $last?->user?->name,
                 'last_user_avatar' => $last?->user?->avatar_thumb_url,
                 'last_body' => $last?->body,

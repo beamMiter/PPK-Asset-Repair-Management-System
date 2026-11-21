@@ -39,15 +39,16 @@ class ChatController extends Controller
             ->orderByDesc('created_at')
             ->paginate(15); // เอา named argument ออกให้ compatible
 
-        $readsMap = $userId
-            ? $this->readPointers((int) $userId, $threads->getCollection()->pluck('id')->all())
+        // unread per thread, all of the page's threads in one query (a query each made the list cost 15 more than it needed to)
+        $unreadMap = $userId
+            ? $this->unreadCountsFor((int) $userId, $threads->getCollection()->pluck('id')->all())
             : [];
         $hiddenIds = $userId ? $this->hiddenThreadIds((int) $userId, $threads->getCollection()->pluck('id')->all()) : [];
 
         $payload = [
-            'data' => $threads->getCollection()->map(function (ChatThread $th) use ($readsMap, $hiddenIds) {
+            'data' => $threads->getCollection()->map(function (ChatThread $th) use ($unreadMap, $hiddenIds) {
                 $total = $th->messages_count ?? 0;
-                $unread = $this->unreadCount((int) $th->id, $readsMap[$th->id] ?? null, (int) $total);
+                $unread = $unreadMap[$th->id] ?? 0;
 
                 return [
                     'id' => $th->id,
@@ -356,12 +357,12 @@ class ChatController extends Controller
             return response()->json([]);
         }
 
-        // map last_read_message_id ของ user นี้ เพื่อคำนวณ unread
-        $readsMap = $this->readPointers((int) $user->id, $threads->pluck('id')->all());
+        // unread ของ user นี้ทุกกระทู้ใน query เดียว (เดิมนับทีละกระทู้: ทุกการโพลเสียเพิ่มอีกสูงสุด 30 query)
+        $unreadMap = $this->unreadCountsFor((int) $user->id, $threads->pluck('id')->all());
 
-        $items = $threads->map(function (ChatThread $th) use ($readsMap) {
+        $items = $threads->map(function (ChatThread $th) use ($unreadMap) {
             $total = $th->messages_count ?? 0;
-            $unread = $this->unreadCount((int) $th->id, $readsMap[$th->id] ?? null, (int) $total);
+            $unread = $unreadMap[$th->id] ?? 0;
 
             $latest = $th->latestMessage;
 
