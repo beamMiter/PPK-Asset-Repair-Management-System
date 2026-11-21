@@ -152,6 +152,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The chat widget's poll counted the unread messages one thread at a time.** `/chat/my-updates`, which every signed-in person's browser asks
+  every 30 seconds, ran a query for each thread the person has a read pointer in: with 14 threads a poll cost 18 queries where 6 do (up to 15
+  more on the web and 30 more on the API's `/api/chat/my-updates`; `GET /api/threads` did the same for its 15 rows). The counts now come from
+  one query for the whole list (the one the chat page already used), and the two helpers that did it a thread at a time are gone.
+  `ChatWidgetQueryCountTest`: the number of queries no longer grows with the threads, and the counts, the "nothing read yet" case, the case
+  where the pointer is on the last message and deleted messages are as before.
 - **Every page you opened asked the server for the chat list again.** The floating chat button asks `/chat/my-updates` every 30 seconds, and
   on top of that each Turbo visit (a new page) asked once more, because the new page's button had to be filled. A visit now draws its list and
   badge from the last answer while it is under 30 seconds old, so opening pages costs no request. It still asks on the chat pages (opening a
