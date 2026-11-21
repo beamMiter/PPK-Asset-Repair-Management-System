@@ -3,17 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Events\Chat\ChatMessageDeleted;
+use App\Events\Chat\ChatMessageSent;
 use App\Events\Chat\ChatThreadDeleted;
 use App\Events\Chat\ChatThreadLockChanged;
 use App\Models\ChatMessage;
 use App\Models\ChatModerationLog;
 use App\Models\ChatThread;
 use App\Services\ChatQuota;
+use App\Support\Like;
 use App\Support\SafeBroadcast;
+use App\Support\Toast;
 use App\Traits\HandlesChatReads;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Support\Like;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class ChatController extends Controller
 {
@@ -28,10 +31,10 @@ class ChatController extends Controller
         $threads = ChatThread::query()
             ->with('author:id,name')
             ->withCount('messages')
-            ->with(['latestMessage' => fn($qq) => $qq->with('user:id,name')])
-            ->when($scope === 'mine', fn($qq) => $qq->inMyList($meId))
-            ->when($scope === 'hidden', fn($qq) => $qq->hiddenBy($meId))
-            ->when($q, fn($qq) => $qq->where('title', 'like', Like::contains($q)))
+            ->with(['latestMessage' => fn ($qq) => $qq->with('user:id,name')])
+            ->when($scope === 'mine', fn ($qq) => $qq->inMyList($meId))
+            ->when($scope === 'hidden', fn ($qq) => $qq->hiddenBy($meId))
+            ->when($q, fn ($qq) => $qq->where('title', 'like', Like::contains($q)))
             ->orderByDesc('created_at')
             ->paginate(15)
             ->withQueryString();
@@ -98,11 +101,11 @@ class ChatController extends Controller
 
         // so many new threads a day for each person (config/chat.php): asked BEFORE it is made, and told how many are left
         if (! ChatQuota::canStart($r->user())) {
-            return back()->withInput()->with('toast', \App\Support\Toast::warning(ChatQuota::refusal(), 5000));
+            return back()->withInput()->with('toast', Toast::warning(ChatQuota::refusal(), 5000));
         }
 
         $thread = ChatThread::create([
-            'title'     => $data['title'],
+            'title' => $data['title'],
             'author_id' => Auth::id(),
             'is_locked' => false,
         ]);
@@ -110,7 +113,7 @@ class ChatController extends Controller
         session(['toast' => [
             'type' => 'success',
             'message' => 'สร้างกระทู้ใหม่เรียบร้อยแล้ว',
-            'title' => 'บันทึกสำเร็จ'
+            'title' => 'บันทึกสำเร็จ',
         ]]);
 
         return redirect()->route('chat.index', ['thread_id' => $thread->id]);
@@ -182,7 +185,7 @@ class ChatController extends Controller
             $this->markThreadRead((int) $message->user_id, (int) $thread->id, (int) $message->id, reappear: true);
         }
 
-        SafeBroadcast::send(new \App\Events\Chat\ChatMessageSent($message));
+        SafeBroadcast::send(new ChatMessageSent($message));
 
         // the page sends with fetch and draws the message from this; a plain form post still goes back to the page
         return $r->expectsJson() ? response()->json($message->toChatArray(), 201) : back();
@@ -206,15 +209,16 @@ class ChatController extends Controller
 
         $items = $threads->map(function ($t) use ($pointers) {
             $last = $t->messages->first();
+
             return [
-                'id'              => $t->id,
-                'title'           => $t->title ?? ('กระทู้ #' . $t->id),
-                'show_url'        => route('chat.show', $t),
-                'hide_url'        => route('chat.hide', $t),
-                'unread'          => $this->unreadCount((int) $t->id, $pointers[$t->id] ?? null, (int) ($t->messages_count ?? 0)),
-                'last_user_name'  => $last?->user?->name,
-                'last_user_avatar'=> $last?->user?->avatar_thumb_url,
-                'last_body'       => $last?->body,
+                'id' => $t->id,
+                'title' => $t->title ?? ('กระทู้ #'.$t->id),
+                'show_url' => route('chat.show', $t),
+                'hide_url' => route('chat.hide', $t),
+                'unread' => $this->unreadCount((int) $t->id, $pointers[$t->id] ?? null, (int) ($t->messages_count ?? 0)),
+                'last_user_name' => $last?->user?->name,
+                'last_user_avatar' => $last?->user?->avatar_thumb_url,
+                'last_body' => $last?->body,
                 'last_created_at' => optional($last?->created_at)->toIso8601String(),
             ];
         })->values();
@@ -270,7 +274,7 @@ class ChatController extends Controller
     {
         if (! $thread->canBeDeletedBy(Auth::user())) {
             // AccessDeniedHttpException, not abort(403): bootstrap/app.php turns that one into a toast on the page the user was on
-            throw new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException('เฉพาะเจ้าของกระทู้และผู้ดูแลระบบเท่านั้นที่ลบกระทู้ได้');
+            throw new AccessDeniedHttpException('เฉพาะเจ้าของกระทู้และผู้ดูแลระบบเท่านั้นที่ลบกระทู้ได้');
         }
 
         $thread->delete();
@@ -282,7 +286,7 @@ class ChatController extends Controller
         session(['toast' => [
             'type' => 'success',
             'message' => 'ลบกระทู้เรียบร้อยแล้ว ข้อมูลทั้งหมดถูกซ่อนจากระบบ',
-            'title' => 'ลบกระทู้'
+            'title' => 'ลบกระทู้',
         ]]);
 
         return redirect()->route('chat.index');
@@ -299,7 +303,7 @@ class ChatController extends Controller
         abort_unless((int) $message->chat_thread_id === (int) $thread->id, 404);
 
         if (! $thread->canDeleteMessage($message, $request->user())) {
-            throw new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException('เฉพาะเจ้าของข้อความและผู้ดูแลเท่านั้นที่ลบข้อความได้');
+            throw new AccessDeniedHttpException('เฉพาะเจ้าของข้อความและผู้ดูแลเท่านั้นที่ลบข้อความได้');
         }
 
         // deleting a message must not bring the thread to the top of the list ("updated"): the THREAD is what is not touched
@@ -323,7 +327,7 @@ class ChatController extends Controller
         abort_unless((int) $message->chat_thread_id === (int) $thread->id, 404);
 
         if (! $thread->canEditMessage($message, $request->user())) {
-            throw new \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException('แก้ไขได้เฉพาะข้อความของตนเอง และขณะที่กระทู้ยังไม่ล็อก');
+            throw new AccessDeniedHttpException('แก้ไขได้เฉพาะข้อความของตนเอง และขณะที่กระทู้ยังไม่ล็อก');
         }
 
         $data = $request->validate(['body' => 'required|string|max:3000']);
