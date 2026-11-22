@@ -117,6 +117,11 @@ npm run test:js         # the browser-side logic (Node's test runner, a fake DOM
 Both run on GitHub Actions for every pull request and every push to `dev` (`.github/workflows/tests.yml`, MariaDB 11 like
 the Docker setup). Neither needs Vite running: the PHP tests render asset tags from `tests/fixtures/vite-hot`.
 
+A pull request is also checked with [Pint](https://laravel.com/docs/pint) for **the PHP files it changes** (not the whole project: most of
+the code is older than Pint, so a file is brought in line when somebody next edits it). Before pushing, `vendor/bin/pint --diff=origin/dev`
+formats those files; `vendor/bin/pint --test --diff=origin/dev` only says whether they are clean, as CI does. Keep the formatting of a
+file that was not clean in a commit of its own, ahead of the change, so the change can be read.
+
 ## Where things live
 
 `app/Http/Controllers` (web, and `Api/` for the token API), `app/Services` (logic that reads or writes the database),

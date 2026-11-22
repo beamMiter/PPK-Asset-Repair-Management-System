@@ -8,6 +8,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **CI holds the PHP a pull request changes to Pint.** The check runs `vendor/bin/pint --test --diff=origin/<base>` before the suites, on pull
+  requests only, and looks at the files the pull request changes, not the whole project: most of the code is older than Pint (202 of 330 files
+  would be rewritten), so a file is brought in line when somebody next edits it. `vendor/bin/pint --diff=origin/dev` fixes them locally; the
+  README says so. `CiWorkflowTest` keeps the step in place (the checkout has the whole history, which `--diff` needs to find the merge base; the branch name
+  goes through `env`; it runs after `composer install` and before the suites).
 - **`openapi.yaml` describes every API route, and a test keeps it so.** Twelve operations were missing, among them the three whose rules changed
   this week: `POST /repair-requests/{id}/cancel`, `…/rating` (only after the approval, 422 before) and `…/resubmit`, with `GET …/my-jobs`,
   `…/pending/evaluations`, `GET /user`, `PATCH /assets/{id}`, `GET /chat/my-updates`, `POST /threads/{id}/lock|unlock` and the two removed
