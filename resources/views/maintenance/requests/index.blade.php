@@ -159,7 +159,8 @@
         </div>
 
         {{-- what waits for the reporter: their requests sent back to them to fix, and their finished repairs to approve. Each is left out when
-             they are already looking at exactly those. One wrapper for both, so a page without either has the one gap it always had --}}
+             they are already looking at exactly those. One wrapper for both, so a page without either has the one gap it always had (the two "sent back"
+             filters, which had no wrapper, now have its top padding too, whether or not the green banner shows) --}}
         <div class="flex flex-col gap-[12px] px-4 md:px-6 lg:px-8 pt-4">
             @unless (in_array($status, ['returned', 'returned_expiring'], true))
                 <x-returned-requests-banner />

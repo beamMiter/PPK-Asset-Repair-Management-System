@@ -12,7 +12,7 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   after that can they rate it, but nothing told them: they had to open the list and notice the status. On the dashboard and above "รายการงานซ่อม"
   a green note now says how many of THEIR requests are "ซ่อมบำรุงเสร็จสิ้น" and links to the list already filtered; it is not repeated when they are
   looking at exactly those, sits beside the banner for requests sent back, and the manual mentions it. The two banners share one wrapper above
-  the list, so a page with neither keeps the one gap it had. `ResolvedRequestsBannerTest`.
+  the list, so a page with neither keeps the one gap it had (the two "sent back" filters, which had none, now have it too). `ResolvedRequestsBannerTest`.
 - **CI holds the PHP a pull request changes to Pint.** The check runs `vendor/bin/pint --test --diff=origin/<base>` before the suites, on pull
   requests only, and looks at the files the pull request changes, not the whole project: most of the code is older than Pint (202 of 330 files
   would be rewritten), so a file is brought in line when somebody next edits it. `vendor/bin/pint --diff=origin/dev` fixes them locally; the
