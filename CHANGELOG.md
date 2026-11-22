@@ -682,6 +682,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The staff's sound button is a speaker, not a bell.** The button in the top bar (and the phone's bar and menu) that switches the sound which
+  rings when a repair job comes in was a bell, which says "notifications" where it only controls the sound. It now shows a speaker (`volume-up`
+  while the sound is on, `volume-mute` while it is off), its tooltip says "เสียงแจ้งเตือนงานใหม่", a screen reader is told it is the sound
+  (`aria-label`), and the manual calls it the speaker button. Nothing about the sound itself changes, and members still do not see it. This frees
+  the bell for the list of what needs a person's attention. `SoundToggleIsASpeakerTest`; the JS cases of `notify-sound.test.mjs` follow the icons.
 - **A reporter can withdraw their own request until it is finished, not only after the staff accepted it.** The cancel button was only
   there once a request was accepted, in progress or on hold, so a request filed by mistake or twice had to wait for somebody to reject it:
   the junk the owner wants less of. It is there from the first moment now: while the request waits (รอดำเนินการ), once it is
