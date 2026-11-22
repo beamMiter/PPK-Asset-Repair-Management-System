@@ -152,6 +152,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`openapi.yaml` described answers the API does not give.** The operations written before the last round mostly said "Created" or "OK" with
+  no body, and some described fields that were never there: a request was said to need a `priority` (it has none: it was ignored and is in no
+  answer, nor is it a list filter), and `GET /stats/summary` listed `priority_counts`, which it does not return. The asset and request schemas
+  named about a third of their fields, the login answer lacked `citizen_id` and `must_change_password`, `GET /user` was given as the short
+  profile, and the error shapes (`{message, code, correlation_id}`, `errors`, `toast`), the 403 / 404 / 409 / 422 answers, the list filters and
+  sorts, `thread_quota` and the edited-message answer were missing. Each is written from what the call really answers now.
+  `OpenApiAnswersMatchTest` calls the main operations with real records and holds every answer to its schema: a status the document does not
+  list, a key it does not name, or a value of another type fails it (against the old document all five of its cases fail).
 - **Every page you opened asked the server for the chat list again.** The floating chat button asks `/chat/my-updates` every 30 seconds, and
   on top of that each Turbo visit (a new page) asked once more, because the new page's button had to be filled. A visit now draws its list and
   badge from the last answer while it is under 30 seconds old, so opening pages costs no request. It still asks on the chat pages (opening a
