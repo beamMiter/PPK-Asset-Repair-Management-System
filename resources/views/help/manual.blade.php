@@ -785,7 +785,7 @@
                                     </li>
                                     <li class="flex items-start gap-2">
                                         <span class="material-symbols-outlined text-[20px] text-slate-500 mt-0.5 shrink-0">volume_up</span>
-                                        <span class="text-[15px] text-slate-600 leading-relaxed">เจ้าหน้าที่แต่ละคนเปิด/ปิดเสียงเตือนงานใหม่ของตนเองได้ที่ปุ่มกระดิ่งบนแถบด้านบน (บุคลากรทั่วไปไม่มีปุ่มนี้)</span>
+                                        <span class="text-[15px] text-slate-600 leading-relaxed">เจ้าหน้าที่แต่ละคนเปิด/ปิดเสียงเตือนงานใหม่ของตนเองได้ที่ปุ่มลำโพงบนแถบด้านบน (บุคลากรทั่วไปไม่มีปุ่มนี้)</span>
                                     </li>
                                     </ul></div>
                                         </div>

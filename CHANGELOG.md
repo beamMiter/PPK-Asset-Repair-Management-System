@@ -13,6 +13,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a green note now says how many of THEIR requests are "ซ่อมบำรุงเสร็จสิ้น" and links to the list already filtered; it is not repeated when they are
   looking at exactly those, sits beside the banner for requests sent back, and the manual mentions it. The two banners share one wrapper above
   the list, so a page with neither keeps the one gap it had. `ResolvedRequestsBannerTest`.
+- **CI holds the PHP a pull request changes to Pint.** The check runs `vendor/bin/pint --test --diff=origin/<base>` before the suites, on pull
+  requests only, and looks at the files the pull request changes, not the whole project: most of the code is older than Pint (202 of 330 files
+  would be rewritten), so a file is brought in line when somebody next edits it. `vendor/bin/pint --diff=origin/dev` fixes them locally; the
+  README says so. `CiWorkflowTest` keeps the step in place (the checkout has the whole history, which `--diff` needs to find the merge base; the branch name
+  goes through `env`; it runs after `composer install` and before the suites).
 - **`openapi.yaml` describes every API route, and a test keeps it so.** Twelve operations were missing, among them the three whose rules changed
   this week: `POST /repair-requests/{id}/cancel`, `…/rating` (only after the approval, 422 before) and `…/resubmit`, with `GET …/my-jobs`,
   `…/pending/evaluations`, `GET /user`, `PATCH /assets/{id}`, `GET /chat/my-updates`, `POST /threads/{id}/lock|unlock` and the two removed
@@ -157,6 +162,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`openapi.yaml` described answers the API does not give.** The operations written before the last round mostly said "Created" or "OK" with
+  no body, and some described fields that were never there: a request was said to need a `priority` (it has none: it was ignored and is in no
+  answer, nor is it a list filter), and `GET /stats/summary` listed `priority_counts`, which it does not return. The asset and request schemas
+  named about a third of their fields, the login answer lacked `citizen_id` and `must_change_password`, `GET /user` was given as the short
+  profile, and the error shapes (`{message, code, correlation_id}`, `errors`, `toast`), the 403 / 404 / 409 / 422 answers, the list filters and
+  sorts, `thread_quota` and the edited-message answer were missing. Each is written from what the call really answers now.
+  `OpenApiAnswersMatchTest` calls the main operations with real records and holds every answer to its schema: a status the document does not
+  list, a key it does not name, or a value of another type fails it (against the old document all five of its cases fail).
 - **Every page you opened asked the server for the chat list again.** The floating chat button asks `/chat/my-updates` every 30 seconds, and
   on top of that each Turbo visit (a new page) asked once more, because the new page's button had to be filled. A visit now draws its list and
   badge from the last answer while it is under 30 seconds old, so opening pages costs no request. It still asks on the chat pages (opening a
@@ -674,6 +687,11 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **The staff's sound button is a speaker, not a bell.** The button in the top bar (and the phone's bar and menu) that switches the sound which
+  rings when a repair job comes in was a bell, which says "notifications" where it only controls the sound. It now shows a speaker (`volume-up`
+  while the sound is on, `volume-mute` while it is off), its tooltip says "เสียงแจ้งเตือนงานใหม่", a screen reader is told it is the sound
+  (`aria-label`), and the manual calls it the speaker button. Nothing about the sound itself changes, and members still do not see it. This frees
+  the bell for the list of what needs a person's attention. `SoundToggleIsASpeakerTest`; the JS cases of `notify-sound.test.mjs` follow the icons.
 - **A reporter can withdraw their own request until it is finished, not only after the staff accepted it.** The cancel button was only
   there once a request was accepted, in progress or on hold, so a request filed by mistake or twice had to wait for somebody to reject it:
   the junk the owner wants less of. It is there from the first moment now: while the request waits (รอดำเนินการ), once it is
