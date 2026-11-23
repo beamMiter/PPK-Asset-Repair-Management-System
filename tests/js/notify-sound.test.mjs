@@ -1,7 +1,7 @@
-// The bell in the top bar (sound on / off) and the realtime "new request" beep, from resources/js/repair/my-jobs.js.
+// The speaker button in the top bar (sound on / off) and the realtime "new request" beep, from resources/js/repair/my-jobs.js.
 // Run: node --test tests/js/
 //
-// The page is modelled the way the browser + Turbo Drive behave: a visit REPLACES the whole <body> (so the new bell is a
+// The page is modelled the way the browser + Turbo Drive behave: a visit REPLACES the whole <body> (so the new button is a
 // new element without the old one's listeners), `turbo:load` fires after every visit, and the browser refuses audio.play()
 // until the user has interacted with the document (sticky activation — which survives Turbo visits, not a reload).
 import { build } from 'esbuild';
@@ -39,14 +39,14 @@ function makeWorld({ stored = null, echo = true } = {}) {
   };
   const dispatchDoc = (type, ev = {}) => (world.docListeners[type] || []).forEach((f) => f({ type, ...ev }));
 
-  // the top bar of a signed-in staff member: desktop bell, mobile bell, mobile-menu button, plus the layout's <audio>
+  // the top bar of a signed-in staff member: desktop speaker, mobile speaker, mobile-menu button, plus the layout's <audio>
   world.mount = ({ bell = true, audio = true } = {}) => {
     const reg = {};
     if (bell) {
       for (const [btn, icon, dot] of [['notifyToggleBtn', 'notifyIcon', 'notifyStatusDot'], ['notifyToggleBtnMobileTop', 'notifyIconMobileTop', 'notifyStatusDotMobileTop']]) {
-        reg[btn] = new El(btn); reg[icon] = new El(icon, reg[btn]); reg[icon].className = 'bi bi-bell'; reg[dot] = new El(dot, reg[btn]); reg[dot].hidden.add('d-none');
+        reg[btn] = new El(btn); reg[icon] = new El(icon, reg[btn]); reg[icon].className = 'bi bi-volume-mute-fill'; reg[dot] = new El(dot, reg[btn]); reg[dot].hidden.add('d-none');
       }
-      reg.notifyToggleBtnMobile = new El('notifyToggleBtnMobile'); reg.notifyToggleBtnMobile.icon = new El('i', reg.notifyToggleBtnMobile); reg.notifyToggleBtnMobile.icon.className = 'bi bi-bell me-2';
+      reg.notifyToggleBtnMobile = new El('notifyToggleBtnMobile'); reg.notifyToggleBtnMobile.icon = new El('i', reg.notifyToggleBtnMobile); reg.notifyToggleBtnMobile.icon.className = 'bi bi-volume-mute-fill me-2';
     }
     if (audio) reg.notifySound = new AudioEl('notifySound');
     world.registry = reg;
@@ -80,32 +80,32 @@ function makeWorld({ stored = null, echo = true } = {}) {
 
 const iconOf = (reg) => reg.notifyIcon.className;
 
-test('the bell still switches the sound on and off on the page that was loaded first', async () => {
+test('the speaker still switches the sound on and off on the page that was loaded first', async () => {
   const w = makeWorld();
   const page = w.visit();
   await w.click(page.notifyToggleBtn);
   assert.equal(w.storage[LS_KEY], '1');
-  assert.equal(iconOf(page), 'bi bi-bell-fill');
+  assert.equal(iconOf(page), 'bi bi-volume-up-fill');
   await w.click(page.notifyToggleBtn);
   assert.equal(w.storage[LS_KEY], '0');
-  assert.equal(iconOf(page), 'bi bi-bell-slash');
+  assert.equal(iconOf(page), 'bi bi-volume-mute-fill');
 });
 
-test('after a Turbo visit the new bell shows the saved state and still works', async () => {
+test('after a Turbo visit the new speaker shows the saved state and still works', async () => {
   const w = makeWorld();
   const first = w.visit();
   await w.click(first.notifyToggleBtn);                       // sound on
-  const second = w.visit();                                   // navigate: brand-new bell element, default markup
-  assert.equal(iconOf(second), 'bi bi-bell-fill', 'the bell must show that the sound is on');
+  const second = w.visit();                                   // navigate: brand-new button element, default markup
+  assert.equal(iconOf(second), 'bi bi-volume-up-fill', 'the speaker must show that the sound is on');
   assert.match(second.notifyToggleBtn.title, /เปิดเสียงแล้ว/);
   await w.click(second.notifyToggleBtn);                      // switch off from the new page
   assert.equal(w.storage[LS_KEY], '0');
-  assert.equal(iconOf(second), 'bi bi-bell-slash');
+  assert.equal(iconOf(second), 'bi bi-volume-mute-fill');
   const third = w.visit();
-  assert.equal(iconOf(third), 'bi bi-bell-slash');
+  assert.equal(iconOf(third), 'bi bi-volume-mute-fill');
   await w.click(third.notifyToggleBtnMobile);                 // the mobile menu button works too
   assert.equal(w.storage[LS_KEY], '1');
-  assert.equal(third.notifyToggleBtnMobile.icon.className, 'bi bi-bell-fill me-2');
+  assert.equal(third.notifyToggleBtnMobile.icon.className, 'bi bi-volume-up-fill me-2');
 });
 
 test('a new request beeps after visiting other pages (the listener does not depend on the first page\'s elements)', async () => {
@@ -124,9 +124,9 @@ test('the realtime channel is subscribed once however many pages are visited', (
   assert.deepEqual(w.subs, ['private:maintenance-requests'], 'a private channel: a new request is not readable without signing in');
 });
 
-test('a page loaded without a bell or audio element does not disable the feature for the rest of the session', async () => {
+test('a page loaded without a speaker button or audio element does not disable the feature for the rest of the session', async () => {
   const w = makeWorld();
-  w.visit({ bell: false, audio: false });                     // e.g. the first page shown had no bell
+  w.visit({ bell: false, audio: false });                     // e.g. the first page shown had no button
   assert.equal(w.subs.length, 0, 'no bell, no audio: nothing to subscribe for');
   const page = w.visit();                                     // the next one has it
   await w.click(page.notifyToggleBtn);
@@ -145,7 +145,7 @@ test('nothing beeps while the sound is off', async () => {
 test('after a reload with the sound saved as on, the first click anywhere unlocks it: the next new request beeps', async () => {
   const w = makeWorld({ stored: '1' });                       // fresh page load: no user activation yet
   const page = w.visit();
-  assert.equal(iconOf(page), 'bi bi-bell-fill');
+  assert.equal(iconOf(page), 'bi bi-volume-up-fill');
   await w.newRequest();                                       // arrives before the user touched the page → cannot play yet
   assert.equal(w.plays.length, 0);
   w.gesture(); await w.settle();                              // any click / key press on the page
@@ -159,7 +159,7 @@ test('clicking the bell while the saved "on" is still locked unlocks it — it d
   await w.newRequest();                                       // a missed beep is waiting
   await w.click(page.notifyToggleBtn);
   assert.equal(w.storage[LS_KEY], '1', 'still on');
-  assert.equal(iconOf(page), 'bi bi-bell-fill');
+  assert.equal(iconOf(page), 'bi bi-volume-up-fill');
   assert.equal(w.plays.length, 1, 'the beep that was waiting plays exactly once');
   assert.deepEqual(w.toasts, []);
 });
@@ -181,7 +181,7 @@ test('once unlocked, clicking the bell (which shows "on") switches the sound off
   w.gesture(); await w.settle();                              // the user clicked somewhere else first: unlocked
   await w.click(page.notifyToggleBtn);
   assert.equal(w.storage[LS_KEY], '0');
-  assert.equal(iconOf(page), 'bi bi-bell-slash');
+  assert.equal(iconOf(page), 'bi bi-volume-mute-fill');
 });
 
 test('a key press also unlocks the audio, and a beep that was waiting plays once', async () => {
@@ -198,9 +198,9 @@ test('a key press also unlocks the audio, and a beep that was waiting plays once
 test('switching the sound in another tab updates this tab\'s bell', async () => {
   const w = makeWorld();
   const page = w.visit();
-  assert.equal(iconOf(page), 'bi bi-bell-slash');
+  assert.equal(iconOf(page), 'bi bi-volume-mute-fill');
   w.otherTabChanges('1');
-  assert.equal(iconOf(page), 'bi bi-bell-fill');
+  assert.equal(iconOf(page), 'bi bi-volume-up-fill');
   w.otherTabChanges('0');
-  assert.equal(iconOf(page), 'bi bi-bell-slash');
+  assert.equal(iconOf(page), 'bi bi-volume-mute-fill');
 });

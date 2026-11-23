@@ -126,18 +126,18 @@
       const dot = $(group.dot);
 
       if (btn) {
-        btn.title = enabled ? "แจ้งเตือน (เปิดเสียงแล้ว)" : "แจ้งเตือน (กดเพื่อเปิดเสียง)";
+        btn.title = enabled ? "เสียงแจ้งเตือนงานใหม่ (เปิดเสียงแล้ว)" : "เสียงแจ้งเตือนงานใหม่ (กดเพื่อเปิดเสียง)";
         // For buttons without a separate icon ID, find the <i> inside
         if (!icon) {
           const innerIcon = btn.querySelector('i');
           if (innerIcon) {
-            innerIcon.className = enabled ? 'bi bi-bell-fill me-2' : 'bi bi-bell-slash me-2';
+            innerIcon.className = enabled ? 'bi bi-volume-up-fill me-2' : 'bi bi-volume-mute-fill me-2';
           }
         }
       }
 
       if (icon) {
-        icon.className = enabled ? 'bi bi-bell-fill' : 'bi bi-bell-slash';
+        icon.className = enabled ? 'bi bi-volume-up-fill' : 'bi bi-volume-mute-fill';
       }
 
       if (dot) {
