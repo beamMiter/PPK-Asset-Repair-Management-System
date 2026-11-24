@@ -7,8 +7,11 @@ use App\Models\ChatMessage;
 use App\Models\ChatModerationLog;
 use App\Models\ChatThread;
 use App\Support\SafeBroadcast;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Shared chat read-tracking + lock-permission logic so the web and API
@@ -22,7 +25,7 @@ trait HandlesChatReads
      * words again is not an edit. An edit does not bring the thread to the top of the list or restart its idle clock (the THREAD is not touched),
      * is written to the moderation record without the words, and is announced to whoever has the thread open.
      */
-    protected function applyEdit(ChatThread $thread, ChatMessage $message, string $body, \Illuminate\Http\Request $request): ChatMessage
+    protected function applyEdit(ChatThread $thread, ChatMessage $message, string $body, Request $request): ChatMessage
     {
         if ($body === (string) $message->body) {
             return $message;
@@ -50,7 +53,7 @@ trait HandlesChatReads
      */
     protected function messageOfAttempt(int $userId, ChatThread $thread, ?string $clientId): ?ChatMessage
     {
-        if (! is_string($clientId) || ! \Illuminate\Support\Str::isUuid($clientId)) {
+        if (! is_string($clientId) || ! Str::isUuid($clientId)) {
             return null;
         }
 
@@ -66,13 +69,13 @@ trait HandlesChatReads
      */
     protected function saveMessageOnce(ChatThread $thread, int $userId, string $body, ?string $clientId): array
     {
-        $clientId = is_string($clientId) && \Illuminate\Support\Str::isUuid($clientId) ? $clientId : null;
+        $clientId = is_string($clientId) && Str::isUuid($clientId) ? $clientId : null;
 
         try {
             $message = $thread->messages()->create(['user_id' => $userId, 'body' => $body, 'client_uuid' => $clientId]);
 
             return [$message->load('user:id,name'), true];
-        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+        } catch (UniqueConstraintViolationException $e) {
             $existing = $this->messageOfAttempt($userId, $thread, $clientId);
             if ($existing !== null) {
                 return [$existing, false];
@@ -94,9 +97,9 @@ trait HandlesChatReads
             ['user_id' => $userId, 'chat_thread_id' => $threadId],
             [
                 'last_read_message_id' => $messageId,
-                'last_read_at'         => now(),
-                'updated_at'           => now(),
-                'created_at'           => now(),
+                'last_read_at' => now(),
+                'updated_at' => now(),
+                'created_at' => now(),
             ] + ($reappear ? ['hidden_at' => null] : []),
         );
     }
@@ -112,11 +115,11 @@ trait HandlesChatReads
         DB::table('chat_thread_reads')->updateOrInsert(
             ['user_id' => $userId, 'chat_thread_id' => $threadId],
             [
-                'hidden_at'            => now(),
+                'hidden_at' => now(),
                 'last_read_message_id' => $latest ?: null,
-                'last_read_at'         => now(),
-                'updated_at'           => now(),
-                'created_at'           => now(),
+                'last_read_at' => now(),
+                'updated_at' => now(),
+                'created_at' => now(),
             ],
         );
     }
@@ -147,22 +150,9 @@ trait HandlesChatReads
             ->pluck('chat_thread_id')->map(fn ($id) => (int) $id)->all();
     }
 
-    /** Unread message count for a thread given the caller's read pointer. */
-    protected function unreadCount(int $threadId, ?int $lastReadMessageId, int $totalMessages): int
-    {
-        if (! $lastReadMessageId) {
-            return $totalMessages;
-        }
-
-        return ChatMessage::query()
-            ->where('chat_thread_id', $threadId)
-            ->where('id', '>', $lastReadMessageId)
-            ->count();
-    }
-
     /**
      * [chat_thread_id => unread messages] for several threads at once (only those with any): what is newer than the person's read
-     * pointer, the same meaning as unreadCount() above, in one query for a whole page of the list.
+     * pointer, in one query for a whole page of the list (a query for each thread made every poll of the chat widget cost 15 to 30 more).
      *
      * @param  array<int,int>  $threadIds
      * @return array<int,int>
@@ -184,20 +174,6 @@ trait HandlesChatReads
             ->selectRaw('m.chat_thread_id, COUNT(*) AS unread')
             ->pluck('unread', 'm.chat_thread_id')
             ->map(fn ($n) => (int) $n)
-            ->all();
-    }
-
-    /** [chat_thread_id => last_read_message_id] for the given user + threads. */
-    protected function readPointers(int $userId, array $threadIds): array
-    {
-        if (empty($threadIds)) {
-            return [];
-        }
-
-        return DB::table('chat_thread_reads')
-            ->where('user_id', $userId)
-            ->whereIn('chat_thread_id', $threadIds)
-            ->pluck('last_read_message_id', 'chat_thread_id')
             ->all();
     }
 }

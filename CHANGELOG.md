@@ -162,6 +162,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The chat widget's poll counted the unread messages one thread at a time.** `/chat/my-updates`, which every signed-in person's browser asks
+  every 30 seconds, ran a query for each thread the person has a read pointer in: with 14 threads a poll cost 18 queries where 6 do (up to 15
+  more on the web and 30 more on the API's `/api/chat/my-updates`; `GET /api/threads` did the same for its 15 rows). The counts now come from
+  one query for the whole list (the one the chat page already used), and the two helpers that did it a thread at a time are gone.
+  `ChatWidgetQueryCountTest`: the number of queries no longer grows with the threads, and the counts, the "nothing read yet" case, the case
+  where the pointer is on the last message and deleted messages are as before.
 - **`openapi.yaml` described answers the API does not give.** The operations written before the last round mostly said "Created" or "OK" with
   no body, and some described fields that were never there: a request was said to need a `priority` (it has none: it was ignored and is in no
   answer, nor is it a list filter), and `GET /stats/summary` listed `priority_counts`, which it does not return. The asset and request schemas

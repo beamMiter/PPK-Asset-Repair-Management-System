@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\ChatThread;
 use App\Events\Chat\ChatMessageDeleted;
+use App\Events\Chat\ChatMessageSent;
 use App\Events\Chat\ChatThreadLockChanged;
-use App\Models\ChatModerationLog;
-use App\Services\ChatQuota;
-use App\Support\SafeBroadcast;
+use App\Http\Controllers\Controller;
 use App\Models\ChatMessage;
+use App\Models\ChatModerationLog;
+use App\Models\ChatThread;
+use App\Services\ChatQuota;
+use App\Support\Like;
+use App\Support\SafeBroadcast;
 use App\Traits\HandlesChatReads;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Support\Like;
 
 class ChatController extends Controller
 {
@@ -38,35 +39,36 @@ class ChatController extends Controller
             ->orderByDesc('created_at')
             ->paginate(15); // เอา named argument ออกให้ compatible
 
-        $readsMap = $userId
-            ? $this->readPointers((int) $userId, $threads->getCollection()->pluck('id')->all())
+        // unread per thread, all of the page's threads in one query (a query each made the list cost 15 more than it needed to)
+        $unreadMap = $userId
+            ? $this->unreadCountsFor((int) $userId, $threads->getCollection()->pluck('id')->all())
             : [];
         $hiddenIds = $userId ? $this->hiddenThreadIds((int) $userId, $threads->getCollection()->pluck('id')->all()) : [];
 
         $payload = [
-            'data' => $threads->getCollection()->map(function (ChatThread $th) use ($readsMap, $hiddenIds) {
-                $total  = $th->messages_count ?? 0;
-                $unread = $this->unreadCount((int) $th->id, $readsMap[$th->id] ?? null, (int) $total);
+            'data' => $threads->getCollection()->map(function (ChatThread $th) use ($unreadMap, $hiddenIds) {
+                $total = $th->messages_count ?? 0;
+                $unread = $unreadMap[$th->id] ?? 0;
 
                 return [
-                    'id'              => $th->id,
-                    'title'           => $th->title,
-                    'is_locked'       => (bool) $th->is_locked,
-                    'hidden_by_me'    => in_array((int) $th->id, $hiddenIds, true),   // hidden from my "กระทู้ที่มีส่วนร่วม"
-                    'created_at'      => $th->created_at ? $th->created_at->toISOString() : null,
-                    'author'          => $th->author ? [
-                        'id'   => $th->author->id,
+                    'id' => $th->id,
+                    'title' => $th->title,
+                    'is_locked' => (bool) $th->is_locked,
+                    'hidden_by_me' => in_array((int) $th->id, $hiddenIds, true),   // hidden from my "กระทู้ที่มีส่วนร่วม"
+                    'created_at' => $th->created_at ? $th->created_at->toISOString() : null,
+                    'author' => $th->author ? [
+                        'id' => $th->author->id,
                         'name' => $th->author->name,
                     ] : null,
-                    'messages_count'  => $total,
-                    'unread_count'    => $unread,
-                    'latest_message'  => $th->latestMessage ? [
-                        'id'         => $th->latestMessage->id,
-                        'user'       => $th->latestMessage->user ? [
-                            'id'   => $th->latestMessage->user->id,
+                    'messages_count' => $total,
+                    'unread_count' => $unread,
+                    'latest_message' => $th->latestMessage ? [
+                        'id' => $th->latestMessage->id,
+                        'user' => $th->latestMessage->user ? [
+                            'id' => $th->latestMessage->user->id,
                             'name' => $th->latestMessage->user->name,
                         ] : null,
-                        'body'       => $th->latestMessage->body,
+                        'body' => $th->latestMessage->body,
                         'created_at' => $th->latestMessage->created_at ? $th->latestMessage->created_at->toISOString() : null,
                     ] : null,
                 ];
@@ -74,9 +76,9 @@ class ChatController extends Controller
             'meta' => [
                 'thread_quota' => $r->user() ? ChatQuota::for($r->user()) : null,   // how many threads I may still start today
                 'current_page' => $threads->currentPage(),
-                'per_page'     => $threads->perPage(),
-                'total'        => $threads->total(),
-                'last_page'    => $threads->lastPage(),
+                'per_page' => $threads->perPage(),
+                'total' => $threads->total(),
+                'last_page' => $threads->lastPage(),
             ],
         ];
 
@@ -98,15 +100,15 @@ class ChatController extends Controller
         }
 
         $thread = ChatThread::create([
-            'title'     => $data['title'],
+            'title' => $data['title'],
             'author_id' => Auth::id(),
             'is_locked' => false,
         ]);
 
         return response()->json([
-            'id'         => $thread->id,
-            'title'      => $thread->title,
-            'is_locked'  => (bool) $thread->is_locked,
+            'id' => $thread->id,
+            'title' => $thread->title,
+            'is_locked' => (bool) $thread->is_locked,
             'created_at' => $thread->created_at ? $thread->created_at->toISOString() : null,
         ], 201);
     }
@@ -124,29 +126,29 @@ class ChatController extends Controller
             ->values();
 
         return response()->json([
-            'id'         => $thread->id,
-            'title'      => $thread->title,
-            'is_locked'  => (bool) $thread->is_locked,
-            'locked_at'  => $thread->locked_at?->toISOString(),
+            'id' => $thread->id,
+            'title' => $thread->title,
+            'is_locked' => (bool) $thread->is_locked,
+            'locked_at' => $thread->locked_at?->toISOString(),
             // The Thai calendar day the nightly sweep will lock this thread if nobody writes (only in its last chat.warn_days_before days),
             // or delete it if nobody unlocks it (locked threads); null when neither applies. A client shows its own notice with these.
-            'auto_lock_on'   => $thread->autoLockWarningOn()?->toDateString(),
+            'auto_lock_on' => $thread->autoLockWarningOn()?->toDateString(),
             'auto_delete_on' => $thread->autoDeletesOn()?->toDateString(),
             'created_at' => $thread->created_at ? $thread->created_at->toISOString() : null,
-            'author'     => $thread->author ? [
-                'id'   => $thread->author->id,
+            'author' => $thread->author ? [
+                'id' => $thread->author->id,
                 'name' => $thread->author->name,
             ] : null,
             'latest_messages' => $latest->map(function (ChatMessage $m) {
                 return [
-                    'id'         => $m->id,
-                    'user'       => $m->user ? [
-                        'id'   => $m->user->id,
+                    'id' => $m->id,
+                    'user' => $m->user ? [
+                        'id' => $m->user->id,
                         'name' => $m->user->name,
                     ] : null,
-                    'body'       => $m->body,
-                    'edited'     => $m->edited_at !== null,
-                    'edited_at'  => $m->edited_at?->toISOString(),
+                    'body' => $m->body,
+                    'edited' => $m->edited_at !== null,
+                    'edited_at' => $m->edited_at?->toISOString(),
                     'created_at' => $m->created_at ? $m->created_at->toISOString() : null,
                 ];
             }),
@@ -155,10 +157,10 @@ class ChatController extends Controller
 
     public function messages(Request $r, ChatThread $thread)
     {
-        $afterId  = $r->integer('after_id');
+        $afterId = $r->integer('after_id');
         $beforeId = $r->integer('before_id');
-        $limit    = (int) $r->query('limit', 50);
-        $limit    = max(1, min($limit, 100));
+        $limit = (int) $r->query('limit', 50);
+        $limit = max(1, min($limit, 100));
 
         // ?before_id= : the batch OLDER than that message (scrolling up), oldest first, deleted ones as placeholders; meta.has_more says if more remain
         if ($beforeId) {
@@ -176,7 +178,7 @@ class ChatController extends Controller
 
         if ($afterId) {
             $q->where('id', '>', $afterId)
-              ->orderBy('id', 'asc');
+                ->orderBy('id', 'asc');
         } else {
             $q->orderBy('created_at', 'asc');
         }
@@ -186,14 +188,14 @@ class ChatController extends Controller
         return response()->json([
             'data' => $messages->map(function (ChatMessage $m) {
                 return [
-                    'id'         => $m->id,
-                    'user'       => $m->user ? [
-                        'id'   => $m->user->id,
+                    'id' => $m->id,
+                    'user' => $m->user ? [
+                        'id' => $m->user->id,
                         'name' => $m->user->name,
                     ] : null,
-                    'body'       => $m->body,
-                    'edited'     => $m->edited_at !== null,
-                    'edited_at'  => $m->edited_at?->toISOString(),
+                    'body' => $m->body,
+                    'edited' => $m->edited_at !== null,
+                    'edited_at' => $m->edited_at?->toISOString(),
                     'created_at' => $m->created_at ? $m->created_at->toISOString() : null,
                 ];
             }),
@@ -203,9 +205,9 @@ class ChatController extends Controller
     public function storeMessage(Request $r, ChatThread $thread)
     {
         $shape = fn (ChatMessage $m) => [
-            'id'         => $m->id,
-            'user'       => $m->user ? ['id' => $m->user->id, 'name' => $m->user->name] : null,
-            'body'       => $m->body,
+            'id' => $m->id,
+            'user' => $m->user ? ['id' => $m->user->id, 'name' => $m->user->name] : null,
+            'body' => $m->body,
             'created_at' => $m->created_at ? $m->created_at->toISOString() : null,
         ];
 
@@ -234,7 +236,7 @@ class ChatController extends Controller
         }
 
         // Real-time fan-out, same as the web path.
-        SafeBroadcast::send(new \App\Events\Chat\ChatMessageSent($msg));
+        SafeBroadcast::send(new ChatMessageSent($msg));
 
         return response()->json($shape($msg), 201);
     }
@@ -251,9 +253,9 @@ class ChatController extends Controller
         SafeBroadcast::send(new ChatThreadLockChanged((int) $thread->id, true));
 
         return response()->json([
-            'id'         => $thread->id,
-            'title'      => $thread->title,
-            'is_locked'  => (bool) $thread->is_locked,
+            'id' => $thread->id,
+            'title' => $thread->title,
+            'is_locked' => (bool) $thread->is_locked,
             'created_at' => $thread->created_at ? $thread->created_at->toISOString() : null,
         ]);
     }
@@ -270,9 +272,9 @@ class ChatController extends Controller
         SafeBroadcast::send(new ChatThreadLockChanged((int) $thread->id, false));
 
         return response()->json([
-            'id'         => $thread->id,
-            'title'      => $thread->title,
-            'is_locked'  => (bool) $thread->is_locked,
+            'id' => $thread->id,
+            'title' => $thread->title,
+            'is_locked' => (bool) $thread->is_locked,
             'created_at' => $thread->created_at ? $thread->created_at->toISOString() : null,
         ]);
     }
@@ -355,22 +357,22 @@ class ChatController extends Controller
             return response()->json([]);
         }
 
-        // map last_read_message_id ของ user นี้ เพื่อคำนวณ unread
-        $readsMap = $this->readPointers((int) $user->id, $threads->pluck('id')->all());
+        // unread ของ user นี้ทุกกระทู้ใน query เดียว (เดิมนับทีละกระทู้: ทุกการโพลเสียเพิ่มอีกสูงสุด 30 query)
+        $unreadMap = $this->unreadCountsFor((int) $user->id, $threads->pluck('id')->all());
 
-        $items = $threads->map(function (ChatThread $th) use ($readsMap) {
-            $total  = $th->messages_count ?? 0;
-            $unread = $this->unreadCount((int) $th->id, $readsMap[$th->id] ?? null, (int) $total);
+        $items = $threads->map(function (ChatThread $th) use ($unreadMap) {
+            $total = $th->messages_count ?? 0;
+            $unread = $unreadMap[$th->id] ?? 0;
 
             $latest = $th->latestMessage;
 
             return [
-                'id'              => $th->id,
-                'title'           => $th->title ?? ('กระทู้ #' . $th->id),
-                'show_url'        => route('chat.show', $th->id), // web route
-                'unread'          => $unread,
-                'last_user_name'  => $latest && $latest->user ? $latest->user->name : null,
-                'last_body'       => $latest ? $latest->body : null,
+                'id' => $th->id,
+                'title' => $th->title ?? ('กระทู้ #'.$th->id),
+                'show_url' => route('chat.show', $th->id), // web route
+                'unread' => $unread,
+                'last_user_name' => $latest && $latest->user ? $latest->user->name : null,
+                'last_body' => $latest ? $latest->body : null,
                 'last_created_at' => $latest && $latest->created_at
                     ? $latest->created_at->toISOString()
                     : null,
