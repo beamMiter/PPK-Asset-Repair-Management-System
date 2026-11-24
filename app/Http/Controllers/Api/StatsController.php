@@ -18,32 +18,31 @@ class StatsController extends Controller
             // (MaintenanceRequest::syncAssetStatus): 'acknowledged' is open,
             // 'rejected' is terminal — both were missing here.
             $openRequests = DB::table('maintenance_requests')->whereNull('deleted_at')->whereIn('status', [
-                'pending','acknowledged','accepted','in_progress','on_hold'
+                'pending', 'acknowledged', 'accepted', 'in_progress', 'on_hold',
             ])->count();
             $closedRequests = DB::table('maintenance_requests')->whereNull('deleted_at')->whereIn('status', [
-                'resolved','closed','cancelled','rejected'
+                'resolved', 'closed', 'cancelled', 'rejected',
             ])->count();
-
 
             $recent = DB::table('maintenance_requests')
                 ->whereNull('deleted_at')
                 ->selectRaw('DATE(created_at) as d, COUNT(*) as c')
-                ->where('created_at','>=', now()->subDays(6)->startOfDay())
+                ->where('created_at', '>=', now()->subDays(6)->startOfDay())
                 ->groupBy('d')
-                ->orderBy('d','asc')
-                ->pluck('c','d')
+                ->orderBy('d', 'asc')
+                ->pluck('c', 'd')
                 ->all();
             $recentSeries = [];
-            for ($i=6; $i>=0; $i--) {
+            for ($i = 6; $i >= 0; $i--) {
                 $day = now()->subDays($i)->format('Y-m-d');
-                $recentSeries[] = ['date' => $day, 'count' => (int)($recent[$day] ?? 0)];
+                $recentSeries[] = ['date' => $day, 'count' => (int) ($recent[$day] ?? 0)];
             }
 
             return [
-                'assets_total'    => $assetTotal,
-                'requests_open'   => $openRequests,
+                'assets_total' => $assetTotal,
+                'requests_open' => $openRequests,
                 'requests_closed' => $closedRequests,
-                'recent_daily'    => $recentSeries,
+                'recent_daily' => $recentSeries,
             ];
         });
 
@@ -57,9 +56,10 @@ class StatsController extends Controller
                 ->whereNull('deleted_at')
                 ->selectRaw('status, COUNT(*) as c')
                 ->groupBy('status')
-                ->pluck('c','status')
+                ->pluck('c', 'status')
                 ->all();
         });
+
         return response()->json(['data' => $raw]);
     }
 
@@ -96,15 +96,15 @@ class StatsController extends Controller
         });
 
         $ids = $rows->pluck('id')->filter()->all();
-        $names = $ids ? DB::table('users')->whereIn('id',$ids)->pluck('name','id')->all() : [];
+        $names = $ids ? DB::table('users')->whereIn('id', $ids)->pluck('name', 'id')->all() : [];
 
-        $mapped = $rows->map(fn($r) => [
-            'id'         => $r->id,
-            'name'       => $names[$r->id] ?? null,
-            'total'      => (int) $r->total_count,
-            'open'       => (int) $r->open_count,
-            'closed'     => (int) $r->closed_count,
-            'avg_hours'  => $r->avg_hours !== null ? round((float) $r->avg_hours, 2) : null,
+        $mapped = $rows->map(fn ($r) => [
+            'id' => $r->id,
+            'name' => $names[$r->id] ?? null,
+            'total' => (int) $r->total_count,
+            'open' => (int) $r->open_count,
+            'closed' => (int) $r->closed_count,
+            'avg_hours' => $r->avg_hours !== null ? round((float) $r->avg_hours, 2) : null,
         ]);
 
         return response()->json(['data' => $mapped]);
@@ -114,21 +114,22 @@ class StatsController extends Controller
     {
         $rows = Cache::remember('stats:assets_by_department:v1', 60, function () {
             return DB::table('assets')
-            ->selectRaw('department_id as id, COUNT(*) as c')
-            ->whereNotNull('department_id')
-            ->whereNull('deleted_at')
-            ->groupBy('department_id')
-            ->orderByDesc('c')
-            ->get();
+                ->selectRaw('department_id as id, COUNT(*) as c')
+                ->whereNotNull('department_id')
+                ->whereNull('deleted_at')
+                ->groupBy('department_id')
+                ->orderByDesc('c')
+                ->get();
         });
         $ids = $rows->pluck('id')->all();
         // departments have name_th / name_en, not `name` — this endpoint answered 500 every time
         $deptNames = $ids ? Department::whereIn('id', $ids)->get()->pluck('display_name', 'id')->all() : [];
-        $mapped = $rows->map(fn($r) => [
-            'id'    => $r->id,
-            'name'  => $deptNames[$r->id] ?? null,
+        $mapped = $rows->map(fn ($r) => [
+            'id' => $r->id,
+            'name' => $deptNames[$r->id] ?? null,
             'count' => (int) $r->c,
         ]);
+
         return response()->json(['data' => $mapped]);
     }
 }
