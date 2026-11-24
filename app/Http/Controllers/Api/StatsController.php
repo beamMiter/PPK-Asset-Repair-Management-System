@@ -11,17 +11,20 @@ class StatsController extends Controller
 {
     public function summary()
     {
-        $key = 'stats:summary:v1';
+        // v2: a new number (requests_returned) and the old "completed" status moved into closed, so an answer cached under v1 must not be served
+        $key = 'stats:summary:v2';
         $payload = Cache::remember($key, 60, function () {
             $assetTotal = DB::table('assets')->whereNull('deleted_at')->count();
-            // Open / closed sets must match the model's canonical split
-            // (MaintenanceRequest::syncAssetStatus): 'acknowledged' is open,
-            // 'rejected' is terminal — both were missing here.
+            // Every status falls in exactly one of the three numbers, so they add up to all the requests.
+            // Open / closed follow the model's canonical split (MaintenanceRequest::syncAssetStatus): 'acknowledged' is open, 'rejected' is
+            // terminal. A request sent back to its reporter ('returned') is told apart from the open ones: it waits for the reporter, not
+            // the staff. The old 'completed' status is finished work, so it is closed.
             $openRequests = DB::table('maintenance_requests')->whereNull('deleted_at')->whereIn('status', [
                 'pending', 'acknowledged', 'accepted', 'in_progress', 'on_hold',
             ])->count();
+            $returnedRequests = DB::table('maintenance_requests')->whereNull('deleted_at')->where('status', 'returned')->count();
             $closedRequests = DB::table('maintenance_requests')->whereNull('deleted_at')->whereIn('status', [
-                'resolved', 'closed', 'cancelled', 'rejected',
+                'resolved', 'closed', 'cancelled', 'rejected', 'completed',
             ])->count();
 
             $recent = DB::table('maintenance_requests')
@@ -41,6 +44,7 @@ class StatsController extends Controller
             return [
                 'assets_total' => $assetTotal,
                 'requests_open' => $openRequests,
+                'requests_returned' => $returnedRequests,
                 'requests_closed' => $closedRequests,
                 'recent_daily' => $recentSeries,
             ];
