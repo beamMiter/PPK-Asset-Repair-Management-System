@@ -158,12 +158,17 @@
             </div>
         </div>
 
-        {{-- the reporter's own requests sent back to them to fix: not repeated when they are already looking at exactly those --}}
-        @unless (in_array($status, ['returned', 'returned_expiring'], true))
-            <div class="px-4 md:px-6 lg:px-8 pt-4">
+        {{-- what waits for the reporter: their requests sent back to them to fix, and their finished repairs to approve. Each is left out when
+             they are already looking at exactly those. One wrapper for both, so a page without either has the one gap it always had (the two "sent back"
+             filters, which had no wrapper, now have its top padding too, whether or not the green banner shows) --}}
+        <div class="flex flex-col gap-[12px] px-4 md:px-6 lg:px-8 pt-4">
+            @unless (in_array($status, ['returned', 'returned_expiring'], true))
                 <x-returned-requests-banner />
-            </div>
-        @endunless
+            @endunless
+            @unless ($status === 'resolved')
+                <x-resolved-requests-banner />
+            @endunless
+        </div>
 
         {{-- Header row --}}
         <div class="px-4 md:px-6 lg:px-8 py-2 border-b border-slate-200">
