@@ -162,6 +162,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`GET /api/stats/summary` left some requests out of both numbers.** `requests_open` and `requests_closed` did not count a request sent back
+  to its reporter (`returned`) or one with the old status `completed`, so the two never added up to the requests there are. The answer has a
+  new `requests_returned`, and `completed` counts as closed (it is finished work); `requests_open` is as before, so an app that only reads the
+  old keys keeps working and sees `requests_closed` grow by the old `completed` ones. Every request is now in exactly one of the three numbers.
+  The cache key moved to `stats:summary:v2`, so an answer cached by the previous version (60 seconds at most) is not handed out without the new
+  key. `openapi.yaml` says so. Two cases in `ApiStatsTest`.
 - **The chat widget's poll counted the unread messages one thread at a time.** `/chat/my-updates`, which every signed-in person's browser asks
   every 30 seconds, ran a query for each thread the person has a read pointer in: with 14 threads a poll cost 18 queries where 6 do (up to 15
   more on the web and 30 more on the API's `/api/chat/my-updates`; `GET /api/threads` did the same for its 15 rows). The counts now come from

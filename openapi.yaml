@@ -870,8 +870,9 @@ paths:
       summary: Dashboard summary statistics
       description: |
         System-wide numbers, the same for everyone, cached for 60 seconds; deleted requests and assets are not counted.
-        `requests_open` = pending, acknowledged, accepted, in progress, on hold; `requests_closed` = resolved, closed, cancelled, rejected.
-        A request that is `returned` (sent back to the reporter) or has the old status `completed` is in neither count.
+        Every request is in exactly one of three numbers, so they add up to all the requests: `requests_open` = pending, acknowledged,
+        accepted, in progress, on hold; `requests_returned` = sent back to the reporter to fix (status `returned`: it waits for them, not
+        for the staff); `requests_closed` = resolved, closed, cancelled, rejected and the old status `completed`.
       responses:
         '200':
           description: Stats summary
@@ -882,6 +883,7 @@ paths:
                 properties:
                   assets_total: { type: integer }
                   requests_open: { type: integer }
+                  requests_returned: { type: integer }
                   requests_closed: { type: integer }
                   recent_daily:
                     description: The last 7 days, oldest first; a day with no request is 0
