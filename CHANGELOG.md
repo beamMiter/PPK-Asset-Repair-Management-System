@@ -162,6 +162,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`GET /api/health` handed the failure's own message to anybody who asked.** The endpoint needs no sign-in, and when the database or Redis
+  failed its answer carried the exception's message as `error`: a connection error names the host, the port, the database and the SQL, so a
+  stranger learned them at exactly the moment the system was in trouble. The failing check now says `error: "check failed"` and the message
+  goes to the server's log (`[health] the database check failed`, with the exception class). `status`, the 200 / 503 codes and the rest of the
+  answer (including `meta`) are as before. `openapi.yaml` says so. Two cases in `HealthEndpointTest` (the Redis one runs where phpredis is
+  installed, as in CI and the Docker image).
 - **`GET /api/stats/summary` left some requests out of both numbers.** `requests_open` and `requests_closed` did not count a request sent back
   to its reporter (`returned`) or one with the old status `completed`, so the two never added up to the requests there are. The answer has a
   new `requests_returned`, and `completed` counts as closed (it is finished work); `requests_open` is as before, so an app that only reads the
