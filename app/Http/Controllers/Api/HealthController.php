@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 use Throwable;
 
@@ -24,6 +25,22 @@ class HealthController extends Controller
         return (is_string($reply) || $reply instanceof \Stringable) && strtoupper(ltrim((string) $reply, '+')) === 'PONG';
     }
 
+    /**
+     * What a failed check shows. This endpoint needs no sign-in, so whoever asks gets the answer, and the failure's own message
+     * (a connection error names the host, the port, the database and the SQL) went out to all of them at the very moment the system
+     * was in trouble. The answer says which check failed and a fixed word; the message is written to the log, where the people
+     * who run the server look.
+     */
+    private function failed(string $check, Throwable $e): array
+    {
+        Log::error("[health] the {$check} check failed", ['error' => $e->getMessage(), 'exception' => $e::class]);
+
+        return [
+            'status' => 'error',
+            'error' => 'check failed',
+        ];
+    }
+
     public function index(Request $request)
     {
         $checks = [];
@@ -38,10 +55,7 @@ class HealthController extends Controller
             ];
         } catch (Throwable $e) {
             $overallOk = false;
-            $checks['db'] = [
-                'status' => 'error',
-                'error' => $e->getMessage(),
-            ];
+            $checks['db'] = $this->failed('database', $e);
         }
 
         try {
@@ -63,10 +77,7 @@ class HealthController extends Controller
             }
         } catch (Throwable $e) {
             $overallOk = false;
-            $checks['redis'] = [
-                'status' => 'error',
-                'error' => $e->getMessage(),
-            ];
+            $checks['redis'] = $this->failed('redis', $e);
         }
 
         $status = $overallOk ? 'ok' : 'degraded';
