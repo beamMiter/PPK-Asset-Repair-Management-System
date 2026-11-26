@@ -7,6 +7,7 @@ import { installImageFallback } from './image-fallback';
 import { installFileGuard } from './layout/file-guard';
 import { installCharCounter } from './layout/char-counter';
 import { installConfirmSubmit } from './layout/confirm-submit';
+import { installNotifyVolume } from './layout/notify-volume';
 import './bootstrap';
 import './repair/my-jobs';
 import './repair/dashboard';
@@ -17,6 +18,7 @@ installImageFallback(); // a picture that will not load shows a "no picture" pla
 installFileGuard(); // a file input with data-max-kb / data-ext refuses a file that is too big or of the wrong kind, with a toast
 installCharCounter(); // a textarea with maxlength + data-counter shows "123 / 1000" and says when a paste was cut
 installConfirmSubmit(); // window.confirmSubmit(event, options) - the app's own dialog in place of a form's native confirm()
+installNotifyVolume(); // the level of the new-job and chat sounds: the slider in the top bar, the test button, window.applyNotifyVolume
 
 // Initialize Alpine.js globally for Blade components using x-data/x-show
 window.Alpine = Alpine

@@ -785,7 +785,7 @@
                                     </li>
                                     <li class="flex items-start gap-2">
                                         <span class="material-symbols-outlined text-[20px] text-slate-500 mt-0.5 shrink-0">volume_up</span>
-                                        <span class="text-[15px] text-slate-600 leading-relaxed">เจ้าหน้าที่แต่ละคนเปิด/ปิดเสียงเตือนงานใหม่ของตนเองได้ที่ปุ่มลำโพงบนแถบด้านบน (บุคลากรทั่วไปไม่มีปุ่มนี้)</span>
+                                        <span class="text-[15px] text-slate-600 leading-relaxed">เจ้าหน้าที่แต่ละคนเปิด/ปิดเสียงเตือนงานใหม่ของตนเองได้ที่ปุ่มลำโพงบนแถบด้านบน และปรับระดับเสียงได้ที่ลูกศรข้างปุ่มลำโพง (เริ่มต้นที่ 50% ค่านี้จำไว้ในเบราว์เซอร์ของเครื่องนั้น ใช้กับเสียงแชตด้วย และบน iPhone/iPad ปรับไม่ได้) (บุคลากรทั่วไปไม่มีปุ่มนี้)</span>
                                     </li>
                                     </ul></div>
                                         </div>
