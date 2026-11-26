@@ -1,22 +1,21 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\MaintenanceRatingApiController;
+use App\Http\Controllers\Api\MetaController;
+use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\AssetController;
+use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\Maintenance\MaintenanceLogController;
 use App\Http\Controllers\Maintenance\MaintenanceRequestController;
 use App\Http\Controllers\Maintenance\MaintenanceTransitionController;
 use App\Http\Controllers\Repair\MaintenanceJobController;
-use App\Http\Controllers\AttachmentController;
-use App\Http\Controllers\Maintenance\MaintenanceLogController;
-use App\Http\Controllers\Api\ChatController;
-use App\Http\Controllers\Api\MetaController;
-use App\Http\Controllers\Api\StatsController;
-use App\Http\Controllers\Api\SearchController;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\HealthController;
-use App\Http\Controllers\Api\PasswordResetController;
-use App\Http\Controllers\Api\MaintenanceRatingApiController;
-use App\Http\Controllers\Api\MaintenanceRequestApiController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -95,22 +94,22 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     Route::prefix('repair-requests')->name('repair-requests.')->group(function () {
         // GET /api/repair-requests   ?status= (หรือ returned_expiring = ใบงานที่ส่งกลับแก้ไขและเหลือไม่เกิน 3 วันก่อนถูกยกเลิกอัตโนมัติ) &q= &asset_id= &sort_by=(request_no|id|request_date) &sort_dir=asc|desc &page=
         //   20 รายการ/หน้า → {data, meta, toast} · member เห็นเฉพาะใบงานที่ตัวเองแจ้ง, admin/supervisor/ทีมช่างเห็นทั้งหมด
-        Route::get('/',                   [MaintenanceRequestController::class, 'index'])->name('index');
+        Route::get('/', [MaintenanceRequestController::class, 'index'])->name('index');
 
         // POST /api/repair-requests  แจ้งซ่อมใหม่ (multipart/form-data เมื่อแนบไฟล์) — ทุกบทบาทที่ login แจ้งได้
         //   title*, description, asset_id, department_id, type_id, location_text, reporter_name, reporter_phone,
         //   reporter_email, files[] (สูงสุด 3 ไฟล์), captions[] → 201 {data, toast} · 422 {message, errors}
-        Route::post('/',                  [MaintenanceRequestController::class, 'store'])->name('store');
+        Route::post('/', [MaintenanceRequestController::class, 'store'])->name('store');
 
         // GET /api/repair-requests/my-jobs — must stay above `/{req}`, which would take "my-jobs" for a request id
         //   งานของฉัน = ที่ตนเป็นหัวหน้าทีมหรือถูกมอบหมาย (ไม่นับที่ถูกถอนออกจากงาน) · ?search= (เลขที่/หัวข้อ) &status=
         //   (ไม่ส่ง = ทุกสถานะ, status=all = ทุกสถานะยกเว้น closed) → {data: paginator 20/หน้า}
         //   เฉพาะ admin, supervisor, ทีมช่าง (member ได้ 403)
-        Route::get('/my-jobs',            [MaintenanceJobController::class, 'myJobs'])->name('my-jobs');
+        Route::get('/my-jobs', [MaintenanceJobController::class, 'myJobs'])->name('my-jobs');
 
         // GET /api/repair-requests/{req} → {data} รายละเอียดครบเท่าที่หน้ารายละเอียดแสดง · Gate 'view':
         //   admin/supervisor, ผู้แจ้ง, ผู้ที่ถูกมอบหมาย และทีมช่างเมื่องานยังรอรับทราบ/รอผู้รับเรื่อง
-        Route::get('/{req}',              [MaintenanceRequestController::class, 'show'])->name('show');
+        Route::get('/{req}', [MaintenanceRequestController::class, 'show'])->name('show');
 
         // PUT /api/repair-requests/{req} — แก้ไขใบงาน · Gate 'update': admin/supervisor เสมอ · ผู้ที่ถูกมอบหมายเมื่อ
         //   accepted/in_progress/on_hold · ผู้แจ้งเมื่อยัง pending/acknowledged และยังไม่มีผู้รับผิดชอบ
@@ -119,7 +118,7 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
         //   status = การเปลี่ยนสถานะจริง (เหมือน POST …/transition): ต้องมีสิทธิ์ของขั้นนั้นเท่ากับปุ่ม (เช่น closed = ผู้แจ้ง/admin,
         //   ผู้แจ้งยกเลิกใบที่เสร็จแล้วไม่ได้ → 403) แล้วผ่านตาราง ALLOWED_TRANSITIONS (ผิดกติกา = 409 และไม่บันทึกอะไรเลย)
         //   note? = เหตุผลของการเปลี่ยนสถานะ (on_hold ต้องมี)
-        Route::put('/{req}',              [MaintenanceRequestController::class, 'update'])->name('update');
+        Route::put('/{req}', [MaintenanceRequestController::class, 'update'])->name('update');
 
         // ไม่มี DELETE /api/repair-requests/{req}: ใบงานเป็นหลักฐานว่าใครทำอะไร จึงไม่มีทางลบผ่าน API (ตอบ 405)
         //   (เคยมี route นี้โดยเขียนว่า admin/supervisor ลบได้ แต่ policy ไม่มี delete จึงตอบ 403 กับทุกคนมาตลอด)
@@ -128,20 +127,20 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
         //   เปลี่ยนสถานะตาม MaintenanceRequest::ALLOWED_TRANSITIONS · Gate 'transition': admin/supervisor หรือผู้ที่ถูกมอบหมาย
         //   เท่านั้น (ผู้อื่น 403) และต้องมีสิทธิ์ของขั้นนั้นเท่ากับปุ่ม (เช่น closed = ผู้แจ้ง/admin; ช่างในทีมปิดงานแทนผู้แจ้งไม่ได้ → 403)
         //   · ข้อมูลไม่ถูกต้อง = 422 · ย้ายสถานะผิดกติกา/ขาดเหตุผลที่ต้องระบุ = 409
-        Route::post('/{req}/transition',  [MaintenanceTransitionController::class, 'transition'])->name('transition');
+        Route::post('/{req}/transition', [MaintenanceTransitionController::class, 'transition'])->name('transition');
 
         // POST /api/repair-requests/{req}/cancel   body: cancel_reason? (≤ 2,000) — ผู้แจ้งยกเลิกใบงานของตัวเอง (admin/supervisor ทำแทนได้)
         //   ได้ตราบที่งานยังไม่เสร็จ: รอดำเนินการ, รับทราบ, ส่งกลับแก้ไข, รับเรื่อง, กำลังทำ, พักไว้ · ผู้อื่น 403 · ใบที่เสร็จแล้ว 403
         //   (การส่ง status ผ่าน PUT ไม่ใช่ทางของผู้แจ้ง: 422)
-        Route::post('/{req}/cancel',      [MaintenanceTransitionController::class, 'cancelCase'])->name('cancel');
+        Route::post('/{req}/cancel', [MaintenanceTransitionController::class, 'cancelCase'])->name('cancel');
 
         // POST /api/repair-requests/{req}/resubmit — the reporter sends a request again after fixing it (status `returned` → `pending`;
         //   admin/supervisor may on their behalf). The staff send one back with POST …/transition body status=returned and a `note`
         //   (what to fix; required) from pending or acknowledged. `returned` is not final (rejected is) and the SLA clock stops while it lasts
-        Route::post('/{req}/resubmit',    [MaintenanceTransitionController::class, 'resubmitCase'])->name('resubmit');
+        Route::post('/{req}/resubmit', [MaintenanceTransitionController::class, 'resubmitCase'])->name('resubmit');
 
         // GET /api/repair-requests/{req}/logs — ประวัติการเปลี่ยนแปลง ใหม่→เก่า 20 รายการ/หน้า (paginator ตรงๆ) · Gate 'view'
-        Route::get('/{req}/logs',         [MaintenanceLogController::class, 'index'])->name('logs');
+        Route::get('/{req}/logs', [MaintenanceLogController::class, 'index'])->name('logs');
 
         // GET /api/repair-requests/pending/evaluations
         //   ใบงานที่ฉันแจ้ง และอนุมัติปิดงานแล้ว (closed) ยังไม่ได้ให้คะแนน และยังอยู่ในกรอบ 30 วัน → {data:[...]}
@@ -164,7 +163,7 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     //   POST|DELETE /maintenance/requests/{req}/attachments[/{attachment}] (routes/web.php)
     //   เปิดไฟล์: GET /attachments/{id} (ค่า `url` ของไฟล์แนบในใบงาน) ส่ง bearer token ได้ · สิทธิ์เท่ากับการดูใบงานนั้น (403)
     //   · ส่ง If-None-Match มาพร้อม ETag เดิมแล้วไฟล์ไม่เปลี่ยน = 304 · ไฟล์ของใบงานเป็น private เสมอ ไม่มีที่อยู่ /storage/
-    Route::post('/attachments',              [AttachmentController::class, 'store'])->name('attachments.store');
+    Route::post('/attachments', [AttachmentController::class, 'store'])->name('attachments.store');
     Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
     // Chat (กระทู้) — ทุกคนที่ login เห็นทุกกระทู้ ไม่มีสิทธิ์รายกระทู้
@@ -172,15 +171,15 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     //   GET  /api/threads   ?q= (ค้นจากหัวข้อ) ?scope=mine (เฉพาะกระทู้ที่ตั้งเองหรือเคยตอบ) 15 กระทู้/หน้า → {data, meta}; แต่ละรายการมี latest_message และ unread_count ของผู้เรียก
     //   POST /api/threads   body: title* (≤ 180) → 201
     //   GET  /api/threads/{thread}   กระทู้ + latest_messages (10 ข้อความล่าสุด เรียงเก่า→ใหม่) · locked_at, auto_lock_on (วันที่จะถูกล็อกอัตโนมัติ เฉพาะ 14 วันสุดท้าย), auto_delete_on (วันที่จะถูกลบอัตโนมัติ เมื่อถูกล็อก)
-    Route::get('/threads',          [ChatController::class, 'index'])->name('threads.index');
-    Route::post('/threads',         [ChatController::class, 'store'])->middleware('throttle:chat-thread')->name('threads.store');
+    Route::get('/threads', [ChatController::class, 'index'])->name('threads.index');
+    Route::post('/threads', [ChatController::class, 'store'])->middleware('throttle:chat-thread')->name('threads.store');
     Route::get('/threads/{thread}', [ChatController::class, 'show'])->name('threads.show');
 
     // Thread messages
     //   GET  .../messages   ?after_id= (เอาเฉพาะข้อความที่ id ใหม่กว่า ใช้ poll) &limit= (1–100, ปริยาย 50)
     //                       ถ้าไม่ส่ง after_id จะได้ข้อความเก่าสุดก่อน ไม่เกิน limit
     //   POST .../messages   body: body* (≤ 3,000) → 201 และ broadcast แบบ real-time · กระทู้ที่ล็อกอยู่ = 403
-    Route::get('/threads/{thread}/messages',  [ChatController::class, 'messages'])->name('messages.index');
+    Route::get('/threads/{thread}/messages', [ChatController::class, 'messages'])->name('messages.index');
     Route::post('/threads/{thread}/messages', [ChatController::class, 'storeMessage'])->middleware('throttle:chat-message')->name('messages.store');
     //   DELETE .../messages/{message}  ผู้เขียน (ตอนกระทู้ยังไม่ล็อก) หรือผู้ดูแล (admin + ทีม IT/ช่าง) → {deleted:true}; ข้อความกลายเป็น "ข้อความนี้ถูกลบ" และมีบันทึกการดูแล
     Route::delete('/threads/{thread}/messages/{message}', [ChatController::class, 'destroyMessage'])->name('messages.destroy');
@@ -188,14 +187,14 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     Route::patch('/threads/{thread}/messages/{message}', [ChatController::class, 'updateMessage'])->middleware('throttle:chat-message')->name('messages.update');
 
     // Thread lock / unlock — admin และทีม IT / ช่าง (User::workerRoles) เท่านั้น ไม่รวม supervisor และ member (เช็คใน ChatThread::canBeLockedBy)
-    Route::post('/threads/{thread}/lock',   [ChatController::class, 'lock'])->name('threads.lock');
+    Route::post('/threads/{thread}/lock', [ChatController::class, 'lock'])->name('threads.lock');
     Route::post('/threads/{thread}/unlock', [ChatController::class, 'unlock'])->name('threads.unlock');
 
     // ซ่อนกระทู้จาก "กระทู้ที่มีส่วนร่วม" ของตัวเอง (ไม่ลบ ไม่กระทบคนอื่น) — DELETE = แสดงอีกครั้ง; กลับมาเองเมื่อเราพิมพ์ในกระทู้นั้น
     //   POST   /api/threads/{thread}/hide   ต้องเคยมีส่วนร่วมในกระทู้นั้น ไม่งั้น 422
     //   DELETE /api/threads/{thread}/hide
-    Route::post('/threads/{thread}/hide',    [ChatController::class, 'hide'])->name('threads.hide');
-    Route::delete('/threads/{thread}/hide',  [ChatController::class, 'unhide'])->name('threads.unhide');
+    Route::post('/threads/{thread}/hide', [ChatController::class, 'hide'])->name('threads.hide');
+    Route::delete('/threads/{thread}/hide', [ChatController::class, 'unhide'])->name('threads.unhide');
 
     // GET /api/chat/my-updates — กระทู้ที่ฉันตั้งหรือเคยตอบ (30 ล่าสุด) พร้อมจำนวนที่ยังไม่ได้อ่าน
     Route::get('/chat/my-updates', [ChatController::class, 'myUpdates'])->name('api.chat.my_updates');
@@ -206,26 +205,26 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     //   GET    /api/auth/me            โปรไฟล์ย่อ (id, name, citizen_id, email, role) + abilities
     //   POST   /api/auth/logout        ยกเลิก token ที่ใช้เรียกอยู่
     //   POST   /api/auth/logout-all    ยกเลิก token ทั้งหมดของฉัน (ทุกอุปกรณ์)
-    Route::get('/auth/tokens',         [AuthController::class, 'tokens'])->name('auth.tokens');
+    Route::get('/auth/tokens', [AuthController::class, 'tokens'])->name('auth.tokens');
     Route::delete('/auth/tokens/{id}', [AuthController::class, 'revokeToken'])->name('auth.tokens.revoke');
-    Route::get('/auth/me',             [AuthController::class, 'me'])->name('auth.me');
+    Route::get('/auth/me', [AuthController::class, 'me'])->name('auth.me');
     // PUT /api/auth/password   body: current_password, password + password_confirmation (≥ 8 ตัว มีตัวอักษรและตัวเลข ต่างจากรหัสเดิม)
     //   200 {message, must_change_password:false} · 422 · token ที่ใช้เรียกยังใช้ได้ token อื่นทั้งหมดถูกยกเลิก (6 ครั้ง/นาที)
     //   ผู้ที่แอดมินตั้งรหัสให้ (403 password_change_required) ใช้ route นี้เป็นทางออก
-    Route::put('/auth/password',       [AuthController::class, 'changePassword'])->middleware('throttle:6,1')->name('auth.password.update');
-    Route::post('/auth/logout',        [AuthController::class, 'logout'])->name('auth.logout');
-    Route::post('/auth/logout-all',    [AuthController::class, 'logoutAll'])->name('auth.logout-all');
+    Route::put('/auth/password', [AuthController::class, 'changePassword'])->middleware('throttle:6,1')->name('auth.password.update');
+    Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+    Route::post('/auth/logout-all', [AuthController::class, 'logoutAll'])->name('auth.logout-all');
 
     // Meta — ข้อมูลอ้างอิงสำหรับ dropdown ทุกเส้นตอบ {data:[...]}
     Route::prefix('meta')->name('meta.')->group(function () {
         // ?q= (รหัส/ชื่อไทย/ชื่ออังกฤษ) สูงสุด 50 → {id, code, name, display}
         Route::get('/departments', [MetaController::class, 'departments'])->name('departments');
         // ?q= (ชื่อ/slug) สูงสุด 50 → {id, name, slug, color, description}
-        Route::get('/categories',  [MetaController::class, 'categories'])->name('categories');
+        Route::get('/categories', [MetaController::class, 'categories'])->name('categories');
         // ?role=admin|supervisor|it_support|network|programmer|technician|member (ไม่ส่ง = ทุกบทบาท)
         //   สูงสุด 200 คน ไม่รวมบัญชีที่ถูกระงับ → {id, name, role, department}
         //   ฝ่ายจัดการ (can:maintenance-type-manage) เห็นทุกบทบาท · สมาชิกทั่วไปเห็นเฉพาะเจ้าหน้าที่ (ไม่เห็นสมาชิกคนอื่น)
-        Route::get('/users',       [MetaController::class, 'users'])->name('users');
+        Route::get('/users', [MetaController::class, 'users'])->name('users');
     });
 
     // Search — สำหรับ autocomplete ตอบ {data:[...]} · ?limit= 1–50 (ปริยาย 10)
@@ -239,15 +238,15 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
     // Stats — ตัวเลขรวมทั้งระบบ ไม่แยกตามผู้ใช้/บทบาท และแคชไว้ 60 วินาที · นับเฉพาะใบงาน/ครุภัณฑ์ที่ยังไม่ถูกลบ
     Route::prefix('stats')->name('stats.')->group(function () {
         // {assets_total, requests_open, requests_closed, recent_daily: 7 วันล่าสุด [{date, count}]}
-        Route::get('/summary',                     [StatsController::class, 'summary'])->name('summary');
+        Route::get('/summary', [StatsController::class, 'summary'])->name('summary');
         // {data: {<status>: จำนวน}}
-        Route::get('/maintenance/status-counts',   [StatsController::class, 'maintenanceStatusCounts'])->name('maintenance.status-counts');
+        Route::get('/maintenance/status-counts', [StatsController::class, 'maintenanceStatusCounts'])->name('maintenance.status-counts');
         // ผลงานต่อคนที่อยู่ในงาน (สูงสุด 50) → {id, name, total, open, closed, avg_hours}
         //   นับทุกคนในทีมของใบงาน (ที่ยังไม่ถูกถอดออก) รวมผู้รับผิดชอบหลักที่ไม่มีแถวทีม ใบงานเดียวกันนับให้หลายคนได้ ผลรวมทุกแถวจึงเกินจำนวนใบงาน
         //   เฉพาะฝ่ายจัดการ (can:maintenance-type-manage) เหมือนกระดานคะแนนเจ้าหน้าที่ — เป็นผลงานรายบุคคล ไม่ใช่ตัวเลขรวม
-        Route::get('/maintenance/technicians',     [StatsController::class, 'technicianSummary'])->name('maintenance.technicians')
+        Route::get('/maintenance/technicians', [StatsController::class, 'technicianSummary'])->name('maintenance.technicians')
             ->middleware('can:maintenance-type-manage');
         // {id, name, count} เรียงจากมากไปน้อย
-        Route::get('/assets/by-department',        [StatsController::class, 'assetsByDepartment'])->name('assets.by-department');
+        Route::get('/assets/by-department', [StatsController::class, 'assetsByDepartment'])->name('assets.by-department');
     });
 });
