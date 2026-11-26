@@ -162,6 +162,15 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Staff who are not on a request could not take it from the app.** `POST /api/repair-requests/{id}/transition` let in only an admin, a
+  supervisor or somebody already on the request, but a new request has nobody on it, so no ordinary staff member could acknowledge, accept,
+  reject or send back a request through the API (403), although the web's buttons for those steps are open to every staff member. The endpoint
+  now lets every staff member in and asks, for each move, what that step's own button asks: those four steps, and starting an accepted request
+  nobody is on, are open to all staff (unless somebody else is in charge of the request); hold, resume and resolve stay with the people on it;
+  only the reporter or an admin closes. Naming the person in charge (`technician_id`) stays with an admin, a supervisor or somebody already on
+  the request (403 for the rest, nothing saved), and a member who only files requests is still turned away. `openapi.yaml` says so.
+  `ApiTransitionFollowsEachStepsOwnRuleTest` (6 cases, one of which walks the whole state map and checks the endpoint refuses exactly what the
+  buttons refuse).
 - **`GET /api/stats/summary` left some requests out of both numbers.** `requests_open` and `requests_closed` did not count a request sent back
   to its reporter (`returned`) or one with the old status `completed`, so the two never added up to the requests there are. The answer has a
   new `requests_returned`, and `completed` counts as closed (it is finished work); `requests_open` is as before, so an app that only reads the
