@@ -30,11 +30,21 @@ class MaintenanceTransitionController extends Controller
 
     public function transition(Request $request, MR $req)
     {
-        Gate::authorize('transition', $req);
-
         $user = $request->user();
         $actorId = $user ? $user->id : null;
         $isTeam = $user && ($user->isAdmin() || $user->isSupervisor() || $user->isTechnician());
+
+        // Every member of the staff gets to the step check below: the web's acknowledge / accept / reject / send-back buttons are open to
+        // all of them, and a request nobody is on yet (every new one) could not be taken from the app when only admins and the people
+        // already on it came in. What each move asks is decided by its own ability there. A member is turned away before the body is read.
+        if (! $isTeam) {
+            throw new AuthorizationException('อนุญาตเฉพาะเจ้าหน้าที่เท่านั้น');
+        }
+
+        // Naming the person in charge stays with those who run the job: an admin, a supervisor, or somebody already on it
+        if ($request->has('technician_id')) {
+            Gate::authorize('transition', $req);
+        }
 
         $rules = [
             'status' => $isTeam
@@ -55,7 +65,8 @@ class MaintenanceTransitionController extends Controller
             return $this->respondWithToast($request, Toast::warning($msg, 2200), redirect()->back()->withErrors($validator)->withInput(), ['errors' => $validator->errors()], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        // being on the job is not enough: each step asks what its own button asks (only the reporter approves, …)
+        // each step asks what its own button asks: open to all staff (acknowledge, accept, reject, send back), the people on the job
+        // (hold, resume, resolve), only the reporter (approve), …
         $target = $validator->validated()['status'] ?? null;
         if ($target && $target !== $req->status) {
             Gate::authorize('moveTo', [$req, $target]);

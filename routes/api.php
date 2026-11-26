@@ -124,8 +124,10 @@ Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(functio
         //   (เคยมี route นี้โดยเขียนว่า admin/supervisor ลบได้ แต่ policy ไม่มี delete จึงตอบ 403 กับทุกคนมาตลอด)
 
         // POST /api/repair-requests/{req}/transition   body: status*, note?, technician_id?
-        //   เปลี่ยนสถานะตาม MaintenanceRequest::ALLOWED_TRANSITIONS · Gate 'transition': admin/supervisor หรือผู้ที่ถูกมอบหมาย
-        //   เท่านั้น (ผู้อื่น 403) และต้องมีสิทธิ์ของขั้นนั้นเท่ากับปุ่ม (เช่น closed = ผู้แจ้ง/admin; ช่างในทีมปิดงานแทนผู้แจ้งไม่ได้ → 403)
+        //   เปลี่ยนสถานะตาม MaintenanceRequest::ALLOWED_TRANSITIONS · เจ้าหน้าที่ทุกคนเข้าได้ (สมาชิกทั่วไป 403) แล้วแต่ละขั้นถามสิทธิ์ของ
+        //   ปุ่มของขั้นนั้นเอง (Gate 'moveTo'): รับทราบ/รับเรื่อง/ไม่รับเรื่อง/ส่งกลับแก้ไข/เริ่มงานที่ยังไม่มีใครอยู่ = เจ้าหน้าที่ทุกคน,
+        //   พัก/ทำต่อ/ปิดซ่อม = ผู้ที่อยู่ในงาน, อนุมัติ (closed) = ผู้แจ้ง/admin (ช่างในทีมปิดงานแทนผู้แจ้งไม่ได้ → 403)
+        //   · technician_id (กำหนดผู้รับผิดชอบ) = admin/supervisor หรือผู้ที่อยู่ในงานเท่านั้น (Gate 'transition'; ผู้อื่น 403)
         //   · ข้อมูลไม่ถูกต้อง = 422 · ย้ายสถานะผิดกติกา/ขาดเหตุผลที่ต้องระบุ = 409
         Route::post('/{req}/transition', [MaintenanceTransitionController::class, 'transition'])->name('transition');
 
