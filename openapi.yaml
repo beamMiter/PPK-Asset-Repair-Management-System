@@ -588,10 +588,12 @@ paths:
       security: [{ bearerAuth: [] }]
       summary: Transition maintenance request status
       description: |
-        Admin, supervisor, or a person assigned to the request; anyone else gets 403. (The web's acknowledge, accept and reject buttons are
-        open to every staff member; this endpoint is not, so staff who are not on the request cannot take it from here.) The move also needs
-        the permission of that step's button (only the reporter, or an admin, closes). A move the state map does not allow is 409; the
-        reasons that a step needs (`note` for on hold and for sending back) are checked there too.
+        Any member of the staff may call it (a member who only files requests gets 403), and each move asks what that step's button on the
+        web asks. Acknowledging, accepting, rejecting and sending back a request, and starting an accepted one nobody is on, are open to
+        every staff member (unless somebody else is already in charge of the request); holding, resuming and resolving are for the people on
+        the request; only the reporter, or an admin, closes. Naming the person in charge (`technician_id`) is for an admin, a supervisor or
+        somebody already on the request; anyone else who sends it gets 403 and nothing is saved. A move the state map does not allow is
+        409; the reasons that a step needs (`note` for on hold and for sending back) are checked there too.
       parameters:
         - in: path
           name: id
@@ -606,7 +608,7 @@ paths:
               properties:
                 status: { type: string, enum: [pending, acknowledged, accepted, in_progress, on_hold, resolved, closed, cancelled, rejected, returned, completed] }
                 note: { type: string, maxLength: 2000, description: "The reason; required for some steps (on hold, sending back)" }
-                technician_id: { type: integer, description: Staff only }
+                technician_id: { type: integer, description: "Who is in charge: an admin, a supervisor or somebody already on the request (anyone else: 403)" }
               required: [status]
       responses:
         '200':
