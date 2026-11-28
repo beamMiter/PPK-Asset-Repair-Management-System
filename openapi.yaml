@@ -1119,7 +1119,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Health' }
         '503':
-          description: "Degraded: the same shape, `status` is `degraded` and the failing check says why"
+          description: "Degraded: the same shape, `status` is `degraded` and the failing check says `error` (what went wrong is in the server's log, not in the answer)"
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Health' }
@@ -1461,7 +1461,7 @@ components:
               latency_ms: { type: number, description: The database check only }
               reply: { type: string, description: What Redis answered to PING }
               reason: { type: string, description: Why a check was skipped }
-              error: { type: string, description: "The failure's own message (database or Redis)" }
+              error: { type: string, description: "A fixed `check failed` when that check could not run. The failure's own message names the host, the port and the SQL, so it is written to the server's log instead of being handed to anybody who asks (this endpoint needs no sign-in)" }
         meta:
           type: object
           properties:

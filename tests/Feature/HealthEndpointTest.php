@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Api\HealthController;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use Tests\TestCase;
 
 /**
@@ -36,6 +39,53 @@ class HealthEndpointTest extends TestCase
     public function test_health_needs_no_login(): void
     {
         $this->getJson('/api/health')->assertOk();
+    }
+
+    public function test_a_failing_database_is_reported_without_its_own_message(): void
+    {
+        // The endpoint needs no sign-in, so whoever asks gets the answer. A connection error carries the host, the port, the database
+        // name and the SQL ("… (Connection: mysql, Host: …, Port: 3306, Database: …, SQL: select 1)"): it went out as `error` to
+        // anybody, at exactly the moment the system was in trouble. The answer says which check failed; the message goes to the log.
+        $message = 'SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, Host: db-internal-host, Port: 3306, Database: ppk_secret_db, SQL: select 1)';
+        DB::partialMock()->shouldReceive('select')->andThrow(new \RuntimeException($message));
+        Log::spy();
+
+        $res = $this->getJson('/api/health');
+
+        $res->assertStatus(503)
+            ->assertJsonPath('status', 'degraded')
+            ->assertJsonPath('checks.db.status', 'error')
+            ->assertJsonPath('checks.db.error', 'check failed');
+        foreach (['db-internal-host', 'ppk_secret_db', 'SQLSTATE', 'select 1', '3306'] as $secret) {
+            $this->assertStringNotContainsString($secret, $res->getContent(), "the answer leaked `{$secret}`");
+        }
+
+        Log::shouldHaveReceived('error')
+            ->withArgs(fn ($text, $context = []) => str_contains($text, 'database') && ($context['error'] ?? null) === $message)
+            ->once();
+    }
+
+    public function test_a_failing_redis_is_reported_without_its_own_message(): void
+    {
+        if (! class_exists('Redis')) {
+            $this->markTestSkipped('phpredis is not installed here (CI and the Docker image have it); without it the endpoint skips the check');
+        }
+
+        $message = 'Connection refused [tcp://redis-internal-host:6379]';
+        Redis::shouldReceive('connection')->andThrow(new \RuntimeException($message));
+        Log::spy();
+
+        $res = $this->getJson('/api/health');
+
+        $res->assertStatus(503)
+            ->assertJsonPath('status', 'degraded')
+            ->assertJsonPath('checks.redis.status', 'error')
+            ->assertJsonPath('checks.redis.error', 'check failed');
+        $this->assertStringNotContainsString('redis-internal-host', $res->getContent());
+
+        Log::shouldHaveReceived('error')
+            ->withArgs(fn ($text, $context = []) => str_contains($text, 'redis') && ($context['error'] ?? null) === $message)
+            ->once();
     }
 
     public function test_nothing_in_the_application_uses_laravels_queue(): void

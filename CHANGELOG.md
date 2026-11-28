@@ -171,6 +171,12 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`GET /api/health` handed the failure's own message to anybody who asked.** The endpoint needs no sign-in, and when the database or Redis
+  failed its answer carried the exception's message as `error`: a connection error names the host, the port, the database and the SQL, so a
+  stranger learned them at exactly the moment the system was in trouble. The failing check now says `error: "check failed"` and the message
+  goes to the server's log (`[health] the database check failed`, with the exception class). `status`, the 200 / 503 codes and the rest of the
+  answer (including `meta`) are as before. `openapi.yaml` says so. Two cases in `HealthEndpointTest` (the Redis one runs where phpredis is
+  installed, as in CI and the Docker image).
 - **Staff who are not on a request could not take it from the app.** `POST /api/repair-requests/{id}/transition` let in only an admin, a
   supervisor or somebody already on the request, but a new request has nobody on it, so no ordinary staff member could acknowledge, accept,
   reject or send back a request through the API (403), although the web's buttons for those steps are open to every staff member. The endpoint
