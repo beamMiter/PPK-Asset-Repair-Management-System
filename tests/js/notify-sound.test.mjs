@@ -16,7 +16,7 @@ const code = (await build({ entryPoints: [SRC], bundle: true, format: 'iife', wr
 const LS_KEY = 'myjobs.notify.sound.enabled';
 
 function makeWorld({ stored = null, echo = true } = {}) {
-  const world = { activated: false, plays: [], subs: [], handlers: {}, toasts: [], registry: {}, docListeners: {}, winListeners: {}, storage: {} };
+  const world = { activated: false, plays: [], volumes: [], subs: [], handlers: {}, toasts: [], registry: {}, docListeners: {}, winListeners: {}, storage: {} };
   if (stored !== null) world.storage[LS_KEY] = stored;
 
   class El {
@@ -28,7 +28,7 @@ function makeWorld({ stored = null, echo = true } = {}) {
   }
   class AudioEl extends El {
     constructor(id) { super(id); this.volume = 1; this.currentTime = 0; }
-    play() { if (!world.activated) return Promise.reject(new Error('NotAllowedError')); if (this.volume > 0) world.plays.push(this.id); return Promise.resolve(); } // the unlock probe plays at volume 0: silent
+    play() { if (!world.activated) return Promise.reject(new Error('NotAllowedError')); if (this.volume > 0) { world.plays.push(this.id); world.volumes.push(this.volume); } return Promise.resolve(); } // the unlock probe plays at volume 0: silent
     pause() {}
   }
 
@@ -203,4 +203,16 @@ test('switching the sound in another tab updates this tab\'s bell', async () => 
   assert.equal(iconOf(page), 'bi bi-volume-up-fill');
   w.otherTabChanges('0');
   assert.equal(iconOf(page), 'bi bi-volume-mute-fill');
+});
+
+test('a new request rings at the level the person set, half if they never did, not at the file\'s full volume', async () => {
+  const w = makeWorld();
+  const page = w.visit();
+  await w.click(page.notifyToggleBtn);                        // sound on (the unlocking play is at volume 0 and is not a ring)
+  w.volumes.length = 0;
+  await w.newRequest();
+  assert.deepEqual(w.volumes, [0.5], 'nobody set a level: half');
+  w.storage['myjobs.notify.sound.volume'] = '30';
+  await w.newRequest();
+  assert.deepEqual(w.volumes, [0.5, 0.3], 'the level saved in this browser');
 });

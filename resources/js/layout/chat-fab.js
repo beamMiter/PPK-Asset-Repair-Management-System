@@ -11,6 +11,8 @@
 // The list is built with DOM nodes and `textContent`: thread titles, senders and message text are typed by other users,
 // so none of it may reach `innerHTML` (the inline script did exactly that).
 
+import { applyVolume } from './notify-volume';
+
 export const POLL_MS = 30000;               // how often the widget asks the server for new messages
 const BASELINE_KEY = 'chatFab.serverUnread'; // the last unread total the server reported, per tab (sessionStorage)
 const SOUND_KEY = 'myjobs.notify.sound.enabled';
@@ -237,6 +239,7 @@ export function installChatFab(win = window) {
         if (soundOn) {
             const audio = doc.getElementById('chatNotifySound');
             if (audio) {
+                applyVolume(audio, win);   // the level this person set in the top bar (half if never)
                 audio.currentTime = 0;
                 audio.play().catch((e) => win.console?.warn('Chat sound blocked:', e));
             }

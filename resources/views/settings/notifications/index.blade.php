@@ -156,6 +156,8 @@
                 const select = document.querySelector('select[name="notification_sound"]');
                 const player = document.getElementById('soundPreview');
                 player.src = '{{ asset('sounds') }}/' + select.value;
+                // at the level this person set in the top bar (layout/notify-volume.js), so the preview is not louder than the real sound
+                window.applyNotifyVolume && window.applyNotifyVolume(player);
                 player.play().catch(e => console.error('Preview failed'));
             }
         </script>

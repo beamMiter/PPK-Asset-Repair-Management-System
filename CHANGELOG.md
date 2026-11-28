@@ -8,6 +8,15 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Staff set how loud the new-job and the chat sounds are.** Both rang at the full volume of their file for everybody, and the only control
+  was on / off. An arrow beside the speaker button in the top bar opens a panel with a slider (10–100%, steps of 5) and a "ทดสอบเสียง" button; the
+  phone's menu has the same two under its speaker entry. The level is a person's own and is kept in the browser (next to the on / off switch, so
+  a phone and an office computer can differ), is a percentage of the file's own volume (a page cannot make a sound louder than the file), and is
+  applied to both sounds and to the admin's preview on the sound settings page the moment it moves and after every page visit. **It starts at
+  50%: until somebody raises it, the sounds are half as loud as they were.** The sound settings page is the admin's alone, which is why the
+  control is not there. iPhone and iPad keep the volume of a media element for themselves, so the slider does nothing there and the panel says
+  so. A member has no sound button, so none of this. `NotifyVolumeControlTest`, `notify-volume.test.mjs`, and a case each in
+  `notify-sound.test.mjs` and `chat-fab.test.mjs`.
 - **A banner tells a reporter that a finished repair waits for their approval.** The reporter is the one who approves ("อนุมัติปิดงาน"), and only
   after that can they rate it, but nothing told them: they had to open the list and notice the status. On the dashboard and above "รายการงานซ่อม"
   a green note now says how many of THEIR requests are "ซ่อมบำรุงเสร็จสิ้น" and links to the list already filtered; it is not repeated when they are

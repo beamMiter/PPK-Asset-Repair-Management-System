@@ -102,15 +102,42 @@
         <div class="nav-right ms-auto d-flex align-items-center gap-3 flex-shrink-0">
             @auth
                 @if ($user->role !== 'member')
-                    <button type="button" id="notifyToggleBtn"
-                        class="nav-icon-btn d-flex align-items-center justify-content-center border-0"
-                        title="เปิด/ปิดเสียงแจ้งเตือน" aria-label="เสียงแจ้งเตือน">
-                        <i id="notifyIcon" class="bi bi-volume-mute-fill" aria-hidden="true" style="font-size: 1.2rem;"></i>
-                        <span id="notifyStatusDot" class="nav-dot d-none">
-                            <span class="nav-dot__ping"></span>
-                            <span class="nav-dot__core"></span>
-                        </span>
-                    </button>
+                    {{-- The speaker switches the sound on and off. The arrow beside it opens the level of that sound (kept in this browser by
+                         resources/js/layout/notify-volume.js, which fills and reads the slider). It is here and not on the sound settings page
+                         because that page is the admin's alone. --}}
+                    <div class="d-flex align-items-center position-relative" x-data="{ open: false }" @click.outside="open = false"
+                        @keydown.escape.window="open = false">
+                        <button type="button" id="notifyToggleBtn"
+                            class="nav-icon-btn d-flex align-items-center justify-content-center border-0"
+                            title="เปิด/ปิดเสียงแจ้งเตือน" aria-label="เสียงแจ้งเตือน">
+                            <i id="notifyIcon" class="bi bi-volume-mute-fill" aria-hidden="true" style="font-size: 1.2rem;"></i>
+                            <span id="notifyStatusDot" class="nav-dot d-none">
+                                <span class="nav-dot__ping"></span>
+                                <span class="nav-dot__core"></span>
+                            </span>
+                        </button>
+                        <button type="button" id="notifyVolumeBtn"
+                            class="nav-icon-btn d-flex align-items-center justify-content-center border-0" style="width: 24px;"
+                            title="ปรับระดับเสียงแจ้งเตือน" aria-label="ปรับระดับเสียงแจ้งเตือน" aria-controls="notifyVolumePanel"
+                            :aria-expanded="open" @click="open = !open">
+                            <i class="bi bi-chevron-down" aria-hidden="true" style="font-size: 0.75rem;"></i>
+                        </button>
+                        <div id="notifyVolumePanel" x-show="open" x-cloak x-transition.opacity.duration.100ms
+                            class="position-absolute end-0 mt-2 p-3 bg-white border rounded-3 shadow ff-sarabun"
+                            style="top: 100%; width: 240px; z-index: 1055;">
+                            <label for="notifyVolumeRange" class="d-flex justify-content-between small fw-semibold mb-1">
+                                <span>ระดับเสียง</span><span data-notify-volume-value>50%</span>
+                            </label>
+                            <input type="range" id="notifyVolumeRange" class="form-range" min="10" max="100" step="5" value="50"
+                                data-notify-volume-range>
+                            <button type="button" class="btn btn-light btn-sm w-100 mt-1" data-notify-volume-test>
+                                <i class="bi bi-play-fill me-1" aria-hidden="true"></i> ทดสอบเสียง
+                            </button>
+                            <div class="text-muted mt-2" style="font-size: 0.75rem;">
+                                บน iPhone/iPad ตัวเลื่อนนี้ไม่มีผล ให้ใช้ปุ่มปรับเสียงของเครื่อง
+                            </div>
+                        </div>
+                    </div>
                 @endif
 
             @endauth
@@ -153,6 +180,20 @@
                             class="btn btn-light btn-sm ff-sarabun text-start px-3">
                             <i class="bi bi-volume-mute-fill me-2"></i> ตั้งค่าเสียงแจ้งเตือน
                         </button>
+                        {{-- the same level as the arrow beside the speaker in the bar (the bar's panel is for the wide screens) --}}
+                        <div class="px-3 py-2 ff-sarabun">
+                            <label for="notifyVolumeRangeMobile" class="d-flex justify-content-between small fw-semibold mb-1">
+                                <span>ระดับเสียง</span><span data-notify-volume-value>50%</span>
+                            </label>
+                            <input type="range" id="notifyVolumeRangeMobile" class="form-range" min="10" max="100" step="5" value="50"
+                                data-notify-volume-range>
+                            <button type="button" class="btn btn-light btn-sm w-100 mt-1" data-notify-volume-test>
+                                <i class="bi bi-play-fill me-1" aria-hidden="true"></i> ทดสอบเสียง
+                            </button>
+                            <div class="text-muted mt-2" style="font-size: 0.75rem;">
+                                บน iPhone/iPad ตัวเลื่อนนี้ไม่มีผล ให้ใช้ปุ่มปรับเสียงของเครื่อง
+                            </div>
+                        </div>
                     @endif
 
                     <form method="POST" action="{{ route('logout') }}" data-turbo="false" class="mt-2">
