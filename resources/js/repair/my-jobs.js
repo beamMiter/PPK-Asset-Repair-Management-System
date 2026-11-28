@@ -1,3 +1,5 @@
+import { applyVolume } from '../layout/notify-volume';
+
 (function () {
   function $(id) { return document.getElementById(id); }
 
@@ -182,6 +184,7 @@
     }
 
     try {
+      applyVolume(audio); // the level this person set (half if never): unlocking leaves the player at whatever it was, and a Turbo visit brings a new one
       audio.currentTime = 0;
       audio.play().catch(err => {
         console.warn("[Notify] play blocked:", err);

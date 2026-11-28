@@ -32,7 +32,7 @@ function fabPage(body, world) {
   r.search = el('input', { id: 'chatSearch' }); r.search.value = '';
   r.list = el('div', { id: 'chatWidgetList' });
   r.drawer = el('div', { id: 'chatDrawer' }).append(r.ask, r.close, r.search, r.list);
-  r.audio = el('audio', { id: 'chatNotifySound' }); r.audio.plays = 0; r.audio.play = () => { r.audio.plays++; return Promise.resolve(); };
+  r.audio = el('audio', { id: 'chatNotifySound' }); r.audio.plays = 0; r.audio.play = () => { r.audio.plays++; r.audio.volumeAtPlay = r.audio.volume; return Promise.resolve(); };
   r.root = el('div', { id: 'chatWidgetRoot' }).append(r.fab, r.badge, r.drawer, r.audio);
   r.root.dataset.updatesUrl = '/chat/my-updates'; r.root.dataset.notifyIcon = '/images/logoppk.png';
   body.append(r.root);
@@ -322,6 +322,17 @@ test('the first poll in a tab never rings; a later rise does — the sound only 
   const quiet = boot({ answers: [[item({ unread: 1 })], [item({ unread: 5 })]], sound: false });
   await settle(); quiet.advance(Fab.POLL_MS); await settle();
   assert.equal(quiet.ref.audio.plays, 0, 'sound is off');
+});
+
+test('the chat sound rings at the level the person set, half if they never did', async () => {
+  const unset = boot({ answers: [[item({ unread: 1 })], [item({ unread: 3 })]], sound: true });
+  await settle(); unset.advance(Fab.POLL_MS); await settle();
+  assert.equal(unset.ref.audio.plays, 1);
+  assert.equal(unset.ref.audio.volumeAtPlay, 0.5, 'nobody set a level: half, not the full volume of the file');
+
+  const chosen = boot({ answers: [[item({ unread: 1 })], [item({ unread: 3 })]], sound: true, storage: { 'myjobs.notify.sound.volume': '30' } });
+  await settle(); chosen.advance(Fab.POLL_MS); await settle();
+  assert.equal(chosen.ref.audio.volumeAtPlay, 0.3, 'the level saved in this browser');
 });
 
 test('the baseline survives Turbo visits and a reload of the tab (sessionStorage): opening pages does not ring', async () => {
